@@ -4,7 +4,6 @@ import argparse
 import ast
 import importlib.util
 import json
-import sys
 import tempfile
 from pathlib import Path
 
@@ -47,10 +46,8 @@ from agentic_workspace.contract_tooling import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COMMAND_GENERATION_SRC = REPO_ROOT / "internal" / "command-generation" / "src"
-if str(COMMAND_GENERATION_SRC) not in sys.path:
-    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
 
+from command_generation import command_package_schema_path  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
@@ -81,12 +78,12 @@ def _validate(instance: object, schema_name: str) -> list[str]:
 
 def _validate_command_generation_schema_boundary() -> list[str]:
     workspace_schema = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
-    package_schema = REPO_ROOT / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    package_schema = command_package_schema_path()
     errors: list[str] = []
     if not package_schema.is_file():
-        return ["internal/command-generation/schemas/command_package_ir.schema.json is missing"]
+        return ["command-generation packaged command_package_ir.schema.json is missing"]
     if workspace_schema.read_text(encoding="utf-8") != package_schema.read_text(encoding="utf-8"):
-        errors.append("internal/command-generation/schemas/command_package_ir.schema.json drifted from workspace validation schema")
+        errors.append("command-generation packaged command_package_ir.schema.json drifted from workspace validation schema")
     return errors
 
 
@@ -814,7 +811,12 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
     adapters = {adapter["id"]: adapter for adapter in command_adapter_generation_manifest()["adapters"]}
     operations = {operation["id"]: operation for operation in operation_contracts_manifest()["operations"]}
     conformance_refs = {contract["id"] for contract in conformance_contracts_manifest()["contracts"]}
-    primitive_refs = {primitive["id"] for primitive in operation_primitives_manifest()["primitives"]}
+    primitive_entries = {
+        str(primitive["id"]): primitive
+        for primitive in operation_primitives_manifest()["primitives"]
+        if isinstance(primitive, dict) and primitive.get("id")
+    }
+    primitive_refs = set(primitive_entries)
     packages = payload.get("packages", [])
     if not isinstance(packages, list):
         return ["command_package_ir.json packages must be a list"]
@@ -840,15 +842,38 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
             if isinstance(operation_executor, dict):
                 handlers = operation_executor.get("handlers", [])
                 if isinstance(handlers, list):
+                    package_runtime_primitives = {
+                        str(ref)
+                        for command in commands
+                        if isinstance(command, dict) and isinstance(command.get("runtime_binding"), dict)
+                        for ref in command["runtime_binding"].get("primitive_refs", [])
+                    }
                     for handler in handlers:
                         if not isinstance(handler, dict):
                             continue
                         if handler.get("handler") == "function_call":
                             primitive = str(handler.get("primitive", ""))
-                            errors.append(
-                                f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
-                                "declare python.function.call in operation IR instead"
-                            )
+                            primitive_entry = primitive_entries.get(primitive, {})
+                            if primitive not in primitive_entries:
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} uses function_call without "
+                                    "a declared domain-runtime primitive"
+                                )
+                            if primitive == "python.function.call" or primitive_entry.get("portability") == "target-executor":
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
+                                    "declare a named domain-runtime primitive in operation IR instead"
+                                )
+                            if primitive not in package_runtime_primitives:
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} has a function_call handler "
+                                    "but no generated command references that primitive"
+                                )
+                            if primitive_entry.get("taxonomy_tier") == "tier-1-portable-codegen":
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} cannot use function_call for "
+                                    "tier-1 portable codegen behavior"
+                                )
         for command in commands:
             if not isinstance(command, dict):
                 errors.append(f"command_package_ir package {program} command entry must be an object")
@@ -2144,7 +2169,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_adapter_statuses, _ = _generated_command_adapter_statuses()
         print("Contract tooling health report")
         print("- No contract-tooling drift warnings detected.")
-        print("- Command-generation schema boundary: internal/command-generation/schemas/command_package_ir.schema.json mirrors workspace validation schema.")
+        print("- Command-generation schema boundary: packaged command_package_ir.schema.json mirrors workspace validation schema.")
         print("- Generated command adapter status:")
         for status in generated_adapter_statuses:
             commands = ", ".join(str(command) for command in status["command_surfaces"])

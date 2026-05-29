@@ -56,7 +56,7 @@
     {
       "id": "load_promotion_report",
       "uses": "memory.promotion_report.load",
-      "description": "Load the memory package promotion report through a named domain primitive."
+      "description": "Load the Memory package promotion report through a named domain primitive."
     },
     {
       "id": "emit_output",
@@ -81,16 +81,14 @@
         "uses": "memory.promotion_report.load",
         "description": "Load the memory promotion report domain payload for the requested target and filters.",
         "arguments": {
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "mode": {
-              "value": "mode"
-            }
+          "target": {
+            "value": "target"
+          },
+          "notes": {
+            "value": "notes"
+          },
+          "mode": {
+            "value": "mode"
           }
         },
         "outputs": [

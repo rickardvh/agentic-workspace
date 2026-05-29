@@ -24,24 +24,24 @@
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
         {
-          "id": "generated-package-resource-projections",
-          "kind": "temporary-generated-resource-projection",
-          "paths": [
-            "internal/command-generation/src/command_generation/generator.py"
-          ],
-          "owner": "#1100 / #892 tier-7-command-generation-extraction-readiness",
-          "reason": "The generator still renders a small set of generated package-resource command projections and product-shaped output helpers while the operation IR primitives are being normalized.",
-          "migration_path": "Move remaining projection facts into operation contracts, command package IR, or target-local generated resources, then render them through generic command-generation primitives without package-name branches."
-        },
-        {
           "id": "generic-output-compatibility-renderers",
           "kind": "accepted-output-compatibility-boundary",
           "paths": [
-            "internal/command-generation/src/command_generation/primitive_executor.py"
+            "command_generation/primitive_executor.py"
           ],
           "owner": "#892 python completion lane",
           "reason": "The primitive executor owns generic JSON/text emission and keeps compact compatibility renderers for current memory and planning report payload shapes already routed through generated operation IR.",
           "migration_path": "Keep only schema-generic output rendering in command-generation; move package-specific text compatibility to generated target-local resources or package runtime handlers when the compatibility surface stops being universal enough to share."
+        },
+        {
+          "id": "portable-primitive-registry-legacy-ids",
+          "kind": "accepted-primitive-id-vocabulary",
+          "paths": [
+            "command_generation/primitive_registry.py"
+          ],
+          "owner": "#1204 command-generation primitive registry",
+          "reason": "The package-owned registry declares legacy primitive identifiers so host manifests can prove support and unsupported states during extraction.",
+          "migration_path": "Keep primitive identifiers schema-backed and deprecate host-specific names only through explicit registry migrations."
         }
       ]
     },
@@ -137,7 +137,7 @@
       ]
     },
     "python_cli_completion": {
-      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; internal/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
+      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; the command-generation package owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
       "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
@@ -625,11 +625,20 @@
                   "workflow_sufficiency",
                   "authority_hierarchy",
                   "compliance_economics"
-                ]
+                ],
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "compact_profile_ref": ".agentic-workspace/docs/compact-contract-profile.md",
+                "section_command_ref": "agentic-workspace defaults --format json",
+                "section_detail_command": "agentic-workspace defaults --section <section> --format json",
+                "full_detail_command": "agentic-workspace defaults --verbose --format json"
               },
               {
                 "function": "_emit_workspace_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -5059,7 +5068,10 @@
             "generated_function_overrides": [
               {
                 "function": "emit_planning_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -5087,7 +5099,8 @@
             "planning.summary.report",
             "planning.uninstall.lifecycle",
             "planning.upgrade.lifecycle",
-            "planning.verify-payload.report"
+            "planning.verify-payload.report",
+            "planning.list-files.report"
           ],
           "initial_values": [
             {
@@ -5495,8 +5508,32 @@
               "function": "apply_planning_delegation_decision_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             }
+          ],
+          "context_roots": [
+            {
+              "name": "planning.package-payload",
+              "generated_root": "_payload",
+              "required_marker": "AGENTS.template.md"
+            },
+            {
+              "name": "planning.package-skills",
+              "generated_root": "_skills",
+              "required_marker": "REGISTRY.json"
+            }
           ]
-        }
+        },
+        "resource_copies": [
+          {
+            "source_root": "packages/planning/bootstrap",
+            "generated_root": "_payload",
+            "required_marker": "AGENTS.template.md"
+          },
+          {
+            "source_root": "packages/planning/skills",
+            "generated_root": "_skills",
+            "required_marker": "REGISTRY.json"
+          }
+        ]
       },
       "targets": [
         {
@@ -8041,7 +8078,10 @@
             "generated_function_overrides": [
               {
                 "function": "_emit_memory_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -8069,7 +8109,9 @@
             "memory.search.report",
             "memory.verify-payload.report",
             "memory.status.report",
-            "memory.sync-memory.report"
+            "memory.sync-memory.report",
+            "memory.list-files.report",
+            "memory.list-skills.report"
           ],
           "initial_values": [
             {
@@ -8308,6 +8350,23 @@
               "handler": "runtime_handler",
               "function": "_load_memory_prompt",
               "import_module": "repo_memory_bootstrap.runtime_primitives"
+            },
+            {
+              "primitive": "memory.promotion_report.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "promotion_report",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "notes": {
+                  "value": "notes"
+                },
+                "mode": {
+                  "value": "mode"
+                }
+              }
             },
             {
               "primitive": "memory.report.load",

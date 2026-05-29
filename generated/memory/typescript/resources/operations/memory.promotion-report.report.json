@@ -43,16 +43,14 @@
     "steps": [
       {
         "arguments": {
-          "kwargs": {
-            "mode": {
-              "value": "mode"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "target": {
-              "value": "target"
-            }
+          "mode": {
+            "value": "mode"
+          },
+          "notes": {
+            "value": "notes"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the memory promotion report domain payload for the requested target and filters.",
@@ -98,7 +96,7 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Load the memory package promotion report through a named domain primitive.",
+      "description": "Load the Memory package promotion report through a named domain primitive.",
       "id": "load_promotion_report",
       "uses": "memory.promotion_report.load"
     },

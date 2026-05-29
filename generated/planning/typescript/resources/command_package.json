@@ -2494,8 +2494,11 @@
       {
         "generated_function_overrides": [
           {
+            "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",
             "function": "emit_planning_operation_output",
-            "implementation": "json_output_with_source_fallback"
+            "implementation": "json_output_with_source_fallback",
+            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+            "selected_output_kind": "agentic-workspace/selected-output/v1"
           }
         ],
         "module_file": "primitives.planning_runtime",
@@ -2503,6 +2506,18 @@
       }
     ],
     "operation_executor": {
+      "context_roots": [
+        {
+          "generated_root": "_payload",
+          "name": "planning.package-payload",
+          "required_marker": "AGENTS.template.md"
+        },
+        {
+          "generated_root": "_skills",
+          "name": "planning.package-skills",
+          "required_marker": "REGISTRY.json"
+        }
+      ],
       "handlers": [
         {
           "condition_value": "verbose",
@@ -2932,10 +2947,23 @@
         "planning.summary.report",
         "planning.uninstall.lifecycle",
         "planning.upgrade.lifecycle",
-        "planning.verify-payload.report"
+        "planning.verify-payload.report",
+        "planning.list-files.report"
       ]
     },
     "render_runtime_module": true,
+    "resource_copies": [
+      {
+        "generated_root": "_payload",
+        "required_marker": "AGENTS.template.md",
+        "source_root": "packages/planning/bootstrap"
+      },
+      {
+        "generated_root": "_skills",
+        "required_marker": "REGISTRY.json",
+        "source_root": "packages/planning/skills"
+      }
+    ],
     "runtime_module_file": "cli"
   },
   "targets": [

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
 cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")

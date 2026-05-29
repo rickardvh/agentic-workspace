@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning/planning-review.schema.json",
+  "title": "Planning Review Record",
+  "type": "object",
+  "required": ["kind", "title"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "planning-review/v1" },
+    "title": { "type": "string" },
+    "classification": { "type": "string" },
+    "date": { "type": "string" },
+    "goal": { "$ref": "#/$defs/string_or_array" },
+    "scope": { "$ref": "#/$defs/string_or_array" },
+    "non_goals": { "$ref": "#/$defs/string_or_array" },
+    "review_mode": { "$ref": "#/$defs/string_map" },
+    "review_method": { "$ref": "#/$defs/string_map" },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reference" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "issue_classifications": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "recommendation": { "$ref": "#/$defs/string_map" },
+    "retention": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string" },
+          { "$ref": "#/$defs/string_array" }
+        ]
+      }
+    },
+    "prose_templates": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/prose_template" }
+    },
+    "validation_commands": { "$ref": "#/$defs/string_array" },
+    "drift_log": { "$ref": "#/$defs/string_array" },
+    "summary": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "object" }
+      ]
+    },
+    "summary_counts": { "type": "object" },
+    "classification_legend": { "type": "object" },
+    "lane_impacts": { "type": "array" }
+  },
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "string_or_array": {
+      "anyOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/string_array" }
+      ]
+    },
+    "string_map": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "array" },
+          { "type": "object" },
+          { "type": "boolean" },
+          { "type": "number" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "kind": { "type": "string" },
+        "target": { "type": "string" },
+        "label": { "type": "string" },
+        "role": { "type": "string" },
+        "locator": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "evidence": { "type": "string" },
+        "risk if unchanged": { "type": "string" },
+        "suggested action": { "type": "string" },
+        "confidence": { "type": "string" },
+        "source": { "type": "string" },
+        "promotion target": { "type": "string" },
+        "promotion trigger": { "type": "string" },
+        "post-remediation note shape": { "type": "string" }
+      }
+    },
+    "prose_template": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "sections": { "$ref": "#/$defs/string_array" },
+        "field_map": { "$ref": "#/$defs/string_map" },
+        "rule": { "type": "string" }
+      }
+    }
+  }
+}
+

@@ -22,7 +22,6 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 for SOURCE_ROOT in (
     REPO_ROOT / "src",
-    REPO_ROOT / "internal" / "command-generation" / "src",
     REPO_ROOT / "packages" / "planning" / "src",
     REPO_ROOT / "packages" / "memory" / "src",
     REPO_ROOT / "packages" / "verification" / "src",
@@ -30,9 +29,14 @@ for SOURCE_ROOT in (
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
 
+import command_generation  # noqa: E402
+from command_generation import CommandGenerationHostManifest, PrimitiveRegistry, command_package_schema_path, render_outputs  # noqa: E402
+from command_generation.generated_package_loader import (  # noqa: E402
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
 from jsonschema import Draft202012Validator  # noqa: E402
 from workspace_command_generation import (  # noqa: E402
-    SCHEMA_PATH,
     SOURCE_PATH,
     load_workspace_command_package_ir,
     render_workspace_command_package_outputs,
@@ -43,10 +47,6 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
-)
-from command_generation.generated_package_loader import (  # noqa: E402
-    load_generated_command_module_for_entrypoint,
-    load_generated_command_package_for_entrypoint,
 )
 
 SelectedFields = Callable[[str], dict[str, object]]
@@ -215,7 +215,6 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json": (
         "historical generated target-layout migration context"
     ),
-    "internal/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
     "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
     "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
     "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
@@ -234,7 +233,8 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
-COMMAND_GENERATION_SOURCE_ROOT = "internal/command-generation/src/command_generation"
+COMMAND_GENERATION_PACKAGE_ROOT = Path(command_generation.__file__).resolve().parent
+COMMAND_GENERATION_SOURCE_ROOT = "command_generation"
 COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
     "agentic_workspace",
     "repo_planning_bootstrap",
@@ -403,7 +403,6 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
         str(REPO_ROOT / "packages" / "planning" / "src"),
         str(REPO_ROOT / "packages" / "memory" / "src"),
         str(REPO_ROOT / "packages" / "verification" / "src"),
-        str(REPO_ROOT / "internal" / "command-generation" / "src"),
     ]
     existing_pythonpath = env.get("PYTHONPATH")
     if existing_pythonpath:
@@ -1427,58 +1426,29 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
     return findings
 
 
-def _validate_direct_generated_python_command_projection() -> list[str]:
+def _validate_portable_resource_python_command_projection() -> list[str]:
     errors: list[str] = []
-    direct_commands = {
+    portable_commands = {
         "memory.list-files.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_files_report.py",
         "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
         "planning.list-files.report": REPO_ROOT / "generated" / "planning" / "python" / "commands" / "planning_list_files_report.py",
     }
     forbidden_fragments = (
-        "generated_operation_contract",
-        "run_operation_ir",
         "command_generation.primitive_executor",
         "repo_memory_bootstrap.runtime_primitives",
         "repo_planning_bootstrap.runtime_projection",
     )
-    required_fragments_by_operation = {
-        "memory.list-files.report": (
-            "from ..primitives.resources import (",
-            "project_payload_entries(",
-            "resolve_repo_target_root(getattr(args, 'target', None), PROJECT_MARKERS)",
-            "def _assemble_payload(",
-            "emit_action_report(payload, str(getattr(args, 'format', 'text') or 'text'))",
-        ),
-        "memory.list-skills.report": (
-            "from ..primitives.resources import find_resource_root, read_json_object",
-            "def _assemble_payload(",
-            "def _emit_output(",
-            "registry = read_json_object(skills_root, 'REGISTRY.json')",
-        ),
-        "planning.list-files.report": (
-            "from ..primitives.resources import emit_json_or_lines, find_resource_root, list_resource_files",
-            "payload_root = find_resource_root(__file__, PAYLOAD_ROOT_CANDIDATES)",
-            "skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)",
-            "def _assemble_payload(",
-            "list_resource_files(payload_root)",
-            "emit_json_or_lines(payload, str(getattr(args, 'format', 'text') or 'text'), line_field='files')",
-        ),
-    }
-    for operation_id, path in direct_commands.items():
+    for operation_id, path in portable_commands.items():
         if not path.is_file():
-            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for direct generated command {operation_id}")
+            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for portable generated command {operation_id}")
             continue
         text = path.read_text(encoding="utf-8")
+        if "run_operation_ir(generated_operation_contract(" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} must execute {operation_id} through generated operation IR")
         for fragment in forbidden_fragments:
             if fragment in text:
                 errors.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} must not contain {fragment!r}"
-                )
-        for fragment in required_fragments_by_operation[operation_id]:
-            if fragment not in text:
-                errors.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
-                    f"must contain concrete primitive fragment {fragment!r}"
+                    f"{path.relative_to(REPO_ROOT).as_posix()} portable generated command {operation_id} must not contain {fragment!r}"
                 )
     return errors
 
@@ -1702,6 +1672,16 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             facade_keys = {key for key in expected_keys if key[0] == "runtime-facade-call" and key[1] == facade_path}
             if facade_keys and facade_keys <= accepted_keys:
                 accepted_nonblocking_paths.add(facade_path)
+        operation_executor_by_operation_prefix = {
+            "generated/workspace/python/operations/": "generated/workspace/python/primitives/operation_executor.py",
+            "generated/planning/python/operations/": "generated/planning/python/primitives/operation_executor.py",
+            "generated/memory/python/operations/": "generated/memory/python/primitives/operation_executor.py",
+            "generated/verification/python/operations/": "generated/verification/python/primitives/operation_executor.py",
+        }
+        for prefix, executor_path in operation_executor_by_operation_prefix.items():
+            operation_keys = {key for key in expected_keys if key[0] == "operation-function-call" and key[1].startswith(prefix)}
+            if operation_keys and operation_keys <= accepted_keys:
+                accepted_nonblocking_paths.add(executor_path)
         for source_path, keys in source_path_keys.items():
             if keys and keys <= accepted_keys:
                 accepted_nonblocking_paths.add(source_path)
@@ -2236,7 +2216,8 @@ def _source_tree_python_files() -> list[str]:
         REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
         REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap",
-        REPO_ROOT / "internal" / "command-generation" / "src" / "command_generation",
+        REPO_ROOT / "scripts" / "check",
+        REPO_ROOT / "scripts" / "generate",
     ]
     paths = []
     for root in roots:
@@ -2297,9 +2278,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
     tracked_sources = _tracked_python_source_files()
     for relative_path in tracked_sources:
         is_shipped_module_source = relative_path.startswith(PYTHON_SHIPPED_MODULE_SOURCE_ROOTS)
-        is_product_command_generation_source = relative_path.startswith(
-            "internal/command-generation/src/command_generation/"
-        ) and relative_path.endswith(PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS)
+        is_product_command_generation_source = False
         if not is_shipped_module_source and not is_product_command_generation_source:
             continue
         path = REPO_ROOT / relative_path
@@ -2466,11 +2445,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.verify-payload.report",
         "planning.list-files.report",
     }
-    expected_primitive_executors = {
-        "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
-        "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
-        "planning.list-files.report": "generated/planning/python/commands/planning_list_files_report.py",
-    }
+    expected_primitive_executors: dict[str, str] = {}
     for operation_id in sorted(ir_consumed_operations):
         entry = by_operation.get(operation_id)
         if not isinstance(entry, dict):
@@ -2484,7 +2459,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
         expected_primitive_executor = expected_primitive_executors.get(
             operation_id,
-            "internal/command-generation/src/command_generation/primitive_executor.py",
+            "command_generation/primitive_executor.py",
         )
         if entry.get("primitive_executor") != expected_primitive_executor:
             errors.append(f"{operation_id} must point at {expected_primitive_executor}")
@@ -2632,11 +2607,20 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must use the generated target-root primitive instead of memory runtime")
     if "resolve_repo_target_root(values.get('target')" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must render target-root resolution through target-local resource primitives")
-    for direct_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
-        if direct_operation_id in memory_operation_executor_text:
-            errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
-    if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
-        errors.append("memory promotion-report must execute through declared memory.promotion_report.load, not a runtime facade handler")
+    for portable_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
+        if portable_operation_id not in memory_operation_executor_text:
+            errors.append(f"{portable_operation_id} must be supported by memory run_operation_ir")
+    promotion_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.promotion-report.report.json"
+    if promotion_operation.is_file():
+        promotion_text = promotion_operation.read_text(encoding="utf-8")
+        if '"uses": "memory.promotion_report.load"' not in promotion_text:
+            errors.append("generated memory promotion-report operation must execute through declared memory.promotion_report.load")
+        if '"uses": "python.function.call"' in promotion_text:
+            errors.append("generated memory promotion-report operation must not expose python.function.call in operation IR")
+    else:
+        errors.append("generated memory promotion-report operation is missing")
+    if "_handle_memory_promotion_report_load" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must render the declared memory.promotion_report.load host-domain handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (
@@ -2675,8 +2659,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         facade_path = REPO_ROOT / "generated" / "planning" / "python" / "primitives" / facade_name
         if not facade_path.is_file():
             errors.append(f"generated planning runtime facade is missing: {facade_path.relative_to(REPO_ROOT).as_posix()}")
-    if "planning.list-files.report" in planning_operation_executor_text:
-        errors.append("planning.list-files.report must be executed by its direct generated command module, not planning run_operation_ir")
+    if "planning.list-files.report" not in planning_operation_executor_text:
+        errors.append("planning.list-files.report must be supported by planning run_operation_ir")
     if "planning.list-files.load" in planning_operation_executor_text:
         errors.append("planning.list-files.load must not remain as dead handler wiring in planning run_operation_ir")
     planning_runtime_text = (REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "planning_runtime.py").read_text(
@@ -2992,8 +2976,11 @@ def _source_import_roots(text: str) -> set[str]:
 
 
 def _command_generation_source_files() -> list[Path]:
-    source_root = REPO_ROOT / COMMAND_GENERATION_SOURCE_ROOT
-    return sorted(path for path in source_root.rglob("*.py") if path.is_file())
+    return sorted(path for path in COMMAND_GENERATION_PACKAGE_ROOT.rglob("*.py") if path.is_file())
+
+
+def _command_generation_relative(path: Path) -> str:
+    return f"{COMMAND_GENERATION_SOURCE_ROOT}/{path.relative_to(COMMAND_GENERATION_PACKAGE_ROOT).as_posix()}"
 
 
 def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str], list[str]]:
@@ -3029,7 +3016,7 @@ def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str]
             if not relative_path.startswith(f"{COMMAND_GENERATION_SOURCE_ROOT}/"):
                 errors.append(f"{location} path is outside command-generation source: {relative_path}")
                 continue
-            if not (REPO_ROOT / relative_path).is_file():
+            if not (COMMAND_GENERATION_PACKAGE_ROOT.parent / relative_path).is_file():
                 errors.append(f"{location} path does not exist: {relative_path}")
                 continue
             accepted_paths.add(relative_path)
@@ -3040,7 +3027,7 @@ def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> 
     accepted_paths, errors = _accepted_extraction_coupling_paths(ir)
     product_literal_paths: set[str] = set()
     for source_path in _command_generation_source_files():
-        relative_path = _repo_relative(source_path)
+        relative_path = _command_generation_relative(source_path)
         text = source_path.read_text(encoding="utf-8")
         forbidden_imports = sorted(set(COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS) & _source_import_roots(text))
         if forbidden_imports:
@@ -3056,6 +3043,194 @@ def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> 
     stale_inventory = sorted(accepted_paths - product_literal_paths)
     if stale_inventory:
         errors.append(f"command-generation extraction-readiness inventory is stale for paths without product literals: {stale_inventory!r}")
+    return errors
+
+
+def _validate_command_generation_non_aw_fixture() -> list[str]:
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="command-generation-non-aw-fixture-") as tmp:
+        root = Path(tmp)
+        (root / "contracts" / "operations").mkdir(parents=True)
+        (root / "payload").mkdir()
+        (root / "payload" / "todos.json").write_text(
+            json.dumps([{"title": "Write proof"}, {"title": "Run proof"}]),
+            encoding="utf-8",
+        )
+        operation = {
+            "schema_version": "fixture-operation/v1",
+            "id": "todo.list.report",
+            "migration_status": "runtime-consumed",
+            "ir_plan": {
+                "status": "complete",
+                "steps": [
+                    {
+                        "id": "read_todos",
+                        "uses": "filesystem.read",
+                        "arguments": {"root": "todo.payload", "path": "todos.json"},
+                        "outputs": ["todo_text"],
+                    },
+                    {"id": "parse_todos", "uses": "json.parse", "arguments": {"source": "todo_text"}, "outputs": ["todos"]},
+                    {
+                        "id": "assemble",
+                        "uses": "payload.assemble",
+                        "arguments": {
+                            "fields": {
+                                "template": {
+                                    "kind": "todo-list/v1",
+                                    "item_count": {"$count": "todos"},
+                                    "items": {"$value": "todos"},
+                                }
+                            }
+                        },
+                        "outputs": ["result"],
+                    },
+                    {"id": "emit", "uses": "output.emit", "outputs": ["emitted"]},
+                ],
+            },
+        }
+        (root / "contracts" / "operations" / "todo.list.report.json").write_text(json.dumps(operation), encoding="utf-8")
+        manifest = {
+            "schema_version": "agentic-workspace/command-package-ir/v1",
+            "summary": "Non-AW fixture command package.",
+            "schema": "schemas/command_package_ir.schema.json",
+            "source_contracts": ["contracts/operations/todo.list.report.json"],
+            "generation_policy": {
+                "non_python_runtime_binding": {"selected_model": "native runtime"},
+                "generated_package_maturity": {
+                    "levels": [
+                        {
+                            "id": "weak-agent-safe-adapter",
+                            "summary": "Runnable fixture.",
+                            "runnable": True,
+                            "runtime_backed": True,
+                            "weak_agent_routing": "allowed-read-only",
+                            "promotion_requires": ["fixture proof"],
+                        }
+                    ]
+                },
+            },
+            "packages": [
+                {
+                    "id": "todo-fixture",
+                    "program": "todoctl",
+                    "package_role": "fixture-cli",
+                    "operation_contract_root": "contracts",
+                    "version_metadata": {"source": "python-package-metadata", "distribution": "todo-fixture", "fallback_version": "0.0.0"},
+                    "targets": [
+                        {
+                            "kind": "python",
+                            "package_name": "todo-fixture",
+                            "generated_root": "todo_cli_pkg",
+                            "entrypoints": ["todoctl"],
+                            "test_environment": "python-dev",
+                            "maturity_level_ref": "weak-agent-safe-adapter",
+                        }
+                    ],
+                    "commands": [
+                        {
+                            "adapter_id": "todo.list.cli",
+                            "status": "generated",
+                            "command": {"name": "list"},
+                            "interface": {
+                                "name": "list",
+                                "help": "List todos.",
+                                "options": [
+                                    {
+                                        "name": "format",
+                                        "flags": ["--format"],
+                                        "choices": ["text", "json"],
+                                        "default": "json",
+                                        "help": "Output format.",
+                                    }
+                                ],
+                            },
+                            "operation_ref": {"id": "todo.list.report", "path": "operations/todo.list.report.json"},
+                            "runtime_binding": {
+                                "kind": "operation-primitive-sequence",
+                                "primitive_refs": ["filesystem.read", "json.parse", "payload.assemble", "output.emit"],
+                            },
+                            "schemas": {"input": [], "output": []},
+                            "effect_hints": {
+                                "read_only": True,
+                                "destructive": False,
+                                "idempotent": True,
+                                "writes_repo_state": False,
+                                "requires_preflight_gate": False,
+                            },
+                            "conformance_refs": ["todo.list.process"],
+                            "projection_boundary": {
+                                "universal": ["command identity"],
+                                "target_specific": ["parser wiring"],
+                                "runtime_owned": ["portable primitive execution"],
+                            },
+                        }
+                    ],
+                    "python_runtime_binding": {
+                        "entrypoint": "todoctl",
+                        "default_runtime_command": "python -m todo_cli_pkg.cli",
+                        "runtime_module_file": "cli",
+                        "render_runtime_module": True,
+                        "resource_copies": [{"source_root": "payload", "generated_root": "_payload", "required_marker": "todos.json"}],
+                        "operation_executor": {
+                            "module_file": "primitives.operation_executor",
+                            "supported_operation_ids": ["todo.list.report"],
+                            "initial_values": [{"name": "format", "arg": "format", "default": "json"}],
+                            "context_roots": [{"name": "todo.payload", "generated_root": "_payload", "required_marker": "todos.json"}],
+                            "handlers": [],
+                        },
+                        "runtime_module_handlers": [],
+                        "local_runtime_bindings": [],
+                    },
+                }
+            ],
+        }
+        try:
+            outputs = render_outputs(
+                manifest,
+                repo_root=root,
+                source_path="fixture-command-package-ir.json",
+                regenerate_command="fixture generate",
+                host_manifest=CommandGenerationHostManifest(primitive_registry=PrimitiveRegistry.from_definitions([])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return [f"command-generation non-AW fixture did not render: {exc}"]
+        for output in outputs:
+            output.path.parent.mkdir(parents=True, exist_ok=True)
+            output.path.write_text(output.content, encoding="utf-8")
+        generated_text = "\n".join(
+            output.content
+            for output in outputs
+            if output.path.suffix == ".py" and output.path.name != "primitive_executor.py"
+        )
+        forbidden = sorted(token for token in COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS if token in generated_text)
+        if forbidden:
+            errors.append(f"command-generation non-AW fixture rendered product literals: {forbidden!r}")
+        result = subprocess.run(
+            [
+                _python_executable(),
+                "-c",
+                (
+                    "import json, sys; sys.path.insert(0, sys.argv[1]); "
+                    "from todo_cli_pkg.cli import main; "
+                    "raise SystemExit(main(['list', '--format', 'json']))"
+                ),
+                str(root),
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            errors.append(f"command-generation non-AW fixture command failed: {result.stderr.strip()}")
+        else:
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"command-generation non-AW fixture did not emit JSON: {exc}: {result.stdout!r}")
+            else:
+                if payload.get("item_count") != 2:
+                    errors.append(f"command-generation non-AW fixture emitted wrong item_count: {payload!r}")
     return errors
 
 
@@ -3226,6 +3401,77 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     return errors
 
 
+def _run_representative_typescript_native_commands(*, require_node: bool) -> list[str]:
+    errors: list[str] = []
+    node = shutil.which("node")
+    if node is None:
+        message = "representative TypeScript native command proof skipped: node is not available"
+        if require_node:
+            return [message]
+        print(message)
+        return []
+
+    planning_cli = REPO_ROOT / "generated" / "planning" / "typescript" / "src" / "cli.mjs"
+    if not planning_cli.is_file():
+        return ["representative TypeScript native command proof cannot run: generated planning CLI is missing"]
+
+    with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-typescript-smoke-") as tmp:
+        fixture_root = Path(tmp)
+        json_result = _capture(
+            [node, str(planning_cli), "list-files", "--format", "json"],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=""),
+        )
+        if json_result.returncode != 0:
+            errors.append(
+                "representative TypeScript native command failed: planning list-files --format json "
+                f"exit={json_result.returncode}, stderr={json_result.stderr!r}"
+            )
+        elif json_result.stderr.strip():
+            errors.append(
+                "representative TypeScript native command emitted unexpected stderr: "
+                f"planning list-files --format json stderr={json_result.stderr!r}"
+            )
+        else:
+            try:
+                payload = json.loads(json_result.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(
+                    "representative TypeScript native command did not emit JSON: "
+                    f"planning list-files --format json {exc}; stdout={json_result.stdout!r}"
+                )
+            else:
+                if ".agentic-workspace/docs/execution-flow-contract.md" not in payload.get("default_files", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted default_files")
+                if ".agentic-workspace/docs/capability-contract.json" not in payload.get("optional_files", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted optional_files")
+                if "agentic-planning install --include-optional" not in payload.get("optional_enable_commands", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted optional_enable_commands")
+
+        text_result = _capture(
+            [node, str(planning_cli), "list-files", "--format", "text"],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=""),
+        )
+        if text_result.returncode != 0:
+            errors.append(
+                "representative TypeScript native command failed: planning list-files --format text "
+                f"exit={text_result.returncode}, stderr={text_result.stderr!r}"
+            )
+        elif text_result.stderr.strip():
+            errors.append(
+                "representative TypeScript native command emitted unexpected stderr: "
+                f"planning list-files --format text stderr={text_result.stderr!r}"
+            )
+        else:
+            lines = {line.strip() for line in text_result.stdout.splitlines() if line.strip()}
+            if ".agentic-workspace/docs/execution-flow-contract.md" not in lines:
+                errors.append("representative TypeScript planning list-files text omitted default payload file")
+            if ".agentic-workspace/docs/capability-contract.json" not in lines:
+                errors.append("representative TypeScript planning list-files text omitted optional payload file")
+    return errors
+
+
 def _validate_static_surfaces() -> list[str]:
     errors: list[str] = []
     expected_levels = {
@@ -3238,11 +3484,11 @@ def _validate_static_surfaces() -> list[str]:
         "deferred",
     }
     ir_path = REPO_ROOT / SOURCE_PATH
-    schema_path = REPO_ROOT / SCHEMA_PATH
+    schema_path = command_package_schema_path()
     if not ir_path.is_file():
         errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
     if not schema_path.is_file():
-        errors.append("internal/command-generation/schemas/command_package_ir.schema.json is missing")
+        errors.append("command-generation packaged command_package_ir.schema.json is missing")
     if errors:
         return errors
     try:
@@ -3251,6 +3497,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
         errors.extend(_validate_command_generation_extraction_readiness(ir))
+        errors.extend(_validate_command_generation_non_aw_fixture())
         errors.extend(_validate_generated_operation_cli_inputs(ir))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}
@@ -3440,7 +3687,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_target_layout())
-        errors.extend(_validate_direct_generated_python_command_projection())
+        errors.extend(_validate_portable_resource_python_command_projection())
         errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
@@ -3476,9 +3723,16 @@ def _validate_static_surfaces() -> list[str]:
     primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
     if not primitive_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.primitive-conformance is missing")
-    primitive_conformance_script = REPO_ROOT / "internal" / "command-generation" / "tests" / "primitive_conformance.py"
-    if not primitive_conformance_script.is_file():
-        errors.append("internal/command-generation/tests/primitive_conformance.py is missing")
+    try:
+        import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
+    except ModuleNotFoundError:
+        primitive_conformance_script = None
+    else:
+        primitive_conformance_script = Path(primitive_conformance.__file__).resolve()
+    if primitive_conformance_script is None:
+        errors.append("command_generation.primitive_conformance is missing")
+    elif not primitive_conformance_script.is_file():
+        errors.append("command_generation.primitive_conformance is missing")
     else:
         primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
         for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
@@ -3642,7 +3896,7 @@ def _run_docker(
 
 
 def _run_primitive_conformance() -> int:
-    return _run([_python_executable(), "internal/command-generation/tests/primitive_conformance.py"])
+    return _run([_python_executable(), "-m", "command_generation.primitive_conformance"])
 
 
 def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, object]:
@@ -3824,6 +4078,13 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(error)
         return 1
+    if args.require_node:
+        native_smoke_errors = _run_representative_typescript_native_commands(require_node=True)
+        if native_smoke_errors:
+            for error in native_smoke_errors:
+                print(error)
+            return 1
+        print("[ok] representative TypeScript native command proof")
     if args.python_conformance:
         python_conformance_errors = _run_python_adapter_conformance()
         if python_conformance_errors:

@@ -1,0 +1,176 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Non-AW command-generation fixture package",
+  "canonical_core": {
+    "requested_outcome": "Add a small non-AW command package fixture that proves command-generation works without AW names, runtime modules, or repository layout assumptions.",
+    "hard_constraints": "Keep command-generation as a maintainer dependency only; AW remains the owner of AW command meaning, generated outputs, and runtime-boundary policy.",
+    "agent_may_decide": "Implementation order, helper names, and validation tightening inside this lane.",
+    "escalate_when": "The lane needs command semantic drift, runtime dependency drift, or files outside the declared owner surfaces.",
+    "next_action": "Create the fixture package, render it through public APIs, and add conformance/freshness tests for portable and custom primitive cases.",
+    "proof_expectations": [
+      "uv --directory ../command-generation run pytest -q"
+    ],
+    "touched_scope": [
+      "../command-generation/examples/",
+      "../command-generation/tests/",
+      "../command-generation/src/command_generation/",
+      "../command-generation/README.md"
+    ],
+    "completion_criteria": [
+      "The non-AW fixture renders through public command-generation APIs.",
+      "Its generated Python command package runs at least one portable operation.",
+      "A custom primitive is implemented or reports a clear unsupported error.",
+      "Tests fail if the fixture imports AW modules, paths, or command names."
+    ],
+    "continuation_owner": "command-generation-extraction-epic",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Add a small non-AW command package fixture that proves command-generation works without AW names, runtime modules, or repository layout assumptions."
+  ],
+  "non_goals": [
+    "Do not build a polished product example.",
+    "Do not require full TypeScript target parity."
+  ],
+  "parent_lane": {
+    "id": "command-generation-extraction-epic",
+    "source": "GitHub #1201",
+    "decomposition": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+    "depends_on": [
+      "command-generation-public-api-host-manifest",
+      "command-generation-primitive-registry"
+    ]
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete command-generation extraction across GitHub #1201-#1208.",
+    "this slice completes the larger intended outcome": "no, it completes one child lane",
+    "continuation surface": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+    "parent lane": "GitHub #1201"
+  },
+  "execution_bounds": {
+    "allowed paths": "../command-generation/examples/; ../command-generation/tests/; ../command-generation/src/command_generation/; ../command-generation/README.md",
+    "required validation commands": "uv --directory ../command-generation run pytest -q",
+    "ask-before-refactor threshold": "Ask before changing command semantics, generated package layout, runtime dependency policy, or unrelated package internals.",
+    "stop before touching": "Unrelated AW runtime behavior, unrelated package internals, or generated outputs not covered by freshness proof."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "route chosen": "keep-local",
+    "reason": "The current branch spans two repos and active PR context; hand off only after a lane becomes isolated and mechanical."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The epic changes ownership and dependency boundaries across AW and command-generation.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "#1206",
+      "#1201"
+    ],
+    "proof_profiles": [
+      "cross-repo tests",
+      "generated-output freshness",
+      "runtime dependency boundary",
+      "static coupling checks"
+    ],
+    "required_gates": [
+      "issue acceptance mapping",
+      "no shipped command-generation runtime dependency",
+      "dogfooding issue routing"
+    ]
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1206",
+      "label": "GitHub #1206",
+      "role": "source",
+      "locator": ""
+    },
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+      "label": "command-generation extraction decomposition",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "command-generation-non-aw-fixture",
+    "status": "planned",
+    "scope": "Add a small non-AW command package fixture that proves command-generation works without AW names, runtime modules, or repository layout assumptions.",
+    "ready": "ready after dependency lanes complete: command-generation-public-api-host-manifest, command-generation-primitive-registry",
+    "blocked": "none currently known",
+    "optional_deps": "command-generation-public-api-host-manifest, command-generation-primitive-registry"
+  },
+  "immediate_next_action": [
+    "Create the fixture package, render it through public APIs, and add conformance/freshness tests for portable and custom primitive cases."
+  ],
+  "blockers": [
+    "None currently known; dependency order is recorded in the decomposition."
+  ],
+  "touched_paths": [
+    "../command-generation/examples/",
+    "../command-generation/tests/",
+    "../command-generation/src/command_generation/",
+    "../command-generation/README.md"
+  ],
+  "invariants": [
+    "Do not add command-generation to AW runtime dependencies.",
+    "Do not hide AW-specific behavior inside generic command_generation renderers.",
+    "Generated package proof remains the freshness and target-proof authority."
+  ],
+  "validation_commands": [
+    "uv --directory ../command-generation run pytest -q"
+  ],
+  "required_tools": [
+    "uv",
+    "pytest",
+    "GitHub CLI for publish/cross-checks"
+  ],
+  "completion_criteria": [
+    "The non-AW fixture renders through public command-generation APIs.",
+    "Its generated Python command package runs at least one portable operation.",
+    "A custom primitive is implemented or reports a clear unsupported error.",
+    "Tests fail if the fixture imports AW modules, paths, or command names."
+  ],
+  "proof_expectations": [
+    "Package tests render and execute the fixture through public APIs.",
+    "Fixture static checks prove no AW imports, paths, or command names are required."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "current branch",
+    "handoff source": "GitHub #1206 and command-generation extraction decomposition",
+    "what happened": "planning scaffold tightened before implementation continuation",
+    "scope touched": "planning only so far",
+    "changed surfaces": ".agentic-workspace/planning/execplans/command-generation-non-aw-fixture.plan.json",
+    "validations run": "pending",
+    "result for continuation": "execute only when dependencies are satisfied",
+    "next step": "Create the fixture package, render it through public APIs, and add conformance/freshness tests for portable and custom primitive cases."
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "planning record created and bounded",
+    "evidence for proof achieved state": "Registered execplan plus parent decomposition reference."
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "open",
+    "closure decision": "pending",
+    "why this decision is honest": "No lane is closed by planning alone; implementation proof must satisfy the issue criteria.",
+    "evidence carried forward": "https://github.com/rickardvh/agentic-workspace/issues/1206",
+    "reopen trigger": "Any acceptance criterion is missing, validation fails, or command-generation becomes an AW runtime dependency."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "signals found": [
+      "The agent started direct implementation of an eight-issue epic before promoting the roadmap candidates into decomposition and execplan surfaces."
+    ],
+    "signals routed": [
+      "GitHub #1215 tracks the epic candidate-lane promotion guardrail discovered during dogfooding."
+    ],
+    "next owner": "GitHub #1215"
+  }
+}

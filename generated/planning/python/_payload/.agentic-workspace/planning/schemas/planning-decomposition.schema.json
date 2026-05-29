@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning/planning-decomposition.schema.json",
+  "title": "Planning Decomposition Record",
+  "type": "object",
+  "required": [
+    "kind",
+    "title",
+    "status",
+    "larger_intended_outcome",
+    "non_goals",
+    "candidate_lanes",
+    "proof_expectations",
+    "promotion_rule"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "planning-decomposition/v1"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "shaping",
+        "ready-for-lane-promotion",
+        "partially-promoted",
+        "closed"
+      ]
+    },
+    "larger_intended_outcome": {
+      "type": "string"
+    },
+    "non_goals": {
+      "$ref": "#/$defs/string_array"
+    },
+    "candidate_lanes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/candidate_lane"
+      }
+    },
+    "dependency_assumptions": {
+      "$ref": "#/$defs/string_array"
+    },
+    "parallelization_assumptions": {
+      "$ref": "#/$defs/string_array"
+    },
+    "proof_expectations": {
+      "$ref": "#/$defs/string_array"
+    },
+    "promotion_rule": {
+      "type": "string"
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reference"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "candidate_lane": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "readiness",
+        "outcome",
+        "owner_surface"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "readiness": {
+          "enum": [
+            "needs-shaping",
+            "ready",
+            "promoted",
+            "blocked",
+            "deferred"
+          ]
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "owner_surface": {
+          "type": "string"
+        },
+        "proof": {
+          "type": "string"
+        },
+        "depends_on": {
+          "$ref": "#/$defs/string_array"
+        },
+        "parallel_with": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+

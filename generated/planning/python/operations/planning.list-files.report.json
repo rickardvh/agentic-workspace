@@ -55,7 +55,46 @@
         "uses": "filesystem.glob"
       },
       {
-        "arguments": {},
+        "arguments": {
+          "fields": {
+            "bundled_skill_files_from": "bundled_skill_files",
+            "default_files": [
+              "AGENTS.template.md",
+              ".agentic-workspace/docs/execution-flow-contract.md",
+              ".agentic-workspace/docs/system-intent-contract.md",
+              ".agentic-workspace/docs/routing-contract.md",
+              ".agentic-workspace/docs/minimum-operating-model.md",
+              ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+              ".agentic-workspace/docs/workspace-config-contract.md",
+              ".agentic-workspace/planning/execplans/README.md",
+              ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+              ".agentic-workspace/planning/execplans/archive/README.md",
+              ".agentic-workspace/planning/decompositions/README.md",
+              ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+              ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+              ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+              ".agentic-workspace/planning/schemas/planning-review.schema.json",
+              ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+              ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+              ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+              ".agentic-workspace/planning/agent-manifest.json"
+            ],
+            "files_from": "files",
+            "optional_enable_commands": [
+              "agentic-planning install --include-optional",
+              "agentic-planning adopt --include-optional",
+              "agentic-planning upgrade --include-optional"
+            ],
+            "optional_files": [
+              ".agentic-workspace/docs/capability-contract.json",
+              ".agentic-workspace/planning/reviews/README.md",
+              ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+              ".agentic-workspace/planning/upstream-task-intake.md",
+              ".agentic-workspace/planning/pre-ingestion-refinement.md"
+            ],
+            "payload_kind": "package-file-list"
+          }
+        },
         "description": "Build the planning list-files payload from package resources and static enablement commands.",
         "id": "assemble_payload",
         "inputs": [

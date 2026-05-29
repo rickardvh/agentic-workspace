@@ -1,0 +1,336 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Plan Title",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "",
+    "hard_constraints": "",
+    "agent_may_decide": "",
+    "escalate_when": "",
+    "next_action": "",
+    "proof_expectations": [],
+    "touched_scope": [],
+    "completion_criteria": [],
+    "continuation_owner": "",
+    "closeout_decision": ""
+  },
+  "goal": [
+    ""
+  ],
+  "non_goals": [
+    ""
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "",
+      "constraints": "",
+      "latitude": "",
+      "escalation": ""
+    },
+    "execution": {
+      "milestone": "",
+      "status": "",
+      "next_step": "",
+      "proof": ""
+    },
+    "scope": {
+      "touched": [],
+      "invariants": []
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "",
+    "this slice completes the larger intended outcome": "",
+    "continuation surface": "",
+    "parent lane": ""
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "",
+    "owner surface": "",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "",
+    "intentionally deferred": "",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "",
+    "next likely slice": ""
+  },
+  "intent_interpretation": {
+    "literal request": "",
+    "inferred intended outcome": "",
+    "chosen concrete what": "",
+    "interpretation distance": "",
+    "review guidance": ""
+  },
+  "execution_bounds": {
+    "allowed paths": "",
+    "max changed files": "",
+    "required validation commands": "",
+    "ask-before-refactor threshold": "",
+    "stop before touching": ""
+  },
+  "stop_conditions": {
+    "stop when": "",
+    "escalate when boundary reached": "",
+    "escalate on scope drift": "",
+    "escalate on proof failure": ""
+  },
+  "context_budget": {
+    "live working set": "",
+    "recoverable later": "",
+    "externalize before shift": "",
+    "pre-work config pull": "",
+    "pre-work memory pull": "",
+    "tiny resumability note": "",
+    "context-shift triggers": ""
+  },
+  "delegated_judgment": {
+    "requested outcome": "",
+    "hard constraints": "",
+    "agent may decide locally": "",
+    "escalate when": ""
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After the slice is bounded, choose whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "adaptive_assurance": {
+    "level": "low",
+    "reason": "",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [],
+    "proof_profiles": [],
+    "required_gates": []
+  },
+  "traceability_refs": {
+    "requirement_refs": [],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [],
+    "risk_refs": [],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [],
+    "decision_refs": []
+  },
+  "control_gates": [],
+  "implementation_blockers": [],
+  "risk_registry_refs": [],
+  "invariant_refs": [],
+  "test_data_policy": {
+    "classification": "",
+    "forbidden": [],
+    "fixture_owner": "",
+    "proof_required": [],
+    "refs": []
+  },
+  "layer_scaffold": {
+    "type": "",
+    "required_refs": [],
+    "common_risks": [],
+    "suggested_proof_profiles": [],
+    "suggested_gates": [],
+    "non_goals": [],
+    "durable_residue_prompts": []
+  },
+  "architecture_decision_promotion": {
+    "status": "none",
+    "target": "",
+    "decision_refs": [],
+    "promotion_needed": false,
+    "notes": ""
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "",
+      "target": "",
+      "label": "",
+      "role": "",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "",
+    "status": "",
+    "scope": "",
+    "ready": "",
+    "blocked": "",
+    "optional_deps": ""
+  },
+  "immediate_next_action": [
+    ""
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ""
+  ],
+  "invariants": [
+    ""
+  ],
+  "contract_decisions_to_freeze": [
+    ""
+  ],
+  "open_questions_to_close": [
+    ""
+  ],
+  "validation_commands": [
+    ""
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    ""
+  ],
+  "execution_run": {
+    "run status": "",
+    "executor": "",
+    "handoff source": "",
+    "what happened": "",
+    "scope touched": "",
+    "changed surfaces": "",
+    "validations run": "",
+    "result for continuation": "",
+    "next step": ""
+  },
+  "finished_run_review": {
+    "review status": "",
+    "scope respected": "",
+    "proof status": "",
+    "intent served": "",
+    "config compliance": "",
+    "misinterpretation risk": "",
+    "follow-on decision": ""
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "",
+    "route skipped reason": "",
+    "expected savings": "",
+    "actual friction": "",
+    "proof result": "",
+    "quality concern": "",
+    "decomposition adjustment": ""
+  },
+  "proof_report": {
+    "validation proof": "",
+    "proof achieved now": "",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "",
+    "was original intent fully satisfied?": "",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": ""
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "",
+    "slice shaping bias": "",
+    "broader-lane validation question": "",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "pending",
+    "memory consult recommended?": "pending",
+    "memory notes read": "",
+    "future agents should not rediscover": "pending",
+    "decision": "pending",
+    "target": "",
+    "reason": "Choose one: none, update_existing_memory_note, create_memory_note, promote_to_docs_contracts_checks_code, route_to_planning, evidence_only."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "",
+    "motivation worth preserving": "",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "execution_summary": {
+    "outcome delivered": "",
+    "validation confirmed": "",
+    "follow-on routed to": "",
+    "post-work posterity capture": "",
+    "knowledge promoted (Memory/Docs/Config)": "",
+    "resume from": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "drift_log": [
+    "2026-01-01: Initial plan created."
+  ]
+}

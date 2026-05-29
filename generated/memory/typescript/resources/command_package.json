@@ -2587,8 +2587,11 @@
       {
         "generated_function_overrides": [
           {
+            "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",
             "function": "_emit_memory_operation_output",
-            "implementation": "json_output_with_source_fallback"
+            "implementation": "json_output_with_source_fallback",
+            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+            "selected_output_kind": "agentic-workspace/selected-output/v1"
           }
         ],
         "module_file": "primitives.memory_runtime",
@@ -2641,6 +2644,23 @@
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.prompt.render"
+        },
+        {
+          "function": "promotion_report",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "mode": {
+              "value": "mode"
+            },
+            "notes": {
+              "value": "notes"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.promotion_report.load"
         },
         {
           "function": "_load_memory_report",
@@ -2875,7 +2895,9 @@
         "memory.search.report",
         "memory.verify-payload.report",
         "memory.status.report",
-        "memory.sync-memory.report"
+        "memory.sync-memory.report",
+        "memory.list-files.report",
+        "memory.list-skills.report"
       ]
     },
     "render_runtime_module": true,

@@ -1,0 +1,29 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Epic-shaped request decomposition",
+  "status": "shaping",
+  "larger_intended_outcome": "Describe the larger outcome before choosing implementation lanes.",
+  "non_goals": [
+    "Do not put milestone execution detail here; promote ready slices into execplans."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "lane-1",
+      "title": "First bounded lane",
+      "readiness": "needs-shaping",
+      "outcome": "The bounded result this lane would deliver.",
+      "owner_surface": "",
+      "proof": "High-level proof expectation; exact commands belong in the execplan.",
+      "depends_on": [],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [],
+  "parallelization_assumptions": [],
+  "proof_expectations": [
+    "Each promoted lane records narrow validation in its execplan."
+  ],
+  "promotion_rule": "Promote only lanes with clear outcome, owner surface, proof expectation, and bounded write scope.",
+  "references": [],
+  "notes": ""
+}

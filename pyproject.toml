@@ -19,6 +19,7 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
+  "command-generation",
   "jsonschema",
   "pre-commit",
   "pytest",
@@ -33,14 +34,13 @@ dev = [
 package = true
 
 [tool.uv.sources]
-command-generation = { workspace = true }
+command-generation = { git = "https://github.com/rickardvh/command-generation.git", rev = "5fdfcf6f84ae398f4cebfdb7899f762bb2550f1b" }
 agentic-memory = { workspace = true }
 agentic-planning = { workspace = true }
 agentic-verification = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-  "internal/command-generation",
   "packages/memory",
   "packages/planning",
   "packages/verification",
@@ -84,7 +84,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 140
 target-version = "py311"
-src = ["src", "tests", "internal/command-generation/src"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 ignore = ["E501"]
