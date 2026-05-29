@@ -3401,6 +3401,77 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     return errors
 
 
+def _run_representative_typescript_native_commands(*, require_node: bool) -> list[str]:
+    errors: list[str] = []
+    node = shutil.which("node")
+    if node is None:
+        message = "representative TypeScript native command proof skipped: node is not available"
+        if require_node:
+            return [message]
+        print(message)
+        return []
+
+    planning_cli = REPO_ROOT / "generated" / "planning" / "typescript" / "src" / "cli.mjs"
+    if not planning_cli.is_file():
+        return ["representative TypeScript native command proof cannot run: generated planning CLI is missing"]
+
+    with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-typescript-smoke-") as tmp:
+        fixture_root = Path(tmp)
+        json_result = _capture(
+            [node, str(planning_cli), "list-files", "--format", "json"],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=""),
+        )
+        if json_result.returncode != 0:
+            errors.append(
+                "representative TypeScript native command failed: planning list-files --format json "
+                f"exit={json_result.returncode}, stderr={json_result.stderr!r}"
+            )
+        elif json_result.stderr.strip():
+            errors.append(
+                "representative TypeScript native command emitted unexpected stderr: "
+                f"planning list-files --format json stderr={json_result.stderr!r}"
+            )
+        else:
+            try:
+                payload = json.loads(json_result.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(
+                    "representative TypeScript native command did not emit JSON: "
+                    f"planning list-files --format json {exc}; stdout={json_result.stdout!r}"
+                )
+            else:
+                if ".agentic-workspace/docs/execution-flow-contract.md" not in payload.get("default_files", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted default_files")
+                if ".agentic-workspace/docs/capability-contract.json" not in payload.get("optional_files", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted optional_files")
+                if "agentic-planning install --include-optional" not in payload.get("optional_enable_commands", []):
+                    errors.append("representative TypeScript planning list-files JSON omitted optional_enable_commands")
+
+        text_result = _capture(
+            [node, str(planning_cli), "list-files", "--format", "text"],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=""),
+        )
+        if text_result.returncode != 0:
+            errors.append(
+                "representative TypeScript native command failed: planning list-files --format text "
+                f"exit={text_result.returncode}, stderr={text_result.stderr!r}"
+            )
+        elif text_result.stderr.strip():
+            errors.append(
+                "representative TypeScript native command emitted unexpected stderr: "
+                f"planning list-files --format text stderr={text_result.stderr!r}"
+            )
+        else:
+            lines = {line.strip() for line in text_result.stdout.splitlines() if line.strip()}
+            if ".agentic-workspace/docs/execution-flow-contract.md" not in lines:
+                errors.append("representative TypeScript planning list-files text omitted default payload file")
+            if ".agentic-workspace/docs/capability-contract.json" not in lines:
+                errors.append("representative TypeScript planning list-files text omitted optional payload file")
+    return errors
+
+
 def _validate_static_surfaces() -> list[str]:
     errors: list[str] = []
     expected_levels = {
@@ -4007,6 +4078,13 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(error)
         return 1
+    if args.require_node:
+        native_smoke_errors = _run_representative_typescript_native_commands(require_node=True)
+        if native_smoke_errors:
+            for error in native_smoke_errors:
+                print(error)
+            return 1
+        print("[ok] representative TypeScript native command proof")
     if args.python_conformance:
         python_conformance_errors = _run_python_adapter_conformance()
         if python_conformance_errors:

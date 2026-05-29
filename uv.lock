@@ -145,7 +145,7 @@ wheels = [
 [[package]]
 name = "command-generation"
 version = "0.1.0"
-source = { git = "https://github.com/rickardvh/command-generation.git?branch=master#965bdf5d4690af43bae83990896bad32a1e6e924" }
+source = { git = "https://github.com/rickardvh/command-generation.git?branch=master#5fdfcf6f84ae398f4cebfdb7899f762bb2550f1b" }
 dependencies = [
     { name = "jsonschema" },
 ]

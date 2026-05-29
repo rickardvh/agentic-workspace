@@ -157,6 +157,15 @@ function stringList(value, source) {
   return value;
 }
 
+function relativePathList(value, source) {
+  if (!Array.isArray(value)) throw new RuntimeError(`${source} must be a list`);
+  return value.map((item) => {
+    if (typeof item === 'string') return item;
+    if (isObject(item) && typeof item.relative_path === 'string') return item.relative_path;
+    throw new RuntimeError(`${source} entries must be strings or objects with relative_path`);
+  });
+}
+
 function conditionMatches(condition, values) {
   if (condition === undefined || condition === null || (isObject(condition) && Object.keys(condition).length === 0)) return true;
   if (!isObject(condition)) throw new RuntimeError('step when condition must be an object');
@@ -314,6 +323,7 @@ function emitOutput(values, args = {}) {
   if (isObject(result) && result.kind === 'memory-module-report/v1') return emitMemoryReportText(result);
   if (isObject(result) && result.kind === 'planning-module-report/v1' && result.profile === 'tiny') return emitPlanningReportText(result);
   if (!isObject(result)) return `${result}\n`;
+  if (Array.isArray(result.files) && result.files.every((item) => typeof item === 'string')) return `${result.files.join('\n')}\n`;
   const lines = [String(result.message ?? result.kind ?? '')];
   for (const action of listObjects(result.actions ?? [], 'result.actions')) lines.push(`- ${action.path ?? action.id ?? action.kind}`);
   return `${lines.join('\n').trimEnd()}\n`;
@@ -322,12 +332,15 @@ function emitOutput(values, args = {}) {
 function assemblePayload(values, args) {
   const fields = args.fields ?? {};
   if (fields.template !== undefined) return resolveTemplate(fields.template, values);
-  if (Object.keys(args).length === 0 && Array.isArray(values.files)) {
+  if (fields.payload_kind === 'package-file-list') {
+    const filesFrom = String(fields.files_from ?? 'files');
+    const bundledSkillsFrom = String(fields.bundled_skill_files_from ?? 'bundled_skill_files');
     return {
-      dry_run: true,
-      files: values.files,
-      bundled_skill_files: values.bundled_skill_files ?? [],
-      optional_enable_commands: ['agentic-planning install --include-optional', 'agentic-planning adopt --include-optional', 'agentic-planning upgrade --include-optional'],
+      files: relativePathList(values[filesFrom] ?? [], filesFrom),
+      default_files: stringList(fields.default_files ?? [], 'payload.assemble fields.default_files'),
+      optional_files: stringList(fields.optional_files ?? [], 'payload.assemble fields.optional_files'),
+      bundled_skill_files: relativePathList(values[bundledSkillsFrom] ?? [], bundledSkillsFrom),
+      optional_enable_commands: stringList(fields.optional_enable_commands ?? [], 'payload.assemble fields.optional_enable_commands'),
     };
   }
   const targetRoot = values.target_root;
