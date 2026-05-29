@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Command-generation extraction epic decomposition",
-  "status": "partially-promoted",
+  "status": "closed",
   "larger_intended_outcome": "Extract command-generation from Agentic Workspace as an independently installable maintainer/source-checkout package while AW remains the host for command meaning, generated outputs, domain primitives, runtime-boundary policy, and packaging proof.",
   "non_goals": [
     "Do not close GitHub #1201 from a partial slice or planning artifact alone.",
@@ -164,5 +164,5 @@
       "role": "dogfooding follow-up"
     }
   ],
-  "notes": "Created after dogfooding showed the eight ingested GitHub candidates had been implemented against directly without first promoting them into durable decomposition and execplan surfaces. Follow-up guardrail filed as GitHub #1215."
+  "notes": "Closed after PR #1210 merged into master. Dogfooding follow-up remains in GitHub #1215."
 }

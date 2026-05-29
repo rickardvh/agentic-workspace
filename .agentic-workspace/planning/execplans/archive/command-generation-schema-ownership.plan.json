@@ -1,0 +1,308 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command-generation generic schema ownership",
+  "canonical_core": {
+    "requested_outcome": "Move or mirror generic command package schemas under command-generation ownership while AW keeps only AW-specific contracts and data.",
+    "hard_constraints": "Keep command-generation as a maintainer dependency only; AW remains the owner of AW command meaning, generated outputs, and runtime-boundary policy.",
+    "agent_may_decide": "Implementation order, helper names, and validation tightening inside this lane.",
+    "escalate_when": "The lane needs command semantic drift, runtime dependency drift, or files outside the declared owner surfaces.",
+    "next_action": "Inventory generic schemas, wire package-owned schema resolution, and leave explicit mirror/removal checks for temporary AW copies.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run pytest tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py -q",
+      "uv --directory ../command-generation run pytest -q"
+    ],
+    "touched_scope": [
+      "../command-generation/src/command_generation/schemas/",
+      "../command-generation/schemas/",
+      "../command-generation/src/command_generation/ir.py",
+      "src/agentic_workspace/contracts/schemas/",
+      "scripts/check/",
+      "tests/test_command_generation_artifacts.py"
+    ],
+    "completion_criteria": [
+      "Generic command package, operation, primitive, and conformance schemas have package-owned paths.",
+      "AW validation resolves generic schemas through explicit package APIs or paths.",
+      "Any remaining AW mirror has an equality check and removal path."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Move or mirror generic command package schemas under command-generation ownership while AW keeps only AW-specific contracts and data."
+  ],
+  "non_goals": [
+    "Do not move AW command data or AW operation contracts into command-generation.",
+    "Do not rewrite schema semantics broadly."
+  ],
+  "parent_lane": {
+    "id": "command-generation-extraction-epic",
+    "source": "GitHub #1201",
+    "decomposition": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+    "depends_on": [
+      "command-generation-public-api-host-manifest"
+    ]
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete command-generation extraction across GitHub #1201-#1208.",
+    "this slice completes the larger intended outcome": "no, it completes one child lane",
+    "continuation surface": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+    "parent lane": "GitHub #1201"
+  },
+  "execution_bounds": {
+    "allowed paths": "../command-generation/src/command_generation/schemas/; ../command-generation/schemas/; ../command-generation/src/command_generation/ir.py; src/agentic_workspace/contracts/schemas/; scripts/check/; tests/test_command_generation_artifacts.py",
+    "required validation commands": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py -q; uv --directory ../command-generation run pytest -q",
+    "ask-before-refactor threshold": "Ask before changing command semantics, generated package layout, runtime dependency policy, or unrelated package internals.",
+    "stop before touching": "Unrelated AW runtime behavior, unrelated package internals, or generated outputs not covered by freshness proof.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "route chosen": "keep-local",
+    "reason": "The current branch spans two repos and active PR context; hand off only after a lane becomes isolated and mechanical."
+  },
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The epic changes ownership and dependency boundaries across AW and command-generation. Closeout gate normalized after PR #1210 merge; literal issue refs are carried in references/closure evidence, not adaptive required_refs.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": false,
+    "required_refs": [],
+    "proof_profiles": [
+      "cross-repo tests",
+      "generated-output freshness",
+      "runtime dependency boundary",
+      "static coupling checks"
+    ],
+    "required_gates": [
+      "issue acceptance mapping",
+      "no shipped command-generation runtime dependency",
+      "dogfooding issue routing"
+    ]
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1203",
+      "label": "GitHub #1203",
+      "role": "source",
+      "locator": ""
+    },
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+      "label": "command-generation extraction decomposition",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "command-generation-schema-ownership",
+    "status": "completed",
+    "scope": "Move or mirror generic command package schemas under command-generation ownership while AW keeps only AW-specific contracts and data.",
+    "ready": "ready after dependency lanes complete: command-generation-public-api-host-manifest",
+    "blocked": "none currently known",
+    "optional_deps": "command-generation-public-api-host-manifest"
+  },
+  "immediate_next_action": [
+    "Inventory generic schemas, wire package-owned schema resolution, and leave explicit mirror/removal checks for temporary AW copies."
+  ],
+  "blockers": [
+    "None currently known; dependency order is recorded in the decomposition."
+  ],
+  "touched_paths": [
+    "../command-generation/src/command_generation/schemas/",
+    "../command-generation/schemas/",
+    "../command-generation/src/command_generation/ir.py",
+    "src/agentic_workspace/contracts/schemas/",
+    "scripts/check/",
+    "tests/test_command_generation_artifacts.py"
+  ],
+  "invariants": [
+    "Do not add command-generation to AW runtime dependencies.",
+    "Do not hide AW-specific behavior inside generic command_generation renderers.",
+    "Generated package proof remains the freshness and target-proof authority."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run pytest tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py -q",
+    "uv --directory ../command-generation run pytest -q",
+    "rg -n \"command-generation-schema-ownership|schema ownership|schema_ownership\" .agentic-workspace src tests packages"
+  ],
+  "required_tools": [
+    "uv",
+    "pytest",
+    "GitHub CLI for publish/cross-checks"
+  ],
+  "completion_criteria": [
+    "Generic command package, operation, primitive, and conformance schemas have package-owned paths.",
+    "AW validation resolves generic schemas through explicit package APIs or paths.",
+    "Any remaining AW mirror has an equality check and removal path."
+  ],
+  "proof_expectations": [
+    "Schema ownership is proven by package tests and AW generated package checks.",
+    "No repository-relative schema assumption remains in generic package code."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current branch",
+    "handoff source": "GitHub #1203 and command-generation extraction decomposition",
+    "what happened": "PR #1210 merged into master; this planning item is no longer live execution state.",
+    "scope touched": "planning only so far",
+    "changed surfaces": ".agentic-workspace/planning/execplans/command-generation-schema-ownership.plan.json",
+    "validations run": "PR #1210 CI passed after merge; local cleanup validation rerun after archive.",
+    "result for continuation": "live planning state should be closed; dogfooding follow-up remains in GitHub #1215.",
+    "next step": "Inventory generic schemas, wire package-owned schema resolution, and leave explicit mirror/removal checks for temporary AW copies."
+  },
+  "proof_report": {
+    "validation proof": "PR #1210 merged into master with green CI.",
+    "proof achieved now": "merged",
+    "evidence for \"proof achieved\" state": "PR #1210 CI passed after merge; local cleanup validation rerun after archive."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Merged extraction PR completed the tracked planning lane; keeping it live after merge is stale planning state.",
+    "evidence carried forward": "GitHub PR #1210 merged; master includes command-generation extraction changes.",
+    "reopen trigger": "Reopen if the linked extraction issue is reopened or extraction validation regresses."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "signals found": [
+      "The agent started direct implementation of an eight-issue epic before promoting the roadmap candidates into decomposition and execplan surfaces."
+    ],
+    "signals routed": [
+      "GitHub #1215 tracks the epic candidate-lane promotion guardrail discovered during dogfooding."
+    ],
+    "next owner": "GitHub #1215",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals fixed": [],
+    "signals dismissed": []
+  },
+  "intent_satisfaction": {
+    "original intent": "Command-generation generic schema ownership",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR #1210 merged into master with green CI.",
+    "unsolved intent passed to": "none"
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the archived proof record.",
+    "motivation worth preserving": "none beyond evidence-only archive",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "evidence_only",
+    "target": "archive",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "none beyond evidence-only archive",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "machine_readable_contract": {
+    "intent": {
+      "proof": "PR #1210 merged into master with green CI."
+    },
+    "execution": {
+      "proof": "PR #1210 merged into master with green CI."
+    },
+    "scope": {
+      "touched": [
+        "closeout scope recorded in closure_check and generated_closeout."
+      ]
+    }
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The bounded slice completed with recorded closeout evidence.",
+    "proof achieved now": "merged",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice.",
+    "intentionally deferred": "None.",
+    "discovered implications": "None beyond the recorded closeout distillation."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "merged",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "GitHub #1215 tracks the epic candidate-lane promotion guardrail discovered during dogfooding.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub #1215 for the dogfooding guardrail follow-up.",
+          "owner": "GitHub PR #1210 merged; master includes command-generation extraction changes.",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #1203",
+          "owner": "issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/1203"
+        }
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Command-generation generic schema ownership\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: PR #1210 merged into master with green CI.\nChanged surfaces: .agentic-workspace/planning/execplans/command-generation-schema-ownership.plan.json\nDurable residue: evidence_only (archive)\nMemory learning: evidence_only\nFollow-up: GitHub #1215 for the dogfooding guardrail follow-up."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Move or mirror generic command package schemas under command-generation ownership while AW keeps only AW-specific contracts and data.",
+    "hard constraints": "Keep command-generation as a maintainer dependency only; AW remains the owner of AW command meaning, generated outputs, and runtime-boundary policy.",
+    "agent may decide locally": "Implementation order, helper names, and validation tightening inside this lane.",
+    "escalate when": "The lane needs command semantic drift, runtime dependency drift, or files outside the declared owner surfaces."
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1210 merged into master and delivered the command-generation extraction work tracked by this plan.",
+    "validation confirmed": "GitHub CI passed for merged PR #1210; local cleanup validation runs after stale planning state is archived.",
+    "follow-on routed to": "GitHub #1215 for the dogfooding guardrail follow-up.",
+    "post-work posterity capture": "Archived execplan retains closeout evidence; decomposition marked closed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "no active planning item; reopen linked issue or #1215 if needed"
+  }
+}
