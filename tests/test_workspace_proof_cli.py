@@ -632,6 +632,58 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
     assert payload["manual_verification"] is None
 
 
+def test_proof_changed_treats_plain_python_project_as_discovery_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["agentic-workspace"]
+""",
+    )
+    _write(tmp_path / "uv.lock", "# lock\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "pyproject.toml", "uv.lock", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest" not in answer["required_commands"]
+    assert answer["manual_verification"]["status"] == "required"
+    pytest_capability = answer["target_proof_capabilities"]["python"]["pytest"]
+    assert pytest_capability["status"] == "candidate"
+    assert pytest_capability["authority"] == "candidate-discovery"
+    assert answer["target_proof_capabilities"]["role_commands"] == {}
+    learning = answer["host_repo_learning"]
+    assert learning["authority_rule"].startswith("Host-repo heuristics may propose discovery candidates")
+    assert learning["negative_evidence"]["status"] == "present"
+    assert {item["command"] for item in learning["negative_evidence"]["items"]} == {"make test-workspace", "make lint-workspace"}
+    assert "Memory" in learning["negative_evidence"]["items"][0]["owner_options"]
+
+
+def test_proof_changed_uses_declared_pytest_dependency_as_confirmed_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["pytest>=8"]
+""",
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "pyproject.toml", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "uv run pytest" in payload["required_commands"]
+    pytest_capability = payload["target_proof_capabilities"]["python"]["pytest"]
+    assert pytest_capability["status"] == "confirmed"
+    assert pytest_capability["evidence"] == [
+        {"state": "confirmed", "source": "declared-dependency", "path": "pyproject.toml:project.dependencies"}
+    ]
+
+
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -650,6 +702,8 @@ line-length = 120
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["uv run pytest", "uv run ruff check ."]
     assert payload["target_proof_capabilities"]["python"]["available"] is True
+    assert payload["target_proof_capabilities"]["python"]["pytest"]["status"] == "confirmed"
+    assert payload["target_proof_capabilities"]["python"]["pytest"]["authority"] == "confirmed-repo-evidence"
     assert payload["target_proof_capabilities"]["role_commands"] == {
         "test": ["uv run pytest"],
         "lint": ["uv run ruff check ."],

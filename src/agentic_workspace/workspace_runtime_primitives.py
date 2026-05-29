@@ -24292,6 +24292,7 @@ def _project_root_record(*, target_root: Path, project_root: Path, source: str, 
     make_targets = _makefile_targets(project_root)
     package_scripts = _package_json_scripts(project_root)
     role_commands = _target_role_command_candidates(target_root=project_root, package_scripts=package_scripts)
+    python_capability = _python_proof_capability(project_root)
     candidate_commands: list[str] = []
     for script_name in ("test", "lint", "check", "typecheck"):
         if script_name in package_scripts:
@@ -24309,11 +24310,7 @@ def _project_root_record(*, target_root: Path, project_root: Path, source: str, 
         "changed_path_matched": changed_path_match_count > 0,
         "make": {"available": make_targets is not None, "targets": sorted(make_targets or [])},
         "package_json": {"available": bool((project_root / "package.json").is_file()), "scripts": sorted(package_scripts)},
-        "python": {
-            "available": bool(
-                (project_root / "pyproject.toml").is_file() or (project_root / "pytest.ini").is_file() or (project_root / "tests").exists()
-            )
-        },
+        "python": python_capability,
         "role_commands": role_commands,
         "candidate_commands": _dedupe(candidate_commands),
     }
@@ -24660,12 +24657,80 @@ def _proof_route_decision_payload(
     }
 
 
+def _host_repo_learning_posture_payload(
+    *,
+    target_capabilities: dict[str, Any],
+    learned_route_hints: dict[str, Any],
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+) -> dict[str, Any]:
+    stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
+    negative_items: list[dict[str, Any]] = []
+    for command in unavailable_commands:
+        command_text = str(command.get("command", "")).strip()
+        if not command_text:
+            continue
+        negative_items.append(
+            {
+                "state": "negative",
+                "command": command_text,
+                "scope": str(command.get("lane", "")) or "proof-selection",
+                "provenance": str(command.get("reason", "")) or "proof selection could not confirm command availability",
+                "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+            }
+        )
+    for hint in stale_hints:
+        command_text = str(hint.get("candidate_command", "")).strip()
+        if not command_text:
+            continue
+        negative_items.append(
+            {
+                "state": "stale",
+                "command": command_text,
+                "scope": str(hint.get("intent_type", "")) or "learned proof route",
+                "provenance": f"learned hint from {hint.get('source_path') or hint.get('source') or 'unknown source'} was not live-confirmed",
+                "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+            }
+        )
+    return {
+        "kind": "host-repo-learning-posture/v1",
+        "status": "active",
+        "authority_rule": "Host-repo heuristics may propose discovery candidates; authoritative workflow and proof decisions require confirmed repo evidence or host configuration.",
+        "evidence_states": ["candidate", "confirmed", "stale", "negative", "superseded"],
+        "owner_routes": [
+            {
+                "owner": "Memory",
+                "use_when": "durable repo fact, recurring trap, operator runbook, or confirmed/negative proof-route lesson",
+            },
+            {"owner": "config", "use_when": "stable host policy, required proof profile, or disallowed command"},
+            {"owner": "canonical docs", "use_when": "human-facing workflow or release/build/test policy"},
+            {"owner": "tests/checks", "use_when": "the lesson can become enforceable validation"},
+            {"owner": "Planning", "use_when": "active or bounded future work needs sequencing"},
+            {"owner": "issue follow-up", "use_when": "product or repo improvement needs review and prioritization"},
+            {"owner": "local-only scratch", "use_when": "machine-local probe output that should not become shared authority"},
+        ],
+        "proof_selection_contract": {
+            "candidate_sources": ["changed paths", "language/project markers", "setup/adopt proof-route hints"],
+            "confirmed_sources": ["host config/proof profiles", "live target capabilities", "confirmed learned hints"],
+            "not_authoritative": ["filenames alone", "language markers alone", "AW source-repo lane names in another host repo"],
+            "target_capability_status": target_capabilities.get("status", "unknown"),
+        },
+        "negative_evidence": {
+            "status": "present" if negative_items else "none",
+            "items": negative_items,
+            "recording_rule": "Failed or absent commands should be routed as negative evidence instead of being retried later as confirmed proof.",
+        },
+        "host_policy_blocked_count": len(host_policy_blocked_commands),
+    }
+
+
 def _proof_route_explanation_payload(
     *,
     proof_intents: list[dict[str, Any]],
     configured_policy: list[dict[str, Any]],
     learned_route_hints: dict[str, Any],
     target_capabilities: dict[str, Any],
+    host_repo_learning: dict[str, Any],
     selected_commands: list[dict[str, Any]],
     unavailable_commands: list[dict[str, Any]],
     host_policy_blocked_commands: list[dict[str, str]],
@@ -24688,6 +24753,7 @@ def _proof_route_explanation_payload(
         "learned_route_hints": learned_route_hints,
         "setup_adopt_route_learning": _setup_adopt_route_learning_projection(learned_route_hints),
         "target_capabilities": target_capabilities,
+        "host_repo_learning": host_repo_learning,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
@@ -24758,20 +24824,14 @@ def _target_proof_capabilities(
     role_commands = _target_role_command_candidates(target_root=target_root, package_scripts=package_scripts)
     has_makefile = bool(target_root is not None and (target_root / "Makefile").is_file())
     has_package_json = bool(target_root is not None and (target_root / "package.json").is_file())
+    python_capability = _python_proof_capability(target_root)
     capabilities: dict[str, Any] = {
         "kind": "target-proof-capabilities/v1",
         "status": "discovered" if target_root is not None else "source-default",
         "target_root": "." if target_root is None else target_root.as_posix(),
         "make": {"available": has_makefile, "targets": sorted(make_targets or [])},
         "package_json": {"available": has_package_json, "scripts": sorted(package_scripts)},
-        "python": {
-            "available": bool(
-                target_root is not None
-                and (
-                    (target_root / "pyproject.toml").is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists()
-                )
-            )
-        },
+        "python": python_capability,
         "rust": {"available": bool(target_root is not None and (target_root / "Cargo.toml").is_file())},
         "go": {"available": bool(target_root is not None and (target_root / "go.mod").is_file())},
         "java": {
@@ -24838,6 +24898,89 @@ def _package_script_command_for_role(*, role: str | None, package_scripts: dict[
     return None
 
 
+def _dependency_name(specifier: Any) -> str:
+    text = str(specifier).strip()
+    match = re.match(r"^\s*([A-Za-z0-9_.-]+)", text)
+    if not match:
+        return ""
+    return match.group(1).replace("_", "-").lower()
+
+
+def _dependency_entries(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, dict):
+        return [item for items in value.values() if isinstance(items, list) for item in items]
+    return []
+
+
+def _pyproject_dependency_locations(*, payload: dict[str, Any], package_name: str) -> list[str]:
+    expected = package_name.replace("_", "-").lower()
+    locations: list[str] = []
+    project = payload.get("project", {}) if isinstance(payload.get("project"), dict) else {}
+    for field_name in ("dependencies", "optional-dependencies"):
+        if any(_dependency_name(item) == expected for item in _dependency_entries(project.get(field_name))):
+            locations.append(f"project.{field_name}")
+    dependency_groups = payload.get("dependency-groups", {})
+    if any(_dependency_name(item) == expected for item in _dependency_entries(dependency_groups)):
+        locations.append("dependency-groups")
+    tool = payload.get("tool", {}) if isinstance(payload.get("tool"), dict) else {}
+    uv = tool.get("uv", {}) if isinstance(tool.get("uv"), dict) else {}
+    if any(_dependency_name(item) == expected for item in _dependency_entries(uv.get("dev-dependencies"))):
+        locations.append("tool.uv.dev-dependencies")
+    return _dedupe(locations)
+
+
+def _python_proof_capability(target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {
+            "available": False,
+            "pytest": {"status": "unavailable", "command": "", "evidence": []},
+            "rule": "Python proof commands require confirmed repo evidence.",
+        }
+    pyproject_path = target_root / "pyproject.toml"
+    pyproject_text = ""
+    pyproject_payload: dict[str, Any] = {}
+    if pyproject_path.is_file():
+        try:
+            pyproject_text = pyproject_path.read_text(encoding="utf-8-sig")
+            loaded = tomllib.loads(pyproject_text)
+            pyproject_payload = loaded if isinstance(loaded, dict) else {}
+        except (OSError, tomllib.TOMLDecodeError):
+            pyproject_text = ""
+            pyproject_payload = {}
+
+    evidence: list[dict[str, str]] = []
+    candidate_markers: list[dict[str, str]] = []
+    if pyproject_path.is_file():
+        candidate_markers.append({"state": "candidate", "source": "pyproject", "path": "pyproject.toml"})
+    tests_path = target_root / "tests"
+    if tests_path.exists():
+        candidate_markers.append({"state": "candidate", "source": "tests-directory", "path": "tests"})
+    if (target_root / "pytest.ini").is_file():
+        evidence.append({"state": "confirmed", "source": "pytest-config", "path": "pytest.ini"})
+    tool = pyproject_payload.get("tool", {}) if isinstance(pyproject_payload.get("tool"), dict) else {}
+    if isinstance(tool.get("pytest"), dict):
+        evidence.append({"state": "confirmed", "source": "pytest-config", "path": "pyproject.toml"})
+    for location in _pyproject_dependency_locations(payload=pyproject_payload, package_name="pytest"):
+        evidence.append({"state": "confirmed", "source": "declared-dependency", "path": f"pyproject.toml:{location}"})
+
+    status = "confirmed" if evidence else "candidate" if candidate_markers else "unavailable"
+    return {
+        "available": bool(evidence or candidate_markers),
+        "pytest": {
+            "status": status,
+            "command": "uv run pytest" if status == "confirmed" else "",
+            "evidence": evidence or candidate_markers,
+            "authority": "confirmed-repo-evidence" if status == "confirmed" else "candidate-discovery",
+        },
+        "rule": (
+            "pyproject.toml and tests/ are discovery hints only; pytest proof is executable only when pytest is configured "
+            "or declared by the target repo."
+        ),
+    }
+
+
 def _target_role_command_candidates(*, target_root: Path | None, package_scripts: dict[str, str]) -> dict[str, list[str]]:
     role_commands: dict[str, list[str]] = {"test": [], "lint": [], "check": [], "typecheck": []}
     if "test" in package_scripts:
@@ -24849,6 +24992,7 @@ def _target_role_command_candidates(*, target_root: Path | None, package_scripts
         role_commands["lint"].append("npm run check")
     if target_root is None:
         return {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+    python_capability = _python_proof_capability(target_root)
     pyproject_path = target_root / "pyproject.toml"
     pyproject_text = ""
     if pyproject_path.is_file():
@@ -24856,7 +25000,7 @@ def _target_role_command_candidates(*, target_root: Path | None, package_scripts
             pyproject_text = pyproject_path.read_text(encoding="utf-8-sig")
         except OSError:
             pyproject_text = ""
-    if pyproject_path.is_file() or (target_root / "pytest.ini").is_file() or (target_root / "tests").exists():
+    if python_capability.get("pytest", {}).get("status") == "confirmed":
         role_commands["test"].append("uv run pytest")
     if (
         (target_root / "ruff.toml").is_file()
@@ -25905,11 +26049,18 @@ def _proof_selection_for_changed_paths(
         manual_verification=manual_verification,
         unavailable_commands=unavailable_commands,
     )
+    host_repo_learning = _host_repo_learning_posture_payload(
+        target_capabilities=target_capabilities,
+        learned_route_hints=learned_route_hints,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+    )
     proof_route_explanation = _proof_route_explanation_payload(
         proof_intents=proof_intents,
         configured_policy=configured_policy,
         learned_route_hints=learned_route_hints,
         target_capabilities=target_capabilities,
+        host_repo_learning=host_repo_learning,
         selected_commands=selected_commands,
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
@@ -25969,6 +26120,7 @@ def _proof_selection_for_changed_paths(
             ],
         },
         "target_proof_capabilities": target_capabilities,
+        "host_repo_learning": host_repo_learning,
         "learned_route_hints": learned_route_hints,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
