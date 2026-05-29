@@ -1931,7 +1931,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = planning_main(_planning_module_argv(args))
-    print(buffer.getvalue().replace("agentic-planning ", "agentic-workspace planning "), end="")
+    print(_rewrite_module_cli_commands(buffer.getvalue()), end="")
     return result
 
 
