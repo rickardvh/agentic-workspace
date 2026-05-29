@@ -12237,7 +12237,7 @@ def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[
             "path": relative_path,
             "reason": "candidate append would make planning state invalid",
             "parser_error": str(exc),
-            "error_location": {"line": exc.lineno, "column": exc.colno},
+            "error_location": {"line": getattr(exc, "lineno", None), "column": getattr(exc, "colno", None)},
             "recovery": "Inspect the reported TOML location, then ensure [roadmap] has one candidates array before rerunning.",
             "applied_count": 0,
             "candidate_ids": [candidate["id"] for candidate in candidates],
@@ -16552,20 +16552,26 @@ def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
     skip_dirs = {".git", ".hg", ".svn", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "dist", "build", "node_modules"}
     suffixes = {".py", ".json", ".toml", ".yaml", ".yml", ".md"}
     files: list[Path] = []
-    for path in target_root.rglob("*"):
+    for root, dirnames, filenames in os.walk(target_root):
+        dirnames[:] = sorted(dirname for dirname in dirnames if dirname not in skip_dirs and not dirname.startswith(".uv-cache"))
+        root_path = Path(root)
+        for filename in sorted(filenames):
+            if len(files) >= 800:
+                break
+            path = root_path / filename
+            if path.suffix not in suffixes:
+                continue
+            try:
+                relative_parts = path.relative_to(target_root).parts
+            except ValueError:
+                relative_parts = path.parts
+            if any(part in skip_dirs or part.startswith(".uv-cache") for part in relative_parts):
+                continue
+            if not path.is_file():
+                continue
+            files.append(path)
         if len(files) >= 800:
             break
-        try:
-            relative_parts = path.relative_to(target_root).parts
-        except ValueError:
-            relative_parts = path.parts
-        if (
-            not path.is_file()
-            or path.suffix not in suffixes
-            or any(part in skip_dirs or part.startswith(".uv-cache") for part in relative_parts)
-        ):
-            continue
-        files.append(path)
     return sorted(files)
 
 
