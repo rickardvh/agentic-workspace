@@ -52,3 +52,5 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
 ```
 
 Use `state:"negative"` for failed or absent commands that should not be selected again as confirmed proof. Negative lessons suppress matching candidate commands before selection. Confirmed lessons may add a route when generic discovery cannot infer it, but they must preserve provenance and scope so later agents can promote or retire them.
+
+Confirmed and negative Memory lessons are authoritative only when the route line includes `candidate_command`, `state`, `intent_type`, `owner`, `scope`, `provenance`, and `learned_at`. If any of those fields are missing, proof selection treats the record as invalid learning evidence instead of using it as confirmed proof or negative suppression, and the output should point the agent to recapture the Memory lesson with the missing metadata.

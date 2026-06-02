@@ -80,6 +80,34 @@
           "confidence",
           "requires_live_confirmation"
         ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "confirmed",
+                    "negative"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "required": [
+                "candidate_command",
+                "state",
+                "intent_type",
+                "owner",
+                "scope",
+                "provenance",
+                "learned_at"
+              ]
+            }
+          }
+        ],
         "properties": {
           "id": {
             "type": "string",

@@ -858,6 +858,60 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     assert learning["actionable_next_steps"]["status"] == "present"
 
 
+def test_proof_changed_incomplete_confirmed_memory_route_is_not_authoritative(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('ok')\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Incomplete proof routes
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["confirmed"] == []
+    assert hints["invalid"][0]["original_state"] == "confirmed"
+    assert set(hints["invalid"][0]["missing_fields"]) == {"owner", "scope", "provenance", "learned_at"}
+    assert answer["required_commands"] == []
+    assert answer["proof_route_decision"]["selected_command"] is None
+    learning = answer["host_repo_learning"]
+    assert learning["invalid_learning_evidence"]["status"] == "present"
+    assert (
+        "candidate_command, state, intent_type, owner, scope, provenance, and learned_at" in learning["invalid_learning_evidence"]["rule"]
+    )
+    assert "recapture this proof-route lesson" in learning["invalid_learning_evidence"]["items"][0]["recovery"]
+
+
+def test_proof_changed_incomplete_negative_memory_route_does_not_suppress_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run"}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "proof-routes.md",
+        """
+# Incomplete failed proof routes
+
+agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":true}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["negative"] == []
+    assert hints["invalid"][0]["original_state"] == "negative"
+    assert "npm test" in answer["target_proof_capabilities"]["candidate_commands"]
+    assert answer["proof_route_decision"]["selected_command"]["command"] == "npm test"
+    learning = answer["host_repo_learning"]
+    assert learning["negative_evidence"]["status"] == "none"
+    assert learning["invalid_learning_evidence"]["items"][0]["command"] == "npm test"
+
+
 def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

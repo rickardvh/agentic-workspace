@@ -24451,6 +24451,15 @@ def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
 _PROOF_ROUTE_MEMORY_PREFIX = "agentic-workspace-proof-route:"
 _PROOF_ROUTE_STATES = {"candidate", "confirmed", "stale", "negative", "superseded"}
 _PROOF_ROUTE_INTENT_TYPES = {"behavior-test", "static-check", "type-check", "general-check"}
+_AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS = (
+    "candidate_command",
+    "state",
+    "intent_type",
+    "owner",
+    "scope",
+    "provenance",
+    "learned_at",
+)
 
 
 def _proof_route_hints_path(*, target_root: Path) -> Path:
@@ -24474,7 +24483,8 @@ def _normalize_proof_route_hint(
     command = str(hint.get("candidate_command") or hint.get("command") or "").strip()
     if not command:
         return None
-    state = str(hint.get("state") or "candidate").strip().lower()
+    raw_state = str(hint.get("state") or "candidate").strip().lower()
+    state = raw_state
     if state not in _PROOF_ROUTE_STATES:
         state = "candidate"
     intent_type = str(hint.get("intent_type") or "behavior-test").strip()
@@ -24484,6 +24494,23 @@ def _normalize_proof_route_hint(
     source_path = str(hint.get("source_path") or default_source_path).strip()
     owner = str(hint.get("owner") or default_owner).strip()
     requires_live_confirmation = bool(hint.get("requires_live_confirmation", state != "confirmed"))
+    missing_authoritative_fields: list[str] = []
+    if raw_state in {"confirmed", "negative"}:
+        explicit_values = {
+            "candidate_command": command,
+            "state": str(hint.get("state") or "").strip(),
+            "intent_type": str(hint.get("intent_type") or "").strip(),
+            "owner": str(hint.get("owner") or "").strip(),
+            "scope": str(hint.get("scope") or "").strip(),
+            "provenance": str(hint.get("provenance") or "").strip(),
+            "learned_at": str(hint.get("learned_at") or hint.get("last_confirmed") or "").strip(),
+        }
+        missing_authoritative_fields = [
+            field_name for field_name in _AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS if not explicit_values[field_name]
+        ]
+        if missing_authoritative_fields:
+            state = "stale"
+            requires_live_confirmation = True
     record: dict[str, Any] = {
         "id": str(hint.get("id") or f"{source}:{_decision_slug(command)}"),
         "state": state,
@@ -24498,6 +24525,18 @@ def _normalize_proof_route_hint(
         "provenance": str(hint.get("provenance") or hint.get("observed") or source_path or source).strip(),
         "learned_at": str(hint.get("learned_at") or hint.get("last_confirmed") or "").strip(),
     }
+    if missing_authoritative_fields:
+        record.update(
+            {
+                "invalid_authority": True,
+                "original_state": raw_state,
+                "missing_fields": missing_authoritative_fields,
+                "recovery": (
+                    "recapture this proof-route lesson in Memory with candidate_command, state, intent_type, owner, "
+                    "scope, provenance, and learned_at before it can become authoritative"
+                ),
+            }
+        )
     return {key: value for key, value in record.items() if value != "" and value != []}
 
 
@@ -24652,6 +24691,7 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
     confirmed: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
     negative: list[dict[str, Any]] = []
+    invalid: list[dict[str, Any]] = []
     for hint in learned_hints.get("hints", []):
         command = str(hint.get("candidate_command", "")).strip()
         record = {
@@ -24667,9 +24707,17 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
             "owner": str(hint.get("owner", "")),
             "provenance": str(hint.get("provenance", "")),
             "learned_at": str(hint.get("learned_at", "")),
+            "invalid_authority": bool(hint.get("invalid_authority", False)),
+            "original_state": str(hint.get("original_state", "")),
+            "missing_fields": list(hint.get("missing_fields", [])) if isinstance(hint.get("missing_fields"), list) else [],
+            "recovery": str(hint.get("recovery", "")),
         }
         record = {key: value for key, value in record.items() if value != "" and value != []}
-        if record.get("state") == "negative":
+        if record.get("invalid_authority"):
+            invalid_record = {**record, "confirmation": "invalid-authoritative-learning-evidence"}
+            invalid.append(invalid_record)
+            stale.append(invalid_record)
+        elif record.get("state") == "negative":
             negative.append({**record, "confirmation": "negative-learned-route"})
         elif command and not record.get("requires_live_confirmation", True) and record.get("state") == "confirmed":
             confirmed.append({**record, "confirmation": "learned-confirmed"})
@@ -24682,6 +24730,7 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
         "confirmed": confirmed,
         "stale": stale,
         "negative": negative,
+        "invalid": invalid,
         "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
     }
 
@@ -24754,6 +24803,9 @@ def _proof_next_decision_payload(
     warnings: list[str] = []
     stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
     negative_hints = learned_route_hints.get("negative", []) if isinstance(learned_route_hints, dict) else []
+    invalid_hints = learned_route_hints.get("invalid", []) if isinstance(learned_route_hints, dict) else []
+    if invalid_hints:
+        warnings.append(f"{len(invalid_hints)} learned route lesson(s) are missing authoritative provenance metadata.")
     if stale_hints:
         warnings.append(f"{len(stale_hints)} learned route hint(s) are stale or unavailable.")
     if negative_hints:
@@ -24914,6 +24966,7 @@ def _host_repo_learning_posture_payload(
 ) -> dict[str, Any]:
     stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
     negative_hints = learned_route_hints.get("negative", []) if isinstance(learned_route_hints, dict) else []
+    invalid_hints = learned_route_hints.get("invalid", []) if isinstance(learned_route_hints, dict) else []
     negative_items: list[dict[str, Any]] = []
     for command in unavailable_commands:
         command_text = str(command.get("command", "")).strip()
@@ -24938,6 +24991,8 @@ def _host_repo_learning_posture_payload(
             }
         )
     for hint in stale_hints:
+        if hint.get("invalid_authority"):
+            continue
         command_text = str(hint.get("candidate_command", "")).strip()
         if not command_text:
             continue
@@ -25017,6 +25072,24 @@ def _host_repo_learning_posture_payload(
             "status": "present" if confirmed_items else "none",
             "items": confirmed_items,
             "recording_rule": "Successful or selected repo-specific proof routes should be captured in Memory when durable, then promoted to config, docs, checks, Planning, or issue follow-up when those are better owners.",
+        },
+        "invalid_learning_evidence": {
+            "status": "present" if invalid_hints else "none",
+            "items": [
+                {
+                    "state": "invalid",
+                    "original_state": str(hint.get("original_state", "")),
+                    "command": str(hint.get("candidate_command", "")),
+                    "missing_fields": list(hint.get("missing_fields", [])),
+                    "recovery": str(hint.get("recovery", "")),
+                    "source_path": str(hint.get("source_path", "")),
+                }
+                for hint in invalid_hints
+            ],
+            "rule": (
+                "Confirmed or negative learned routes are authoritative only when they include candidate_command, state, "
+                "intent_type, owner, scope, provenance, and learned_at."
+            ),
         },
         "actionable_next_steps": {
             "status": "present" if confirmed_items or negative_items else "none",
