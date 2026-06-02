@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/proof-route-hints.schema.json",
   "title": "Agentic Workspace Proof Route Hints",
-  "description": "Advisory proof route hints discovered during lifecycle setup/adopt. Hints are not host policy and require live confirmation before command selection.",
+  "description": "Proof route lessons discovered during lifecycle setup/adopt or promoted from Memory. Candidate hints are not host policy; confirmed and negative lessons require provenance and owner routing.",
   "type": "object",
   "required": [
     "kind",
@@ -68,10 +68,10 @@
     },
     "hints": {
       "type": "array",
-      "description": "Advisory proof command candidates that still require live confirmation before use.",
+      "description": "Proof command candidates or lessons. Candidate hints require live confirmation; confirmed Memory lessons may add proof candidates; negative Memory lessons suppress matching candidates.",
       "items": {
         "type": "object",
-        "description": "One advisory proof route hint discovered from repo-local surfaces.",
+        "description": "One proof route hint or learned proof lesson discovered from repo-local surfaces.",
         "required": [
           "id",
           "intent_type",
@@ -80,11 +80,50 @@
           "confidence",
           "requires_live_confirmation"
         ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "confirmed",
+                    "negative"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "required": [
+                "candidate_command",
+                "state",
+                "intent_type",
+                "owner",
+                "scope",
+                "provenance",
+                "learned_at"
+              ]
+            }
+          }
+        ],
         "properties": {
           "id": {
             "type": "string",
             "minLength": 1,
             "description": "Stable identifier for this discovered proof route hint."
+          },
+          "state": {
+            "type": "string",
+            "description": "Evidence state for this route lesson. Omitted legacy records are treated as candidate.",
+            "enum": [
+              "candidate",
+              "confirmed",
+              "stale",
+              "negative",
+              "superseded"
+            ]
           },
           "intent_type": {
             "type": "string",
@@ -103,10 +142,16 @@
           },
           "source": {
             "type": "string",
-            "description": "Kind of repo-local surface where the candidate command was found.",
+            "description": "Kind of repo-local surface where the candidate command or lesson was found.",
             "enum": [
               "makefile",
-              "package-json"
+              "package-json",
+              "memory",
+              "config",
+              "docs",
+              "tests-checks",
+              "planning",
+              "issue"
             ]
           },
           "source_path": {
@@ -124,8 +169,36 @@
             ]
           },
           "requires_live_confirmation": {
-            "const": true,
-            "description": "Whether the candidate must be confirmed against current repo capabilities before command selection."
+            "type": "boolean",
+            "description": "Whether the candidate must be confirmed against current repo capabilities before command selection. Confirmed Memory lessons may set this false when provenance already establishes the route."
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repo, path, tool, workflow, or surface scope where this lesson applies."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Canonical owner surface for the lesson.",
+            "enum": [
+              "Memory",
+              "config",
+              "canonical docs",
+              "tests/checks",
+              "Planning",
+              "issue follow-up",
+              "local-only scratch"
+            ]
+          },
+          "provenance": {
+            "type": "string",
+            "minLength": 1,
+            "description": "How this route was confirmed, disproved, observed, or promoted."
+          },
+          "learned_at": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO date or timestamp when this lesson was learned or last confirmed."
           }
         },
         "additionalProperties": false
