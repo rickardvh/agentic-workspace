@@ -106,6 +106,38 @@ active_items = [
     assert any(action.kind == "archived" for action in result.actions)
 
 
+def test_close_item_blocked_archive_flow_reports_machine_readable_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", title = "Plan alpha", status = "completed", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+""",
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(plan_path, status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record.pop("closure_check")
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    result = close_planning_item("plan-alpha", target=tmp_path)
+    payload = json.loads(installer_mod.format_result_json(result))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert payload["status"] == "blocked"
+    assert payload["closed"] is False
+    assert payload["mutation_applied"] is False
+    assert "Closure Check" in payload["next_action"]
+    assert payload["blocked_reason"].startswith("archive_missing_closure_check")
+    assert plan_path.exists()
+    assert state["todo"]["active_items"][0]["id"] == "plan-alpha"
+
+
 def test_close_item_preserves_execplan_when_retained_archive_path_is_stale(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -207,4 +239,34 @@ queued_items = [
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["message"] == "Close planning item done-item"
+    assert payload["status"] == "closed"
+    assert payload["closed"] is True
     assert any(action["kind"] == "updated" for action in payload["actions"])
+
+
+def test_close_item_runtime_cli_reports_blocked_json_status(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", title = "Plan alpha", status = "completed", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+""",
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(plan_path, status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["closure_check"]["closure decision"] = "keep-active"
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    assert planning_cli.main(["close-item", "plan-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "blocked"
+    assert payload["closed"] is False
+    assert payload["mutation_applied"] is False
+    assert "keep the plan active" in payload["next_action"]

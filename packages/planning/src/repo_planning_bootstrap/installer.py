@@ -11973,6 +11973,69 @@ def format_actions(actions: list[Action], target_root: Path) -> list[str]:
     return lines
 
 
+_CLOSE_ITEM_NON_BLOCKING_WARNING_CLASSES = {"archive_retention_skipped_by_size_guardrail"}
+_CLOSE_ITEM_MUTATION_ACTIONS = {"updated", "archived", "closed"}
+
+
+def _close_item_result_fields(result: InstallResult) -> dict[str, Any]:
+    if not result.message.startswith("Close planning item "):
+        return {}
+    blocking_warnings = [
+        warning for warning in result.warnings if str(warning.get("warning_class", "")) not in _CLOSE_ITEM_NON_BLOCKING_WARNING_CLASSES
+    ]
+    manual_review_actions = [action for action in result.actions if action.kind == "manual review"]
+    blocked = bool(blocking_warnings or manual_review_actions)
+    mutation_applied = any(action.kind in _CLOSE_ITEM_MUTATION_ACTIONS for action in result.actions)
+    if blocked:
+        status = "blocked"
+        closed = False
+        next_action = _close_item_blocked_next_action(
+            blocking_warnings=blocking_warnings,
+            manual_review_actions=manual_review_actions,
+        )
+    elif result.dry_run:
+        status = "dry-run"
+        closed = False
+        next_action = "Review actions and rerun close-item without --dry-run only if the plan matches intent."
+    elif mutation_applied:
+        status = "closed"
+        closed = True
+        next_action = "Run agentic-workspace summary --target . --format json to verify planning state."
+    else:
+        status = "not-changed"
+        closed = False
+        next_action = "Inspect close-item actions and rerun summary before assuming the item closed."
+    fields: dict[str, Any] = {
+        "status": status,
+        "closed": closed,
+        "mutation_applied": mutation_applied,
+        "next_action": next_action,
+    }
+    if blocked:
+        fields["blocked_reason"] = _close_item_blocked_reason(
+            blocking_warnings=blocking_warnings,
+            manual_review_actions=manual_review_actions,
+        )
+    return fields
+
+
+def _close_item_blocked_next_action(*, blocking_warnings: list[dict[str, str]], manual_review_actions: list[Action]) -> str:
+    if manual_review_actions:
+        return f"{manual_review_actions[0].detail}; rerun close-item after resolving the blocker."
+    if blocking_warnings:
+        return f"{blocking_warnings[0].get('message', 'Resolve close-item warnings')}; rerun close-item after resolving the blocker."
+    return "Resolve close-item blockers, then rerun close-item."
+
+
+def _close_item_blocked_reason(*, blocking_warnings: list[dict[str, str]], manual_review_actions: list[Action]) -> str:
+    if blocking_warnings:
+        warning = blocking_warnings[0]
+        return f"{warning.get('warning_class', 'warning')}: {warning.get('message', '')}".strip()
+    if manual_review_actions:
+        return manual_review_actions[0].detail
+    return "close-item did not apply its requested mutation"
+
+
 def format_result_json(result: InstallResult) -> str:
     payload: dict[str, Any] = {
         "target_root": str(result.target_root),
@@ -11983,6 +12046,7 @@ def format_result_json(result: InstallResult) -> str:
         "actions": [{"kind": action.kind, "path": str(action.path), "detail": action.detail} for action in result.actions],
         "warnings": result.warnings,
     }
+    payload.update(_close_item_result_fields(result))
     if result.completion_options:
         payload["completion_options"] = result.completion_options
     if result.dry_run:
