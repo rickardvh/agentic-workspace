@@ -805,6 +805,59 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
 
 
+def test_proof_changed_reuses_confirmed_memory_proof_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('ok')\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Proof routes
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"src","owner":"Memory","provenance":"manual verification passed on 2026-06-02","learned_at":"2026-06-02"}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["source_counts"]["memory"] == 1
+    assert hints["confirmed"][0]["candidate_command"] == "python -m compileall src"
+    assert hints["confirmed"][0]["confirmation"] == "learned-confirmed"
+    assert answer["proof_route_decision"]["selected_command"]["command"] == "python -m compileall src"
+    assert answer["proof_route_decision"]["selected_command"]["route_source"] == "live-adapted-target-capability"
+    learning = answer["host_repo_learning"]
+    assert learning["confirmed_evidence"]["status"] == "present"
+    assert "memory capture-note" in learning["confirmed_evidence"]["items"][0]["capture"]["command_to_run"]
+    assert learning["actionable_next_steps"]["memory_note_entries"][0].startswith("agentic-workspace-proof-route:")
+
+
+def test_proof_changed_memory_negative_route_suppresses_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "pytest"}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "proof-routes.md",
+        """
+# Failed proof routes
+
+agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":true,"scope":"repo","owner":"Memory","provenance":"npm test failed because pytest is not installed","learned_at":"2026-06-02"}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["learned_route_hints"]["negative"][0]["candidate_command"] == "npm test"
+    assert "npm test" not in answer["target_proof_capabilities"]["candidate_commands"]
+    assert answer["required_commands"] == []
+    assert answer["proof_route_decision"]["selected_command"] is None
+    assert answer["proof_route_decision"]["critical_warnings"] == ["1 learned negative route(s) suppressed candidate proof commands."]
+    learning = answer["host_repo_learning"]
+    assert learning["negative_evidence"]["status"] == "present"
+    assert learning["negative_evidence"]["items"][0]["command"] == "npm test"
+    assert learning["actionable_next_steps"]["status"] == "present"
+
+
 def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

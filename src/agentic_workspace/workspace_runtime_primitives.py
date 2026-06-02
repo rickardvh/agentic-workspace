@@ -24448,52 +24448,232 @@ def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+_PROOF_ROUTE_MEMORY_PREFIX = "agentic-workspace-proof-route:"
+_PROOF_ROUTE_STATES = {"candidate", "confirmed", "stale", "negative", "superseded"}
+_PROOF_ROUTE_INTENT_TYPES = {"behavior-test", "static-check", "type-check", "general-check"}
+
+
 def _proof_route_hints_path(*, target_root: Path) -> Path:
     return target_root / PROOF_ROUTE_HINTS_PATH
+
+
+def _proof_route_memory_notes_root(*, target_root: Path) -> Path:
+    return target_root / ".agentic-workspace" / "memory" / "repo"
+
+
+def _repo_relative_for_payload(*, target_root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _normalize_proof_route_hint(
+    hint: dict[str, Any], *, default_source: str, default_source_path: str = "", default_owner: str = ""
+) -> dict[str, Any] | None:
+    command = str(hint.get("candidate_command") or hint.get("command") or "").strip()
+    if not command:
+        return None
+    state = str(hint.get("state") or "candidate").strip().lower()
+    if state not in _PROOF_ROUTE_STATES:
+        state = "candidate"
+    intent_type = str(hint.get("intent_type") or "behavior-test").strip()
+    if intent_type not in _PROOF_ROUTE_INTENT_TYPES:
+        intent_type = "behavior-test"
+    source = str(hint.get("source") or default_source).strip() or default_source
+    source_path = str(hint.get("source_path") or default_source_path).strip()
+    owner = str(hint.get("owner") or default_owner).strip()
+    requires_live_confirmation = bool(hint.get("requires_live_confirmation", state != "confirmed"))
+    record: dict[str, Any] = {
+        "id": str(hint.get("id") or f"{source}:{_decision_slug(command)}"),
+        "state": state,
+        "intent_type": intent_type,
+        "candidate_command": command,
+        "source": source,
+        "source_path": source_path,
+        "confidence": str(hint.get("confidence") or ("high" if state == "confirmed" else "medium")),
+        "requires_live_confirmation": requires_live_confirmation,
+        "scope": str(hint.get("scope") or "repo").strip() or "repo",
+        "owner": owner or ("Memory" if source == "memory" else ""),
+        "provenance": str(hint.get("provenance") or hint.get("observed") or source_path or source).strip(),
+        "learned_at": str(hint.get("learned_at") or hint.get("last_confirmed") or "").strip(),
+    }
+    return {key: value for key, value in record.items() if value != "" and value != []}
+
+
+def _load_memory_proof_route_hints(*, target_root: Path) -> list[dict[str, Any]]:
+    root = _proof_route_memory_notes_root(target_root=target_root)
+    if not root.is_dir():
+        return []
+    hints: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*.md")):
+        try:
+            lines = path.read_text(encoding="utf-8-sig").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            stripped = line.strip()
+            if not stripped.startswith(_PROOF_ROUTE_MEMORY_PREFIX):
+                continue
+            raw_payload = stripped[len(_PROOF_ROUTE_MEMORY_PREFIX) :].strip()
+            try:
+                payload = json.loads(raw_payload)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            normalized = _normalize_proof_route_hint(
+                payload,
+                default_source="memory",
+                default_source_path=_repo_relative_for_payload(target_root=target_root, path=path),
+                default_owner="Memory",
+            )
+            if normalized is not None:
+                hints.append(normalized)
+    return hints
 
 
 def _load_proof_route_hints(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {"kind": "learned-proof-route-hints/v1", "status": "unavailable", "hints": []}
     path = _proof_route_hints_path(target_root=target_root)
-    if not path.is_file():
-        return {"kind": "learned-proof-route-hints/v1", "status": "not-found", "path": PROOF_ROUTE_HINTS_PATH.as_posix(), "hints": []}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return {
-            "kind": "learned-proof-route-hints/v1",
-            "status": "invalid",
-            "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
-            "reason": str(exc),
-            "hints": [],
-        }
-    raw_hints = payload.get("hints", []) if isinstance(payload, dict) else []
+    raw_hints: list[Any] = []
+    status = "not-found"
+    reason = ""
+    if path.is_file():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            raw_hints = payload.get("hints", []) if isinstance(payload, dict) else []
+            status = "loaded"
+        except (OSError, json.JSONDecodeError) as exc:
+            status = "invalid"
+            reason = str(exc)
+            raw_hints = []
     if not isinstance(raw_hints, list):
         raw_hints = []
-    return {
+    normalized_hints = [
+        normalized
+        for hint in raw_hints
+        if isinstance(hint, dict)
+        for normalized in [
+            _normalize_proof_route_hint(hint, default_source="proof-route-hints", default_source_path=PROOF_ROUTE_HINTS_PATH.as_posix())
+        ]
+        if normalized is not None
+    ]
+    memory_hints = _load_memory_proof_route_hints(target_root=target_root)
+    if memory_hints and status == "not-found":
+        status = "loaded"
+    result = {
         "kind": "learned-proof-route-hints/v1",
-        "status": "loaded",
+        "status": status,
         "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
-        "hints": [hint for hint in raw_hints if isinstance(hint, dict)],
+        "hints": normalized_hints + memory_hints,
+        "source_counts": {
+            "proof_route_hints": len(normalized_hints),
+            "memory": len(memory_hints),
+        },
     }
+    if reason:
+        result["reason"] = reason
+    return result
+
+
+def _proof_role_for_intent_type(intent_type: str) -> str:
+    if intent_type == "static-check":
+        return "lint"
+    if intent_type == "type-check":
+        return "typecheck"
+    if intent_type == "general-check":
+        return "check"
+    return "test"
+
+
+def _apply_learned_route_hints_to_capabilities(
+    *, target_capabilities: dict[str, Any], learned_route_hints: dict[str, Any]
+) -> dict[str, Any]:
+    capabilities = copy.deepcopy(target_capabilities)
+    negative_commands = {
+        str(hint.get("candidate_command", "")).strip()
+        for hint in learned_route_hints.get("negative", [])
+        if str(hint.get("candidate_command", "")).strip()
+    }
+    role_commands = {
+        str(role): [str(command) for command in commands if str(command).strip() and str(command).strip() not in negative_commands]
+        for role, commands in dict(capabilities.get("role_commands", {})).items()
+        if isinstance(commands, list)
+    }
+    candidate_commands = [
+        str(command)
+        for command in _list_payload(capabilities.get("candidate_commands"))
+        if str(command).strip() and str(command).strip() not in negative_commands
+    ]
+    for hint in learned_route_hints.get("confirmed", []):
+        command = str(hint.get("candidate_command", "")).strip()
+        if not command or command in negative_commands:
+            continue
+        role = _proof_role_for_intent_type(str(hint.get("intent_type", "")))
+        role_commands.setdefault(role, [])
+        if command not in role_commands[role]:
+            role_commands[role].append(command)
+        if command not in candidate_commands:
+            candidate_commands.append(command)
+    capabilities["role_commands"] = {role: _dedupe(commands) for role, commands in role_commands.items() if commands}
+    capabilities["candidate_commands"] = _dedupe(candidate_commands)
+    capabilities["learned_routes"] = {
+        "confirmed_count": len(learned_route_hints.get("confirmed", [])),
+        "negative_count": len(learned_route_hints.get("negative", [])),
+        "rule": "Confirmed learned routes may add proof candidates; negative learned routes suppress matching candidates before selection.",
+    }
+    return {
+        **capabilities,
+        "candidate_commands": capabilities["candidate_commands"],
+        "role_commands": capabilities["role_commands"],
+        "learned_routes": capabilities["learned_routes"],
+    }
+
+
+def _package_scripts_without_negative_routes(package_scripts: dict[str, str], negative_commands: set[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for script_name, script_body in package_scripts.items():
+        command = "npm test" if script_name == "test" else f"npm run {script_name}"
+        if command not in negative_commands:
+            result[script_name] = script_body
+    return result
+
+
+def _make_targets_without_negative_routes(make_targets: set[str] | None, negative_commands: set[str]) -> set[str] | None:
+    if make_targets is None:
+        return None
+    return {target for target in make_targets if f"make {target}" not in negative_commands}
 
 
 def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabilities: dict[str, Any]) -> dict[str, Any]:
     live_commands = set((str(command) for command in target_capabilities.get("candidate_commands", [])))
     confirmed: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
+    negative: list[dict[str, Any]] = []
     for hint in learned_hints.get("hints", []):
         command = str(hint.get("candidate_command", "")).strip()
         record = {
             "id": str(hint.get("id", "")),
+            "state": str(hint.get("state", "candidate")),
             "intent_type": str(hint.get("intent_type", "")),
             "candidate_command": command,
             "source": str(hint.get("source", "")),
+            "source_path": str(hint.get("source_path", "")),
             "confidence": str(hint.get("confidence", "")),
             "requires_live_confirmation": bool(hint.get("requires_live_confirmation", True)),
+            "scope": str(hint.get("scope", "repo")),
+            "owner": str(hint.get("owner", "")),
+            "provenance": str(hint.get("provenance", "")),
+            "learned_at": str(hint.get("learned_at", "")),
         }
-        if command and command in live_commands:
+        record = {key: value for key, value in record.items() if value != "" and value != []}
+        if record.get("state") == "negative":
+            negative.append({**record, "confirmation": "negative-learned-route"})
+        elif command and not record.get("requires_live_confirmation", True) and record.get("state") == "confirmed":
+            confirmed.append({**record, "confirmation": "learned-confirmed"})
+        elif command and command in live_commands:
             confirmed.append({**record, "confirmation": "live-confirmed"})
         else:
             stale.append({**record, "confirmation": "stale-or-unavailable"})
@@ -24501,6 +24681,7 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
         **learned_hints,
         "confirmed": confirmed,
         "stale": stale,
+        "negative": negative,
         "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
     }
 
@@ -24572,8 +24753,11 @@ def _proof_next_decision_payload(
 ) -> dict[str, Any]:
     warnings: list[str] = []
     stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
+    negative_hints = learned_route_hints.get("negative", []) if isinstance(learned_route_hints, dict) else []
     if stale_hints:
         warnings.append(f"{len(stale_hints)} learned route hint(s) are stale or unavailable.")
+    if negative_hints:
+        warnings.append(f"{len(negative_hints)} learned negative route(s) suppressed candidate proof commands.")
     if unavailable_commands:
         warnings.append("Some selected proof commands are unavailable in this target repo.")
     if host_policy_blocked_commands:
@@ -24657,14 +24841,79 @@ def _proof_route_decision_payload(
     }
 
 
+def _proof_route_lesson_entry(
+    *,
+    state: str,
+    command: str,
+    intent_type: str,
+    scope: str,
+    provenance: str,
+    source_path: str = "",
+    owner: str = "Memory",
+) -> dict[str, Any]:
+    return {
+        "state": state,
+        "intent_type": intent_type or "behavior-test",
+        "candidate_command": command,
+        "source": "memory",
+        "source_path": source_path,
+        "confidence": "high" if state == "confirmed" else "medium",
+        "requires_live_confirmation": state != "confirmed",
+        "scope": scope or "repo",
+        "owner": owner,
+        "provenance": provenance,
+        "learned_at": date.today().isoformat(),
+    }
+
+
+def _proof_route_capture_action(*, entry: dict[str, Any], source_path: str = "") -> dict[str, Any]:
+    command = str(entry.get("candidate_command", "")).strip()
+    state = str(entry.get("state", "")).strip()
+    slug = f"proof-route-{state}-{_decision_slug(command)}"
+    files_arg = source_path or str(entry.get("source_path") or ".agentic-workspace/memory/repo/index.md")
+    summary = f"proof-route {state}: {command}; scope={entry.get('scope', 'repo')}; provenance={entry.get('provenance', '')}"
+    return {
+        "kind": "proof-route-lesson-capture/v1",
+        "state": state,
+        "command": command,
+        "owner": "Memory",
+        "why": "Record durable host-repo proof knowledge in Memory first; promote later to config, docs, checks, Planning, or issue follow-up when that owner becomes better.",
+        "command_to_run": (
+            f'uv run agentic-workspace memory capture-note --target . --slug {slug} --summary "{summary}" --files {files_arg} --format json'
+        ),
+        "memory_note_entry": f"{_PROOF_ROUTE_MEMORY_PREFIX} {json.dumps(entry, sort_keys=True)}",
+        "promotion_targets": ["config proof profile", "canonical docs", "tests/checks", "Planning", "issue follow-up"],
+    }
+
+
+def _confirmed_proof_lesson_items(selected_commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for selected in selected_commands:
+        command = str(selected.get("command", "")).strip()
+        if not command:
+            continue
+        items.append(
+            _proof_route_lesson_entry(
+                state="confirmed",
+                command=command,
+                intent_type=str(selected.get("intent_type") or "behavior-test"),
+                scope=str(selected.get("lane") or "proof-selection"),
+                provenance=f"proof selection selected {selected.get('selected_from', 'confirmed route')}",
+            )
+        )
+    return items
+
+
 def _host_repo_learning_posture_payload(
     *,
     target_capabilities: dict[str, Any],
     learned_route_hints: dict[str, Any],
     unavailable_commands: list[dict[str, Any]],
     host_policy_blocked_commands: list[dict[str, str]],
+    selected_commands: list[dict[str, Any]],
 ) -> dict[str, Any]:
     stale_hints = learned_route_hints.get("stale", []) if isinstance(learned_route_hints, dict) else []
+    negative_hints = learned_route_hints.get("negative", []) if isinstance(learned_route_hints, dict) else []
     negative_items: list[dict[str, Any]] = []
     for command in unavailable_commands:
         command_text = str(command.get("command", "")).strip()
@@ -24677,6 +24926,15 @@ def _host_repo_learning_posture_payload(
                 "scope": str(command.get("lane", "")) or "proof-selection",
                 "provenance": str(command.get("reason", "")) or "proof selection could not confirm command availability",
                 "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+                "capture": _proof_route_capture_action(
+                    entry=_proof_route_lesson_entry(
+                        state="negative",
+                        command=command_text,
+                        intent_type="behavior-test",
+                        scope=str(command.get("lane", "")) or "proof-selection",
+                        provenance=str(command.get("reason", "")) or "proof selection could not confirm command availability",
+                    )
+                ),
             }
         )
     for hint in stale_hints:
@@ -24690,8 +24948,43 @@ def _host_repo_learning_posture_payload(
                 "scope": str(hint.get("intent_type", "")) or "learned proof route",
                 "provenance": f"learned hint from {hint.get('source_path') or hint.get('source') or 'unknown source'} was not live-confirmed",
                 "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+                "capture": _proof_route_capture_action(
+                    entry=_proof_route_lesson_entry(
+                        state="negative",
+                        command=command_text,
+                        intent_type=str(hint.get("intent_type") or "behavior-test"),
+                        scope=str(hint.get("scope") or hint.get("intent_type") or "learned proof route"),
+                        provenance=f"learned hint from {hint.get('source_path') or hint.get('source') or 'unknown source'} was not live-confirmed",
+                        source_path=str(hint.get("source_path", "")),
+                    ),
+                    source_path=str(hint.get("source_path", "")),
+                ),
             }
         )
+    for hint in negative_hints:
+        command_text = str(hint.get("candidate_command", "")).strip()
+        if not command_text:
+            continue
+        negative_items.append(
+            {
+                "state": "negative",
+                "command": command_text,
+                "scope": str(hint.get("scope", "")) or str(hint.get("intent_type", "")) or "learned proof route",
+                "provenance": str(hint.get("provenance", "")) or "Memory records this route as negative evidence",
+                "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+                "capture": None,
+            }
+        )
+    confirmed_items = [
+        {
+            "state": "confirmed",
+            "command": item["candidate_command"],
+            "scope": item.get("scope", "proof-selection"),
+            "provenance": item.get("provenance", "proof selection selected command"),
+            "capture": _proof_route_capture_action(entry=item),
+        }
+        for item in _confirmed_proof_lesson_items(selected_commands)
+    ]
     return {
         "kind": "host-repo-learning-posture/v1",
         "status": "active",
@@ -24719,6 +25012,22 @@ def _host_repo_learning_posture_payload(
             "status": "present" if negative_items else "none",
             "items": negative_items,
             "recording_rule": "Failed or absent commands should be routed as negative evidence instead of being retried later as confirmed proof.",
+        },
+        "confirmed_evidence": {
+            "status": "present" if confirmed_items else "none",
+            "items": confirmed_items,
+            "recording_rule": "Successful or selected repo-specific proof routes should be captured in Memory when durable, then promoted to config, docs, checks, Planning, or issue follow-up when those are better owners.",
+        },
+        "actionable_next_steps": {
+            "status": "present" if confirmed_items or negative_items else "none",
+            "commands": [
+                item["capture"]["command_to_run"] for item in [*confirmed_items, *negative_items] if isinstance(item.get("capture"), dict)
+            ],
+            "memory_note_entries": [
+                item["capture"]["memory_note_entry"]
+                for item in [*confirmed_items, *negative_items]
+                if isinstance(item.get("capture"), dict)
+            ],
         },
         "host_policy_blocked_count": len(host_policy_blocked_commands),
     }
@@ -25871,6 +26180,17 @@ def _proof_selection_for_changed_paths(
     learned_route_hints = _confirm_learned_route_hints(
         learned_hints=_load_proof_route_hints(target_root=target_root), target_capabilities=target_capabilities
     )
+    target_capabilities = _apply_learned_route_hints_to_capabilities(
+        target_capabilities=target_capabilities, learned_route_hints=learned_route_hints
+    )
+    learned_negative_commands = {
+        str(hint.get("candidate_command", "")).strip()
+        for hint in learned_route_hints.get("negative", [])
+        if str(hint.get("candidate_command", "")).strip()
+    }
+    selection_make_targets = _make_targets_without_negative_routes(make_targets, learned_negative_commands)
+    selection_package_scripts = _package_scripts_without_negative_routes(package_scripts, learned_negative_commands)
+    selection_role_commands = target_capabilities.get("role_commands", {})
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
     host_policy_disallowed_commands: dict[str, dict[str, str]] = {}
@@ -25883,9 +26203,9 @@ def _proof_selection_for_changed_paths(
             adapted_command, _adjustment = _adapt_make_proof_command_for_target(
                 command=raw_command_text,
                 target_root=target_root,
-                make_targets=make_targets,
-                package_scripts=package_scripts,
-                role_commands=target_capabilities.get("role_commands", {}),
+                make_targets=selection_make_targets,
+                package_scripts=selection_package_scripts,
+                role_commands=selection_role_commands,
                 project_roots=project_roots,
                 record_missing_makefile_as_unavailable=bool(lane.get("proof_profile") or lane.get("subsystem")),
             )
@@ -25912,9 +26232,9 @@ def _proof_selection_for_changed_paths(
             adapted_command, adjustment = _adapt_make_proof_command_for_target(
                 command=str(raw_command),
                 target_root=target_root,
-                make_targets=make_targets,
-                package_scripts=package_scripts,
-                role_commands=target_capabilities.get("role_commands", {}),
+                make_targets=selection_make_targets,
+                package_scripts=selection_package_scripts,
+                role_commands=selection_role_commands,
                 project_roots=project_roots,
                 record_missing_makefile_as_unavailable=bool(lane.get("proof_profile") or lane.get("subsystem")),
             )
@@ -26059,6 +26379,7 @@ def _proof_selection_for_changed_paths(
         learned_route_hints=learned_route_hints,
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
+        selected_commands=selected_commands,
     )
     proof_route_explanation = _proof_route_explanation_payload(
         proof_intents=proof_intents,
