@@ -25106,6 +25106,7 @@ def _adapt_make_proof_command_for_target(
     package_scripts: dict[str, str] | None = None,
     role_commands: dict[str, list[str]] | None = None,
     project_roots: list[dict[str, Any]] | None = None,
+    record_missing_makefile_as_unavailable: bool = False,
 ) -> tuple[str | None, dict[str, str] | None]:
     target = _target_make_command(command)
     if target is None or target_root is None:
@@ -25139,6 +25140,8 @@ def _adapt_make_proof_command_for_target(
                     "reason": f"target repo has no Makefile; using detected {role!r} proof capability",
                 },
             )
+        if not record_missing_makefile_as_unavailable:
+            return (None, None)
         return (
             None,
             {
@@ -25884,6 +25887,7 @@ def _proof_selection_for_changed_paths(
                 package_scripts=package_scripts,
                 role_commands=target_capabilities.get("role_commands", {}),
                 project_roots=project_roots,
+                record_missing_makefile_as_unavailable=bool(lane.get("proof_profile") or lane.get("subsystem")),
             )
             if adapted_command is not None:
                 candidate_commands.append(adapted_command)
@@ -25912,6 +25916,7 @@ def _proof_selection_for_changed_paths(
                 package_scripts=package_scripts,
                 role_commands=target_capabilities.get("role_commands", {}),
                 project_roots=project_roots,
+                record_missing_makefile_as_unavailable=bool(lane.get("proof_profile") or lane.get("subsystem")),
             )
             if adjustment is not None:
                 adjustment = {"lane": str(lane.get("id", "")), **adjustment}

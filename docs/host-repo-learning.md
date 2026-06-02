@@ -32,4 +32,4 @@ Proof selection is one consumer of this posture:
 - Live target capabilities can select commands when the repo currently exposes them.
 - Language/project markers alone remain discovery candidates.
 
-For Python repos, `pyproject.toml` and `tests/` are not enough to require `uv run pytest`. Pytest proof requires confirmed repo evidence such as pytest configuration or a declared pytest dependency. If no executable route is confirmed, proof selection must ask for manual verification and expose any absent command as negative evidence to route into Memory, config, docs/checks, Planning, or an issue.
+For Python repos, `pyproject.toml` and `tests/` are not enough to require `uv run pytest`. Pytest proof requires confirmed repo evidence such as pytest configuration or a declared pytest dependency. If no executable route is confirmed, proof selection must ask for manual verification. An absent command becomes negative evidence only when the host repo, host config, proof profile, Memory note, or confirmed route hint made that command plausible first.

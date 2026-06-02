@@ -425,25 +425,13 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
     assert payload["proof_route_decision"]["manual_fallback"]["status"] == "required"
-    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 2
+    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 0
     assert payload["proof_route_decision"]["selected_command"] is None
     assert payload["proof_route_decision"]["route_source"] == "manual-fallback"
     assert payload["manual_verification"]["status"] == "required"
     assert "no executable proof route" in payload["manual_verification"]["summary"]
-    assert payload["unavailable_proof_commands"] == [
-        {
-            "lane": "workspace_cli",
-            "command": "make test-workspace",
-            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
-        },
-        {
-            "lane": "workspace_cli",
-            "command": "make lint-workspace",
-            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
-        },
-    ]
-    assert payload["proof_strategy"]["selection_order"][0] == "match changed paths to proof intent"
-    assert payload["target_proof_capabilities"]["candidate_commands"] == []
+    assert payload.get("unavailable_proof_commands", []) == []
+    assert payload["warnings"] == []
     assert payload["manual_verification"]["status"] == "required"
 
 
@@ -484,11 +472,11 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert decision["next_action"]["action"] == "manual-verification"
     assert decision["selected_command"] is None
     assert decision["manual_fallback"]["status"] == "required"
-    assert decision["manual_fallback"]["unavailable_command_count"] == 2
-    assert decision["critical_warnings"] == ["Some selected proof commands are unavailable in this target repo."]
+    assert decision["manual_fallback"]["unavailable_command_count"] == 0
+    assert decision["critical_warnings"] == []
     explanation = answer["proof_route_explanation"]
     assert explanation["selected_commands"] == []
-    assert [command["command"] for command in explanation["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
+    assert explanation["unavailable_commands"] == []
     assert explanation["manual_verification"]["status"] == "required"
     assert explanation["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
     assert explanation["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
@@ -656,9 +644,9 @@ dependencies = ["agentic-workspace"]
     assert answer["target_proof_capabilities"]["role_commands"] == {}
     learning = answer["host_repo_learning"]
     assert learning["authority_rule"].startswith("Host-repo heuristics may propose discovery candidates")
-    assert learning["negative_evidence"]["status"] == "present"
-    assert {item["command"] for item in learning["negative_evidence"]["items"]} == {"make test-workspace", "make lint-workspace"}
-    assert "Memory" in learning["negative_evidence"]["items"][0]["owner_options"]
+    assert learning["negative_evidence"]["status"] == "none"
+    assert learning["negative_evidence"]["items"] == []
+    assert answer["unavailable_commands"] == []
 
 
 def test_proof_changed_uses_declared_pytest_dependency_as_confirmed_evidence(tmp_path: Path, capsys) -> None:

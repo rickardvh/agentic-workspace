@@ -45,8 +45,8 @@
     "completion_criteria": [
       "Host-repo learning posture is implemented, validated, and closed out honestly."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "archive-and-close"
+    "continuation_owner": "GitHub #1211",
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "GitHub #1211"
@@ -60,12 +60,12 @@
       "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
       "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
       "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-      "proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed"
+      "proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
     },
     "execution": {
       "milestone": "host-repo-learning-posture",
       "status": "completed",
-      "next_step": "Archive complete; no #1211 continuation remains.",
+      "next_step": "Archive this bounded slice; continue #1211 through the upstream issue.",
       "proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
     },
     "scope": {
@@ -82,21 +82,21 @@
   },
   "intent_continuity": {
     "larger intended outcome": "GitHub #1211",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none"
+    "this slice completes the larger intended outcome": "partial",
+    "continuation surface": "GitHub #1211"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": "none",
-    "activation trigger": "none"
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub #1211",
+    "activation trigger": "review selects the remaining host-repo learning posture work"
   },
   "iterative_follow_through": {
     "what this slice enabled": "Proof selection now exposes a general host-repo learning posture and avoids selecting pytest from Python markers alone.",
     "intentionally deferred": "none",
     "discovered implications": "Closeout still suggests an invalid planning summary command; already routed to GitHub #1218.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "validation still needed": "none for #1211",
-    "next likely slice": "none for #1211"
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "continue #1211 with actual Memory/promotion/canonical-owner routing for confirmed and negative repo lessons"
   },
   "intent_interpretation": {
     "literal request": "Host-repo learning posture",
@@ -195,13 +195,13 @@
     "what happened": "Implemented #1211 by making host-repo proof routing treat heuristics as candidate evidence, requiring confirmed pytest evidence before selecting pytest, surfacing host-repo learning owner routes, and documenting the posture.",
     "scope touched": "workspace proof-selection runtime, focused proof CLI tests, host-repo learning docs, docs index, active planning closeout",
     "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_proof_cli.py; docs/host-repo-learning.md; docs/index.md; .agentic-workspace/planning/execplans/host-repo-learning-posture.plan.json",
-    "validations run": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed",
-    "result for continuation": "bounded closeout complete",
+    "validations run": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "result for continuation": "bounded slice complete; GitHub #1211 remains open",
     "next step": "archive this execplan"
   },
   "finished_run_review": {
     "review status": "complete",
-    "scope respected": "Scope stayed within the active plan; no unresolved residue found for #1211.",
+    "scope respected": "Scope stayed within the active plan; remaining #1211 breadth is preserved in GitHub #1211.",
     "proof status": "passed",
     "intent served": "yes",
     "config compliance": "used planning closeout command-owned writer",
@@ -218,51 +218,51 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed",
+    "validation proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed"
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
   },
   "intent_satisfaction": {
     "original intent": "GitHub #1211",
-    "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed",
-    "unsolved intent passed to": "none"
+    "was original intent fully satisfied?": "partial",
+    "evidence of intent satisfaction": "This slice adds confirmed-evidence pytest proof routing and host-repo learning documentation, with tests and selected proof passing.",
+    "unsolved intent passed to": "GitHub #1211"
   },
   "execution_summary": {
-    "outcome delivered": "Host-repo learning posture is implemented for proof selection and documented; GitHub #1211 can be closed by this PR if review agrees.",
-    "validation confirmed": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed",
-    "follow-on routed to": "none",
+    "outcome delivered": "Host-repo learning posture is advanced for proof selection and documented; GitHub #1211 remains the owner for broader Memory/promotion routing.",
+    "validation confirmed": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "follow-on routed to": "GitHub #1211",
     "post-work posterity capture": "archive closeout distillation",
     "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
-    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
-    "canonical owner now": "archive",
-    "promotion trigger": "none",
+    "status": "evidence_only",
+    "learned constraint": "This PR is a focused proof-selection slice, not full #1211 closure.",
+    "motivation worth preserving": "The broader host-repo learning route still needs real Memory/promotion/canonical-owner behavior.",
+    "canonical owner now": "GitHub #1211",
+    "promotion trigger": "when the remaining #1211 learning route is selected",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
     "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
     "evidence source": "archive-plan --prepare-closeout",
-    "target scope": "archive",
-    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "target scope": "GitHub #1211",
+    "proposed durable intent": "Continue #1211 beyond this focused proof-selection slice.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": "archive"
+    "owner surface": "GitHub #1211"
   },
   "closure_check": {
-    "closeout scope": "epic",
+    "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
-    "why this decision is honest": "planning closeout accepted a epic claim with intent-status satisfied.",
-    "evidence carried forward": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed",
-    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Review found this PR advances #1211 but does not implement the full Memory/promotion/canonical-owner learning route.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "reopen trigger": "Continue via GitHub #1211 when the broader learning route is selected."
   },
   "improvement_signal_review": {
     "status": "signals_routed",
@@ -297,11 +297,23 @@
           "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
         }
       ],
-      "continuation": [],
+      "continuation": [
+        {
+          "summary": "Continue #1211 with actual Memory/promotion/canonical-owner routing for confirmed and negative repo lessons.",
+          "owner": "GitHub #1211",
+          "source": "PR #1222 review"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "This PR advances #1211 but should not close it.",
+          "owner": "GitHub #1211",
+          "source": "PR #1222 review"
+        }
+      ]
     }
   },
   "drift_log": [
@@ -311,15 +323,15 @@
     "status": "reviewed",
     "memory consult recommended?": "review startup/report memory_consult",
     "memory notes read": "not recorded",
-    "future agents should not rediscover": "no",
-    "decision": "none",
-    "target": "none",
+    "future agents should not rediscover": "yes",
+    "decision": "evidence_only",
+    "target": "GitHub #1211",
     "reason": "Derived from durable_residue during closeout preparation."
   },
   "generated_closeout": {
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1211\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md: reviewed\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_proof_cli.py; docs/host-repo-learning.md; docs/index.md; .agentic-workspace/planning/execplans/host-repo-learning-posture.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1211 focused proof-selection slice\nIntent satisfied: partial\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_proof_cli.py; docs/host-repo-learning.md; docs/index.md; .agentic-workspace/planning/execplans/host-repo-learning-posture.plan.json\nDurable residue: evidence_only (GitHub #1211)\nMemory learning: none\nFollow-up: GitHub #1211"
   }
 }
