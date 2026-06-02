@@ -1307,7 +1307,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "external_work_delta" not in payload
     closeout_route = context["closeout_report"]
     assert closeout_route["selector"] == "closeout_report"
-    assert closeout_route["next_command"] == "agentic-workspace report --section closeout_report --format json"
+    assert closeout_route["next_command"] == f"agentic-workspace report --target {relative_target} --section closeout_report --format json"
     assert "closeout_report" in context["report_profile"]["decision_grade_fields"]
     assert context["operating_posture"]["surface"] == "report"
     assert context["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
@@ -1333,6 +1333,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "external_work_reconciliation" in context["report_profile"]["decision_grade_fields"]
     assert context["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert drill_down["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
+
     section_hints = {item["section"]: item for item in drill_down["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert "compact router field" in section_hints["module_reports"]["why_now"]
@@ -1373,6 +1374,24 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["kind"] == "agentic-workspace/operating-posture/v1"
     assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
+
+
+def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "guidance-only"
+    assert report["profile"] == "minimal"
+    assert report["profile_policy"]["high_risk"] is False
+    assert report["completeness"]["status"] == "guidance-only"
+    assert report["completeness"]["trust_effect"] == "not-applicable"
+    assert report["completeness"]["missing_count"] == 0
 
 
 def test_report_commands_use_resolved_target_not_repo_placeholder(tmp_path: Path, capsys) -> None:
@@ -3181,6 +3200,12 @@ retention_until = "2099-01-01"
     assurance_status = closeout["assurance_requirements"]["evidence_status"][0]
     assert assurance_status["verification_protocols"][0]["protocol_id"] == "privacy_review"
     assert assurance_status["verification_protocols"][0]["evidence_bundle_ids"] == ["privacy_review_2026"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    closeout_report = json.loads(capsys.readouterr().out)["answer"]
+    rows = {row["id"]: row for row in closeout_report["traceability"]["rows"]}
+    assert "1 verification evidence row(s)" in rows["assurance-verification"]["evidence"]
 
 
 def test_report_closeout_trust_blocks_known_gap_claims_from_verification(tmp_path: Path, capsys) -> None:

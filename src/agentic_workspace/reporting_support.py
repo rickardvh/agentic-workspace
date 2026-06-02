@@ -577,7 +577,7 @@ def report_router_payload(
         "durable_intent": payload.get("durable_intent", {}),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
-        "closeout_report": _report_router_closeout_report(payload.get("closeout_report", {})),
+        "closeout_report": _report_router_closeout_report(payload.get("closeout_report", {}), cli_invoke=cli_invoke, target_arg=target_arg),
         "surface_value_guardrail": {
             "command": _command_with_cli_invoke(
                 "agentic-workspace defaults --section surface_value_guardrail --format json", cli_invoke=cli_invoke
@@ -846,13 +846,18 @@ def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
     }
 
 
-def _report_router_closeout_report(value: Any) -> dict[str, Any]:
+def _report_router_closeout_report(value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_arg: str = "./repo") -> dict[str, Any]:
+    command = _command_with_cli_invoke(
+        "agentic-workspace report --target ./repo --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
+    )
     if not isinstance(value, dict):
         return {
             "profile": "compact",
             "reason": "default",
             "escalation_source": "profile-policy-default",
-            "next_command": "agentic-workspace report --section closeout_report --format json",
+            "next_command": command,
             "selector": "closeout_report",
         }
     routing = value.get("routing", {})
@@ -863,7 +868,7 @@ def _report_router_closeout_report(value: Any) -> dict[str, Any]:
         "profile": value.get("profile") or routing.get("profile", "compact"),
         "reason": routing.get("reason") or profile_policy.get("reason", "default"),
         "escalation_source": routing.get("escalation_source") or profile_policy.get("escalation_source", ""),
-        "next_command": "agentic-workspace report --section closeout_report --format json",
+        "next_command": command,
         "selector": "closeout_report",
     }
 

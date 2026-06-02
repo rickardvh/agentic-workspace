@@ -7611,7 +7611,7 @@ def _closeout_report_profile_policy_payload(
     evidence_state = evidence_state if isinstance(evidence_state, dict) else {}
     external_closeout_safe = evidence_state.get("external_closeout_safe", completion_contract.get("external_evidence_closeout_safe"))
     high_risk_reasons: list[str] = []
-    if strict:
+    if strict and completeness_status not in {"guidance-only", "not-applicable"}:
         high_risk_reasons.append("assurance.strict_closeout enabled")
     if trust == "lower-trust" or lower_trust_count:
         high_risk_reasons.append("closeout_trust lower-trust signals present")
@@ -7631,6 +7631,8 @@ def _closeout_report_profile_policy_payload(
         selected = "explanatory"
     elif active_planning or completeness_status == "partial":
         selected = "balanced"
+    elif completeness_status in {"guidance-only", "not-applicable"}:
+        selected = "minimal"
     elif trust == "normal":
         selected = "compact"
     else:
@@ -7721,7 +7723,9 @@ def _closeout_report_traceability_rows(
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     assurance = _as_dict(closeout_trust.get("assurance_requirements"))
     evidence_status = [item for item in _list_payload(assurance.get("evidence_status")) if isinstance(item, dict)]
-    verification_evidence = [item for item in _list_payload(verification.get("evidence_bundle_status")) if isinstance(item, dict)]
+    verification_evidence = [item for item in _list_payload(verification.get("evidence_status")) if isinstance(item, dict)]
+    if not verification_evidence:
+        verification_evidence = [item for item in _list_payload(verification.get("evidence_bundle_status")) if isinstance(item, dict)]
 
     def text_from(value: Any, *, fallback: str = "") -> str:
         text = str(value or "").strip()
@@ -7814,6 +7818,22 @@ def _closeout_report_completeness_payload(
         in {"open", "partial", "unfinished", "follow-up-required"}
     )
     owner = str(keep_parent_open.get("owner") or completion_boundary.get("required_follow_up_owner") or "").strip()
+
+    if not active_planning_record and str(completion_contract.get("status", "")).strip().lower() != "active-planning-derived":
+        return {
+            "kind": "agentic-workspace/closeout-report-completeness/v1",
+            "status": "guidance-only",
+            "complete": False,
+            "check_count": 0,
+            "missing_count": 0,
+            "partial_count": 0,
+            "checks": [],
+            "trust_effect": "not-applicable",
+            "strict_or_high_risk_rule": (
+                "Missing work or validation evidence is not a closeout failure when no active closeout claim "
+                "or required closeout evidence is present."
+            ),
+        }
 
     def evidence_text(*values: Any) -> str:
         for value in values:
