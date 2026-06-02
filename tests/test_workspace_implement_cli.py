@@ -1655,6 +1655,74 @@ def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path:
     assert reuse_pressure["findings"] == []
 
 
+def test_implement_reuse_pressure_honors_gitignore_for_ordinary_scan(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "-C", str(tmp_path), "init"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _write(tmp_path / ".gitignore", "src/sample_app/ignored_helper.py\n")
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "ignored_helper.py",
+        "def normalize_text(value):\n    return value\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "none_found"
+    assert reuse_pressure["findings"] == []
+    assert reuse_pressure["weak_hints"] == []
+
+
+def test_implement_reuse_pressure_skips_workspace_local_scratch(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "scratch" / "external-repo" / "helpers.py",
+        "def normalize_text(value):\n    return value\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "none_found"
+    assert reuse_pressure["findings"] == []
+
+
 def test_implement_reuse_pressure_surfaces_repeated_special_case(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
