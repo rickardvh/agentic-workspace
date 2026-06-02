@@ -1400,7 +1400,7 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
     assert rendering["plain_done_allowed"] is True
 
 
-def test_report_closeout_report_guidance_only_rendering_stays_terse_for_audit_profile() -> None:
+def test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat() -> None:
     from agentic_workspace.workspace_runtime_primitives import _closeout_report_final_response_rendering_payload
 
     rendering = _closeout_report_final_response_rendering_payload(
@@ -1423,12 +1423,14 @@ def test_report_closeout_report_guidance_only_rendering_stays_terse_for_audit_pr
         next_action="route residue",
     )
 
-    assert rendering["status"] == "guidance-only"
+    assert rendering["status"] == "required"
     assert rendering["profile"] == "audit"
-    assert rendering["rendering_mode"] == "terse"
-    assert rendering["summary_lines"] == []
-    assert rendering["must_include"] == []
-    assert rendering["plain_done_allowed"] is True
+    assert rendering["rendering_mode"] == "compact"
+    assert any(line.startswith("Closeout caveat: guidance-only audit profile") for line in rendering["summary_lines"])
+    assert any(line.startswith("Residue: follow-up owner: .agentic-workspace/planning/state.toml") for line in rendering["summary_lines"])
+    assert "profile reason or caveat" in rendering["must_include"]
+    assert "residue or follow-up status" in rendering["must_include"]
+    assert rendering["plain_done_allowed"] is False
     assert rendering["raw_json_allowed"] is False
 
 

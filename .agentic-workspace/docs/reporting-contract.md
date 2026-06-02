@@ -94,7 +94,8 @@ It keeps:
 - `plain_done_allowed`
 - `raw_json_allowed`
 
-Minimal and guidance-only closeouts should stay terse.
+Minimal and guidance-only closeouts without trust, residue, or follow-up signals should stay terse.
+Guidance-only closeouts with audit, lower-trust, residue, or follow-up signals should stay compact but still render the caveat and disallow a plain-done claim.
 Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
 The final response should use concise prose or bullets and must not dump raw JSON.
 

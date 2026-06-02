@@ -7947,7 +7947,16 @@ def _closeout_report_final_response_rendering_payload(
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
 
-    if guidance_only:
+    owners = [
+        str(item.get("owner") or "").strip()
+        for item in completion_options
+        if isinstance(item, dict)
+        and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
+        and item.get("owner")
+    ]
+    has_material_guidance_signal = bool(guidance_only and (lower_trust or profile_requires_detail or owners))
+
+    if guidance_only and not has_material_guidance_signal:
         return {
             "kind": "agentic-workspace/final-closeout-rendering/v1",
             "status": "guidance-only",
@@ -7963,7 +7972,14 @@ def _closeout_report_final_response_rendering_payload(
             "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
         }
 
-    if profile_requires_detail:
+    if guidance_only:
+        must_include.extend(["profile reason or caveat", "residue or follow-up status"])
+        summary_lines.append(
+            f"Closeout caveat: guidance-only {profile} profile"
+            + (f" because {profile_reason}" if profile_reason else "")
+            + "; do not render as plain done."
+        )
+    elif profile_requires_detail:
         must_include.extend(["profile reason", "closure boundary", "proof or validation", "residue or follow-up status"])
         summary_lines.append(f"Closeout profile: {profile}" + (f" because {profile_reason}" if profile_reason else "."))
     elif profile == "compact":
@@ -7994,13 +8010,6 @@ def _closeout_report_final_response_rendering_payload(
     if boundary_text:
         summary_lines.append(f"Closure boundary: {boundary_text}")
 
-    owners = [
-        str(item.get("owner") or "").strip()
-        for item in completion_options
-        if isinstance(item, dict)
-        and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
-        and item.get("owner")
-    ]
     residue = present(residual_risk)
     if owners:
         residue = f"follow-up owner: {owners[0]}" + (f"; {residue}" if residue else "")
@@ -8011,26 +8020,30 @@ def _closeout_report_final_response_rendering_payload(
     if residue:
         summary_lines.append(f"Residue: {residue}")
 
-    if lower_trust or incomplete_or_partial:
+    if lower_trust or incomplete_or_partial or has_material_guidance_signal:
         must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
     if incomplete_or_partial:
         must_include.append("missing or partial evidence caveat")
 
-    rendering_mode = "evidence-backed" if profile_requires_detail else "compact"
+    rendering_mode = "compact" if guidance_only else "evidence-backed" if profile_requires_detail else "compact"
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
-        "status": "required" if profile_requires_detail or lower_trust or incomplete_or_partial else "available",
+        "status": "required"
+        if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal
+        else "available",
         "profile": profile,
         "rendering_mode": rendering_mode,
         "rendering_guidance": (
             "Render these closeout facts in the final user-facing response; keep them concise and omit empty fields."
             if rendering_mode == "evidence-backed"
+            else "Use a short final response that names the caveat and any follow-up or residue; do not claim plain done."
+            if guidance_only
             else "Use a short final response that names outcome and proof without ceremony."
         ),
         "summary_lines": summary_lines[:6],
         "must_include": list(dict.fromkeys(must_include)),
         "must_not_claim": must_not_claim,
-        "plain_done_allowed": not (lower_trust or incomplete_or_partial),
+        "plain_done_allowed": not (lower_trust or incomplete_or_partial or has_material_guidance_signal),
         "raw_json_allowed": False,
         "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
     }
