@@ -42,6 +42,44 @@ The surrounding report payload keeps these fields separate:
 - `reports`
 - `module_reports`
 
+## Closeout Report Shape
+
+The `closeout_report` object is the operator-facing closeout projection.
+
+It keeps:
+
+- `profile`
+- `profile_policy`
+- `work_completed`
+- `interpreted_intent`
+- `changes`
+- `validation`
+- `gaps_and_residual_risk`
+- `closure_boundary`
+- `traceability`
+- `completeness`
+- `next_action`
+
+The profile policy is presentation-only:
+
+- `minimal`: trivial or no-plan closeout with no visible residue.
+- `compact`: ordinary bounded work with normal closeout trust.
+- `balanced`: active planning or partial evidence needs traceability.
+- `explanatory`: continuation, blocked closure, or review needs explanation.
+- `audit`: strict closeout, lower trust, incomplete evidence, missing verification, external divergence, or residue routing is present.
+
+The report is derived from Planning, Verification, `completion_contract`, and `closeout_trust`.
+It must not become execution state, a proof decision, or a second planning record.
+
+Use:
+
+```bash
+agentic-workspace report --target ./repo --section closeout_report --format json
+```
+
+Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
+Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
+
 ## Discovery Shape
 
 The `discovery` object is the pre-write, pre-seed setup layer.
@@ -139,6 +177,8 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what actually changed in that bounded run without broad diff reconstruction?
 - how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
 - what dangling larger intent or lower-trust closeout signals currently exist even when no execplan is active?
+- which closeout report profile should be used, why it escalated, and which selector produces the operator-facing report?
+- whether the operator-facing closeout report is complete, partial, or incomplete before claiming final completion?
 - whether optional external planning evidence is present, absent, invalid, or in conflict with checked-in planning visibility?
 - whether previously closed archived lanes still look honestly landed or now have reopening evidence that lowers closeout trust?
 - what findings or warnings need attention?
@@ -188,6 +228,9 @@ Only open raw module files or broader docs when the report points you to a follo
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when truth stays unchanged
   - stays invariant: machine-readable report truth, execution method, proof semantics, delegated-judgment boundaries, and ownership semantics
 - Treat standing-intent reporting as an inspection and routing surface, not as a new editable source of truth.
+- Treat `closeout_report` as derived presentation over Planning, Verification, `completion_contract`, and `closeout_trust`; do not write to it or let profile selection alter execution state.
+- Escalate closeout report density for strict, high-risk, lower-trust, continuation-bearing, externally divergent, or incomplete closeout evidence instead of hiding the gap behind a shorter final answer.
+- Keep residual risk and follow-up ownership explicit; when either is missing, route the gap to Planning, Verification, Memory, docs/checks, or issue follow-up rather than claiming final closure.
 
 ## Relationship To Lazy Discovery
 

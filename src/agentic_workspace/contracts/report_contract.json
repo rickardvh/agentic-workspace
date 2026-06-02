@@ -41,6 +41,7 @@
     "structured_findings",
     "external_evidence_safety",
     "workflow_compliance_summary",
+    "closeout_report",
     "continuation_next_actions",
     "migration_pilot_template",
     "compact_output_criteria",
