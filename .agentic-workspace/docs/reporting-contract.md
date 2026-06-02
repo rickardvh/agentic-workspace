@@ -58,6 +58,7 @@ It keeps:
 - `closure_boundary`
 - `traceability`
 - `completeness`
+- `final_response_rendering`
 - `next_action`
 
 The profile policy is presentation-only:
@@ -79,6 +80,23 @@ agentic-workspace report --target ./repo --section closeout_report --format json
 
 Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
 Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
+
+Use `closeout_report.final_response_rendering` to turn the report into final user-facing closeout text.
+It is a derived rendering packet, not a source of truth.
+It keeps:
+
+- `profile`
+- `rendering_mode`
+- `rendering_guidance`
+- `summary_lines`
+- `must_include`
+- `must_not_claim`
+- `plain_done_allowed`
+- `raw_json_allowed`
+
+Minimal and guidance-only closeouts should stay terse.
+Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
+The final response should use concise prose or bullets and must not dump raw JSON.
 
 ## Discovery Shape
 

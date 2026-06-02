@@ -7916,6 +7916,126 @@ def _closeout_report_completeness_payload(
     }
 
 
+def _closeout_report_final_response_rendering_payload(
+    *,
+    status: str,
+    profile_policy: dict[str, Any],
+    trust: str,
+    work_completed: str,
+    requested_outcome: str,
+    changed_surfaces: str,
+    validation_proof: str,
+    completion_decision: str,
+    completion_boundary: dict[str, Any],
+    completion_options: list[Any],
+    completeness: dict[str, Any],
+    residual_risk: str,
+    blockers: list[Any],
+    next_action: str,
+) -> dict[str, Any]:
+    profile = str(profile_policy.get("selected_profile") or "minimal")
+    profile_reason = str(profile_policy.get("reason") or "").strip()
+    completeness_status = str(completeness.get("status") or "").strip()
+    lower_trust = str(trust).strip().lower() == "lower-trust"
+    profile_requires_detail = profile in {"balanced", "explanatory", "audit"}
+    incomplete_or_partial = completeness_status in {"incomplete", "partial"}
+    guidance_only = status == "guidance-only" or completeness_status in {"guidance-only", "not-applicable"}
+    must_include: list[str] = []
+    summary_lines: list[str] = []
+    must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
+
+    def present(text: str) -> str:
+        return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
+
+    if guidance_only:
+        return {
+            "kind": "agentic-workspace/final-closeout-rendering/v1",
+            "status": "guidance-only",
+            "profile": profile,
+            "rendering_mode": "terse",
+            "rendering_guidance": "Keep the final response terse; no active closeout claim needs expanded reporting.",
+            "summary_lines": [],
+            "must_include": [],
+            "must_not_claim": must_not_claim
+            + ["Do not present missing active Planning evidence as a closeout failure when no closeout claim is being made."],
+            "plain_done_allowed": True,
+            "raw_json_allowed": False,
+            "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+        }
+
+    if profile_requires_detail:
+        must_include.extend(["profile reason", "closure boundary", "proof or validation", "residue or follow-up status"])
+        summary_lines.append(f"Closeout profile: {profile}" + (f" because {profile_reason}" if profile_reason else "."))
+    elif profile == "compact":
+        must_include.extend(["outcome", "validation"])
+        summary_lines.append("Closeout: compact normal-trust summary is sufficient.")
+    else:
+        must_include.append("outcome")
+
+    outcome = present(work_completed) or present(requested_outcome)
+    if outcome:
+        summary_lines.append(f"Outcome: {outcome}")
+    if present(changed_surfaces):
+        summary_lines.append(f"Changed: {changed_surfaces}")
+    if present(validation_proof):
+        summary_lines.append(f"Proof: {validation_proof}")
+
+    boundary_text = present(completion_decision)
+    completion_boundary_text = present(
+        str(
+            completion_boundary.get("final_satisfaction")
+            or completion_boundary.get("bounded_slice_success")
+            or completion_boundary.get("required_residual_intent")
+            or ""
+        )
+    )
+    if completion_boundary_text:
+        boundary_text = f"{boundary_text}; {completion_boundary_text}" if boundary_text else completion_boundary_text
+    if boundary_text:
+        summary_lines.append(f"Closure boundary: {boundary_text}")
+
+    owners = [
+        str(item.get("owner") or "").strip()
+        for item in completion_options
+        if isinstance(item, dict)
+        and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
+        and item.get("owner")
+    ]
+    residue = present(residual_risk)
+    if owners:
+        residue = f"follow-up owner: {owners[0]}" + (f"; {residue}" if residue else "")
+    elif blockers:
+        residue = f"blocked by: {', '.join(str(item) for item in blockers[:3])}" + (f"; {residue}" if residue else "")
+    elif next_action:
+        residue = present(next_action)
+    if residue:
+        summary_lines.append(f"Residue: {residue}")
+
+    if lower_trust or incomplete_or_partial:
+        must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
+    if incomplete_or_partial:
+        must_include.append("missing or partial evidence caveat")
+
+    rendering_mode = "evidence-backed" if profile_requires_detail else "compact"
+    return {
+        "kind": "agentic-workspace/final-closeout-rendering/v1",
+        "status": "required" if profile_requires_detail or lower_trust or incomplete_or_partial else "available",
+        "profile": profile,
+        "rendering_mode": rendering_mode,
+        "rendering_guidance": (
+            "Render these closeout facts in the final user-facing response; keep them concise and omit empty fields."
+            if rendering_mode == "evidence-backed"
+            else "Use a short final response that names outcome and proof without ceremony."
+        ),
+        "summary_lines": summary_lines[:6],
+        "must_include": list(dict.fromkeys(must_include)),
+        "must_not_claim": must_not_claim,
+        "plain_done_allowed": not (lower_trust or incomplete_or_partial),
+        "raw_json_allowed": False,
+        "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+    }
+
+
 def _closeout_report_payload(
     *,
     active_planning_record: dict[str, Any],
@@ -7965,6 +8085,31 @@ def _closeout_report_payload(
         or _as_dict(closeout_trust.get("terminal_action")).get("recommended_next_action")
         or "Use the closeout report evidence before making a final completion claim."
     )
+    work_completed = str(execution.get("what happened") or execution.get("summary") or "").strip()
+    requested_outcome = str(
+        delegated.get("requested outcome") or delegated.get("requested_outcome") or completion_contract.get("must_be_true") or ""
+    ).strip()
+    changed_surfaces = str(execution.get("changed surfaces") or "").strip()
+    validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
+    completion_decision = str(completion_contract.get("completion_decision", "unknown"))
+    residual_risk = str(_as_dict(closeout_trust.get("proof_confidence")).get("residual_risk", ""))
+    blockers = first_blocking_option.get("blocking_fields", [])
+    final_response_rendering = _closeout_report_final_response_rendering_payload(
+        status="present" if active_planning_record else "guidance-only",
+        profile_policy=profile_policy,
+        trust=trust,
+        work_completed=work_completed,
+        requested_outcome=requested_outcome,
+        changed_surfaces=changed_surfaces,
+        validation_proof=validation_proof,
+        completion_decision=completion_decision,
+        completion_boundary=completion_boundary,
+        completion_options=closeout_trust.get("completion_options", []),
+        completeness=completeness,
+        residual_risk=residual_risk,
+        blockers=blockers if isinstance(blockers, list) else [],
+        next_action=str(next_action),
+    )
     return {
         "kind": "agentic-workspace/closeout-report/v1",
         "status": "present" if active_planning_record else "guidance-only",
@@ -7972,11 +8117,9 @@ def _closeout_report_payload(
         "profile": profile_policy["selected_profile"],
         "profile_policy": profile_policy,
         "trust": trust,
-        "work_completed": str(execution.get("what happened") or execution.get("summary") or "").strip(),
+        "work_completed": work_completed,
         "interpreted_intent": {
-            "requested_outcome": str(
-                delegated.get("requested outcome") or delegated.get("requested_outcome") or completion_contract.get("must_be_true") or ""
-            ).strip(),
+            "requested_outcome": requested_outcome,
             "intent_satisfaction": {
                 key: intent_check.get(key)
                 for key in ("status", "trust", "required_follow_on", "continuation_surface")
@@ -7985,18 +8128,18 @@ def _closeout_report_payload(
             "closure_decision": str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip(),
         },
         "changes": {
-            "changed_surfaces": str(execution.get("changed surfaces") or "").strip(),
+            "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
             "source": "planning.active.planning_record.execution_run",
         },
         "validation": {
-            "proof": str(proof_report.get("validation proof") or execution.get("validations run") or "").strip(),
+            "proof": validation_proof,
             "proof_achieved_now": str(proof_report.get("proof achieved now") or "").strip(),
             "proof_confidence": closeout_trust.get("proof_confidence", {}),
         },
         "gaps_and_residual_risk": {
-            "completion_blockers": first_blocking_option.get("blocking_fields", []),
-            "residual_risk": _as_dict(closeout_trust.get("proof_confidence")).get("residual_risk", ""),
+            "completion_blockers": blockers,
+            "residual_risk": residual_risk,
             "durable_residue_action": closeout_trust.get("durable_residue_action", {}),
             "workflow_trust_impact": workflow_compliance_summary.get("trust_impact", "unknown")
             if isinstance(workflow_compliance_summary, dict)
@@ -8015,6 +8158,7 @@ def _closeout_report_payload(
             "rows": traceability_rows,
         },
         "completeness": completeness,
+        "final_response_rendering": final_response_rendering,
         "next_action": {
             "summary": next_action,
             "command": profile_policy["next_command"],

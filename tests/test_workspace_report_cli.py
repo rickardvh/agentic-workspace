@@ -1392,6 +1392,44 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
     assert report["completeness"]["status"] == "guidance-only"
     assert report["completeness"]["trust_effect"] == "not-applicable"
     assert report["completeness"]["missing_count"] == 0
+    rendering = report["final_response_rendering"]
+    assert rendering["kind"] == "agentic-workspace/final-closeout-rendering/v1"
+    assert rendering["status"] == "guidance-only"
+    assert rendering["rendering_mode"] == "terse"
+    assert rendering["summary_lines"] == []
+    assert rendering["plain_done_allowed"] is True
+
+
+def test_report_closeout_report_guidance_only_rendering_stays_terse_for_audit_profile() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _closeout_report_final_response_rendering_payload
+
+    rendering = _closeout_report_final_response_rendering_payload(
+        status="guidance-only",
+        profile_policy={
+            "selected_profile": "audit",
+            "reason": "closeout_trust lower-trust signals present",
+        },
+        trust="lower-trust",
+        work_completed="",
+        requested_outcome="large closed plan",
+        changed_surfaces="",
+        validation_proof="",
+        completion_decision="guidance-only",
+        completion_boundary={},
+        completion_options=[{"id": "keep-parent-open", "owner": ".agentic-workspace/planning/state.toml"}],
+        completeness={"status": "guidance-only"},
+        residual_risk="Proof confidence was not recorded.",
+        blockers=["durable_residue"],
+        next_action="route residue",
+    )
+
+    assert rendering["status"] == "guidance-only"
+    assert rendering["profile"] == "audit"
+    assert rendering["rendering_mode"] == "terse"
+    assert rendering["summary_lines"] == []
+    assert rendering["must_include"] == []
+    assert rendering["plain_done_allowed"] is True
+    assert rendering["raw_json_allowed"] is False
 
 
 def test_report_commands_use_resolved_target_not_repo_placeholder(tmp_path: Path, capsys) -> None:
@@ -2913,6 +2951,17 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert report["profile_policy"]["escalation_source"] == "assurance.strict_closeout enabled"
     assert report["completeness"]["status"] == "complete"
     assert report["completeness"]["trust_effect"] == "normal"
+    rendering = report["final_response_rendering"]
+    assert rendering["status"] == "required"
+    assert rendering["rendering_mode"] == "evidence-backed"
+    assert "profile reason" in rendering["must_include"]
+    assert "proof or validation" in rendering["must_include"]
+    assert "closure boundary" in rendering["must_include"]
+    assert any(line.startswith("Closeout profile: audit because assurance.strict_closeout enabled") for line in rendering["summary_lines"])
+    assert any(line.startswith("Proof: uv run pytest tests/test_workspace_report_cli.py -q passed") for line in rendering["summary_lines"])
+    assert any(line.startswith("Residue:") for line in rendering["summary_lines"])
+    assert rendering["plain_done_allowed"] is True
+    assert rendering["raw_json_allowed"] is False
     row_ids = {row["id"] for row in report["traceability"]["rows"]}
     assert {"intent-boundary", "work-completed", "changed-surfaces", "validation", "closure-boundary"} <= row_ids
     assert "derived operator-facing presentation" in report["boundary"]
@@ -2974,6 +3023,11 @@ def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp
     assert checks["validation"]["status"] == "incomplete"
     assert checks["follow-up-owner"]["status"] == "incomplete"
     assert "strict" in report["completeness"]["strict_or_high_risk_rule"].lower()
+    rendering = report["final_response_rendering"]
+    assert rendering["status"] == "required"
+    assert rendering["plain_done_allowed"] is False
+    assert "missing or partial evidence caveat" in rendering["must_include"]
+    assert any("plain done summary" in item for item in rendering["must_not_claim"])
 
 
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
