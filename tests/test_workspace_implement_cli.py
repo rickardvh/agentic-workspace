@@ -1018,10 +1018,63 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
 
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
-    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert payload["planning_safety_gate"]["status"] == "attention"
+    assert payload["planning_safety_gate"]["decision"] == "external-issue-scope-unknown"
+    assert payload["planning_safety_gate"]["implementation_allowed"] is True
+    assert payload["planning_safety_gate"]["issue_scope_evidence"]["missing_issue_refs"] == ["#424"]
     assert payload["planning_safety_gate"]["work_shape_guidance"]["scope_factors"]["issue_refs"] == ["#424"]
     assert payload["planning_safety_gate"]["work_shape_guidance"]["agent_decision_required"] is True
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
+
+
+def test_implement_blocks_epic_work_with_multiple_roadmap_candidates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1201-command-package", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1201", title = "Command package extraction", outcome = "Extract the command package.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+  { id = "github-1202-runtime-parity", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1202", title = "Runtime parity", outcome = "Prove generated runtime parity.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement the command generation extraction epic",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["candidate_pressure"]["candidate_ids"] == [
+        "github-1201-command-package",
+        "github-1202-runtime-parity",
+    ]
+    assert payload["context"]["workflow_sufficiency"]["decision"] == "candidate-lane-promotion-required"
 
 
 def test_implement_with_explicit_target_ignores_checkout_active_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -1073,7 +1126,9 @@ candidates = []
 
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
-    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert payload["planning_safety_gate"]["status"] == "attention"
+    assert payload["planning_safety_gate"]["decision"] == "external-issue-scope-unknown"
+    assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 

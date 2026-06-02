@@ -13434,7 +13434,13 @@ def _next_safe_action_packet(
         forbidden_actions.extend(["begin implementation", "create planning artifact before clarified intent is captured"])
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
-    if decision in {"active-execplan-required", "planning-escalation-required", "implementation-owner-missing"}:
+    if decision in {
+        "active-execplan-required",
+        "candidate-lane-promotion-required",
+        "parent-decomposition-decision-required",
+        "planning-escalation-required",
+        "implementation-owner-missing",
+    }:
         forbidden_actions.append("continue implementation without active planning ownership")
     memory_status = str((memory_consult or {}).get("status", "unknown"))
     command_effect = "none"
@@ -14852,6 +14858,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "changed_path_classification",
         "active_delegation_requirement",
         "active_parent_decomposition_requirement",
+        "candidate_pressure",
+        "issue_scope_evidence",
         "repair_route",
         "work_shape_guidance",
     ):
@@ -15484,6 +15492,200 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
         "rule": "Delegation candidates from decomposition records are advisory. Promote or hand off only bounded lanes with clear owner surface, proof expectation, and unchanged validation burden.",
+    }
+
+
+def _planning_roadmap_candidates(target_root: Path) -> list[dict[str, Any]]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return []
+    try:
+        state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return []
+    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    raw_candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    candidates: list[dict[str, Any]] = []
+    for candidate in raw_candidates if isinstance(raw_candidates, list) else []:
+        if not isinstance(candidate, dict):
+            continue
+        status = str(candidate.get("status", "")).strip().lower()
+        maturity = str(candidate.get("maturity", "")).strip().lower()
+        if status in {"done", "closed", "retired", "superseded", "deferred"}:
+            continue
+        candidates.append(
+            {
+                "id": str(candidate.get("id", "")).strip(),
+                "title": str(candidate.get("title", "")).strip(),
+                "refs": str(candidate.get("refs", "")).strip(),
+                "priority": str(candidate.get("priority", "")).strip(),
+                "status": status or "unknown",
+                "maturity": maturity or "unknown",
+                "outcome": str(candidate.get("outcome", "")).strip(),
+                "promotion_signal": str(candidate.get("promotion_signal", "")).strip(),
+                "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
+            }
+        )
+    return [candidate for candidate in candidates if candidate.get("id") or candidate.get("title")]
+
+
+def _candidate_promotion_command(*, candidate_id: str, config: WorkspaceConfig, planning_revision: dict[str, Any]) -> str:
+    return str(
+        _command_with_expected_planning_revision(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace planning promote-to-plan --item-id {candidate_id} --target . --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            planning_revision=planning_revision,
+        )
+    )
+
+
+def _planning_candidate_pressure_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    issue_refs: list[str],
+    work_shape: str | None,
+    decomposition_delegation: dict[str, Any],
+    planning_revision: dict[str, Any],
+) -> dict[str, Any]:
+    roadmap_candidates = _planning_roadmap_candidates(target_root)
+    decomposition_candidates = (
+        [candidate for candidate in decomposition_delegation.get("candidates", []) if isinstance(candidate, dict)]
+        if isinstance(decomposition_delegation, dict)
+        else []
+    )
+    issue_ref_set = set(issue_refs)
+    matched_roadmap = [
+        candidate for candidate in roadmap_candidates if issue_ref_set and issue_ref_set.intersection(_candidate_refs(candidate))
+    ]
+    broad_shape = work_shape in {"lane", "epic"}
+    promotion_required = False
+    reasons: list[str] = []
+    if broad_shape and decomposition_candidates:
+        promotion_required = True
+        reasons.append("open decomposition lane candidates exist for broad or lane-shaped work")
+    if broad_shape and len(roadmap_candidates) >= 2:
+        promotion_required = True
+        reasons.append("multiple roadmap candidates exist while the requested work is broad or lane-shaped")
+    if len(matched_roadmap) >= 2:
+        promotion_required = True
+        reasons.append("multiple roadmap candidates match the requested external issue refs")
+
+    include_candidate_detail = promotion_required or bool(matched_roadmap)
+    top_roadmap = (matched_roadmap or roadmap_candidates) if include_candidate_detail else []
+    route_options: list[dict[str, Any]] = []
+    for candidate in top_roadmap[:3]:
+        candidate_id = str(candidate.get("id", "")).strip()
+        if not candidate_id:
+            continue
+        route_options.append(
+            {
+                "kind": "roadmap-candidate",
+                "id": candidate_id,
+                "title": candidate.get("title", ""),
+                "refs": candidate.get("refs", ""),
+                "command": _candidate_promotion_command(
+                    candidate_id=candidate_id,
+                    config=config,
+                    planning_revision=planning_revision,
+                ),
+            }
+        )
+    for candidate in decomposition_candidates[:3]:
+        lane_id = str(candidate.get("lane_id", "")).strip()
+        if not lane_id:
+            continue
+        route_options.append(
+            {
+                "kind": "decomposition-lane",
+                "id": lane_id,
+                "title": candidate.get("title", ""),
+                "decomposition": candidate.get("decomposition", ""),
+                "command": _candidate_promotion_command(candidate_id=lane_id, config=config, planning_revision=planning_revision),
+            }
+        )
+
+    status = "promotion-required" if promotion_required else "observed" if roadmap_candidates or decomposition_candidates else "none"
+    return {
+        "kind": "agentic-workspace/planning-candidate-pressure/v1",
+        "status": status,
+        "work_shape": work_shape or "unknown",
+        "roadmap_candidate_count": len(roadmap_candidates),
+        "matched_roadmap_candidate_count": len(matched_roadmap),
+        "decomposition_candidate_count": len(decomposition_candidates),
+        "candidate_count": len(roadmap_candidates) + len(decomposition_candidates),
+        "candidate_ids": [
+            *[str(candidate.get("id", "")) for candidate in (matched_roadmap or roadmap_candidates)[:5] if candidate.get("id")],
+            *[str(candidate.get("lane_id", "")) for candidate in decomposition_candidates[:5] if str(candidate.get("lane_id", "")).strip()],
+        ]
+        if include_candidate_detail
+        else [],
+        "reasons": reasons,
+        "route_options": route_options,
+        "required_before_implementation": [
+            "promote a roadmap candidate or decomposition lane to an active execplan",
+            "create a parent decomposition and bounded lane execplans",
+            "or record an explicit bounded-slice exception that does not claim parent epic closure",
+        ]
+        if promotion_required
+        else [],
+        "rule": "Checked-in Planning candidate evidence can require promotion before broad implementation; prompt text alone must not authorize closing an epic.",
+    }
+
+
+def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig, issue_refs: list[str]) -> dict[str, Any]:
+    if not issue_refs:
+        return {"kind": "agentic-workspace/issue-scope-evidence/v1", "status": "not-applicable", "issue_refs": []}
+    path, relative_path, storage = _external_intent_evidence_read_location(target_root)
+    payload: dict[str, Any] = {}
+    if path.exists():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            payload = {}
+    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    by_id = {str(item.get("id", "")).strip(): item for item in items if str(item.get("id", "")).strip()}
+    evidence: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for issue_ref in issue_refs:
+        item = by_id.get(issue_ref)
+        if not item:
+            missing.append(issue_ref)
+            continue
+        evidence.append(
+            {
+                "id": issue_ref,
+                "system": str(item.get("system", "")).strip(),
+                "status": str(item.get("status", "")).strip(),
+                "kind": str(item.get("kind", "")).strip(),
+                "parent_id": str(item.get("parent_id", "")).strip(),
+                "planning_residue_expected": str(item.get("planning_residue_expected", "")).strip(),
+                "negative_invariant_count": len(_list_payload(item.get("negative_invariants"))),
+                "title": str(item.get("title", "")).strip(),
+            }
+        )
+    if missing and evidence:
+        status = "partial"
+    elif missing:
+        status = "unknown"
+    else:
+        status = "available"
+    return {
+        "kind": "agentic-workspace/issue-scope-evidence/v1",
+        "status": status,
+        "issue_refs": issue_refs,
+        "evidence": evidence,
+        "missing_issue_refs": missing,
+        "source_path": relative_path if path.exists() else "",
+        "storage": storage if path.exists() else "none",
+        "risk": "high" if missing else "evidence-backed",
+        "refresh_command": _command_with_cli_invoke(
+            command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "rule": "Issue refs are external-intent handles until cached provider-agnostic evidence or active Planning owns the scope.",
     }
 
 
@@ -17635,6 +17837,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
         compact_gate.pop("work_shape_guidance", None)
+        if compact_gate.get("status") in {"clear", "satisfied"}:
+            compact_gate.pop("candidate_pressure", None)
+            compact_gate.pop("issue_scope_evidence", None)
         projected["context"]["planning_safety_gate"] = compact_gate
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["context"]["intent_acknowledgement"] = {
@@ -18425,6 +18630,15 @@ def _planning_safety_gate_payload(
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
     path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
     planning_revision = _planning_revision_payload(target_root=target_root)
+    issue_scope_evidence = _issue_scope_evidence_payload(target_root=target_root, config=config, issue_refs=issue_refs)
+    candidate_pressure = _planning_candidate_pressure_payload(
+        target_root=target_root,
+        config=config,
+        issue_refs=issue_refs,
+        work_shape=work_shape,
+        decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
+        planning_revision=planning_revision,
+    )
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -18482,6 +18696,23 @@ def _planning_safety_gate_payload(
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
+    elif (not active_planning_present) and candidate_pressure.get("status") == "promotion-required":
+        status = "blocked"
+        decision = "candidate-lane-promotion-required"
+        reason = "Checked-in Planning candidates indicate broad or lane-shaped work; promote or decompose a bounded lane first."
+        required_next_action = "select-or-promote-candidate-lane"
+        workflow_sufficient = False
+    elif (
+        (not active_planning_present)
+        and issue_refs
+        and (not changed_paths)
+        and issue_scope_evidence.get("status") in {"unknown", "partial"}
+    ):
+        status = "attention"
+        decision = "external-issue-scope-unknown"
+        reason = "The task references external issue id(s), but AW has no complete cached intent evidence for their scope."
+        required_next_action = "refresh-external-intent-or-state-bounded-slice"
+        workflow_sufficient = True
     elif path_classification["implementation_paths"] and path_classification["scope_growth_detected"]:
         status = "attention"
         decision = "agent-work-shape-decision-required"
@@ -18514,6 +18745,8 @@ def _planning_safety_gate_payload(
         "active_plan_reliance": active_plan_reliance,
         "active_state_summary": active_summary,
         "issue_refs": issue_refs,
+        "issue_scope_evidence": issue_scope_evidence,
+        "candidate_pressure": candidate_pressure,
         "repair_route": {
             "status": "retired",
             "fit_criteria": [
