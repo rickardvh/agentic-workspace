@@ -112,6 +112,65 @@ def test_planning_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert payload["lifecycle_plan"]["next_safe_command"].startswith("agentic-workspace planning new-plan")
 
 
+def test_planning_front_door_rewrites_closeout_summary_action_to_top_level(tmp_path, capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "closeout-command",
+                "--title",
+                "Closeout command",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "closeout-command.plan.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["active_milestone"]["status"] = "completed"
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "closeout",
+                "closeout-command",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "front-door closeout proof passed",
+                "--what-happened",
+                "closed the front-door closeout command wording",
+                "--scope-touched",
+                "workspace planning front door",
+                "--changed-surfaces",
+                "planning closeout action output",
+                "--review-summary",
+                "scope respected",
+                "--outcome-summary",
+                "summary action points at the top-level workspace summary router",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    next_actions = [action["detail"] for action in payload["actions"] if action["kind"] == "next safe action"]
+
+    assert "agentic-workspace summary --target . --format json" in next_actions
+    assert all("agentic-workspace planning summary" not in detail for detail in next_actions)
+    assert all("agentic-planning summary" not in detail for detail in next_actions)
+
+
 def test_memory_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert cli.main(["memory", "route", "--target", str(tmp_path), "--files", "src/example.py", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
