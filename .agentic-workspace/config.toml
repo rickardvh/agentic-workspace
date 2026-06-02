@@ -12,7 +12,7 @@ workflow_artifact_profile = "repo-owned"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = ["review_artifacts", "external_adapters"]
-cli_invoke = "uv run agentic-workspace"
+cli_invoke = "uv run python scripts/run_agentic_workspace.py"
 
 [assurance]
 default_level = "medium"

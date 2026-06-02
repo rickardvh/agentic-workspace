@@ -113,16 +113,16 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == [
-        "uv run agentic-workspace summary --target . --format json",
-        "uv run agentic-workspace doctor --target . --modules planning --format json",
+        f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json",
+        f"{REPO_LOCAL_CLI_INVOKE} doctor --target . --modules planning --format json",
     ]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
     first_step = answer["validation_plan"]["required"][0]
     assert first_step["order"] == 1
-    assert first_step["command"] == "uv run agentic-workspace summary --target . --format json"
+    assert first_step["command"] == f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json"
     assert first_step["cwd"] == "."
-    assert first_step["run"].endswith("agentic-workspace summary --target . --format json")
+    assert first_step["run"] == f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json"
     assert first_step["required"] is True
     assert first_step["lane_id"] == "planning_surfaces"
     assert first_step["action"] == "run-validation-command"
@@ -373,7 +373,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
     assert "validation_plan" not in encoded
-    assert len(encoded) < 2500
+    assert len(encoded) < 2700
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:

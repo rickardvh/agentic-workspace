@@ -38,6 +38,7 @@ class _WorkspaceCliTestProxy:
 
 
 cli = _WorkspaceCliTestProxy()
+REPO_LOCAL_CLI_INVOKE = "uv run python scripts/run_agentic_workspace.py"
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 

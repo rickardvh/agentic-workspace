@@ -1060,7 +1060,7 @@ def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections
     assert "selected modules" in front_door["ordinary_sequence"][0]["reason"]
     assert front_door["ordinary_sequence"][1]["step"] == "apply"
     assert "--dry-run" not in front_door["ordinary_sequence"][1]["command"]
-    assert front_door["ordinary_sequence"][2]["command"].startswith("uv run agentic-workspace doctor --target ")
+    assert front_door["ordinary_sequence"][2]["command"].startswith(f"{REPO_LOCAL_CLI_INVOKE} doctor --target ")
     assert [(module_name, command_name) for module_name, command_name, _kwargs in calls] == [
         (module_name, "upgrade") for module_name in expected_modules
     ]
@@ -1207,7 +1207,7 @@ def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_p
     assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
     primary_action = lifecycle_plan["primary_next_action"]
     assert primary_action["action"] == "resolve-lifecycle-review"
-    assert primary_action["command"].startswith("uv run agentic-workspace uninstall ")
+    assert primary_action["command"].startswith(f"{REPO_LOCAL_CLI_INVOKE} uninstall ")
     assert "--dry-run" in primary_action["command"]
     assert primary_action["run"] == primary_action["command"]
     assert primary_action["risk"] == "blocked until review items are resolved"

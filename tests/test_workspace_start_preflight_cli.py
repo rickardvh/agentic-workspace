@@ -163,7 +163,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["context_router"]["views"][0]["view"] == "start"
     assert startup["entrypoint"] == "AGENTS.md"
     assert "first_compact_queries" in startup
-    assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
+    configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
+    assert any(q.startswith(configured_cli) for q in startup["first_compact_queries"])
     assert startup["primary_next_action"]["action"] in {"continue-active-planning-record", "use-preflight-context"}
     assert startup["primary_next_action"]["risk"] == "read-only routing"
     assert startup["primary_next_action"]["required_inputs"] == ["target repo", "current task"]
@@ -172,7 +173,6 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert "checked-in planning" in startup["work_intent_gate"]["rule"]
     assert "vague_outcome_orientation" not in startup
     assert startup["skill_routing"]["status"] == "advisory"
-    configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target . --task "<task>" --format json'
     assert "planning-autopilot" not in {route["skill"] for route in startup["skill_routing"]["preferred_routes"]}
     assert startup["skill_routing"]["enabled_advanced_routes"] == ["external_adapters", "review_artifacts"]
@@ -230,7 +230,7 @@ def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
     assert orientation["status"] == "applicable"
     assert orientation["applies_to_current_task"] is True
     assert orientation["first_surface"].startswith("startup_guidance.primary_next_action")
-    assert "agentic-workspace start" in orientation["compact_commands"][1]
+    assert f"{REPO_LOCAL_CLI_INVOKE} start" in orientation["compact_commands"][1]
     assert "intended outcome" in orientation["answer_contract"][0]
 
 
@@ -727,10 +727,10 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert "implement --changed <paths>" in _start_task_context(payload)["implement_changed_command"]
     assert _start_context(payload)["acceptance"]["status"] == "inferred"
     assert _start_context(payload)["acceptance"]["closeout_required"] is True
-    assert payload["skills"]["catalog"]["command"] == 'uv run agentic-workspace skills --target . --task "<task>" --format json'
+    assert payload["skills"]["catalog"]["command"] == f'{REPO_LOCAL_CLI_INVOKE} skills --target . --task "<task>" --format json'
     assert _start_task_context(payload)["status"] == "present"
     assert _start_task_context(payload)["implement_changed_command"] == (
-        f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
+        f'{REPO_LOCAL_CLI_INVOKE} implement --changed <paths> --task "{task}" --format json'
     )
     assert "durable_intent" not in _start_context(payload)
     assert "cli_compatibility" not in payload
@@ -921,7 +921,7 @@ def test_start_select_returns_requested_startup_fields(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
     assert payload["source_command"] == "start"
-    assert payload["values"]["cli_invocation"]["primary"] == "uv run agentic-workspace"
+    assert payload["values"]["cli_invocation"]["primary"] == REPO_LOCAL_CLI_INVOKE
     assert payload["missing"] == ["durable_intent.missing"]
     assert "skill_routing" in payload["available_selectors"]
 
@@ -1110,7 +1110,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
     assert action["action"] == "inspect-effective-config"
-    assert action["command"] == "uv run agentic-workspace config --format json"
+    assert action["command"] == f"{REPO_LOCAL_CLI_INVOKE} config --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
     assert len(json.dumps(payload, sort_keys=True)) < 14500
