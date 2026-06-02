@@ -425,25 +425,13 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
     assert payload["proof_route_decision"]["manual_fallback"]["status"] == "required"
-    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 2
+    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 0
     assert payload["proof_route_decision"]["selected_command"] is None
     assert payload["proof_route_decision"]["route_source"] == "manual-fallback"
     assert payload["manual_verification"]["status"] == "required"
     assert "no executable proof route" in payload["manual_verification"]["summary"]
-    assert payload["unavailable_proof_commands"] == [
-        {
-            "lane": "workspace_cli",
-            "command": "make test-workspace",
-            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
-        },
-        {
-            "lane": "workspace_cli",
-            "command": "make lint-workspace",
-            "reason": "target repo has no Makefile and no matching package.json script, so make-based package proof was not selected",
-        },
-    ]
-    assert payload["proof_strategy"]["selection_order"][0] == "match changed paths to proof intent"
-    assert payload["target_proof_capabilities"]["candidate_commands"] == []
+    assert payload.get("unavailable_proof_commands", []) == []
+    assert payload["warnings"] == []
     assert payload["manual_verification"]["status"] == "required"
 
 
@@ -484,11 +472,11 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert decision["next_action"]["action"] == "manual-verification"
     assert decision["selected_command"] is None
     assert decision["manual_fallback"]["status"] == "required"
-    assert decision["manual_fallback"]["unavailable_command_count"] == 2
-    assert decision["critical_warnings"] == ["Some selected proof commands are unavailable in this target repo."]
+    assert decision["manual_fallback"]["unavailable_command_count"] == 0
+    assert decision["critical_warnings"] == []
     explanation = answer["proof_route_explanation"]
     assert explanation["selected_commands"] == []
-    assert [command["command"] for command in explanation["unavailable_commands"]] == ["make test-workspace", "make lint-workspace"]
+    assert explanation["unavailable_commands"] == []
     assert explanation["manual_verification"]["status"] == "required"
     assert explanation["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
     assert explanation["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
@@ -632,6 +620,58 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
     assert payload["manual_verification"] is None
 
 
+def test_proof_changed_treats_plain_python_project_as_discovery_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["agentic-workspace"]
+""",
+    )
+    _write(tmp_path / "uv.lock", "# lock\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "pyproject.toml", "uv.lock", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest" not in answer["required_commands"]
+    assert answer["manual_verification"]["status"] == "required"
+    pytest_capability = answer["target_proof_capabilities"]["python"]["pytest"]
+    assert pytest_capability["status"] == "candidate"
+    assert pytest_capability["authority"] == "candidate-discovery"
+    assert answer["target_proof_capabilities"]["role_commands"] == {}
+    learning = answer["host_repo_learning"]
+    assert learning["authority_rule"].startswith("Host-repo heuristics may propose discovery candidates")
+    assert learning["negative_evidence"]["status"] == "none"
+    assert learning["negative_evidence"]["items"] == []
+    assert answer["unavailable_commands"] == []
+
+
+def test_proof_changed_uses_declared_pytest_dependency_as_confirmed_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "pyproject.toml",
+        """
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["pytest>=8"]
+""",
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "pyproject.toml", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "uv run pytest" in payload["required_commands"]
+    pytest_capability = payload["target_proof_capabilities"]["python"]["pytest"]
+    assert pytest_capability["status"] == "confirmed"
+    assert pytest_capability["evidence"] == [
+        {"state": "confirmed", "source": "declared-dependency", "path": "pyproject.toml:project.dependencies"}
+    ]
+
+
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -650,6 +690,8 @@ line-length = 120
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["uv run pytest", "uv run ruff check ."]
     assert payload["target_proof_capabilities"]["python"]["available"] is True
+    assert payload["target_proof_capabilities"]["python"]["pytest"]["status"] == "confirmed"
+    assert payload["target_proof_capabilities"]["python"]["pytest"]["authority"] == "confirmed-repo-evidence"
     assert payload["target_proof_capabilities"]["role_commands"] == {
         "test": ["uv run pytest"],
         "lint": ["uv run ruff check ."],
@@ -761,6 +803,113 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert explanation["selected_commands"][0]["kind"] == "proof-command/v1"
     assert explanation["proof_execution_evidence"]["status"] == "not-run"
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
+
+
+def test_proof_changed_reuses_confirmed_memory_proof_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('ok')\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Proof routes
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"src","owner":"Memory","provenance":"manual verification passed on 2026-06-02","learned_at":"2026-06-02"}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["source_counts"]["memory"] == 1
+    assert hints["confirmed"][0]["candidate_command"] == "python -m compileall src"
+    assert hints["confirmed"][0]["confirmation"] == "learned-confirmed"
+    assert answer["proof_route_decision"]["selected_command"]["command"] == "python -m compileall src"
+    assert answer["proof_route_decision"]["selected_command"]["route_source"] == "live-adapted-target-capability"
+    learning = answer["host_repo_learning"]
+    assert learning["confirmed_evidence"]["status"] == "present"
+    assert "memory capture-note" in learning["confirmed_evidence"]["items"][0]["capture"]["command_to_run"]
+    assert learning["actionable_next_steps"]["memory_note_entries"][0].startswith("agentic-workspace-proof-route:")
+
+
+def test_proof_changed_memory_negative_route_suppresses_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "pytest"}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "proof-routes.md",
+        """
+# Failed proof routes
+
+agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":true,"scope":"repo","owner":"Memory","provenance":"npm test failed because pytest is not installed","learned_at":"2026-06-02"}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["learned_route_hints"]["negative"][0]["candidate_command"] == "npm test"
+    assert "npm test" not in answer["target_proof_capabilities"]["candidate_commands"]
+    assert answer["required_commands"] == []
+    assert answer["proof_route_decision"]["selected_command"] is None
+    assert answer["proof_route_decision"]["critical_warnings"] == ["1 learned negative route(s) suppressed candidate proof commands."]
+    learning = answer["host_repo_learning"]
+    assert learning["negative_evidence"]["status"] == "present"
+    assert learning["negative_evidence"]["items"][0]["command"] == "npm test"
+    assert learning["actionable_next_steps"]["status"] == "present"
+
+
+def test_proof_changed_incomplete_confirmed_memory_route_is_not_authoritative(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('ok')\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Incomplete proof routes
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["confirmed"] == []
+    assert hints["invalid"][0]["original_state"] == "confirmed"
+    assert set(hints["invalid"][0]["missing_fields"]) == {"owner", "scope", "provenance", "learned_at"}
+    assert answer["required_commands"] == []
+    assert answer["proof_route_decision"]["selected_command"] is None
+    learning = answer["host_repo_learning"]
+    assert learning["invalid_learning_evidence"]["status"] == "present"
+    assert (
+        "candidate_command, state, intent_type, owner, scope, provenance, and learned_at" in learning["invalid_learning_evidence"]["rule"]
+    )
+    assert "recapture this proof-route lesson" in learning["invalid_learning_evidence"]["items"][0]["recovery"]
+
+
+def test_proof_changed_incomplete_negative_memory_route_does_not_suppress_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run"}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "proof-routes.md",
+        """
+# Incomplete failed proof routes
+
+agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":true}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    assert hints["negative"] == []
+    assert hints["invalid"][0]["original_state"] == "negative"
+    assert "npm test" in answer["target_proof_capabilities"]["candidate_commands"]
+    assert answer["proof_route_decision"]["selected_command"]["command"] == "npm test"
+    learning = answer["host_repo_learning"]
+    assert learning["negative_evidence"]["status"] == "none"
+    assert learning["invalid_learning_evidence"]["items"][0]["command"] == "npm test"
 
 
 def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_path: Path, capsys) -> None:

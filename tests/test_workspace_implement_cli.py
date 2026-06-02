@@ -68,13 +68,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert retry["status"] == "available"
     assert retry["retry_limit"] == 1
     assert "uv run python scripts/check/check_generated_command_packages.py --python-conformance" in retry["applies_to"]
-    unavailable_commands = {item["command"] for item in payload["proof"]["unavailable_commands"]}
-    assert {
-        "make test-planning",
-        "make lint-planning",
-        "make test-workspace",
-        "make lint-workspace",
-    } <= unavailable_commands
+    assert payload["proof"]["unavailable_commands"] == []
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["orientation"]["status"] == "changed-path-context"
     assert "preflight" in payload["orientation"]["preflight_command"]

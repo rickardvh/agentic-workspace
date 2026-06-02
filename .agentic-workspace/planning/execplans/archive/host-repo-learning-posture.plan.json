@@ -1,0 +1,325 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Host-repo learning posture",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "GitHub #1211",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Make proof selection treat host-repo heuristics as candidates until confirmed, add owner routing for learned/negative repo evidence, and document the host-repo learning posture.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_proof_cli.py -q",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_proof_cli.py",
+      "docs/host-repo-learning.md",
+      "docs/index.md"
+    ],
+    "completion_criteria": [
+      "Host-repo learning posture is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "GitHub #1211"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "GitHub #1211",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
+    },
+    "execution": {
+      "milestone": "host-repo-learning-posture",
+      "status": "completed",
+      "next_step": "Archive this bounded slice; the remaining #1211 intent is satisfied by close-1211-host-repo-learning.",
+      "proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_proof_cli.py",
+        "docs/host-repo-learning.md",
+        "docs/index.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #1211",
+    "this slice completes the larger intended outcome": "superseded-by-later-closeout",
+    "continuation surface": "close-1211-host-repo-learning"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "remaining work completed by close-1211-host-repo-learning"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Proof selection now exposes a general host-repo learning posture and avoids selecting pytest from Python markers alone.",
+    "intentionally deferred": "none",
+    "discovered implications": "Closeout still suggests an invalid planning summary command; already routed to GitHub #1218.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "none for #1211 after close-1211-host-repo-learning",
+    "next likely slice": "none for #1211"
+  },
+  "intent_interpretation": {
+    "literal request": "Host-repo learning posture",
+    "inferred intended outcome": "GitHub #1211",
+    "chosen concrete what": "Move Python pytest proof selection from filename-based inference to confirmed repo evidence, surface host-repo learning owner routes, and document the generic learning contract.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace proof-selection implementation, focused proof-selection tests, docs that explain host-repo learning, and this active execplan.",
+    "max changed files": "4 implementation/doc/test files plus this active execplan and closeout archive.",
+    "required validation commands": "Focused proof-selection tests plus workspace test/lint proof.",
+    "ask-before-refactor threshold": "Do not add a new persistent first-class learning surface unless existing Memory, config, docs, checks, Planning, or proof-route hints are shown insufficient.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement confirmed-evidence proof selection and host-repo learning owner routing for #1211.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "GitHub #1211",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "keep-local",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "Keep local because the slice is tightly coupled across proof-selection semantics, tiny payload tests, and docs; delegation would add handoff cost without reducing proof burden."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #1211",
+      "label": "GitHub #1211",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "host-repo-learning-posture",
+    "status": "completed",
+    "scope": "Proof-selection consumer of host-repo learning plus documentation of existing owner routes.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Make proof selection require confirmed pytest evidence and expose host-repo learning owner routing."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_proof_cli.py",
+    "docs/host-repo-learning.md",
+    "docs/index.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_proof_cli.py -q",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Host-repo learning posture is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1211 by making host-repo proof routing treat heuristics as candidate evidence, requiring confirmed pytest evidence before selecting pytest, surfacing host-repo learning owner routes, and documenting the posture.",
+    "scope touched": "workspace proof-selection runtime, focused proof CLI tests, host-repo learning docs, docs index, active planning closeout",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_proof_cli.py; docs/host-repo-learning.md; docs/index.md; .agentic-workspace/planning/execplans/host-repo-learning-posture.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "result for continuation": "bounded slice complete; remaining #1211 closure completed by close-1211-host-repo-learning",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within the active plan; remaining #1211 breadth was later completed by close-1211-host-repo-learning.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1211",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "This slice adds confirmed-evidence pytest proof routing and host-repo learning documentation; close-1211-host-repo-learning adds Memory-backed confirmed and negative proof-route lesson capture, promotion guidance, and reuse.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Host-repo learning posture is implemented for proof selection and documented; close-1211-host-repo-learning completes broader Memory/promotion routing.",
+    "validation confirmed": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "The earlier proof-selection slice was completed by the later Memory-backed host-repo learning route.",
+    "motivation worth preserving": "Use close-1211-host-repo-learning as the closing evidence for the full #1211 route.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Full #1211 closure evidence lives in close-1211-host-repo-learning.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The later close-1211-host-repo-learning closeout implements the full Memory-backed confirmed and negative route required to close #1211.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed.",
+    "reopen trigger": "Reopen only if new evidence shows confirmed or negative host-repo proof lessons cannot be captured, promoted, or reused through existing owner surfaces."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "planning closeout next safe action still suggests invalid `agentic-workspace planning summary --target . --format json`"
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "GitHub #1218"
+    ],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-29: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1211 focused proof-selection slice, later completed by close-1211-host-repo-learning\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; make maintainer-surfaces: passed; docs diff reviewed; close-1211-host-repo-learning proof passed\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_proof_cli.py; docs/host-repo-learning.md; docs/index.md; .agentic-workspace/planning/execplans/host-repo-learning-posture.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

@@ -50,6 +50,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Maturity model](maturity-model.md): support and adoption expectations, not a product map.
 - [Design principles](design-principles.md): product doctrine and tradeoff guidance, not first-contact package documentation.
 - [Setup findings contract](setup-findings-contract.md): how optional setup findings are promoted, dismissed, or kept transient.
+- [Host-repo learning](host-repo-learning.md): how agents turn repo-specific evidence into the right owner surface instead of relying on hard-coded assumptions.
 - [Continuation readiness projections](continuation-readiness-projections.md): completion, repair, findings, external-evidence, migration, compaction, and automation-readiness report sections.
 - [Collaboration safety](collaboration-safety.md): practical merge expectations for Planning, Memory, config, generated surfaces, and managed fences.
 - [Planning live-state collaboration design](planning-live-state-collaboration-design.md): design note for lower-conflict live-state alternatives and the current compact-state choice.
