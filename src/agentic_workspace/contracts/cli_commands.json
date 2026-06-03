@@ -1318,6 +1318,46 @@
           "help": "Return required proof commands for the provided repo-relative changed paths."
         },
         {
+          "name": "record_receipt",
+          "flags": [
+            "--record-receipt"
+          ],
+          "action": "store_true",
+          "help": "Record a compact proof receipt from an actually run validation command."
+        },
+        {
+          "name": "receipt_command",
+          "flags": [
+            "--receipt-command"
+          ],
+          "default": "",
+          "help": "Validation command or evidence to store in the proof receipt."
+        },
+        {
+          "name": "receipt_result",
+          "flags": [
+            "--receipt-result"
+          ],
+          "default": "",
+          "help": "Validation result to store in the proof receipt, such as passed or failed."
+        },
+        {
+          "name": "receipt_plan",
+          "flags": [
+            "--receipt-plan"
+          ],
+          "default": "",
+          "help": "Optional planning id that the proof receipt applies to."
+        },
+        {
+          "name": "dry_run",
+          "flags": [
+            "--dry-run"
+          ],
+          "action": "store_true",
+          "help": "Show the receipt payload without writing it."
+        },
+        {
           "name": "select",
           "flags": [
             "--select"
@@ -1335,8 +1375,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "changed-path proof routing and authority checks",
-      "mutates_state": false
+      "classification_note": "changed-path proof routing, authority checks, and explicit proof receipt recording",
+      "mutates_state": true
     },
     {
       "name": "setup",

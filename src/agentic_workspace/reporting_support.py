@@ -305,7 +305,14 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             if isinstance(package_continuation, dict):
                 compact["package_owned_continuation"] = {
                     key: package_continuation.get(key)
-                    for key in ("status", "surface_count", "owner_surfaces", "rule")
+                    for key in (
+                        "status",
+                        "surface_count",
+                        "owner_surfaces",
+                        "pending_pr_merge_count",
+                        "pending_pr_merge_surfaces",
+                        "rule",
+                    )
                     if key in package_continuation
                 }
             return compact

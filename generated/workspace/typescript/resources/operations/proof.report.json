@@ -1,21 +1,22 @@
 {
-  "classification": "read-only-report",
+  "classification": "derived-output",
   "command_surface": {
     "command": "proof",
     "format_option": "format"
   },
   "effects": {
     "destructive": false,
-    "idempotent": true,
-    "read_only": true,
+    "idempotent": false,
+    "read_only": false,
     "requires_preflight_gate": false,
-    "writes_repo_state": false
+    "writes_repo_state": true
   },
   "guards": [
     "Unknown proof routes should be treated as usage errors.",
     "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
     "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
-    "Tiny output must preserve the first validation action, all required commands, and blocking warnings."
+    "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
+    "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result."
   ],
   "id": "proof.report",
   "inputs": [
@@ -36,6 +37,31 @@
     },
     {
       "name": "changed",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "record_receipt",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_result",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_plan",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
       "required": false,
       "source": "cli-option"
     },
@@ -97,7 +123,8 @@
     "proof changed-path tests remain compatible",
     "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
     "proof changed-path tests cover subsystem proof hints",
-    "proof tiny profile omits selected-lane and provenance detail while preserving required commands"
+    "proof tiny profile omits selected-lane and provenance detail while preserving required commands",
+    "proof receipt tests cover explicit execution evidence recording and planning closeout consumption"
   ],
   "reads": [
     {
@@ -137,7 +164,7 @@
       "uses": "workspace.root.resolve"
     },
     {
-      "description": "Resolve route, current proof, changed-path proof output, and subsystem proof hints.",
+      "description": "Resolve route, current proof, changed-path proof output, subsystem proof hints, or explicit receipt payload.",
       "id": "resolve_proof",
       "uses": "proof.routes.resolve"
     },
@@ -162,6 +189,12 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, and durable-surface value review.",
-  "writes": []
+  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, and explicit proof receipt recording.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/proof-receipts/last.json",
+      "when": "--record-receipt and not a dry run"
+    }
+  ]
 }

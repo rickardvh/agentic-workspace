@@ -23,13 +23,11 @@
     ],
     "exact": [
       "packages/planning/README.md",
-      "packages/memory/README.md",
-      "https://github.com/rickardvh/command-generation/blob/main/README.md"
+      "packages/memory/README.md"
     ],
     "prefixes": [
       "packages/planning/docs/",
-      "packages/memory/docs/",
-      "https://github.com/rickardvh/command-generation/tree/main/docs/"
+      "packages/memory/docs/"
     ],
     "rule": "Markdown-only package documentation edits use review proof unless behavior, generated payload, install contracts, or implementation semantics also changed."
   },
@@ -145,8 +143,7 @@
       "lane": "repo_docs_review",
       "exact": [
         "packages/planning/README.md",
-        "packages/memory/README.md",
-        "https://github.com/rickardvh/command-generation/blob/main/README.md"
+        "packages/memory/README.md"
       ]
     },
     {

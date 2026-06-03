@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -80,9 +81,12 @@ def _write_cached_fingerprint(fingerprint: dict[str, object], *, cache_path: Pat
         "updated_at": datetime.now(UTC).isoformat(),
         "regeneration_command": "uv run python scripts/generate/generate_command_packages.py",
     }
-    temporary_path = cache_path.with_suffix(".tmp")
-    temporary_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    temporary_path.replace(cache_path)
+    temporary_path = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary_path.replace(cache_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _default_run_generator(*, repo_root: Path, generator_script: Path) -> None:

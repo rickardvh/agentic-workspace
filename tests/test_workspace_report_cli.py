@@ -1404,6 +1404,104 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
     assert rendering["plain_done_allowed"] is True
 
 
+def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_active_plan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    archive = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "archived-closeout.plan.json"
+    _write_json(
+        archive,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Archived Closeout",
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Implemented the archived evidence closeout report.",
+                "scope touched": "report closeout",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "proof achieved now": "yes",
+            },
+            "closure_check": {
+                "slice status": "completed",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "Archived closeout evidence remains available for user reporting.",
+            },
+            "delegated_judgment": {
+                "requested outcome": "Surface archived closeout evidence when no active plan exists.",
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "present"
+    assert report["planning_evidence"]["authority"] == "archived-planning-evidence"
+    assert report["planning_evidence"]["state"] == "archived"
+    assert report["planning_evidence"]["source"]["path"] == (".agentic-workspace/planning/execplans/archive/archived-closeout.plan.json")
+    assert report["work_completed"] == "Implemented the archived evidence closeout report."
+    assert report["changes"]["source"] == "planning.archive.execplan.execution_run"
+
+
+def test_report_closeout_trust_explains_open_issue_residue_pending_pr_merge(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n\n'
+        "[todo]\nactive_items = []\nqueued_items = []\n\n"
+        "[roadmap]\nlanes = []\n"
+        "candidates = [\n"
+        "  { id = 'github-1234-follow-up', maturity = 'candidate', status = 'next', priority = 'P2', refs = 'GitHub #1234', title = 'Follow-up issue', outcome = 'Land through the current PR.', reason = 'Open until PR merge closes it.', promotion_signal = 'PR merge', suggested_first_slice = 'Wait for merge refresh.' },\n"
+        "]\n",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "systems": ["github"],
+            "items": [
+                {"system": "github", "id": "#1234", "status": "open", "title": "Follow-up issue"},
+            ],
+            "pull_requests": [
+                {
+                    "system": "github",
+                    "number": 55,
+                    "title": "Closeout follow-ups",
+                    "state": "open",
+                    "url": "https://github.com/acme/project/pull/55",
+                    "head_ref": "codex/closeout-reporting",
+                    "base_ref": "main",
+                    "is_draft": True,
+                    "close_keyword_issue_ids": ["#1234"],
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    continuation = closeout["checks"]["intent_satisfaction"]["package_owned_continuation"]
+    assert continuation["pending_pr_merge_count"] == 1
+    pending = continuation["pending_pr_merge_surfaces"][0]
+    assert pending["id"] == "github-1234-follow-up"
+    assert pending["external_disposition"] == "pending-pr-merge"
+    assert pending["pending_pr_merge"]["pr_number"] == "55"
+    assert pending["pending_pr_merge"]["branch"] == "codex/closeout-reporting"
+    assert "refresh-github" in pending["pending_pr_merge"]["reconcile_command"]
+
+
 def test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat() -> None:
     from agentic_workspace.workspace_runtime_primitives import _closeout_report_final_response_rendering_payload
 
@@ -4595,8 +4693,9 @@ def test_external_intent_refresh_github_uses_product_defaults_instead_of_previou
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "all"
-    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "1000"
+    issue_command = next(command for command in reversed(observed_commands) if "--state" in command)
+    assert issue_command[issue_command.index("--state") + 1] == "all"
+    assert issue_command[issue_command.index("--limit") + 1] == "1000"
     assert payload["state"] == "all"
     assert payload["limit"] == 1000
     assert payload["state_source"] == "product_default"
@@ -4628,8 +4727,9 @@ def test_external_intent_refresh_github_uses_product_defaults_instead_of_previou
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "open"
-    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "50"
+    issue_command = next(command for command in reversed(observed_commands) if "--state" in command)
+    assert issue_command[issue_command.index("--state") + 1] == "open"
+    assert issue_command[issue_command.index("--limit") + 1] == "50"
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "explicit"
 

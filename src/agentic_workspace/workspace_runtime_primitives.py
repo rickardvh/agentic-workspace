@@ -8152,6 +8152,10 @@ def _closeout_report_payload(
     proof_report = _as_dict(active_planning_record.get("proof_report"))
     closure_check = _as_dict(active_planning_record.get("closure_check"))
     delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    evidence_source = _as_dict(active_planning_record.get("_closeout_evidence_source"))
+    default_evidence_authority = "active-planning-evidence" if active_planning_record else ""
+    evidence_authority = str(evidence_source.get("authority") or default_evidence_authority).strip()
+    evidence_is_archived = evidence_authority == "archived-planning-evidence"
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
     traceability_rows = _closeout_report_traceability_rows(
@@ -8213,6 +8217,12 @@ def _closeout_report_payload(
         "kind": "agentic-workspace/closeout-report/v1",
         "status": "present" if active_planning_record else "guidance-only",
         "authority": "derived-projection",
+        "planning_evidence": {
+            "authority": evidence_authority or "no-planning-evidence",
+            "source": evidence_source,
+            "state": "archived" if evidence_is_archived else "active" if active_planning_record else "absent",
+            "rule": "Archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
+        },
         "profile": profile_policy["selected_profile"],
         "profile_policy": profile_policy,
         "trust": trust,
@@ -8229,7 +8239,9 @@ def _closeout_report_payload(
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
-            "source": "planning.active.planning_record.execution_run",
+            "source": "planning.archive.execplan.execution_run"
+            if evidence_is_archived
+            else "planning.active.planning_record.execution_run",
         },
         "validation": {
             "proof": validation_proof,
@@ -8275,9 +8287,9 @@ def _closeout_report_payload(
             ),
         },
         "source_fields": [
-            "planning.active.planning_record.execution_run",
-            "planning.active.planning_record.proof_report",
-            "planning.active.planning_record.closure_check",
+            "planning.archive.execplan.execution_run" if evidence_is_archived else "planning.active.planning_record.execution_run",
+            "planning.archive.execplan.proof_report" if evidence_is_archived else "planning.active.planning_record.proof_report",
+            "planning.archive.execplan.closure_check" if evidence_is_archived else "planning.active.planning_record.closure_check",
             "report.closeout_trust",
             "report.completion_contract",
             "report.verification",
@@ -8353,8 +8365,12 @@ def _derived_continuation_projection_payloads(
         verification=verification,
         cli_invoke=config.cli_invoke,
     )
-    closeout_report = _closeout_report_payload(
+    closeout_planning_record = _closeout_planning_record_for_report(
         active_planning_record=active_planning_record,
+        target_root=target_root,
+    )
+    closeout_report = _closeout_report_payload(
+        active_planning_record=closeout_planning_record,
         closeout_trust=source_payload.get("closeout_trust", {}),
         completion_contract=completion_contract,
         workflow_compliance_summary=workflow_compliance_summary,
@@ -11930,7 +11946,72 @@ def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> di
     }
 
 
-def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+def _issue_refs_from_text(value: Any) -> set[str]:
+    raw = " ".join(str(item) for item in value) if isinstance(value, list) else str(value or "")
+    refs = {f"#{match}" for match in re.findall(r"#(\d+)\b", raw)}
+    refs.update(f"#{match}" for match in re.findall(r"\bgithub-(\d+)\b", raw, flags=re.IGNORECASE))
+    refs.update(f"#{match}" for match in re.findall(r"\bGitHub\s+(\d+)\b", raw, flags=re.IGNORECASE))
+    return refs
+
+
+def _close_keyword_issue_refs(text: str) -> list[str]:
+    refs: list[str] = []
+    for line in str(text or "").splitlines():
+        if not re.search(r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b", line):
+            continue
+        for match in re.findall(r"#(\d+)\b", line):
+            ref = f"#{match}"
+            if ref not in refs:
+                refs.append(ref)
+    return refs
+
+
+def _pending_pr_merge_evidence_by_issue(*, target_root: Path | None) -> dict[str, dict[str, Any]]:
+    if target_root is None:
+        return {}
+    payloads: list[dict[str, Any]] = []
+    for relative in (EXTERNAL_INTENT_CACHE_RELATIVE_PATH, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH):
+        evidence_path = target_root / relative
+        if not evidence_path.is_file():
+            continue
+        try:
+            payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            payloads.append(payload)
+    if not payloads:
+        return {}
+    items = [item for payload in payloads for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    open_issue_ids = {str(item.get("id", "")).strip() for item in items if str(item.get("status", "")).strip().lower() == "open"}
+    pending: dict[str, dict[str, Any]] = {}
+    for payload in payloads:
+        for pr in _list_payload(payload.get("pull_requests")):
+            if not isinstance(pr, dict):
+                continue
+            pr_state = str(pr.get("state", "")).strip().lower()
+            if pr_state in {"closed", "merged"}:
+                continue
+            refs = [str(ref).strip() for ref in _list_payload(pr.get("close_keyword_issue_ids")) if str(ref).strip()]
+            if not refs:
+                refs = _close_keyword_issue_refs(str(pr.get("body", "") or ""))
+            for ref in refs:
+                if ref not in open_issue_ids:
+                    continue
+                pending[ref] = {
+                    "status": "pending-pr-merge",
+                    "issue_id": ref,
+                    "pr_number": str(pr.get("number", "")).strip(),
+                    "pr_url": str(pr.get("url", "")).strip(),
+                    "branch": str(pr.get("head_ref", pr.get("headRefName", ""))).strip(),
+                    "title": str(pr.get("title", "")).strip(),
+                    "reconcile_command": "agentic-workspace external-intent refresh-github --target . --state all --format json",
+                    "rule": "A PR close keyword is pending evidence, not external issue closure; refresh after merge before marking residue closed.",
+                }
+    return pending
+
+
+def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
     closed_statuses = {"archive", "archived", "cancelled", "canceled", "closed", "complete", "completed", "dismissed", "done"}
 
     def is_open_status(value: Any) -> bool:
@@ -12004,6 +12085,27 @@ def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any])
     surfaces = [
         surface for surface in surfaces if str(surface.get("id") or surface.get("title") or surface.get("owner_surface") or "").strip()
     ]
+    pending_by_issue = _pending_pr_merge_evidence_by_issue(target_root=target_root)
+    pending_surfaces: list[dict[str, Any]] = []
+    if pending_by_issue:
+        annotated_surfaces: list[dict[str, Any]] = []
+        for surface in surfaces:
+            refs = (
+                _issue_refs_from_text(surface.get("refs", ""))
+                | _issue_refs_from_text(surface.get("title", ""))
+                | _issue_refs_from_text(surface.get("id", ""))
+            )
+            matching = [pending_by_issue[ref] for ref in sorted(refs) if ref in pending_by_issue]
+            if matching:
+                surface = {
+                    **surface,
+                    "external_disposition": "pending-pr-merge",
+                    "pending_pr_merge": matching[0],
+                    "residue_explanation": "Open externally because the PR has not merged or external evidence has not been refreshed after merge.",
+                }
+                pending_surfaces.append(surface)
+            annotated_surfaces.append(surface)
+        surfaces = annotated_surfaces
     if not surfaces:
         return {
             "status": "quiet",
@@ -12015,6 +12117,8 @@ def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any])
         "status": "present",
         "surface_count": len(surfaces),
         "surfaces": surfaces[:5],
+        "pending_pr_merge_count": len(pending_surfaces),
+        "pending_pr_merge_surfaces": pending_surfaces[:5],
         "owner_surfaces": sorted(
             {str(surface.get("owner_surface", "")).strip() for surface in surfaces if str(surface.get("owner_surface", "")).strip()}
         ),
@@ -12128,7 +12232,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
-        open_continuation = _open_package_owned_continuation_payload(planning_report=planning_report)
+        open_continuation = _open_package_owned_continuation_payload(planning_report=planning_report, target_root=target_root)
         if open_continuation.get("status") == "present":
             owner_surfaces = [str(item) for item in _list_payload(open_continuation.get("owner_surfaces"))]
             continuation_surface = owner_surfaces[0] if owner_surfaces else ".agentic-workspace/planning/"
@@ -12421,6 +12525,69 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
     return payload if isinstance(payload, dict) else {}
 
 
+def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    archive_root = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    if not archive_root.is_dir():
+        return {}
+    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    target_resolved = target_root.resolve()
+    for record_path in archive_root.glob("*.json"):
+        try:
+            resolved = record_path.resolve()
+            resolved.relative_to(target_resolved)
+        except (OSError, ValueError):
+            continue
+        try:
+            payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        evidence_fields = (
+            payload.get("execution_run"),
+            payload.get("proof_report"),
+            payload.get("closure_check"),
+            payload.get("finished_run_review"),
+        )
+        if not any(isinstance(field, dict) and field for field in evidence_fields):
+            continue
+        try:
+            mtime = resolved.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        candidates.append((mtime, resolved, payload))
+    if not candidates:
+        return {}
+    mtime, record_path, payload = max(candidates, key=lambda item: item[0])
+    relative = record_path.relative_to(target_resolved).as_posix()
+    payload = copy.deepcopy(payload)
+    payload["_closeout_evidence_source"] = {
+        "authority": "archived-planning-evidence",
+        "path": relative,
+        "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
+        "rule": "Archived closeout evidence may inform user-facing reports, but it does not restore active planning state.",
+    }
+    return payload
+
+
+def _closeout_planning_record_for_report(*, active_planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    if active_planning_record:
+        record = copy.deepcopy(active_planning_record)
+        record.setdefault(
+            "_closeout_evidence_source",
+            {
+                "authority": "active-planning-evidence",
+                "path": str(_as_dict(record.get("task")).get("surface") or ""),
+                "rule": "Active planning evidence is current workflow state.",
+            },
+        )
+        return record
+    return _recent_archived_planning_record_for_closeout(target_root=target_root)
+
+
 def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
@@ -12555,6 +12722,7 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
     ]
     changed_items = [item for item_id, item in current_by_id.items() if item_id in previous_by_id and item != previous_by_id[item_id]]
     recommended = open_items[0] if open_items else {}
+    pending_pr_merge = _pending_pr_merge_evidence_by_issue(target_root=target_root)
     status = "delta-present" if previous_items else "snapshot-only"
     return {
         "status": status,
@@ -12577,6 +12745,8 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
         "sample_new": [_external_work_summary(item) for item in new_items[:5]] if previous_items else [],
         "sample_changed": [_external_work_summary(item) for item in changed_items[:5]] if previous_items else [],
         "sample_closed": [_external_work_summary(item) for item in closed_items[:5]] if previous_items else [],
+        "pending_pr_merge_count": len(pending_pr_merge),
+        "pending_pr_merge": list(pending_pr_merge.values())[:5],
         "recommended_next_lane": _external_work_summary(recommended) if recommended else {},
         "delta_rule": "When previous_items is present, compare provider-agnostic item ids and statuses; otherwise report a compact current snapshot only.",
     }
@@ -12884,6 +13054,39 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
         "comments_count": _github_comments_count(issue.get("comments")),
     }
+
+
+def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> list[dict[str, Any]]:
+    try:
+        raw_pr = _run_gh_json(
+            [
+                "pr",
+                "view",
+                "--repo",
+                repo,
+                "--json",
+                "number,title,state,url,headRefName,baseRefName,isDraft,body",
+            ],
+            cwd=target_root,
+        )
+    except Exception:
+        return []
+    if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
+        return []
+    body = str(raw_pr.get("body", "") or "")
+    return [
+        {
+            "system": "github",
+            "number": int(raw_pr.get("number") or 0),
+            "title": str(raw_pr.get("title", "")).strip(),
+            "state": str(raw_pr.get("state", "")).strip().lower(),
+            "url": str(raw_pr.get("url", "")).strip(),
+            "head_ref": str(raw_pr.get("headRefName", "")).strip(),
+            "base_ref": str(raw_pr.get("baseRefName", "")).strip(),
+            "is_draft": bool(raw_pr.get("isDraft", False)),
+            "close_keyword_issue_ids": _close_keyword_issue_refs(body),
+        }
+    ]
 
 
 def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
@@ -13361,6 +13564,7 @@ def _refresh_github_external_intent_evidence(
         if item is not None
     ]
     items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
+    pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
     refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     fetched_item_count = len(items)
@@ -13392,6 +13596,8 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
+    if pull_requests:
+        next_payload["pull_requests"] = pull_requests
     previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
     if previous_items:
         next_payload["previous_items"] = previous_items
@@ -24082,6 +24288,46 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
     }
 
 
+PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
+
+
+def _record_proof_receipt_payload(
+    *,
+    target_root: Path,
+    command: str,
+    result: str,
+    changed_paths: list[str],
+    plan_id: str = "",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    command = str(command or "").strip()
+    result = str(result or "").strip()
+    if not command:
+        raise WorkspaceUsageError("--receipt-command is required with --record-receipt.")
+    if not result:
+        raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
+    receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": command,
+        "result": result,
+        "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "changed_paths": _normalize_changed_paths(changed_paths),
+        "plan_id": str(plan_id or "").strip(),
+        "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+    }
+    if not dry_run:
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/proof-receipt-write/v1",
+        "status": "dry-run" if dry_run else "written",
+        "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "receipt": receipt,
+        "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
+    }
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -24092,9 +24338,30 @@ def _emit_proof(
     changed_paths: list[str] | None = None,
     profile: str = "full",
     select: str | None = None,
+    record_receipt: bool = False,
+    receipt_command: str = "",
+    receipt_result: str = "",
+    receipt_plan: str = "",
+    dry_run: bool = False,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     config = _load_workspace_config(target_root=target_root)
+    if record_receipt:
+        payload = _record_proof_receipt_payload(
+            target_root=target_root,
+            command=receipt_command,
+            result=receipt_result,
+            changed_paths=normalized_paths,
+            plan_id=receipt_plan,
+            dry_run=dry_run,
+        )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
+        if format_name == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+        else:
+            _emit_compact_answer_text(payload)
+        return
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
         payload = _tiny_proof_payload(
@@ -24320,6 +24587,11 @@ def _run_proof_report_adapter(args: argparse.Namespace) -> int:
         changed_paths=list(getattr(args, "changed", []) or []),
         profile=_diagnostic_profile(args, default="tiny"),
         select=getattr(args, "select", None),
+        record_receipt=bool(getattr(args, "record_receipt", False)),
+        receipt_command=str(getattr(args, "receipt_command", "") or ""),
+        receipt_result=str(getattr(args, "receipt_result", "") or ""),
+        receipt_plan=str(getattr(args, "receipt_plan", "") or ""),
+        dry_run=bool(getattr(args, "dry_run", False)),
     )
     return 0
 
@@ -27630,6 +27902,7 @@ def _proof_selection_for_changed_paths(
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
                 **({"weak_agent_safe_routing": lane["weak_agent_safe_routing"]} if lane.get("weak_agent_safe_routing") else {}),
+                **({"non_local_references": lane["non_local_references"]} if lane.get("non_local_references") else {}),
             }
             for lane in selected_lanes
         ],

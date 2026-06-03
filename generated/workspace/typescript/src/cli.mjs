@@ -1674,6 +1674,46 @@ const commandDefinitions = [
           "nargs": "*"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--record-receipt"
+          ],
+          "help": "Record a compact proof receipt from an actually run validation command.",
+          "name": "record_receipt"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--receipt-command"
+          ],
+          "help": "Validation command or evidence to store in the proof receipt.",
+          "name": "receipt_command"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--receipt-result"
+          ],
+          "help": "Validation result to store in the proof receipt, such as passed or failed.",
+          "name": "receipt_result"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--receipt-plan"
+          ],
+          "help": "Optional planning id that the proof receipt applies to.",
+          "name": "receipt_plan"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Show the receipt payload without writing it.",
+          "name": "dry_run"
+        },
+        {
           "flags": [
             "--select"
           ],
