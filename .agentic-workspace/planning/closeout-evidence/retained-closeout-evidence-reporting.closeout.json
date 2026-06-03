@@ -1,0 +1,101 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Retained closeout evidence reporting",
+  "plan_id": "retained-closeout-evidence-reporting",
+  "created_at": "2026-06-03T14:39:34.110304+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/retained-closeout-evidence-reporting.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/retained-closeout-evidence-reporting.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "retained-closeout-evidence-reporting",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Retained closeout evidence reporting.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented retained closeout evidence reporting: Planning now writes compact closeout evidence when full archive retention is skipped by size guardrails, and closeout_report prefers the newest retained evidence over older archives.",
+    "scope touched": "planning closeout retention, planning evidence schemas and payload, planning surface checks, workspace closeout_report evidence selection, generated planning command packages, reporting docs, regression tests",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/scripts/check/check_planning_surfaces.py; .agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json; packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json; packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.list-files.report.json; generated/planning/*; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/structured_file_inventory.json; tests; docs",
+    "validations run": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; retained evidence is schema-backed, package-listed, generated into payloads, validated by focused tests, and broad planning/workspace validation passed.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout consumed the latest successful proof receipt.",
+    "evidence for \"proof achieved\" state": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof receipt": "{\"changed_paths\": [\".agentic-workspace/docs/reporting-contract.md\", \".agentic-workspace/planning/state.toml\", \".agentic-workspace/planning/execplans/retained-closeout-evidence-reporting.plan.json\", \".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json\", \"generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json\", \"generated/planning/python/operations/planning.list-files.report.json\", \"generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json\", \"generated/planning/typescript/resources/operations/planning.list-files.report.json\", \"packages/planning/README.md\", \"packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json\", \"packages/planning/payload-surface-classification.json\", \"packages/planning/scripts/check/check_planning_surfaces.py\", \"packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.list-files.report.json\", \"packages/planning/src/repo_planning_bootstrap/installer.py\", \"packages/planning/tests/test_archive.py\", \"packages/planning/tests/test_check_planning_surfaces.py\", \"packages/planning/tests/test_install.py\", \"src/agentic_workspace/contracts/structured_file_inventory.json\", \"src/agentic_workspace/workspace_runtime_primitives.py\", \"tests/test_workspace_report_cli.py\"], \"path\": \".agentic-workspace/local/proof-receipts/last.json\", \"plan_id\": \"retained-closeout-evidence-reporting\", \"recorded_at\": \"2026-06-03T14:39:22+00:00\", \"result\": \"passed\"}"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Retained closeout evidence reporting.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "closeout_report no longer falls back to stale older archives when the just-closed lane skipped full archive retention and retained compact closeout evidence exists.",
+    "validation confirmed": "uv run pytest focused retained closeout evidence tests; uv run ruff check selected changed Python surfaces; uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

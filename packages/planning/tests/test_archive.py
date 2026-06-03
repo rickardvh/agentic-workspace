@@ -890,12 +890,20 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
     options = {option["id"]: option for option in payload["completion_options"]}
 
     assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
     assert any(action["kind"] == "retention skipped" for action in payload["actions"])
+    assert any(action["kind"] == "retained closeout evidence" for action in payload["actions"])
     assert not archived_record_path.exists()
     assert not record_path.exists()
+    retained = json.loads(closeout_evidence_path.read_text(encoding="utf-8"))
+    assert retained["kind"] == "planning-closeout-evidence/v1"
+    assert retained["plan_id"] == "plan-alpha"
+    assert retained["retention"]["state"] == "archive-retention-skipped"
+    assert retained["execution_run"]["what happened"] == "implemented the retention skip closeout option fix."
+    assert retained["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
     assert options["resolve-closeout-blocker"]["allowed"] is False
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["archive-retention-status"]["allowed"] is True

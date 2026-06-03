@@ -76,6 +76,7 @@
               ".agentic-workspace/planning/schemas/planning-review.schema.json",
               ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
               ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+              ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
               ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
               ".agentic-workspace/planning/agent-manifest.json"
             ],

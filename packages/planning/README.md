@@ -311,6 +311,7 @@ The package ships these payload files:
 - `.agentic-workspace/planning/schemas/planning-execplan.schema.json`
 - `.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json`
 - `.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json`
+- `.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json`
 - `.agentic-workspace/planning/schemas/planning-review.schema.json`
 
 The package also ships optional payload files that are not copied by default. Use `--include-optional` with `install`, `adopt`, or `upgrade` to copy them on purpose:

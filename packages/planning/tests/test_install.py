@@ -31,6 +31,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
         tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-external-intent-evidence.schema.json"
     )
     finished_evidence_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-finished-work-evidence.schema.json"
+    closeout_evidence_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-closeout-evidence.schema.json"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
@@ -53,6 +54,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert review_schema_path.exists()
     assert external_evidence_schema_path.exists()
     assert finished_evidence_schema_path.exists()
+    assert closeout_evidence_schema_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
     assert skill_readme_path.exists()

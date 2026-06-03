@@ -1450,6 +1450,73 @@ def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_a
     assert report["changes"]["source"] == "planning.archive.execplan.execution_run"
 
 
+def test_report_closeout_report_prefers_retained_closeout_evidence_over_older_archive(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    archive = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "older-closeout.plan.json"
+    retained = target / ".agentic-workspace" / "planning" / "closeout-evidence" / "retained-closeout.closeout.json"
+    _write_json(
+        archive,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Older Archived Closeout",
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Rendered the older archived closeout.",
+                "scope touched": "older report closeout",
+                "changed surfaces": "older.py",
+                "validations run": "older validation",
+            },
+            "proof_report": {"validation proof": "older validation passed", "proof achieved now": "yes"},
+            "closure_check": {"slice status": "completed", "larger-intent status": "closed", "closure decision": "archive-and-close"},
+        },
+    )
+    _write_json(
+        retained,
+        {
+            "kind": "planning-closeout-evidence/v1",
+            "title": "Retained Closeout",
+            "plan_id": "retained-closeout",
+            "created_at": "2026-06-03T15:30:00+00:00",
+            "source_plan": ".agentic-workspace/planning/execplans/retained-closeout.plan.json",
+            "intended_archive": ".agentic-workspace/planning/execplans/archive/retained-closeout.plan.json",
+            "retention": {
+                "state": "archive-retention-skipped",
+                "reason": "archive exceeded size guardrail",
+                "rule": "compact closeout evidence keeps the report current",
+            },
+            "delegated_judgment": {"requested outcome": "Report retained closeout evidence after archive retention skip."},
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Rendered the retained closeout evidence.",
+                "scope touched": "retained report closeout",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "retained validation",
+            },
+            "proof_report": {"validation proof": "retained validation passed", "proof achieved now": "yes"},
+            "closure_check": {"slice status": "completed", "larger-intent status": "closed", "closure decision": "archive-and-close"},
+        },
+    )
+    os.utime(archive, (1_700_000_000, 1_700_000_000))
+    os.utime(retained, (1_700_000_100, 1_700_000_100))
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "present"
+    assert report["planning_evidence"]["authority"] == "retained-closeout-evidence"
+    assert report["planning_evidence"]["state"] == "retained"
+    assert report["planning_evidence"]["source"]["path"] == (
+        ".agentic-workspace/planning/closeout-evidence/retained-closeout.closeout.json"
+    )
+    assert report["work_completed"] == "Rendered the retained closeout evidence."
+    assert report["changes"]["source"] == "planning.closeout_evidence.execution_run"
+    assert "planning.closeout_evidence.proof_report" in report["source_fields"]
+
+
 def test_report_closeout_trust_explains_open_issue_residue_pending_pr_merge(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

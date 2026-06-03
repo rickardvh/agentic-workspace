@@ -8156,6 +8156,10 @@ def _closeout_report_payload(
     default_evidence_authority = "active-planning-evidence" if active_planning_record else ""
     evidence_authority = str(evidence_source.get("authority") or default_evidence_authority).strip()
     evidence_is_archived = evidence_authority == "archived-planning-evidence"
+    evidence_is_retained = evidence_authority == "retained-closeout-evidence"
+    evidence_state = (
+        "retained" if evidence_is_retained else "archived" if evidence_is_archived else "active" if active_planning_record else "absent"
+    )
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
     traceability_rows = _closeout_report_traceability_rows(
@@ -8220,8 +8224,8 @@ def _closeout_report_payload(
         "planning_evidence": {
             "authority": evidence_authority or "no-planning-evidence",
             "source": evidence_source,
-            "state": "archived" if evidence_is_archived else "active" if active_planning_record else "absent",
-            "rule": "Archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
+            "state": evidence_state,
+            "rule": "Retained or archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
         },
         "profile": profile_policy["selected_profile"],
         "profile_policy": profile_policy,
@@ -8239,7 +8243,9 @@ def _closeout_report_payload(
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
-            "source": "planning.archive.execplan.execution_run"
+            "source": "planning.closeout_evidence.execution_run"
+            if evidence_is_retained
+            else "planning.archive.execplan.execution_run"
             if evidence_is_archived
             else "planning.active.planning_record.execution_run",
         },
@@ -8287,9 +8293,21 @@ def _closeout_report_payload(
             ),
         },
         "source_fields": [
-            "planning.archive.execplan.execution_run" if evidence_is_archived else "planning.active.planning_record.execution_run",
-            "planning.archive.execplan.proof_report" if evidence_is_archived else "planning.active.planning_record.proof_report",
-            "planning.archive.execplan.closure_check" if evidence_is_archived else "planning.active.planning_record.closure_check",
+            "planning.closeout_evidence.execution_run"
+            if evidence_is_retained
+            else "planning.archive.execplan.execution_run"
+            if evidence_is_archived
+            else "planning.active.planning_record.execution_run",
+            "planning.closeout_evidence.proof_report"
+            if evidence_is_retained
+            else "planning.archive.execplan.proof_report"
+            if evidence_is_archived
+            else "planning.active.planning_record.proof_report",
+            "planning.closeout_evidence.closure_check"
+            if evidence_is_retained
+            else "planning.archive.execplan.closure_check"
+            if evidence_is_archived
+            else "planning.active.planning_record.closure_check",
             "report.closeout_trust",
             "report.completion_contract",
             "report.verification",
@@ -12566,8 +12584,57 @@ def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -
     payload["_closeout_evidence_source"] = {
         "authority": "archived-planning-evidence",
         "path": relative,
+        "sort_mtime": mtime,
         "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
         "rule": "Archived closeout evidence may inform user-facing reports, but it does not restore active planning state.",
+    }
+    return payload
+
+
+def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    evidence_root = target_root / ".agentic-workspace" / "planning" / "closeout-evidence"
+    if not evidence_root.is_dir():
+        return {}
+    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    target_resolved = target_root.resolve()
+    for record_path in evidence_root.glob("*.closeout.json"):
+        try:
+            resolved = record_path.resolve()
+            resolved.relative_to(target_resolved)
+        except (OSError, ValueError):
+            continue
+        try:
+            payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("kind") != "planning-closeout-evidence/v1":
+            continue
+        evidence_fields = (
+            payload.get("execution_run"),
+            payload.get("proof_report"),
+            payload.get("closure_check"),
+            payload.get("finished_run_review"),
+        )
+        if not any(isinstance(field, dict) and field for field in evidence_fields):
+            continue
+        try:
+            mtime = resolved.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        candidates.append((mtime, resolved, payload))
+    if not candidates:
+        return {}
+    mtime, record_path, payload = max(candidates, key=lambda item: item[0])
+    relative = record_path.relative_to(target_resolved).as_posix()
+    payload = copy.deepcopy(payload)
+    payload["_closeout_evidence_source"] = {
+        "authority": "retained-closeout-evidence",
+        "path": relative,
+        "sort_mtime": mtime,
+        "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
+        "rule": "Retained closeout evidence may inform user-facing reports when full archive retention was skipped; it does not restore active planning state.",
     }
     return payload
 
@@ -12585,7 +12652,12 @@ def _closeout_planning_record_for_report(*, active_planning_record: dict[str, An
             },
         )
         return record
-    return _recent_archived_planning_record_for_closeout(target_root=target_root)
+    retained = _recent_retained_closeout_evidence_for_report(target_root=target_root)
+    archived = _recent_archived_planning_record_for_closeout(target_root=target_root)
+    candidates = [record for record in (retained, archived) if record]
+    if not candidates:
+        return {}
+    return max(candidates, key=lambda record: float(_as_dict(record.get("_closeout_evidence_source")).get("sort_mtime") or 0.0))
 
 
 def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/planning-closeout-evidence.schema.json",
+  "title": "Planning Closeout Evidence",
+  "type": "object",
+  "required": ["kind", "title", "plan_id", "created_at", "source_plan", "intended_archive", "retention"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "planning-closeout-evidence/v1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_plan": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intended_archive": {
+      "type": "string",
+      "minLength": 1
+    },
+    "retention": {
+      "$ref": "#/$defs/string_map"
+    },
+    "active_milestone": {
+      "$ref": "#/$defs/string_map"
+    },
+    "delegated_judgment": {
+      "$ref": "#/$defs/string_map"
+    },
+    "execution_run": {
+      "$ref": "#/$defs/string_map"
+    },
+    "finished_run_review": {
+      "$ref": "#/$defs/string_map"
+    },
+    "proof_report": {
+      "$ref": "#/$defs/string_map"
+    },
+    "intent_satisfaction": {
+      "$ref": "#/$defs/string_map"
+    },
+    "closure_check": {
+      "$ref": "#/$defs/string_map"
+    },
+    "durable_residue": {
+      "$ref": "#/$defs/string_map"
+    },
+    "execution_summary": {
+      "$ref": "#/$defs/string_map"
+    },
+    "closeout_distillation": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "string_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -55,7 +55,11 @@ def _install_planning_record_schemas(target: Path) -> None:
 
 def _install_planning_evidence_schemas(target: Path) -> None:
     schema_root = WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "schemas"
-    for name in ("planning-external-intent-evidence.schema.json", "planning-finished-work-evidence.schema.json"):
+    for name in (
+        "planning-external-intent-evidence.schema.json",
+        "planning-finished-work-evidence.schema.json",
+        "planning-closeout-evidence.schema.json",
+    ):
         destination = target / ".agentic-workspace" / "planning" / "schemas" / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
@@ -1518,6 +1522,31 @@ def test_checker_warns_for_freehand_planning_artifacts(tmp_path: Path) -> None:
     freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
     assert len(freehand) == 2
     assert all("intake-artifact" in warning.message for warning in freehand)
+
+
+def test_checker_treats_closeout_evidence_as_canonical_planning_surface(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_closeout_evidence_canonical")
+    _install_planning_evidence_schemas(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/closeout-evidence/plan-alpha.closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "title": "Plan Alpha",
+                "plan_id": "plan-alpha",
+                "created_at": "2026-06-03T00:00:00+00:00",
+                "source_plan": ".agentic-workspace/planning/execplans/plan-alpha.md",
+                "intended_archive": ".agentic-workspace/planning/execplans/archive/plan-alpha.md",
+                "retention": {"state": "compact-only"},
+                "active_milestone": {"Status": "completed"},
+            },
+            indent=2,
+        ),
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert not [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
 
 
 def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Path) -> None:

@@ -33,6 +33,7 @@ PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-inten
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_PROOF_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
+PLANNING_CLOSEOUT_EVIDENCE_ROOT = PLANNING_MANAGED_ROOT / "closeout-evidence"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
@@ -47,6 +48,7 @@ EXTERNAL_INTENT_SNAPSHOT_RULE = (
     "closing, or editing external tracker items."
 )
 FINISHED_WORK_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-finished-work-evidence.schema.json"
+CLOSEOUT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-closeout-evidence.schema.json"
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
@@ -109,6 +111,7 @@ REQUIRED_PAYLOAD_FILES = (
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
+    CLOSEOUT_EVIDENCE_SCHEMA_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
 )
@@ -11750,6 +11753,12 @@ def archive_execplan(
         destination_record = _unique_archive_record_path(destination_record)
     archived_record_relative = destination_record.relative_to(target_root).as_posix()
     has_record = record_path.exists()
+    archive_retention_skipped = False
+    closeout_evidence_path = _closeout_evidence_record_path(target_root=target_root, destination_record=destination_record)
+    retention_skip_reason = (
+        "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead"
+    )
+
     if retain_archive:
         if destination.exists() and destination.suffix == ".md":
             result.add(
@@ -11875,8 +11884,9 @@ def archive_execplan(
                 result.add(
                     "retention skipped",
                     destination_record,
-                    "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+                    retention_skip_reason,
                 )
+                archive_retention_skipped = True
                 retain_archive = False
             else:
                 archive_size_warning["message"] += " Rerun without --retain-archive to close after distillation instead."
@@ -11911,6 +11921,8 @@ def archive_execplan(
             if plan_path != record_path:
                 result.add("would remove", plan_path, "remove active Markdown view")
         else:
+            if archive_retention_skipped:
+                result.add("would create", closeout_evidence_path, "compact retained closeout evidence for reporting")
             if record_path.exists():
                 result.add("would remove", record_path, "remove completed execplan after closeout distillation")
             if plan_path.exists() and plan_path != record_path:
@@ -11934,6 +11946,18 @@ def archive_execplan(
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
     else:
+        if archive_retention_skipped:
+            closeout_evidence_path = _unique_closeout_evidence_record_path(closeout_evidence_path)
+            _write_closeout_evidence_record(
+                record_path=closeout_evidence_path,
+                record=_closeout_evidence_record(
+                    closeout_record=closeout_record,
+                    plan_path=plan_path,
+                    target_root=target_root,
+                    intended_archive_path=destination_record,
+                    reason=retention_skip_reason,
+                ),
+            )
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
         if record_path.exists():
@@ -11950,6 +11974,8 @@ def archive_execplan(
     if retain_archive:
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     else:
+        if archive_retention_skipped:
+            result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     return result
 
@@ -11967,6 +11993,71 @@ def _unique_archive_record_path(destination_record: Path) -> Path:
         if not candidate.exists():
             return candidate
     raise RuntimeError(f"unable to choose unique archive path for {destination_record}")
+
+
+def _closeout_evidence_record_path(*, target_root: Path, destination_record: Path) -> Path:
+    if destination_record.name.endswith(".plan.json"):
+        base_name = destination_record.name[: -len(".plan.json")]
+    else:
+        base_name = destination_record.stem
+    base_name = re.sub(r"[^A-Za-z0-9._-]+", "-", base_name).strip("-._") or "closeout"
+    return target_root / PLANNING_CLOSEOUT_EVIDENCE_ROOT / f"{base_name}.closeout.json"
+
+
+def _unique_closeout_evidence_record_path(destination_record: Path) -> Path:
+    if not destination_record.exists():
+        return destination_record
+    base_name = (
+        destination_record.name[: -len(".closeout.json")] if destination_record.name.endswith(".closeout.json") else destination_record.stem
+    )
+    for suffix in range(2, 1000):
+        candidate = destination_record.with_name(f"{base_name}-{suffix}.closeout.json")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"unable to choose unique closeout evidence path for {destination_record}")
+
+
+def _closeout_evidence_record(
+    *,
+    closeout_record: dict[str, Any],
+    plan_path: Path,
+    target_root: Path,
+    intended_archive_path: Path,
+    reason: str,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "kind": "planning-closeout-evidence/v1",
+        "title": str(closeout_record.get("title", "")).strip() or plan_path.stem.replace("-", " ").title(),
+        "plan_id": plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_plan": plan_path.relative_to(target_root).as_posix(),
+        "intended_archive": intended_archive_path.relative_to(target_root).as_posix(),
+        "retention": {
+            "state": "archive-retention-skipped",
+            "reason": reason,
+            "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails.",
+        },
+    }
+    for section in (
+        "active_milestone",
+        "delegated_judgment",
+        "execution_run",
+        "finished_run_review",
+        "proof_report",
+        "intent_satisfaction",
+        "closure_check",
+        "durable_residue",
+        "execution_summary",
+        "closeout_distillation",
+    ):
+        value = closeout_record.get(section)
+        if isinstance(value, dict) and value:
+            record[section] = copy.deepcopy(value)
+    return record
+
+
+def _write_closeout_evidence_record(*, record_path: Path, record: dict[str, Any]) -> None:
+    _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=CLOSEOUT_EVIDENCE_SCHEMA_PATH)
 
 
 def _archive_size_guardrail_warning(

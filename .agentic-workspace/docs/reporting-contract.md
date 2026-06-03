@@ -81,8 +81,9 @@ agentic-workspace report --target ./repo --section closeout_report --format json
 Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
 Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
 
-When no active plan exists, `closeout_report.planning_evidence.authority` may be `archived-planning-evidence`.
-That archived evidence may populate the user-facing closeout summary, but it does not restore active Planning state or prove external issue closure.
+When no active plan exists, `closeout_report.planning_evidence.authority` may be `retained-closeout-evidence` or `archived-planning-evidence`.
+Retained closeout evidence is the compact record written when full archive retention was skipped by size guardrails.
+Retained or archived evidence may populate the user-facing closeout summary, but it does not restore active Planning state or prove external issue closure.
 When refreshed external evidence shows an open issue named by a PR close keyword, closeout trust should explain the residue as `pending-pr-merge` and name the PR or branch plus the post-merge refresh command instead of treating it as ordinary unrouted residue.
 
 Use `closeout_report.final_response_rendering` to turn the report into final user-facing closeout text.
