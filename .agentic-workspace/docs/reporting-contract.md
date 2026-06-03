@@ -42,12 +42,53 @@ The surrounding report payload keeps these fields separate:
 - `reports`
 - `module_reports`
 
+## Authority Boundary
+
+Reportable AW packets may include `authority_boundary`.
+
+Use it to separate:
+
+- `enforced_by_aw`: hard gates or constraints AW is applying.
+- `observed_by_aw`: mechanical facts, path buckets, state, or evidence AW observed.
+- `recommended_by_aw`: advisory next actions or support signals.
+- `candidate_routes`: possible routes AW surfaced without making them semantic authority.
+- `proof_hints`: proof burden or validation hints.
+- `agent_owned_decisions`: semantic work-shape, route, proof-proportionality, or completion judgments the agent must own.
+- `human_owned_decisions`: intent, acceptance, or handoff decisions that require human ownership when present.
+
+Agents should report these categories separately. Do not say "AW classified" or "AW routed" when the boundary says AW only observed facts, suggested a route, or exposed proof guidance. Preserve real hard gates as authoritative when `enforced_by_aw` is non-empty.
+
+### Authority Boundary Examples
+
+Use the authority boundary to write final reports like this:
+
+- `start`: before, "AW classified this as a small task." After, "AW observed no hard blocker and suggested `choose-smallest-workflow-shape`; I judged the task bounded."
+- `implement --changed`: before, "AW routed this to direct implementation." After, "AW observed changed paths, named proof hints, and exposed candidate routes; I chose the route and proof scope."
+- `report --section closeout_report`: before, "AW decided the work is done." After, "AW reported closeout evidence and hard caveats; I own the completion claim against proof and acceptance."
+
+Dogfooding rule: the in-chat closeout report should be able to say what AW enforced, observed, recommended, and left to agent judgment without using "AW classified" or "AW routed" for advisory signals.
+
+### Canonical Advisory Field Names
+
+Reportable advisory and mechanical packets use names that describe what AW actually provides:
+
+- `gate_result`: planning-safety gate result, including real hard blockers when present.
+- `sufficiency_result`: workflow sufficiency status or required evidence result.
+- `recommended_route`: delegation or posture recommendation, not an AW-owned semantic decision.
+- `changed_path_facts`: observed changed-path buckets and scope facts, not a semantic classification.
+- `candidate_route`: surfaced route candidate, not a route AW selected.
+- `proof_route_selection`: selected proof route support, not an AW-owned closeout decision.
+
+Legacy compatibility aliases such as `decision`, `changed_path_classification`, `route_candidate`, and `proof_route_decision` may appear in full/internal payloads while existing callers migrate.
+User-facing reports and compact projections should prefer the canonical names and should treat compatibility aliases as deprecated.
+
 ## Closeout Report Shape
 
 The `closeout_report` object is the operator-facing closeout projection.
 
 It keeps:
 
+- `authority_boundary`
 - `profile`
 - `profile_policy`
 - `work_completed`
@@ -71,6 +112,7 @@ The profile policy is presentation-only:
 
 The report is derived from Planning, Verification, `completion_contract`, and `closeout_trust`.
 It must not become execution state, a proof decision, or a second planning record.
+Use `closeout_report.authority_boundary` to distinguish closeout gates and observed evidence from the agent-owned final completion judgment.
 
 Use:
 

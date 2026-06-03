@@ -290,6 +290,12 @@
     },
     "closeout_report": {
       "type": "object",
+      "properties": {
+        "authority_boundary": {
+          "$ref": "#/$defs/authority_boundary",
+          "description": "Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned."
+        }
+      },
       "description": "Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
     },
     "continuation_next_actions": {
@@ -375,6 +381,105 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "kind",
+        "surface",
+        "authority_class",
+        "enforced_by_aw",
+        "observed_by_aw",
+        "recommended_by_aw",
+        "candidate_routes",
+        "proof_hints",
+        "agent_owned_decisions",
+        "human_owned_decisions",
+        "reporting_rule"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/authority-boundary/v1",
+          "description": "Discriminator for the authority-boundary packet."
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Payload surface whose authority categories are being described."
+        },
+        "authority_class": {
+          "enum": [
+            "hard-gate",
+            "advisory-support",
+            "observed-facts",
+            "agent-owned"
+          ],
+          "description": "Dominant authority class for the surface."
+        },
+        "enforced_by_aw": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Hard gates or constraints AW enforces for this surface."
+        },
+        "observed_by_aw": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Mechanical facts, evidence, path state, or configuration AW observed."
+        },
+        "recommended_by_aw": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Advisory next actions or support signals AW recommends without owning semantic judgment."
+        },
+        "candidate_routes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Possible routes AW surfaced for the agent to evaluate."
+        },
+        "proof_hints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Proof burden or validation hints relevant to the surface."
+        },
+        "agent_owned_decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Semantic, route, proof-proportionality, or completion judgments the agent owns."
+        },
+        "human_owned_decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Intent, acceptance, or handoff decisions requiring human ownership when present."
+        },
+        "reporting_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How agents should report the boundary without overstating AW authority."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgment."
+    },
     "invoked_cli_identity": {
       "type": "object",
       "required": [

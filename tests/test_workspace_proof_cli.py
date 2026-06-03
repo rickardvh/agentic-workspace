@@ -363,7 +363,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "warnings",
         "intent_proof",
         "detail_command",
-        "proof_route_decision",
+        "proof_route_selection",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["next"]["action"] == "run-validation-command"
@@ -387,17 +387,17 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     assert payload["next"]["command"] == "make test"
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
-    assert payload["proof_route_decision"]["selected_command"] == {
+    assert payload["proof_route_selection"]["selected_command"] == {
         "command": "make test",
         "lane": "workspace_cli",
         "route_source": "live-adapted-target-capability",
         "intent_type": "behavior-test",
     }
-    assert payload["proof_route_decision"]["route_source"] == "live-adapted-target-capability"
-    assert payload["proof_route_decision"]["manual_fallback"] is None
-    assert payload["proof_route_decision"]["explanation_field"] == "proof_route_explanation"
-    assert "next_action" not in payload["proof_route_decision"]
-    assert "required_commands" not in payload["proof_route_decision"]
+    assert payload["proof_route_selection"]["route_source"] == "live-adapted-target-capability"
+    assert payload["proof_route_selection"]["manual_fallback"] is None
+    assert payload["proof_route_selection"]["explanation_field"] == "proof_route_explanation"
+    assert "next_action" not in payload["proof_route_selection"]
+    assert "required_commands" not in payload["proof_route_selection"]
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -424,10 +424,10 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
     assert payload["required_commands"] == []
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
-    assert payload["proof_route_decision"]["manual_fallback"]["status"] == "required"
-    assert payload["proof_route_decision"]["manual_fallback"]["unavailable_command_count"] == 0
-    assert payload["proof_route_decision"]["selected_command"] is None
-    assert payload["proof_route_decision"]["route_source"] == "manual-fallback"
+    assert payload["proof_route_selection"]["manual_fallback"]["status"] == "required"
+    assert payload["proof_route_selection"]["manual_fallback"]["unavailable_command_count"] == 0
+    assert payload["proof_route_selection"]["selected_command"] is None
+    assert payload["proof_route_selection"]["route_source"] == "manual-fallback"
     assert payload["manual_verification"]["status"] == "required"
     assert "no executable proof route" in payload["manual_verification"]["summary"]
     assert payload.get("unavailable_proof_commands", []) == []
@@ -468,7 +468,8 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
 
     answer = json.loads(capsys.readouterr().out)["answer"]
-    decision = answer["proof_route_decision"]
+    assert answer["proof_route_selection"] == answer["proof_route_decision"]
+    decision = answer["proof_route_selection"]
     assert decision["next_action"]["action"] == "manual-verification"
     assert decision["selected_command"] is None
     assert decision["manual_fallback"]["status"] == "required"
@@ -570,7 +571,7 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
         }.items()
     )
     assert answer["selected_commands"][0]["execution_mode"] == "parallel-ok"
-    assert answer["proof_route_decision"]["selected_command"] == {
+    assert answer["proof_route_selection"]["selected_command"] == {
         "command": "cd packages/planning && make test",
         "lane": "planning_package",
         "route_source": "live-adapted-target-capability",
@@ -777,7 +778,7 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert hints["confirmed"][0]["confirmation"] == "live-confirmed"
     assert hints["stale"][0]["candidate_command"] == "npm run stale"
     assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
-    decision = answer["proof_route_decision"]
+    decision = answer["proof_route_selection"]
     assert decision["critical_warnings"] == ["1 learned route hint(s) are stale or unavailable."]
     assert decision["selected_command"]["command"] == "npm test"
     explanation = answer["proof_route_explanation"]
@@ -824,8 +825,8 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert hints["source_counts"]["memory"] == 1
     assert hints["confirmed"][0]["candidate_command"] == "python -m compileall src"
     assert hints["confirmed"][0]["confirmation"] == "learned-confirmed"
-    assert answer["proof_route_decision"]["selected_command"]["command"] == "python -m compileall src"
-    assert answer["proof_route_decision"]["selected_command"]["route_source"] == "live-adapted-target-capability"
+    assert answer["proof_route_selection"]["selected_command"]["command"] == "python -m compileall src"
+    assert answer["proof_route_selection"]["selected_command"]["route_source"] == "live-adapted-target-capability"
     learning = answer["host_repo_learning"]
     assert learning["confirmed_evidence"]["status"] == "present"
     assert "memory capture-note" in learning["confirmed_evidence"]["items"][0]["capture"]["command_to_run"]
@@ -850,8 +851,8 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     assert answer["learned_route_hints"]["negative"][0]["candidate_command"] == "npm test"
     assert "npm test" not in answer["target_proof_capabilities"]["candidate_commands"]
     assert answer["required_commands"] == []
-    assert answer["proof_route_decision"]["selected_command"] is None
-    assert answer["proof_route_decision"]["critical_warnings"] == ["1 learned negative route(s) suppressed candidate proof commands."]
+    assert answer["proof_route_selection"]["selected_command"] is None
+    assert answer["proof_route_selection"]["critical_warnings"] == ["1 learned negative route(s) suppressed candidate proof commands."]
     learning = answer["host_repo_learning"]
     assert learning["negative_evidence"]["status"] == "present"
     assert learning["negative_evidence"]["items"][0]["command"] == "npm test"
@@ -878,7 +879,7 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert hints["invalid"][0]["original_state"] == "confirmed"
     assert set(hints["invalid"][0]["missing_fields"]) == {"owner", "scope", "provenance", "learned_at"}
     assert answer["required_commands"] == []
-    assert answer["proof_route_decision"]["selected_command"] is None
+    assert answer["proof_route_selection"]["selected_command"] is None
     learning = answer["host_repo_learning"]
     assert learning["invalid_learning_evidence"]["status"] == "present"
     assert (
@@ -906,7 +907,7 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     assert hints["negative"] == []
     assert hints["invalid"][0]["original_state"] == "negative"
     assert "npm test" in answer["target_proof_capabilities"]["candidate_commands"]
-    assert answer["proof_route_decision"]["selected_command"]["command"] == "npm test"
+    assert answer["proof_route_selection"]["selected_command"]["command"] == "npm test"
     learning = answer["host_repo_learning"]
     assert learning["negative_evidence"]["status"] == "none"
     assert learning["invalid_learning_evidence"]["items"][0]["command"] == "npm test"
@@ -998,7 +999,7 @@ candidates = []
             "selected_by_lane": "workspace_cli",
         }
     ]
-    assert answer["proof_route_decision"]["critical_warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
+    assert answer["proof_route_selection"]["critical_warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
     assert answer["proof_route_explanation"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
     assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
 

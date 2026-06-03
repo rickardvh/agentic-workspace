@@ -1,0 +1,325 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Complete authority boundary UX for #1243",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Finish #1243 completely on the current PR by adding the missing report-schema, before/after example, and dogfooding evidence that makes the authority boundary fully reviewable.",
+    "hard_constraints": "Do not leave #1243 as a partial PR; preserve compatibility and do not weaken real hard gates.",
+    "agent_may_decide": "Exact docs wording, schema projection shape, and focused tests needed to prove the full issue acceptance.",
+    "escalate_when": "A correct fix requires broad internal renames outside presentation/schema/report UX or changes the issue's intended authority model.",
+    "next_action": "Add closeout/report schema coverage, examples, tests, regenerate references, run proof, update PR wording.",
+    "proof_expectations": [
+      "focused report schema/docs tests",
+      "make test-workspace",
+      "make lint-workspace",
+      "contract, inventory, maintainer, schema-reference, and generated package checks"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/docs/reporting-contract.md",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "docs/reference/workspace-report.md",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/execplans/github-1243-final-authority-boundary-completion.plan.json"
+    ],
+    "completion_criteria": [
+      "Workspace report schema/reference surfaces closeout_report.authority_boundary.",
+      "Reporting contract includes before/after examples for start, implement, and closeout_report authority-boundary reporting.",
+      "Tests cover the closeout/report schema/documented surface.",
+      "PR body no longer describes the work as partial and names the dogfooding evidence."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Complete authority boundary UX for #1243."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Finish #1243 completely by adding closeout/report schema coverage, authority-boundary examples, tests, and PR evidence.",
+      "constraints": "Preserve compatibility and hard gates; do not leave the PR as partial.",
+      "latitude": "Choose presentation-compatible docs, schema, and test changes needed for final acceptance.",
+      "escalation": "Escalate if full completion requires broad internal renames outside the current PR scope.",
+      "proof": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed."
+    },
+    "execution": {
+      "milestone": "github-1243-final-authority-boundary-completion",
+      "status": "active",
+      "next_step": "Implement report-schema/docs/test completion and rerun proof.",
+      "proof": "Focused report tests plus full workspace proof lane."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/docs/reporting-contract.md",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "docs/reference/workspace-report.md",
+        "tests/test_workspace_report_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #1243 so AW's relevant startup, implement, delegation, planning-safety, proof, and closeout/report UX clearly separates enforced constraints, advisory guidance, observed facts, candidate routes, and agent-owned decisions.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "It should not be a partial PR. Keep working.",
+    "inferred intended outcome": "Close #1243 on this PR by filling the remaining report UX, schema/docs, examples, and dogfooding evidence gaps.",
+    "chosen concrete what": "Add closeout_report authority_boundary schema/reference coverage, before/after examples, focused tests, regenerate references, rerun proof, and update the PR as closing #1243.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/docs/reporting-contract.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; tests/test_workspace_report_cli.py; this execplan and planning state/archive.",
+    "max changed files": "About 8 additional files including generated reference and plan archive.",
+    "required validation commands": "focused report/schema tests; make test-workspace; make lint-workspace; contract tooling; structured inventory; maintainer-surfaces; schema-reference-docs; generated package check; planning surfaces; summary; doctor.",
+    "ask-before-refactor threshold": "Ask before broad internal renames or changing hard-gate semantics.",
+    "stop before touching": "Unrelated backlog, #1241 decision-traceability implementation, or package internals not required by generated references."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Finish docs/schema/test evidence for closeout_report authority_boundary, regenerate docs, validate, update PR to close #1243.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Finish #1243 completely on this PR.",
+    "hard constraints": "Do not leave residual #1243 scope; preserve compatibility and hard gates.",
+    "agent may decide locally": "Docs wording, schema projection, test assertions, and PR evidence.",
+    "escalate when": "Completion requires broad internal renames or changes the issue's intended authority model."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1243-final-authority-boundary-completion",
+    "status": "completed",
+    "scope": "Final schema/docs/tests/PR-evidence completion for #1243 authority-boundary UX.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add closeout/report schema coverage, before/after examples, focused tests, regenerate references, run proof, update PR."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/docs/reporting-contract.md",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "docs/reference/workspace-report.md",
+    "tests/test_workspace_report_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_workspace_schema_documents_closeout_authority_boundary tests/test_workspace_report_cli.py::test_report_closeout_report_guidance_only_without_active_closeout_claim tests/test_workspace_report_cli.py::test_report_closeout_report_uses_audit_profile_for_strict_closeout -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "make schema-reference-docs"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Schema/reference docs expose closeout_report.authority_boundary.",
+    "Reporting contract includes before/after examples for start, implement, and closeout_report.",
+    "Tests prove the report schema/docs surface and existing runtime/rendering authority boundaries.",
+    "PR body closes #1243 and includes dogfooding evidence that the final in-chat report can say what AW did without saying AW semantically classified or routed advisory work."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Finished #1243 completely by adding closeout_report authority_boundary schema/reference coverage, before/after authority-boundary examples for start/implement/closeout_report, dogfooding reporting guidance, and report schema regression coverage.",
+    "scope touched": "workspace report schema/reference, reporting contract docs, report tests, generated references, and final planning closeout",
+    "changed surfaces": ".agentic-workspace/docs/reporting-contract.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; tests/test_workspace_report_cli.py; .agentic-workspace/planning/execplans/github-1243-final-authority-boundary-completion.plan.json",
+    "validations run": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The PR now covers #1243 final satisfaction: startup and implement runtime authority boundaries were already added, closeout/report runtime boundaries are rendered, workspace report schema/reference documents closeout_report.authority_boundary, docs include before/after examples, and tests cover the report/schema and runtime rendering surfaces.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Complete authority boundary UX for #1243.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "AW reportable outputs can now distinguish enforced constraints, observed/mechanical facts, advisory guidance, candidate routes, proof hints, and agent-owned decisions without saying AW semantically classified or routed advisory work.",
+    "validation confirmed": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-03: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Complete authority boundary UX for #1243.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.\nChanged surfaces: .agentic-workspace/docs/reporting-contract.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; tests/test_workspace_report_cli.py; .agentic-workspace/planning/execplans/github-1243-final-authority-boundary-completion.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}
