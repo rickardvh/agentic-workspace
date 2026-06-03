@@ -7947,6 +7947,66 @@ def _closeout_report_final_response_rendering_payload(
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
 
+    def rendered_summary_payload(
+        *,
+        status: str,
+        rendering_mode: str,
+        summary_lines: list[str],
+        must_include: list[str],
+        must_not_claim: list[str],
+        plain_done_allowed: bool,
+    ) -> dict[str, Any]:
+        template_id = f"builtin/{rendering_mode}"
+        rendered_lines = summary_lines[:6]
+        if rendering_mode == "terse" and not rendered_lines:
+            rendered_lines = ["Done."]
+        required_checks: list[dict[str, str]] = []
+        missing_required: list[str] = []
+        joined = " ".join(rendered_lines).lower()
+        fact_markers = {
+            "profile reason": ("closeout profile:", "because"),
+            "profile reason or caveat": ("closeout caveat:",),
+            "closure boundary": ("closure boundary:",),
+            "proof or validation": ("proof:", "validation:"),
+            "residue or follow-up status": ("residue:", "follow-up"),
+            "missing or partial evidence caveat": ("missing", "partial", "incomplete", "plain done"),
+            "outcome": ("outcome:", "done."),
+            "validation": ("proof:", "validation:"),
+        }
+        for fact in must_include:
+            markers = fact_markers.get(fact, (fact,))
+            found = any(marker in joined for marker in markers)
+            if not found:
+                missing_required.append(fact)
+            required_checks.append({"fact": fact, "status": "present" if found else "missing"})
+        warnings = []
+        if missing_required:
+            warnings.append("Rendered summary is missing required closeout fact(s): " + ", ".join(missing_required))
+        if not plain_done_allowed and rendered_lines == ["Done."]:
+            warnings.append("Rendered summary violates plain_done_allowed=false.")
+        return {
+            "kind": "agentic-workspace/final-closeout-summary/v1",
+            "status": "ready-with-warnings" if warnings else "ready",
+            "template_id": template_id,
+            "template_family": "builtin-profile-bound-closeout",
+            "rendering_mode": rendering_mode,
+            "rendered_lines": rendered_lines,
+            "rendered_text": "\n".join(rendered_lines),
+            "required_fact_coverage": {
+                "status": "missing-required-facts" if missing_required else "complete",
+                "checks": required_checks,
+                "missing_required_facts": missing_required,
+            },
+            "constraints": {
+                "must_include": list(dict.fromkeys(must_include)),
+                "must_not_claim": must_not_claim,
+                "plain_done_allowed": plain_done_allowed,
+                "raw_json_allowed": False,
+            },
+            "warnings": warnings,
+            "boundary": "Derived final-response presentation; canonical truth remains in closeout_report and its source fields.",
+        }
+
     owners = [
         str(item.get("owner") or "").strip()
         for item in completion_options
@@ -7957,17 +8017,31 @@ def _closeout_report_final_response_rendering_payload(
     has_material_guidance_signal = bool(guidance_only and (lower_trust or profile_requires_detail or owners))
 
     if guidance_only and not has_material_guidance_signal:
+        rendering_mode = "terse"
+        summary_lines = []
+        must_include = []
+        must_not_claim = must_not_claim + [
+            "Do not present missing active Planning evidence as a closeout failure when no closeout claim is being made."
+        ]
+        plain_done_allowed = True
         return {
             "kind": "agentic-workspace/final-closeout-rendering/v1",
             "status": "guidance-only",
             "profile": profile,
-            "rendering_mode": "terse",
+            "rendering_mode": rendering_mode,
             "rendering_guidance": "Keep the final response terse; no active closeout claim needs expanded reporting.",
-            "summary_lines": [],
-            "must_include": [],
-            "must_not_claim": must_not_claim
-            + ["Do not present missing active Planning evidence as a closeout failure when no closeout claim is being made."],
-            "plain_done_allowed": True,
+            "summary_lines": summary_lines,
+            "rendered_summary": rendered_summary_payload(
+                status="guidance-only",
+                rendering_mode=rendering_mode,
+                summary_lines=summary_lines,
+                must_include=must_include,
+                must_not_claim=must_not_claim,
+                plain_done_allowed=plain_done_allowed,
+            ),
+            "must_include": must_include,
+            "must_not_claim": must_not_claim,
+            "plain_done_allowed": plain_done_allowed,
             "raw_json_allowed": False,
             "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
         }
@@ -8024,13 +8098,17 @@ def _closeout_report_final_response_rendering_payload(
         must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
     if incomplete_or_partial:
         must_include.append("missing or partial evidence caveat")
+        summary_lines.append("Evidence caveat: missing or partial closeout evidence; do not claim plain done.")
 
     rendering_mode = "compact" if guidance_only else "evidence-backed" if profile_requires_detail else "compact"
+    status_value = (
+        "required" if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal else "available"
+    )
+    plain_done_allowed = not (lower_trust or incomplete_or_partial or has_material_guidance_signal)
+    summary_lines = summary_lines[:6]
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
-        "status": "required"
-        if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal
-        else "available",
+        "status": status_value,
         "profile": profile,
         "rendering_mode": rendering_mode,
         "rendering_guidance": (
@@ -8040,10 +8118,18 @@ def _closeout_report_final_response_rendering_payload(
             if guidance_only
             else "Use a short final response that names outcome and proof without ceremony."
         ),
-        "summary_lines": summary_lines[:6],
+        "summary_lines": summary_lines,
+        "rendered_summary": rendered_summary_payload(
+            status=status_value,
+            rendering_mode=rendering_mode,
+            summary_lines=summary_lines,
+            must_include=list(dict.fromkeys(must_include)),
+            must_not_claim=must_not_claim,
+            plain_done_allowed=plain_done_allowed,
+        ),
         "must_include": list(dict.fromkeys(must_include)),
         "must_not_claim": must_not_claim,
-        "plain_done_allowed": not (lower_trust or incomplete_or_partial or has_material_guidance_signal),
+        "plain_done_allowed": plain_done_allowed,
         "raw_json_allowed": False,
         "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
     }

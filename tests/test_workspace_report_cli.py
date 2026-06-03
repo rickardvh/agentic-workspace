@@ -1397,6 +1397,10 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
     assert rendering["status"] == "guidance-only"
     assert rendering["rendering_mode"] == "terse"
     assert rendering["summary_lines"] == []
+    assert rendering["rendered_summary"]["kind"] == "agentic-workspace/final-closeout-summary/v1"
+    assert rendering["rendered_summary"]["template_id"] == "builtin/terse"
+    assert rendering["rendered_summary"]["rendered_text"] == "Done."
+    assert rendering["rendered_summary"]["required_fact_coverage"]["status"] == "complete"
     assert rendering["plain_done_allowed"] is True
 
 
@@ -1428,6 +1432,11 @@ def test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat() 
     assert rendering["rendering_mode"] == "compact"
     assert any(line.startswith("Closeout caveat: guidance-only audit profile") for line in rendering["summary_lines"])
     assert any(line.startswith("Residue: follow-up owner: .agentic-workspace/planning/state.toml") for line in rendering["summary_lines"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["template_id"] == "builtin/compact"
+    assert "Closeout caveat: guidance-only audit profile" in rendered["rendered_text"]
+    assert "Residue: follow-up owner: .agentic-workspace/planning/state.toml" in rendered["rendered_text"]
+    assert rendered["required_fact_coverage"]["status"] == "complete"
     assert "profile reason or caveat" in rendering["must_include"]
     assert "residue or follow-up status" in rendering["must_include"]
     assert rendering["plain_done_allowed"] is False
@@ -2962,6 +2971,13 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert any(line.startswith("Closeout profile: audit because assurance.strict_closeout enabled") for line in rendering["summary_lines"])
     assert any(line.startswith("Proof: uv run pytest tests/test_workspace_report_cli.py -q passed") for line in rendering["summary_lines"])
     assert any(line.startswith("Residue:") for line in rendering["summary_lines"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["template_id"] == "builtin/evidence-backed"
+    assert "Closeout profile: audit because assurance.strict_closeout enabled" in rendered["rendered_text"]
+    assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
+    assert "Closure boundary:" in rendered["rendered_text"]
+    assert "Residue:" in rendered["rendered_text"]
+    assert rendered["required_fact_coverage"]["status"] == "complete"
     assert rendering["plain_done_allowed"] is True
     assert rendering["raw_json_allowed"] is False
     row_ids = {row["id"] for row in report["traceability"]["rows"]}
@@ -3030,6 +3046,13 @@ def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp
     assert rendering["plain_done_allowed"] is False
     assert "missing or partial evidence caveat" in rendering["must_include"]
     assert any("plain done summary" in item for item in rendering["must_not_claim"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["constraints"]["plain_done_allowed"] is False
+    assert rendered["required_fact_coverage"]["status"] == "missing-required-facts"
+    assert "Evidence caveat: missing or partial closeout evidence" in rendered["rendered_text"]
+    assert "proof or validation" in rendered["required_fact_coverage"]["missing_required_facts"]
+    assert rendered["warnings"]
+    assert rendered["rendered_text"] != "Done."
 
 
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:

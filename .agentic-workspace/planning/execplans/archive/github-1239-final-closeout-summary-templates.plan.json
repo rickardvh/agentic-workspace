@@ -1,0 +1,342 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Profile-bound final closeout summary templates",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1239 by deriving profile-bound, final-response-ready closeout summaries from closeout_report.final_response_rendering.",
+    "hard_constraints": "Keep scope to built-in derived summary templates; do not add arbitrary programmable templating, repo-specific prose rules, mutable closeout state, or raw JSON final-response output.",
+    "agent_may_decide": "Exact nested packet shape, built-in template wording, required-fact coverage checks, and focused validation coverage.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Finish runtime, docs, schema reference, generated refresh, and tests for rendered_summary.",
+    "proof_expectations": [
+      "Focused closeout_report rendering tests cover terse, compact caveated, audit evidence-backed, and incomplete/lower-trust warning paths.",
+      "Workspace contract/lint/test and generated-command checks pass."
+    ],
+    "touched_scope": [
+      ".agentic-workspace/docs/reporting-contract.md",
+      ".agentic-workspace/planning/execplans/github-1239-final-closeout-summary-templates.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      "docs/reference/workspace-report.md",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_report_cli.py"
+    ],
+    "completion_criteria": [
+      "final_response_rendering exposes a rendered_summary packet with built-in terse, compact, and evidence-backed templates.",
+      "Rendered summaries preserve required caveats and expose missing required facts.",
+      "Docs describe the source-of-truth boundary and keep broader customization out of this slice.",
+      "Selected proof passes and the plan is closed honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement #1239 by adding profile-bound, final-response-ready closeout summary templates derived from existing closeout_report facts."
+  ],
+  "non_goals": [
+    "Do not build a general templating engine.",
+    "Do not add repo-specific prose policy, keyword matching, or agent-runtime prompt hacks.",
+    "Do not make closeout_report mutable or canonical state."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1239 by deriving profile-bound, final-response-ready closeout summaries from closeout_report.final_response_rendering.",
+      "constraints": "Keep scope to built-in derived summary templates; do not add arbitrary programmable templating, repo-specific prose rules, mutable closeout state, or raw JSON final-response output.",
+      "latitude": "Exact nested packet shape, built-in template wording, required-fact coverage checks, and focused validation coverage.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces."
+    },
+    "execution": {
+      "milestone": "github-1239-final-closeout-summary-templates",
+      "status": "active",
+      "next_step": "Run focused and workspace proof, regenerate generated command packages and schema reference docs, then close out the plan.",
+      "proof": "Focused closeout_report rendering tests plus workspace lint/test, schema reference docs, contract tooling, structured inventory, ruff, and generated command package check."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/docs/reporting-contract.md",
+        ".agentic-workspace/planning/execplans/github-1239-final-closeout-summary-templates.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        "docs/reference/workspace-report.md",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_report_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Profile-bound final closeout summary templates make closeout_report directly usable in final chat responses.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement refined issue #1239.",
+    "inferred intended outcome": "Add a derived final-response-ready closeout summary packet using built-in profile-bound templates.",
+    "chosen concrete what": "Add rendered_summary under final_response_rendering with rendered text, template id, constraints, required-fact coverage, and warnings.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/docs/reporting-contract.md; .agentic-workspace/planning; docs/reference/workspace-report.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+    "max changed files": "about 8 tracked files including planning archive/state and generated schema reference",
+    "required validation commands": "focused closeout_report tests; py_compile; generated command package refresh/check; schema reference docs; contract tooling; structured inventory; ruff; make test-workspace; make lint-workspace",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1239 rendered_summary implementation and run selected proof before closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1239 by deriving profile-bound, final-response-ready closeout summaries from closeout_report.final_response_rendering.",
+    "hard constraints": "No arbitrary templating, repo-specific prose DSLs, mutable closeout state, or raw JSON final-response output.",
+    "agent may decide locally": "Exact built-in template wording, nested packet field names, and validation assertions.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#1239 is a bounded follow-up on the active closeout-reporting PR branch; local implementation preserves context for runtime packet shape, focused tests, docs, generated refresh, and PR update.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "52b99b7006ba0ed4",
+    "recorded at": "2026-06-03T11:26:15+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1239-final-closeout-summary-templates",
+    "status": "completed",
+    "scope": "Built-in derived final closeout summary packet for #1239.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run focused tests, generated refresh/check, schema docs, and workspace proof; then close out honestly."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/docs/reporting-contract.md",
+    ".agentic-workspace/planning/execplans/github-1239-final-closeout-summary-templates.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    "docs/reference/workspace-report.md",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_report_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_guidance_only_without_active_closeout_claim tests/test_workspace_report_cli.py::test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat tests/test_workspace_report_cli.py::test_report_closeout_report_uses_audit_profile_for_strict_closeout tests/test_workspace_report_cli.py::test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust -q",
+    "uv run python -m py_compile src/agentic_workspace/workspace_runtime_primitives.py",
+    "uv run python scripts/generate/generate_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "make schema-reference-docs",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Rendered_summary packet is implemented with built-in terse, compact, and evidence-backed templates.",
+    "Required-fact coverage reports missing required facts or completes when rendered text preserves them.",
+    "Docs and schema reference describe the profile-bound final summary boundary.",
+    "Proof passes and closeout report is rendered in the final response."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1239 by adding final_response_rendering.rendered_summary, a derived final-response-ready packet with built-in profile-bound templates, rendered text, constraints, required-fact coverage, omission warnings, docs, schema reference refresh, and tests for terse, compact caveated, evidence-backed, and incomplete/lower-trust paths.",
+    "scope touched": "closeout_report final-response rendering runtime, closeout report tests, reporting contract docs, workspace report schema/reference, active planning closeout state.",
+    "changed surfaces": ".agentic-workspace/docs/reporting-contract.md; docs/reference/workspace-report.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-1239-final-closeout-summary-templates.plan.json",
+    "validations run": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "#1239 acceptance is covered: minimal/guidance-only renders terse Done text, guidance-only audit/lower-trust renders compact caveats, audit evidence-backed summaries include proof/closure/residue facts, and incomplete/lower-trust paths expose missing required facts instead of allowing plain done.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "#1239 is a bounded follow-up on the active closeout-reporting PR branch; local implementation preserves context for runtime packet shape, focused tests, docs, generated refresh, and PR update.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Profile-bound final closeout summary templates.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "closeout_report now provides profile-bound final closeout summary text that agents can copy or adapt directly while preserving constraints and required-fact coverage.",
+    "validation confirmed": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-03: Scaffolded by agentic-planning new-plan.",
+    "2026-06-03: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Profile-bound final closeout summary templates.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.\nChanged surfaces: .agentic-workspace/docs/reporting-contract.md; docs/reference/workspace-report.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-1239-final-closeout-summary-templates.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

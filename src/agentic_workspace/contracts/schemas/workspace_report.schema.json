@@ -290,7 +290,7 @@
     },
     "closeout_report": {
       "type": "object",
-      "description": "Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, and final-response rendering guidance."
+      "description": "Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
     },
     "continuation_next_actions": {
       "type": "object",

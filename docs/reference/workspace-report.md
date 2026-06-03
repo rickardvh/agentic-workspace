@@ -87,7 +87,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
 | `workflow_compliance_summary` | object | yes |  | Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action. |  |  |
-| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, and final-response rendering guidance. |  |  |
+| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |
 | `compact_output_criteria` | object | yes |  | Criteria for compact CLI outputs to remain sufficient for cheap continuation. |  |  |
