@@ -9001,10 +9001,12 @@ def _workflow_sufficiency_payload(
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/workflow-sufficiency/v1",
         "surface": surface,
+        "sufficiency_result": decision,
         "decision": decision,
         "reason": reason,
         "evidence_required": evidence_required,
         "authority_boundary": authority_boundary,
+        "legacy_aliases": {"decision": "sufficiency_result"},
         "rule": "Do not hide proof, ownership, or closeout obligations.",
     }
     if required_next_action:
@@ -14573,7 +14575,7 @@ def _next_safe_action_packet(
     read_first = [str(item) for item in _list_payload(immediate.get("read_first")) if str(item).strip()]
     preferred_cli = command or (read_first[0] if read_first else "")
     proof_hint = str(immediate.get("next_proof", "") or "")
-    decision = str((workflow_sufficiency or {}).get("decision", "") or "")
+    decision = str((workflow_sufficiency or {}).get("sufficiency_result") or (workflow_sufficiency or {}).get("decision") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
     skill = ""
     if action == "ask-intent-discovery-question":
@@ -14960,6 +14962,25 @@ def _tiny_durable_intent(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _candidate_route_label(candidate: dict[str, Any]) -> Any:
+    return candidate.get("candidate_route") or candidate.get("route_candidate")
+
+
+def _candidate_with_canonical_route(candidate: dict[str, Any]) -> dict[str, Any]:
+    route = _candidate_route_label(candidate)
+    if route in (None, ""):
+        return dict(candidate)
+    return {**candidate, "candidate_route": route}
+
+
+def _compact_route_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    compact = {key: candidate.get(key) for key in ("lane_id", "title", "readiness", "owner_surface", "proof") if key in candidate}
+    route = _candidate_route_label(candidate)
+    if route not in (None, ""):
+        compact["candidate_route"] = route
+    return compact
+
+
 def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_detail: bool = True) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
@@ -14968,7 +14989,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         "status",
         "mode",
         "clarification_mode",
-        "decision",
+        "recommended_route",
         "authority_boundary",
         "quality_factors",
         "token_savings_guidance",
@@ -14976,6 +14997,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         "effort_guidance",
     )
     compact = {key: value.get(key) for key in common_keys if key in value}
+    compact.setdefault("recommended_route", value.get("recommended_route") or value.get("decision"))
     if "authority_boundary" in compact:
         compact["authority_boundary"] = _compact_authority_boundary(compact["authority_boundary"])
     if isinstance(compact.get("quality_factors"), dict):
@@ -14992,7 +15014,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         }
     if isinstance(compact.get("effort_guidance"), dict):
         compact["effort_guidance"] = _compact_effort_guidance(compact["effort_guidance"])
-    decision = str(value.get("decision", ""))
+    decision = str(value.get("recommended_route") or value.get("decision") or "")
     suppress_manual_detail = not include_manual_handoff_detail and decision in {"manual-handoff", "ask-human"}
     config_effect = value.get("config_effect")
     manual_external_relay = value.get("manual_external_relay")
@@ -15058,23 +15080,9 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         }
         candidates = [item for item in decomposition_delegation.get("candidates", []) if isinstance(item, dict)]
         if candidates:
-            compact["decomposition_delegation"]["candidates"] = [
-                {
-                    key: candidate.get(key)
-                    for key in ("lane_id", "title", "readiness", "owner_surface", "route_candidate", "proof")
-                    if key in candidate
-                }
-                for candidate in candidates[:2]
-            ]
+            compact["decomposition_delegation"]["candidates"] = [_compact_route_candidate(candidate) for candidate in candidates[:2]]
     if delegation_candidates and (decision == "suggest-delegation" or include_decomposition):
-        compact["delegation_candidates"] = [
-            {
-                key: candidate.get(key)
-                for key in ("lane_id", "title", "readiness", "owner_surface", "route_candidate", "proof")
-                if key in candidate
-            }
-            for candidate in delegation_candidates[:2]
-        ]
+        compact["delegation_candidates"] = [_compact_route_candidate(candidate) for candidate in delegation_candidates[:2]]
     auto_delegation_audit = value.get("auto_delegation_audit")
     if isinstance(auto_delegation_audit, dict) and auto_delegation_audit.get("status") == "skipped":
         compact["auto_delegation_audit"] = {
@@ -16066,7 +16074,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
         "status": gate.get("status"),
-        "decision": gate.get("decision"),
+        "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
         "reason": gate.get("reason"),
         "required_next_action": gate.get("required_next_action"),
@@ -16081,8 +16089,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "delegation_decision_required": gate.get("delegation_decision_required"),
         "authority_boundary": _compact_authority_boundary(gate.get("authority_boundary")),
     }
-    if "changed_path_classification" in gate:
-        compact["changed_path_classification"] = gate["changed_path_classification"]
+    if "changed_path_facts" in gate or "changed_path_classification" in gate:
+        compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
     if "work_shape_guidance" in gate:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
     active_delegation_requirement = gate.get("active_delegation_requirement")
@@ -16132,7 +16140,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             "top_candidate": {
                 "lane_id": top_candidate.get("lane_id"),
                 "title": top_candidate.get("title"),
-                "route_candidate": top_candidate.get("route_candidate"),
+                "candidate_route": _candidate_route_label(top_candidate),
             }
             if isinstance(top_candidate, dict) and top_candidate
             else {},
@@ -16158,13 +16166,15 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "preferred_routes": list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else [],
         },
         "planning": {
-            "workflow_sufficiency": payload.get(
-                "workflow_sufficiency",
-                _workflow_sufficiency_payload(
-                    surface="start",
-                    decision="enough-for-first-contact-routing",
-                    reason="Use the next action and selectors; no raw workspace files are needed yet.",
-                ),
+            "workflow_sufficiency": _tiny_workflow_sufficiency(
+                payload.get(
+                    "workflow_sufficiency",
+                    _workflow_sufficiency_payload(
+                        surface="start",
+                        decision="enough-for-first-contact-routing",
+                        reason="Use the next action and selectors; no raw workspace files are needed yet.",
+                    ),
+                )
             ),
             **(
                 {"planning_safety_gate": _selector_first_planning_safety_gate(payload["planning_safety_gate"])}
@@ -16241,8 +16251,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         ):
             context["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
     delegation = payload.get("delegation_decision", {})
+    delegation_route = delegation.get("recommended_route") or delegation.get("decision") if isinstance(delegation, dict) else None
     if isinstance(delegation, dict) and (
-        delegation.get("decision") not in {"", None, "stay-local"}
+        delegation_route not in {"", None, "stay-local"}
         or delegation.get("delegation_candidates")
         or (isinstance(delegation.get("auto_delegation_audit"), dict) and delegation["auto_delegation_audit"].get("status") == "skipped")
     ):
@@ -16733,6 +16744,7 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
                     "lane_id": lane_id,
                     "title": title,
                     "readiness": readiness or "unknown",
+                    "candidate_route": route,
                     "route_candidate": route,
                     "outcome": outcome,
                     "owner_surface": owner_surface,
@@ -18626,7 +18638,7 @@ def _task_contract_payload(
             "missing_fields": [] if acceptance_items else ["acceptance.items"],
         },
         "autonomy_and_escalation": {
-            "delegation_decision": delegation_decision.get("decision"),
+            "recommended_route": delegation_decision.get("recommended_route") or delegation_decision.get("decision"),
             "delegation_mode": delegation_decision.get("mode"),
             "work_shape_guidance": {
                 key: work_shape_guidance.get(key)
@@ -18643,7 +18655,7 @@ def _task_contract_payload(
             },
             "delegation_guidance": {
                 "mode": delegation_decision.get("mode"),
-                "decision": delegation_decision.get("decision"),
+                "recommended_route": delegation_decision.get("recommended_route") or delegation_decision.get("decision"),
                 "rule": "Delegation posture is a control/guidance surface; the agent owns whether delegation fits the current engineering task unless a hard blocker applies.",
             },
             "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
@@ -19272,8 +19284,9 @@ def _tiny_work_shape_guidance(value: Any) -> dict[str, Any]:
 def _tiny_workflow_sufficiency(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {}
-    keys = ("kind", "surface", "decision", "required_next_action", "evidence_required")
+    keys = ("kind", "surface", "sufficiency_result", "required_next_action", "evidence_required")
     compact = {key: value.get(key) for key in keys if value.get(key) not in (None, "", [])}
+    compact.setdefault("sufficiency_result", value.get("decision"))
     compact["authority_boundary"] = _compact_authority_boundary(value.get("authority_boundary"))
     return {key: item for key, item in compact.items() if item not in (None, "", {})}
 
@@ -20091,7 +20104,11 @@ def _planning_safety_gate_payload(
         required_next_action = "continue-direct"
         workflow_sufficient = True
     candidates = (
-        decomposition_delegation.get("candidates", [])
+        [
+            _candidate_with_canonical_route(candidate)
+            for candidate in decomposition_delegation.get("candidates", [])
+            if isinstance(candidate, dict)
+        ]
         if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
         else []
     )
@@ -20105,9 +20122,9 @@ def _planning_safety_gate_payload(
         ],
         recommended_by_aw=[required_next_action] if workflow_sufficient else [],
         candidate_routes=[
-            str(candidate.get("route_candidate", ""))
+            str(_candidate_route_label(candidate) or "")
             for candidate in candidates
-            if isinstance(candidate, dict) and candidate.get("route_candidate")
+            if isinstance(candidate, dict) and _candidate_route_label(candidate)
         ],
         proof_hints=["selected proof commands", "changed path categories"],
         agent_owned_decisions=[
@@ -20126,6 +20143,7 @@ def _planning_safety_gate_payload(
     return {
         "kind": "agentic-workspace/planning-safety-gate/v1",
         "status": status,
+        "gate_result": decision,
         "decision": decision,
         "workflow_sufficient": workflow_sufficient,
         "reason": reason,
@@ -20159,6 +20177,7 @@ def _planning_safety_gate_payload(
             cli_invoke=config.cli_invoke,
         ),
         "decomposition": {"status": decomposition_status or "unknown", "candidate_count": len(candidates), "candidates": candidates},
+        "changed_path_facts": path_classification,
         "changed_path_classification": path_classification,
         "promotion_command": promotion_command,
         "delegation_decision_command": active_delegation_requirement.get("command"),
@@ -20178,6 +20197,11 @@ def _planning_safety_gate_payload(
             "If direct work has grown across boundaries, create or promote an execplan from the discovered scope before further edits.",
         ],
         "delegation_decision_required": active_delegation_requirement.get("required", False),
+        "legacy_aliases": {
+            "decision": "gate_result",
+            "changed_path_classification": "changed_path_facts",
+            "decomposition.candidates[].route_candidate": "decomposition.candidates[].candidate_route",
+        },
         "rule": "Direct/no-plan mode is provisional; AW hard blockers, changed-path scope growth, or active planning obligations require checked-in ownership.",
     }
 
@@ -20397,10 +20421,16 @@ def _delegation_next_action_decision(
     downrouting = runtime_resolution.get("downrouting_guardrail", {})
     downrouting_active = isinstance(downrouting, dict) and downrouting.get("status") == "active"
     decomposition_candidates = (
-        list(decomposition_delegation.get("candidates", []))
+        [
+            _candidate_with_canonical_route(candidate)
+            for candidate in decomposition_delegation.get("candidates", [])
+            if isinstance(candidate, dict)
+        ]
         if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
         else []
     )
+    if isinstance(decomposition_delegation, dict) and decomposition_candidates:
+        decomposition_delegation = {**decomposition_delegation, "candidates": decomposition_candidates}
     decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
     task_signal = " ".join((task_text or "").lower().split())
     decomposition_routing_requested = decomposition_status == "present" or any(
@@ -20446,7 +20476,7 @@ def _delegation_next_action_decision(
             else "mention-suggestion"
         )
         reusable_routes = sorted(
-            {str(candidate.get("route_candidate", "")) for candidate in decomposition_candidates if isinstance(candidate, dict)}
+            {str(_candidate_route_label(candidate) or "") for candidate in decomposition_candidates if isinstance(candidate, dict)}
         )
         if not target_name or not any((method in {"internal", "cli", "api"} for method in target_execution_methods)):
             target_name = "reusable-worker"
@@ -20648,9 +20678,9 @@ def _delegation_next_action_decision(
         ],
         recommended_by_aw=[decision, required_next_action],
         candidate_routes=[
-            str(candidate.get("route_candidate", ""))
+            str(_candidate_route_label(candidate) or "")
             for candidate in decomposition_candidates
-            if isinstance(candidate, dict) and candidate.get("route_candidate")
+            if isinstance(candidate, dict) and _candidate_route_label(candidate)
         ],
         proof_hints=[proof_burden or "unknown"],
         agent_owned_decisions=[
@@ -20671,6 +20701,7 @@ def _delegation_next_action_decision(
         "status": "evaluated",
         "mode": mode,
         "clarification_mode": clarification_mode,
+        "recommended_route": decision,
         "decision": decision,
         "target": target_name if decision != "stay-local" else None,
         "authority_boundary": delegation_authority_boundary,
@@ -20711,6 +20742,11 @@ def _delegation_next_action_decision(
         "manual_prompt": manual_prompt,
         "manual_external_relay": manual_external_relay,
         "route_obligation": route_obligation,
+        "legacy_aliases": {
+            "decision": "recommended_route",
+            "decomposition_delegation.candidates[].route_candidate": "decomposition_delegation.candidates[].candidate_route",
+            "delegation_candidates[].route_candidate": "delegation_candidates[].candidate_route",
+        },
         "human_control_summary": "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff.",
     }
 
@@ -24572,7 +24608,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 route_decision = dict(answer["proof_route_decision"])
                 route_decision.pop("next_action", None)
                 route_decision.pop("required_commands", None)
-                next_decision["proof_route_decision"] = route_decision
+                next_decision["proof_route_selection"] = route_decision
             if answer.get("proof_command_adjustments"):
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
             if answer.get("unavailable_proof_commands"):
@@ -26616,6 +26652,7 @@ def _proof_route_decision_payload(
         "manual_fallback": manual_fallback,
         "critical_warnings": list(proof_next_decision.get("warnings", [])),
         "explanation_field": "proof_route_explanation",
+        "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
     }
 
 
@@ -28259,8 +28296,10 @@ def _proof_selection_for_changed_paths(
             intent_proof=intent_proof,
             proof_execution_evidence=proof_execution_evidence,
         ),
+        "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
+        "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
         "proof_next_decision": proof_next_decision,
         "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
         "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),

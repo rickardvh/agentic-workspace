@@ -631,7 +631,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     )
     assert payload["delegation_decision"]["status"] == "evaluated"
     assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
-    assert payload["delegation_decision"]["decision"] in {
+    assert payload["delegation_decision"]["recommended_route"] in {
         "stay-local",
         "suggest-delegation",
         "suggest-downroute",
@@ -1272,7 +1272,7 @@ def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys
 
     payload = json.loads(capsys.readouterr().out)
     decision = _start_context_value(payload, "delegation_decision")
-    assert decision["decision"] == "ask-human"
+    assert decision["recommended_route"] == "ask-human"
     assert decision["required_next_action"] == "stop-and-ask-human"
     assert decision["manual_prompt"]["target"] == "human-or-external-strong-general-purpose-model"
     assert decision["clarification_mode"] == "ask-first"
@@ -1411,7 +1411,7 @@ def test_start_tiny_keeps_config_effect_when_auto_mode_is_safety_downgraded(tmp_
 
     payload = json.loads(capsys.readouterr().out)
     decision = payload["values"]["delegation_decision"]
-    assert decision["decision"] == "stay-local"
+    assert decision["recommended_route"] == "stay-local"
     assert decision["config_effect"]["delegation_mode"] == "suggest"
     assert decision["config_effect"]["safe_to_auto_run_commands"] is False
 
@@ -1501,7 +1501,7 @@ def test_start_surfaces_decomposed_active_work_delegation_candidates_and_auto_sk
     decomposition = decision["decomposition_delegation"]
     assert decomposition["status"] == "present"
     assert decomposition["candidates"][0]["lane_id"] == "validation-slice"
-    assert decomposition["candidates"][0]["route_candidate"] == "delegate-implementation"
+    assert decomposition["candidates"][0]["candidate_route"] == "delegate-implementation"
     assert decision["delegation_candidates"][0]["owner_surface"].endswith("validation-slice.plan.json")
     audit = decision["auto_delegation_audit"]
     assert audit["status"] == "skipped"
@@ -1574,7 +1574,7 @@ def test_start_decomposition_only_delegation_requires_lane_promotion_before_hand
     )
 
     decision = _start_context_value(json.loads(capsys.readouterr().out), "delegation_decision")
-    assert decision["decision"] == "suggest-delegation"
+    assert decision["recommended_route"] == "suggest-delegation"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
     assert "handoff_command" not in decision
@@ -1636,12 +1636,12 @@ def test_start_blocks_broad_work_when_decomposition_lane_needs_promotion(tmp_pat
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
-    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["gate_result"] == "candidate-lane-promotion-required"
     assert gate["implementation_allowed"] is False
     assert gate["candidate_pressure"]["status"] == "promotion-required"
     assert gate["candidate_pressure"]["candidate_ids"] == ["safety-slice"]
     assert "promote-to-plan --item-id safety-slice" in gate["promotion_command"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "candidate-lane-promotion-required"
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "candidate-lane-promotion-required"
     assert _start_primary_action(payload)["action"] == "select-or-promote-candidate-lane"
     assert payload["next_safe_action"]["implementation_allowed"] is False
     decision = _start_context_value(payload, "delegation_decision")
@@ -1686,7 +1686,7 @@ candidates = [
 
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
-    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["gate_result"] == "candidate-lane-promotion-required"
     assert gate["implementation_allowed"] is False
     assert gate["candidate_pressure"]["roadmap_candidate_count"] == 2
     assert gate["candidate_pressure"]["candidate_ids"] == [
@@ -1720,7 +1720,7 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "attention"
-    assert gate["decision"] == "external-issue-scope-unknown"
+    assert gate["gate_result"] == "external-issue-scope-unknown"
     assert gate["implementation_allowed"] is True
     assert gate["issue_scope_evidence"]["status"] == "unknown"
     assert gate["issue_scope_evidence"]["risk"] == "high"
@@ -1754,13 +1754,13 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "attention"
-    assert gate["decision"] == "agent-work-shape-decision-required"
+    assert gate["gate_result"] == "agent-work-shape-decision-required"
     assert gate["implementation_allowed"] is True
     guidance = payload["context"]["guidance"]["work_shape_guidance"]
     assert guidance["hard_blockers"] == []
-    assert gate["changed_path_classification"]["dirty_shape"] == "implementation-only"
-    assert "generated artifacts changed with source or tests" in gate["changed_path_classification"]["scope_growth_reasons"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert gate["changed_path_facts"]["dirty_shape"] == "implementation-only"
+    assert "generated artifacts changed with source or tests" in gate["changed_path_facts"]["scope_growth_reasons"]
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "enough-for-bounded-implementation"
     assert payload["next"]["action"] != "Create or promote an active execplan before continuing implementation."
 
 
@@ -1789,7 +1789,7 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "clear"
-    assert gate["decision"] == "direct-work-allowed"
+    assert gate["gate_result"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
     assert gate["repair_route"]["status"] == "retired"
     guidance = payload["context"]["guidance"]["work_shape_guidance"]
@@ -1797,9 +1797,9 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     assert guidance["agent_decision_required"] is True
     assert "changed implementation paths are within a narrow top-level surface" in guidance["direct_work_is_reasonable_when"]
     assert payload["context"]["guidance"]["rule"].startswith("AW exposes facts")
-    assert gate["changed_path_classification"]["scope_growth_detected"] is False
-    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert gate["changed_path_facts"]["scope_growth_detected"] is False
+    assert gate["changed_path_facts"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "enough-for-bounded-implementation"
     assert payload["next"]["action"] != "Create or promote an active execplan before continuing implementation."
 
 
@@ -1828,7 +1828,7 @@ def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(t
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "clear"
-    assert gate["decision"] == "direct-work-allowed"
+    assert gate["gate_result"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
     assert gate["repair_route"]["status"] == "retired"
     guidance = payload["context"]["guidance"]["work_shape_guidance"]
@@ -1836,8 +1836,8 @@ def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(t
     assert guidance["agent_decision_required"] is True
     assert "changed implementation paths are within a narrow top-level surface" in guidance["direct_work_is_reasonable_when"]
     assert guidance["scope_factors"]["issue_refs"] == ["#1058"]
-    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert gate["changed_path_facts"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "enough-for-bounded-implementation"
 
 
 def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path, capsys) -> None:
@@ -1864,8 +1864,8 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "violation"
-    assert gate["changed_path_classification"]["dirty_shape"] == "planning-plus-implementation"
-    assert _start_workflow_sufficiency(payload)["decision"] == "implementation-owner-missing"
+    assert gate["changed_path_facts"]["dirty_shape"] == "planning-plus-implementation"
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "implementation-owner-missing"
 
     assert (
         cli.main(
@@ -1886,7 +1886,7 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     )
     planning_only = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert planning_only["status"] == "clear"
-    assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
+    assert planning_only["changed_path_facts"]["dirty_shape"] == "planning-only"
 
     assert (
         cli.main(
@@ -1909,8 +1909,8 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     issue_scoped = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert issue_scoped["status"] == "attention"
     assert issue_scoped["implementation_allowed"] is True
-    assert issue_scoped["changed_path_classification"]["dirty_shape"] == "implementation-with-planning-state-reconciliation"
-    assert issue_scoped["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/planning/state.toml"]
+    assert issue_scoped["changed_path_facts"]["dirty_shape"] == "implementation-with-planning-state-reconciliation"
+    assert issue_scoped["changed_path_facts"]["ancillary_paths"] == [".agentic-workspace/planning/state.toml"]
 
 
 def test_implement_does_not_require_active_plan_delegation_for_direct_task(tmp_path: Path, capsys) -> None:
@@ -1959,7 +1959,7 @@ queued_items = []
 
     startup = json.loads(capsys.readouterr().out)
     assert startup["next_safe_action"]["next_safe_action"] != "record-delegation-decision"
-    assert _start_workflow_sufficiency(startup)["decision"] != "delegation-decision-required"
+    assert _start_workflow_sufficiency(startup)["sufficiency_result"] != "delegation-decision-required"
 
     assert (
         cli.main(
@@ -1979,7 +1979,7 @@ queued_items = []
 
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
-    assert gate["decision"] == "planning-backed"
+    assert gate["gate_result"] == "planning-backed"
     assert gate["delegation_decision_required"] is False
     assert gate["active_delegation_requirement"]["status"] == "delegation-decision-not-needed-for-direct-task"
     assert payload["active_plan_reliance"]["permission_claim"] == "direct-work-not-active-plan-continuation"
@@ -2034,11 +2034,11 @@ queued_items = []
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
-    assert gate["decision"] == "delegation-decision-required"
+    assert gate["gate_result"] == "delegation-decision-required"
     assert "planning delegation-decision" in gate["delegation_decision_command"]
     assert "--expect-planning-revision" in gate["delegation_decision_command"]
     assert gate["planning_revision"]["revision_id"] in gate["delegation_decision_command"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "delegation-decision-required"
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "delegation-decision-required"
 
     _write(
         plan_path,
@@ -2187,7 +2187,7 @@ queued_items = []
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
-    assert gate["decision"] == "delegation-decision-required"
+    assert gate["gate_result"] == "delegation-decision-required"
     assert gate["active_delegation_requirement"]["status"] == "delegation-decision-untrusted-shared-state"
     reliance = gate["active_plan_reliance"]
     assert reliance["status"] == "blocked"
@@ -2285,11 +2285,11 @@ queued_items = []
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
-    assert gate["decision"] == "parent-decomposition-decision-required"
+    assert gate["gate_result"] == "parent-decomposition-decision-required"
     assert gate["implementation_allowed"] is False
     assert gate["active_parent_decomposition_requirement"]["decomposition"].endswith("dogfood.decomposition.json")
     assert "skip decision" in " ".join(gate["active_parent_decomposition_requirement"]["required_before_implementation"])
-    assert _start_workflow_sufficiency(payload)["decision"] == "parent-decomposition-decision-required"
+    assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "parent-decomposition-decision-required"
 
     record = json.loads(decomposition_path.read_text(encoding="utf-8"))
     record["candidate_lanes"][0]["readiness"] = "promoted"

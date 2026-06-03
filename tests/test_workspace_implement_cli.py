@@ -97,7 +97,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["authority_markers"][0]["safe_to_edit"] is False
     assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
     assert payload["planning_safety_gate"]["status"] == "attention"
-    assert payload["planning_safety_gate"]["decision"] == "agent-work-shape-decision-required"
+    assert payload["planning_safety_gate"]["gate_result"] == "agent-work-shape-decision-required"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["planning_safety_gate"]["work_shape_guidance"]["hard_blockers"] == []
 
@@ -453,7 +453,7 @@ def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) 
     assert contract["intent"]["missing_fields"] == []
     assert contract["acceptance"]["closeout_required"] is True
     assert contract["acceptance"]["item_count"] == 3
-    assert contract["autonomy_and_escalation"]["delegation_decision"] in {
+    assert contract["autonomy_and_escalation"]["recommended_route"] in {
         "execute-locally",
         "stay-local",
         "suggest-delegation",
@@ -1027,7 +1027,7 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
     assert payload["planning_safety_gate"]["status"] == "attention"
-    assert payload["planning_safety_gate"]["decision"] == "external-issue-scope-unknown"
+    assert payload["planning_safety_gate"]["gate_result"] == "external-issue-scope-unknown"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["planning_safety_gate"]["issue_scope_evidence"]["missing_issue_refs"] == ["#424"]
     assert payload["planning_safety_gate"]["work_shape_guidance"]["scope_factors"]["issue_refs"] == ["#424"]
@@ -1076,13 +1076,13 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
     gate = payload["context"]["planning_safety_gate"]
     assert gate["status"] == "blocked"
-    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["gate_result"] == "candidate-lane-promotion-required"
     assert gate["implementation_allowed"] is False
     assert gate["candidate_pressure"]["candidate_ids"] == [
         "github-1201-command-package",
         "github-1202-runtime-parity",
     ]
-    assert payload["context"]["workflow_sufficiency"]["decision"] == "candidate-lane-promotion-required"
+    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
 
 
 def test_implement_with_explicit_target_ignores_checkout_active_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -1135,7 +1135,7 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
     assert payload["planning_safety_gate"]["status"] == "attention"
-    assert payload["planning_safety_gate"]["decision"] == "external-issue-scope-unknown"
+    assert payload["planning_safety_gate"]["gate_result"] == "external-issue-scope-unknown"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
@@ -1290,7 +1290,7 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert posture["ready_handoff"]["mode"] == "manual"
     assert posture["ready_handoff"]["packet_type"] == "manual_human_clarification"
     assert "quality" in posture["ready_handoff"]["prompt"]
-    assert posture["delegation_decision"]["decision"] == "suggest-escalation"
+    assert posture["delegation_decision"]["recommended_route"] == "suggest-escalation"
     assert posture["delegation_decision"]["required_next_action"] == "prepare-handoff"
     assert posture["delegation_decision"]["route_obligation"]["must"].startswith("Prepare the handoff packet")
     assert "report why" in posture["delegation_decision"]["route_obligation"]["report_if_skipped"]
@@ -1360,7 +1360,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
 
     payload = json.loads(capsys.readouterr().out)
     decision = _implement_context(payload)["delegation_decision"]
-    assert decision["decision"] == "delegate-bounded-slice"
+    assert decision["recommended_route"] == "delegate-bounded-slice"
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
     assert decision["token_savings_guidance"]["signal"] == "likely"
@@ -1451,7 +1451,7 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
 
     payload = json.loads(capsys.readouterr().out)
     decision = _implement_context(payload)["delegation_decision"]
-    assert decision["decision"] == "suggest-delegation"
+    assert decision["recommended_route"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
     assert decision["token_savings_guidance"]["signal"] == "possible"
@@ -1465,7 +1465,7 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
     assert decision["delegation_next_step"]["handoff_contract_status"] == "unavailable-without-active-planning"
     assert "proof run and result" in decision["delegation_next_step"]["return_contract"]
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
-    assert decision["delegation_candidates"][0]["route_candidate"] == "delegate-exploration"
+    assert decision["delegation_candidates"][0]["candidate_route"] == "delegate-exploration"
     assert "reuse an existing worker" in decision["reason"]
     assert "auto_delegation_audit" not in decision
 
@@ -1512,7 +1512,7 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
 
     payload = json.loads(capsys.readouterr().out)
     decision = _implement_context(payload)["delegation_decision"]
-    assert decision["decision"] == "stay-local"
+    assert decision["recommended_route"] == "stay-local"
     assert decision["required_next_action"] == "continue-local"
     assert decision["effort_guidance"]["orchestrator"] == "medium"
     assert decision["effort_guidance"]["implementer"] == "medium"
@@ -1613,7 +1613,7 @@ def test_implement_selector_surfaces_reuse_pressure_without_blocking_direct_work
     assert reuse_pressure["findings"][0]["symbol"] == "normalize_text"
     assert reuse_pressure["findings"][0]["candidate_paths"] == ["src/sample_app/helpers.py"]
     assert "accept-duplication-with-reason" in reuse_pressure["allowed_outcomes"]
-    assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
+    assert payload["values"]["context.workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
 
 
 def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1884,7 +1884,7 @@ def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Pa
     options = {option["id"]: option for option in reuse_pressure["next_decision_options"]}
     assert options["continue-direct"]["allowed"] is True
     assert options["route-extraction-follow-up"]["allowed"] is False
-    assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
+    assert payload["values"]["context.workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
 
 
 def test_implement_reuse_pressure_demotes_generic_sibling_helpers_to_weak_hints(tmp_path: Path, capsys) -> None:

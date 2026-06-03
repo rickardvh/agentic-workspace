@@ -68,6 +68,20 @@ Use the authority boundary to write final reports like this:
 
 Dogfooding rule: the in-chat closeout report should be able to say what AW enforced, observed, recommended, and left to agent judgment without using "AW classified" or "AW routed" for advisory signals.
 
+### Canonical Advisory Field Names
+
+Reportable advisory and mechanical packets use names that describe what AW actually provides:
+
+- `gate_result`: planning-safety gate result, including real hard blockers when present.
+- `sufficiency_result`: workflow sufficiency status or required evidence result.
+- `recommended_route`: delegation or posture recommendation, not an AW-owned semantic decision.
+- `changed_path_facts`: observed changed-path buckets and scope facts, not a semantic classification.
+- `candidate_route`: surfaced route candidate, not a route AW selected.
+- `proof_route_selection`: selected proof route support, not an AW-owned closeout decision.
+
+Legacy compatibility aliases such as `decision`, `changed_path_classification`, `route_candidate`, and `proof_route_decision` may appear in full/internal payloads while existing callers migrate.
+User-facing reports and compact projections should prefer the canonical names and should treat compatibility aliases as deprecated.
+
 ## Closeout Report Shape
 
 The `closeout_report` object is the operator-facing closeout projection.

@@ -113,7 +113,7 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["values"]["workflow_sufficiency"]["kind"] == "agentic-workspace/workflow-sufficiency/v1"
-    assert payload["values"]["workflow_sufficiency"]["decision"] == "enough-for-first-contact-routing"
+    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-first-contact-routing"
     assert payload["values"]["workflow_sufficiency"]["nothing_more_needed"] is True
     continuation = payload["values"]["continuation_state"]
     assert continuation["kind"] == "agentic-workspace/compact-continuation-state/v1"
@@ -152,7 +152,7 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
 
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
     assert payload["source_command"] == "proof"
-    assert payload["values"]["sufficiency"]["decision"] == "required-proof-selected"
+    assert payload["values"]["sufficiency"]["sufficiency_result"] == "required-proof-selected"
     assert payload["values"]["next"]["action"] == "run-validation-command"
     assert "missing" not in payload
 
