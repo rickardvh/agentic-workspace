@@ -1420,13 +1420,12 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    docs_diff = (
-        "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md"
-    )
+    docs_diff = "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md"
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
     assert answer["required_commands"] == [docs_diff]
+    assert answer["selected_lanes"][0]["non_local_references"] == ["https://github.com/rickardvh/command-generation/blob/main/README.md"]
+    assert "https://github.com" not in answer["required_commands"][0]
     assert "uv run pytest tests -q" not in answer["required_commands"]
     assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
 
@@ -1440,6 +1439,45 @@ def test_proof_changed_selector_routes_package_readmes_to_docs_review(capsys) ->
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
     assert "make test-planning" not in answer["required_commands"]
     assert "git diff -- README.md docs .agentic-workspace/docs" in answer["required_commands"][0]
+
+
+def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    (target / ".agentic-workspace").mkdir()
+    (target / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(target),
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--record-receipt",
+                "--receipt-command",
+                "uv run pytest tests/test_workspace_proof_cli.py -q",
+                "--receipt-result",
+                "passed",
+                "--receipt-plan",
+                "plan-alpha",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    receipt_path = target / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "written"
+    assert payload["path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert receipt["command"] == "uv run pytest tests/test_workspace_proof_cli.py -q"
+    assert receipt["result"] == "passed"
+    assert receipt["changed_paths"] == ["tests/test_workspace_proof_cli.py"]
+    assert receipt["plan_id"] == "plan-alpha"
 
 
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> None:
@@ -1673,10 +1711,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
-    docs_diff = (
-        "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md"
-    )
+    docs_diff = "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md"
     assert payload["kind"] == "proof-next-decision/v1"
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]

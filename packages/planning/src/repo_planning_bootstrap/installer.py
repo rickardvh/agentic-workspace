@@ -31,7 +31,9 @@ PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
+PLANNING_PROOF_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
+PLANNING_CLOSEOUT_EVIDENCE_ROOT = PLANNING_MANAGED_ROOT / "closeout-evidence"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
@@ -46,6 +48,7 @@ EXTERNAL_INTENT_SNAPSHOT_RULE = (
     "closing, or editing external tracker items."
 )
 FINISHED_WORK_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-finished-work-evidence.schema.json"
+CLOSEOUT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-closeout-evidence.schema.json"
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
@@ -108,6 +111,7 @@ REQUIRED_PAYLOAD_FILES = (
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
+    CLOSEOUT_EVIDENCE_SCHEMA_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
 )
@@ -9723,7 +9727,7 @@ def _prepared_closeout_proof_report(
     execution_run: dict[str, str],
     finished_run_review: dict[str, str],
     iterative_follow_through: dict[str, str],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     validation_evidence = (
         proof_report.get("validation proof", "").strip()
         or execution_summary.get("validation confirmed", "").strip()
@@ -9744,11 +9748,15 @@ def _prepared_closeout_proof_report(
     if not proof_evidence:
         proof_evidence = execution_run.get("validations run", "").strip() or execution_summary.get("validation confirmed", "").strip()
 
-    return {
+    normalized: dict[str, Any] = {
         "validation proof": validation_evidence,
         "proof achieved now": proof_now,
         'evidence for "proof achieved" state': proof_evidence,
     }
+    for key, value in proof_report.items():
+        if key not in normalized:
+            normalized[key] = value
+    return normalized
 
 
 def _generated_closeout_adapter(
@@ -10687,6 +10695,68 @@ def archive_parent_lane_closeout(
     return result
 
 
+def _normalize_receipt_path(value: Any) -> str:
+    text = str(value or "").strip().replace("\\", "/").lstrip("./")
+    return text
+
+
+def _record_scope_paths(record: dict[str, Any]) -> set[str]:
+    raw_values: list[Any] = []
+    for key in ("touched_scope", "changed_paths", "scope"):
+        raw_values.append(record.get(key))
+    for section_name in ("execution_run", "execution_summary"):
+        section = _record_section_dict(record, section_name) or {}
+        raw_values.extend(
+            [
+                section.get("scope touched"),
+                section.get("changed surfaces"),
+                section.get("scope_touched"),
+                section.get("changed_surfaces"),
+            ]
+        )
+    paths: set[str] = set()
+    for value in raw_values:
+        if isinstance(value, list):
+            candidates = value
+        else:
+            candidates = re.split(r"[;,]\s*|\s+", str(value or ""))
+        for candidate in candidates:
+            normalized = _normalize_receipt_path(candidate)
+            if normalized and normalized not in {"none", "pending", "unknown"}:
+                paths.add(normalized)
+    return paths
+
+
+def _load_last_proof_receipt(*, target_root: Path, record: dict[str, Any], plan: str) -> tuple[dict[str, Any] | None, str]:
+    receipt_path = target_root / PLANNING_PROOF_RECEIPT_PATH
+    if not receipt_path.is_file():
+        return None, "receipt file is absent"
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"receipt file is unreadable: {exc}"
+    if not isinstance(receipt, dict):
+        return None, "receipt file is not a JSON object"
+    result = str(receipt.get("result", receipt.get("status", ""))).strip().lower()
+    if result not in {"passed", "pass", "success", "succeeded", "ok"}:
+        return None, f"receipt result is not successful: {result or 'missing'}"
+    command = str(receipt.get("command", receipt.get("validation_command", ""))).strip()
+    if not command:
+        return None, "receipt has no command"
+    receipt_plan = str(receipt.get("plan_id", receipt.get("plan", ""))).strip()
+    if receipt_plan and receipt_plan == plan:
+        return receipt, ""
+    raw_receipt_paths = receipt.get("changed_paths", [])
+    receipt_path_values = raw_receipt_paths if isinstance(raw_receipt_paths, list) else [raw_receipt_paths]
+    receipt_paths = {_normalize_receipt_path(path) for path in receipt_path_values if _normalize_receipt_path(path)}
+    record_paths = _record_scope_paths(record)
+    if receipt_paths and record_paths and receipt_paths.isdisjoint(record_paths):
+        return None, "receipt changed paths do not overlap the closeout plan scope"
+    if receipt_paths or record_paths:
+        return receipt, ""
+    return None, "receipt has neither matching plan_id nor changed-path scope"
+
+
 def closeout_execplan(
     plan: str,
     *,
@@ -10776,6 +10846,7 @@ def closeout_execplan(
     proof_request = clean(proof_from)
     proof_report = _record_section_dict(record, "proof_report") or {}
     existing_proof = clean(proof_report.get("validation proof"))
+    receipt: dict[str, Any] | None = None
     if proof_request and proof_request.lower() != "last":
         proof = proof_request
         proof_source = "explicit"
@@ -10783,17 +10854,39 @@ def closeout_execplan(
         proof = existing_proof
         proof_source = "existing"
     else:
-        result.warnings.append(
-            {
-                "warning_class": "closeout_missing_proof",
-                "path": record_path.relative_to(target_root).as_posix(),
-                "message": "planning closeout --proof-from last requires an existing non-placeholder proof_report.validation proof.",
-                "suggested_fix": "Rerun closeout with --proof-from <proof command or evidence>, or record real proof before using --proof-from last.",
-            }
+        receipt, receipt_reason = _load_last_proof_receipt(target_root=target_root, record=record, plan=plan)
+        if receipt is not None:
+            proof = str(receipt.get("command", receipt.get("validation_command", ""))).strip()
+            proof_source = "receipt"
+        else:
+            if receipt_reason and receipt_reason != "receipt file is absent":
+                result.warnings.append(
+                    {
+                        "warning_class": "closeout_receipt_unusable",
+                        "path": PLANNING_PROOF_RECEIPT_PATH.as_posix(),
+                        "message": f"planning closeout --proof-from last could not use the latest proof receipt: {receipt_reason}.",
+                        "suggested_fix": "Record a successful proof receipt for this plan or changed-path scope, or pass --proof-from explicitly.",
+                    }
+                )
+            result.warnings.append(
+                {
+                    "warning_class": "closeout_missing_proof",
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "message": "planning closeout --proof-from last requires an existing non-placeholder proof_report.validation proof or usable proof receipt.",
+                    "suggested_fix": "Rerun closeout with --proof-from <proof command or evidence>, or record real proof before using --proof-from last.",
+                }
+            )
+            result.add("manual review", record_path, "planning closeout needs explicit proof; --proof-from last found no existing proof")
+            result.add("next safe action", record_path, "rerun planning closeout with --proof-from <proof command or evidence>")
+            return result
+
+    receipt_for_report = receipt if proof_source == "receipt" and isinstance(receipt, dict) else {}
+    if proof_source == "receipt":
+        result.add(
+            "proof receipt",
+            target_root / PLANNING_PROOF_RECEIPT_PATH,
+            "planning closeout consumed the latest successful proof receipt",
         )
-        result.add("manual review", record_path, "planning closeout needs explicit proof; --proof-from last found no existing proof")
-        result.add("next safe action", record_path, "rerun planning closeout with --proof-from <proof command or evidence>")
-        return result
 
     execution_run = _record_section_dict(record, "execution_run") or {}
     finished_run_review = _record_section_dict(record, "finished_run_review") or {}
@@ -10933,6 +11026,22 @@ def closeout_execplan(
             }
         elif proof and proof_source == "existing":
             record["proof_report"] = proof_report
+        elif proof and proof_source == "receipt":
+            record["proof_report"] = {
+                "validation proof": proof,
+                "proof achieved now": "yes; planning closeout consumed the latest successful proof receipt.",
+                'evidence for "proof achieved" state': proof,
+                "proof receipt": json.dumps(
+                    {
+                        "path": PLANNING_PROOF_RECEIPT_PATH.as_posix(),
+                        "recorded_at": str(receipt_for_report.get("recorded_at", receipt_for_report.get("timestamp", ""))),
+                        "result": str(receipt_for_report.get("result", receipt_for_report.get("status", ""))),
+                        "changed_paths": receipt_for_report.get("changed_paths", []),
+                        "plan_id": str(receipt_for_report.get("plan_id", receipt_for_report.get("plan", ""))),
+                    },
+                    sort_keys=True,
+                ),
+            }
         if closure_decision == "archive-but-keep-lane-open":
             intent_continuity = _record_section_dict(record, "intent_continuity") or {}
             intent_continuity["this slice completes the larger intended outcome"] = "no"
@@ -11644,6 +11753,12 @@ def archive_execplan(
         destination_record = _unique_archive_record_path(destination_record)
     archived_record_relative = destination_record.relative_to(target_root).as_posix()
     has_record = record_path.exists()
+    archive_retention_skipped = False
+    closeout_evidence_path = _closeout_evidence_record_path(target_root=target_root, destination_record=destination_record)
+    retention_skip_reason = (
+        "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead"
+    )
+
     if retain_archive:
         if destination.exists() and destination.suffix == ".md":
             result.add(
@@ -11769,8 +11884,9 @@ def archive_execplan(
                 result.add(
                     "retention skipped",
                     destination_record,
-                    "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+                    retention_skip_reason,
                 )
+                archive_retention_skipped = True
                 retain_archive = False
             else:
                 archive_size_warning["message"] += " Rerun without --retain-archive to close after distillation instead."
@@ -11805,6 +11921,8 @@ def archive_execplan(
             if plan_path != record_path:
                 result.add("would remove", plan_path, "remove active Markdown view")
         else:
+            if archive_retention_skipped:
+                result.add("would create", closeout_evidence_path, "compact retained closeout evidence for reporting")
             if record_path.exists():
                 result.add("would remove", record_path, "remove completed execplan after closeout distillation")
             if plan_path.exists() and plan_path != record_path:
@@ -11828,6 +11946,18 @@ def archive_execplan(
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
     else:
+        if archive_retention_skipped:
+            closeout_evidence_path = _unique_closeout_evidence_record_path(closeout_evidence_path)
+            _write_closeout_evidence_record(
+                record_path=closeout_evidence_path,
+                record=_closeout_evidence_record(
+                    closeout_record=closeout_record,
+                    plan_path=plan_path,
+                    target_root=target_root,
+                    intended_archive_path=destination_record,
+                    reason=retention_skip_reason,
+                ),
+            )
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
         if record_path.exists():
@@ -11844,6 +11974,8 @@ def archive_execplan(
     if retain_archive:
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     else:
+        if archive_retention_skipped:
+            result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     return result
 
@@ -11861,6 +11993,71 @@ def _unique_archive_record_path(destination_record: Path) -> Path:
         if not candidate.exists():
             return candidate
     raise RuntimeError(f"unable to choose unique archive path for {destination_record}")
+
+
+def _closeout_evidence_record_path(*, target_root: Path, destination_record: Path) -> Path:
+    if destination_record.name.endswith(".plan.json"):
+        base_name = destination_record.name[: -len(".plan.json")]
+    else:
+        base_name = destination_record.stem
+    base_name = re.sub(r"[^A-Za-z0-9._-]+", "-", base_name).strip("-._") or "closeout"
+    return target_root / PLANNING_CLOSEOUT_EVIDENCE_ROOT / f"{base_name}.closeout.json"
+
+
+def _unique_closeout_evidence_record_path(destination_record: Path) -> Path:
+    if not destination_record.exists():
+        return destination_record
+    base_name = (
+        destination_record.name[: -len(".closeout.json")] if destination_record.name.endswith(".closeout.json") else destination_record.stem
+    )
+    for suffix in range(2, 1000):
+        candidate = destination_record.with_name(f"{base_name}-{suffix}.closeout.json")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"unable to choose unique closeout evidence path for {destination_record}")
+
+
+def _closeout_evidence_record(
+    *,
+    closeout_record: dict[str, Any],
+    plan_path: Path,
+    target_root: Path,
+    intended_archive_path: Path,
+    reason: str,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "kind": "planning-closeout-evidence/v1",
+        "title": str(closeout_record.get("title", "")).strip() or plan_path.stem.replace("-", " ").title(),
+        "plan_id": plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_plan": plan_path.relative_to(target_root).as_posix(),
+        "intended_archive": intended_archive_path.relative_to(target_root).as_posix(),
+        "retention": {
+            "state": "archive-retention-skipped",
+            "reason": reason,
+            "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails.",
+        },
+    }
+    for section in (
+        "active_milestone",
+        "delegated_judgment",
+        "execution_run",
+        "finished_run_review",
+        "proof_report",
+        "intent_satisfaction",
+        "closure_check",
+        "durable_residue",
+        "execution_summary",
+        "closeout_distillation",
+    ):
+        value = closeout_record.get(section)
+        if isinstance(value, dict) and value:
+            record[section] = copy.deepcopy(value)
+    return record
+
+
+def _write_closeout_evidence_record(*, record_path: Path, record: dict[str, Any]) -> None:
+    _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=CLOSEOUT_EVIDENCE_SCHEMA_PATH)
 
 
 def _archive_size_guardrail_warning(

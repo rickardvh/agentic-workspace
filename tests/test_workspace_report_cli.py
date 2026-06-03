@@ -1305,6 +1305,10 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload
+    closeout_route = context["closeout_report"]
+    assert closeout_route["selector"] == "closeout_report"
+    assert closeout_route["next_command"] == f"agentic-workspace report --target {relative_target} --section closeout_report --format json"
+    assert "closeout_report" in context["report_profile"]["decision_grade_fields"]
     assert context["operating_posture"]["surface"] == "report"
     assert context["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
     assert context["execution_shape"]["task_shape_recommender"]["status"] == "available"
@@ -1329,6 +1333,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "external_work_reconciliation" in context["report_profile"]["decision_grade_fields"]
     assert context["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert drill_down["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
+
     section_hints = {item["section"]: item for item in drill_down["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert "compact router field" in section_hints["module_reports"]["why_now"]
@@ -1369,6 +1374,238 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["kind"] == "agentic-workspace/operating-posture/v1"
     assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
+
+
+def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "guidance-only"
+    assert report["profile"] == "minimal"
+    assert report["profile_policy"]["high_risk"] is False
+    assert report["completeness"]["status"] == "guidance-only"
+    assert report["completeness"]["trust_effect"] == "not-applicable"
+    assert report["completeness"]["missing_count"] == 0
+    rendering = report["final_response_rendering"]
+    assert rendering["kind"] == "agentic-workspace/final-closeout-rendering/v1"
+    assert rendering["status"] == "guidance-only"
+    assert rendering["rendering_mode"] == "terse"
+    assert rendering["summary_lines"] == []
+    assert rendering["rendered_summary"]["kind"] == "agentic-workspace/final-closeout-summary/v1"
+    assert rendering["rendered_summary"]["template_id"] == "builtin/terse"
+    assert rendering["rendered_summary"]["rendered_text"] == "Done."
+    assert rendering["rendered_summary"]["required_fact_coverage"]["status"] == "complete"
+    assert rendering["plain_done_allowed"] is True
+
+
+def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_active_plan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    archive = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "archived-closeout.plan.json"
+    _write_json(
+        archive,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Archived Closeout",
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Implemented the archived evidence closeout report.",
+                "scope touched": "report closeout",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "proof achieved now": "yes",
+            },
+            "closure_check": {
+                "slice status": "completed",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "Archived closeout evidence remains available for user reporting.",
+            },
+            "delegated_judgment": {
+                "requested outcome": "Surface archived closeout evidence when no active plan exists.",
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "present"
+    assert report["planning_evidence"]["authority"] == "archived-planning-evidence"
+    assert report["planning_evidence"]["state"] == "archived"
+    assert report["planning_evidence"]["source"]["path"] == (".agentic-workspace/planning/execplans/archive/archived-closeout.plan.json")
+    assert report["work_completed"] == "Implemented the archived evidence closeout report."
+    assert report["changes"]["source"] == "planning.archive.execplan.execution_run"
+
+
+def test_report_closeout_report_prefers_retained_closeout_evidence_over_older_archive(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    archive = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "older-closeout.plan.json"
+    retained = target / ".agentic-workspace" / "planning" / "closeout-evidence" / "retained-closeout.closeout.json"
+    _write_json(
+        archive,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Older Archived Closeout",
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Rendered the older archived closeout.",
+                "scope touched": "older report closeout",
+                "changed surfaces": "older.py",
+                "validations run": "older validation",
+            },
+            "proof_report": {"validation proof": "older validation passed", "proof achieved now": "yes"},
+            "closure_check": {"slice status": "completed", "larger-intent status": "closed", "closure decision": "archive-and-close"},
+        },
+    )
+    _write_json(
+        retained,
+        {
+            "kind": "planning-closeout-evidence/v1",
+            "title": "Retained Closeout",
+            "plan_id": "retained-closeout",
+            "created_at": "2026-06-03T15:30:00+00:00",
+            "source_plan": ".agentic-workspace/planning/execplans/retained-closeout.plan.json",
+            "intended_archive": ".agentic-workspace/planning/execplans/archive/retained-closeout.plan.json",
+            "retention": {
+                "state": "archive-retention-skipped",
+                "reason": "archive exceeded size guardrail",
+                "rule": "compact closeout evidence keeps the report current",
+            },
+            "delegated_judgment": {"requested outcome": "Report retained closeout evidence after archive retention skip."},
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Rendered the retained closeout evidence.",
+                "scope touched": "retained report closeout",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "retained validation",
+            },
+            "proof_report": {"validation proof": "retained validation passed", "proof achieved now": "yes"},
+            "closure_check": {"slice status": "completed", "larger-intent status": "closed", "closure decision": "archive-and-close"},
+        },
+    )
+    os.utime(archive, (1_700_000_000, 1_700_000_000))
+    os.utime(retained, (1_700_000_100, 1_700_000_100))
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["status"] == "present"
+    assert report["planning_evidence"]["authority"] == "retained-closeout-evidence"
+    assert report["planning_evidence"]["state"] == "retained"
+    assert report["planning_evidence"]["source"]["path"] == (
+        ".agentic-workspace/planning/closeout-evidence/retained-closeout.closeout.json"
+    )
+    assert report["work_completed"] == "Rendered the retained closeout evidence."
+    assert report["changes"]["source"] == "planning.closeout_evidence.execution_run"
+    assert "planning.closeout_evidence.proof_report" in report["source_fields"]
+
+
+def test_report_closeout_trust_explains_open_issue_residue_pending_pr_merge(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n\n'
+        "[todo]\nactive_items = []\nqueued_items = []\n\n"
+        "[roadmap]\nlanes = []\n"
+        "candidates = [\n"
+        "  { id = 'github-1234-follow-up', maturity = 'candidate', status = 'next', priority = 'P2', refs = 'GitHub #1234', title = 'Follow-up issue', outcome = 'Land through the current PR.', reason = 'Open until PR merge closes it.', promotion_signal = 'PR merge', suggested_first_slice = 'Wait for merge refresh.' },\n"
+        "]\n",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "systems": ["github"],
+            "items": [
+                {"system": "github", "id": "#1234", "status": "open", "title": "Follow-up issue"},
+            ],
+            "pull_requests": [
+                {
+                    "system": "github",
+                    "number": 55,
+                    "title": "Closeout follow-ups",
+                    "state": "open",
+                    "url": "https://github.com/acme/project/pull/55",
+                    "head_ref": "codex/closeout-reporting",
+                    "base_ref": "main",
+                    "is_draft": True,
+                    "close_keyword_issue_ids": ["#1234"],
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    continuation = closeout["checks"]["intent_satisfaction"]["package_owned_continuation"]
+    assert continuation["pending_pr_merge_count"] == 1
+    pending = continuation["pending_pr_merge_surfaces"][0]
+    assert pending["id"] == "github-1234-follow-up"
+    assert pending["external_disposition"] == "pending-pr-merge"
+    assert pending["pending_pr_merge"]["pr_number"] == "55"
+    assert pending["pending_pr_merge"]["branch"] == "codex/closeout-reporting"
+    assert "refresh-github" in pending["pending_pr_merge"]["reconcile_command"]
+
+
+def test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _closeout_report_final_response_rendering_payload
+
+    rendering = _closeout_report_final_response_rendering_payload(
+        status="guidance-only",
+        profile_policy={
+            "selected_profile": "audit",
+            "reason": "closeout_trust lower-trust signals present",
+        },
+        trust="lower-trust",
+        work_completed="",
+        requested_outcome="large closed plan",
+        changed_surfaces="",
+        validation_proof="",
+        completion_decision="guidance-only",
+        completion_boundary={},
+        completion_options=[{"id": "keep-parent-open", "owner": ".agentic-workspace/planning/state.toml"}],
+        completeness={"status": "guidance-only"},
+        residual_risk="Proof confidence was not recorded.",
+        blockers=["durable_residue"],
+        next_action="route residue",
+    )
+
+    assert rendering["status"] == "required"
+    assert rendering["profile"] == "audit"
+    assert rendering["rendering_mode"] == "compact"
+    assert any(line.startswith("Closeout caveat: guidance-only audit profile") for line in rendering["summary_lines"])
+    assert any(line.startswith("Residue: follow-up owner: .agentic-workspace/planning/state.toml") for line in rendering["summary_lines"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["template_id"] == "builtin/compact"
+    assert "Closeout caveat: guidance-only audit profile" in rendered["rendered_text"]
+    assert "Residue: follow-up owner: .agentic-workspace/planning/state.toml" in rendered["rendered_text"]
+    assert rendered["required_fact_coverage"]["status"] == "complete"
+    assert "profile reason or caveat" in rendering["must_include"]
+    assert "residue or follow-up status" in rendering["must_include"]
+    assert rendering["plain_done_allowed"] is False
+    assert rendering["raw_json_allowed"] is False
 
 
 def test_report_commands_use_resolved_target_not_repo_placeholder(tmp_path: Path, capsys) -> None:
@@ -2801,6 +3038,188 @@ def test_report_closeout_trust_allows_work_claim_for_sufficient_intent_proof(tmp
     assert options["claim-work-complete"]["allowed"] is True
 
 
+def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "strict-closeout.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Strict Closeout",
+            "active_milestone": {"id": "strict-closeout", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Finish strict closeout reporting with profile and completeness evidence.",
+                "hard constraints": "Do not turn closeout reporting into execution state.",
+                "agent may decide locally": "Exact report wording.",
+                "escalate when": "Strict evidence is incomplete.",
+            },
+            "completion_criteria": ["Closeout report exposes profile, traceability, and completeness."],
+            "validation_commands": ["uv run pytest tests/test_workspace_report_cli.py -q"],
+            "intent_continuity": {
+                "larger intended outcome": "Finish strict closeout reporting.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace start --format json",
+                "what happened": "Implemented the derived closeout report projection.",
+                "scope touched": "reporting runtime, contracts, docs, tests",
+                "changed surfaces": "workspace_runtime_primitives.py; reporting_support.py; reporting-contract.md",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+                "result for continuation": "close",
+                "next step": "open PR",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "acceptance reconciliation": "profile, traceability, completeness -> report closeout_report -> proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused closeout report tests",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["closeout profile policy", "traceability rows", "completeness checks"],
+                    "proof_dimensions": ["strict closeout report fixture"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The operator-facing report has strict profile evidence.",
+                "evidence carried forward": "report closeout_report",
+                "reopen trigger": "closeout profile or completeness evidence regresses",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'strict-closeout', title = 'Strict closeout', surface = '.agentic-workspace/planning/execplans/strict-closeout.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["kind"] == "agentic-workspace/closeout-report/v1"
+    assert report["authority"] == "derived-projection"
+    assert report["profile"] == "audit"
+    assert report["profile_policy"]["high_risk"] is True
+    assert report["profile_policy"]["escalation_source"] == "assurance.strict_closeout enabled"
+    assert report["completeness"]["status"] == "complete"
+    assert report["completeness"]["trust_effect"] == "normal"
+    rendering = report["final_response_rendering"]
+    assert rendering["status"] == "required"
+    assert rendering["rendering_mode"] == "evidence-backed"
+    assert "profile reason" in rendering["must_include"]
+    assert "proof or validation" in rendering["must_include"]
+    assert "closure boundary" in rendering["must_include"]
+    assert any(line.startswith("Closeout profile: audit because assurance.strict_closeout enabled") for line in rendering["summary_lines"])
+    assert any(line.startswith("Proof: uv run pytest tests/test_workspace_report_cli.py -q passed") for line in rendering["summary_lines"])
+    assert any(line.startswith("Residue:") for line in rendering["summary_lines"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["template_id"] == "builtin/evidence-backed"
+    assert "Closeout profile: audit because assurance.strict_closeout enabled" in rendered["rendered_text"]
+    assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
+    assert "Closure boundary:" in rendered["rendered_text"]
+    assert "Residue:" in rendered["rendered_text"]
+    assert rendered["required_fact_coverage"]["status"] == "complete"
+    assert rendering["plain_done_allowed"] is True
+    assert rendering["raw_json_allowed"] is False
+    row_ids = {row["id"] for row in report["traceability"]["rows"]}
+    assert {"intent-boundary", "work-completed", "changed-surfaces", "validation", "closure-boundary"} <= row_ids
+    assert "derived operator-facing presentation" in report["boundary"]
+    assert report["next_action"]["command"].endswith("--section closeout_report --format json")
+
+
+def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "incomplete-closeout.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Incomplete Closeout",
+            "active_milestone": {"id": "incomplete-closeout", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Show incomplete closeout evidence.",
+                "hard constraints": "Do not claim final closure.",
+            },
+            "completion_criteria": ["Incomplete evidence is visible."],
+            "execution_run": {
+                "run status": "active",
+                "handoff source": "uv run agentic-workspace start --format json",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "larger-intent status": "open",
+                "closure decision": "archive-but-keep-lane-open",
+                "evidence carried forward": "missing proof",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'incomplete-closeout', title = 'Incomplete closeout', surface = '.agentic-workspace/planning/execplans/incomplete-closeout.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["profile"] == "audit"
+    assert report["trust"] == "lower-trust"
+    assert report["completeness"]["status"] == "incomplete"
+    checks = {check["id"]: check for check in report["completeness"]["checks"]}
+    assert checks["work-completed"]["status"] == "incomplete"
+    assert checks["validation"]["status"] == "incomplete"
+    assert checks["follow-up-owner"]["status"] == "incomplete"
+    assert "strict" in report["completeness"]["strict_or_high_risk_rule"].lower()
+    rendering = report["final_response_rendering"]
+    assert rendering["status"] == "required"
+    assert rendering["plain_done_allowed"] is False
+    assert "missing or partial evidence caveat" in rendering["must_include"]
+    assert any("plain done summary" in item for item in rendering["must_not_claim"])
+    rendered = rendering["rendered_summary"]
+    assert rendered["constraints"]["plain_done_allowed"] is False
+    assert rendered["required_fact_coverage"]["status"] == "missing-required-facts"
+    assert "Evidence caveat: missing or partial closeout evidence" in rendered["rendered_text"]
+    assert "proof or validation" in rendered["required_fact_coverage"]["missing_required_facts"]
+    assert rendered["warnings"]
+    assert rendered["rendered_text"] != "Done."
+
+
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -3025,6 +3444,12 @@ retention_until = "2099-01-01"
     assurance_status = closeout["assurance_requirements"]["evidence_status"][0]
     assert assurance_status["verification_protocols"][0]["protocol_id"] == "privacy_review"
     assert assurance_status["verification_protocols"][0]["evidence_bundle_ids"] == ["privacy_review_2026"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    closeout_report = json.loads(capsys.readouterr().out)["answer"]
+    rows = {row["id"]: row for row in closeout_report["traceability"]["rows"]}
+    assert "1 verification evidence row(s)" in rows["assurance-verification"]["evidence"]
 
 
 def test_report_closeout_trust_blocks_known_gap_claims_from_verification(tmp_path: Path, capsys) -> None:
@@ -4335,8 +4760,9 @@ def test_external_intent_refresh_github_uses_product_defaults_instead_of_previou
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "all"
-    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "1000"
+    issue_command = next(command for command in reversed(observed_commands) if "--state" in command)
+    assert issue_command[issue_command.index("--state") + 1] == "all"
+    assert issue_command[issue_command.index("--limit") + 1] == "1000"
     assert payload["state"] == "all"
     assert payload["limit"] == 1000
     assert payload["state_source"] == "product_default"
@@ -4368,8 +4794,9 @@ def test_external_intent_refresh_github_uses_product_defaults_instead_of_previou
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert observed_commands[-1][observed_commands[-1].index("--state") + 1] == "open"
-    assert observed_commands[-1][observed_commands[-1].index("--limit") + 1] == "50"
+    issue_command = next(command for command in reversed(observed_commands) if "--state" in command)
+    assert issue_command[issue_command.index("--state") + 1] == "open"
+    assert issue_command[issue_command.index("--limit") + 1] == "50"
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "explicit"
 
@@ -4759,7 +5186,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     budgets = {
         "start": (["start", "--target", str(target), "--format", "json"], 9800),
         "summary": (["summary", "--target", str(target), "--format", "json"], 13000),
-        "report": (["report", "--target", str(target), "--format", "json"], 18200),
+        "report": (["report", "--target", str(target), "--format", "json"], 18500),
         "proof": (
             ["proof", "--target", str(target), "--changed", ".agentic-workspace/config.toml", "--format", "json"],
             9000,

@@ -207,6 +207,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "successful_completion_cost",
             "maintenance_pressure",
             "reuse_pressure",
+            "closeout_report",
         ],
         "router_shape_guard": {
             "status": "active",
@@ -304,7 +305,14 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             if isinstance(package_continuation, dict):
                 compact["package_owned_continuation"] = {
                     key: package_continuation.get(key)
-                    for key in ("status", "surface_count", "owner_surfaces", "rule")
+                    for key in (
+                        "status",
+                        "surface_count",
+                        "owner_surfaces",
+                        "pending_pr_merge_count",
+                        "pending_pr_merge_surfaces",
+                        "rule",
+                    )
                     if key in package_continuation
                 }
             return compact
@@ -517,6 +525,8 @@ def report_router_payload(
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
     if "report_profile.ordinary_agent_path" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.ordinary_agent_path")
+    if "closeout_report" in payload and "closeout_report" not in decision_grade_fields:
+        decision_grade_fields.append("closeout_report")
     maintainer_mode_value = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode_value, dict) and maintainer_mode_value.get("status") == "enabled":
         if "maintainer_mode" not in decision_grade_fields:
@@ -574,6 +584,7 @@ def report_router_payload(
         "durable_intent": payload.get("durable_intent", {}),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
+        "closeout_report": _report_router_closeout_report(payload.get("closeout_report", {}), cli_invoke=cli_invoke, target_arg=target_arg),
         "surface_value_guardrail": {
             "command": _command_with_cli_invoke(
                 "agentic-workspace defaults --section surface_value_guardrail --format json", cli_invoke=cli_invoke
@@ -638,6 +649,7 @@ def report_router_payload(
                 "context.execution_shape",
                 "context.improvement_intake",
                 "context.external_work_reconciliation",
+                "context.closeout_report",
                 "context.surface_value_guardrail",
                 "drill_down.section_hints",
                 "drill_down.deeper_detail.lazy_section_catalog",
@@ -838,6 +850,33 @@ def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
         "routine_reconciliation": value.get("routine_reconciliation", {}),
         "recommended_next_action": value.get("recommended_next_action", ""),
         "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
+    }
+
+
+def _report_router_closeout_report(value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_arg: str = "./repo") -> dict[str, Any]:
+    command = _command_with_cli_invoke(
+        "agentic-workspace report --target ./repo --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
+    )
+    if not isinstance(value, dict):
+        return {
+            "profile": "compact",
+            "reason": "default",
+            "escalation_source": "profile-policy-default",
+            "next_command": command,
+            "selector": "closeout_report",
+        }
+    routing = value.get("routing", {})
+    routing = routing if isinstance(routing, dict) else {}
+    profile_policy = value.get("profile_policy", {})
+    profile_policy = profile_policy if isinstance(profile_policy, dict) else {}
+    return {
+        "profile": value.get("profile") or routing.get("profile", "compact"),
+        "reason": routing.get("reason") or profile_policy.get("reason", "default"),
+        "escalation_source": routing.get("escalation_source") or profile_policy.get("escalation_source", ""),
+        "next_command": command,
+        "selector": "closeout_report",
     }
 
 

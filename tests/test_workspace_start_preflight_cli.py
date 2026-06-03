@@ -909,6 +909,10 @@ candidates = [
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    closeout_route = _start_context_value(payload, "closeout_report_route")
+    assert closeout_route["profile"] == "audit"
+    assert closeout_route["next_command"] == f"agentic-workspace report --target {relative_target} --section closeout_report --format json"
+    assert closeout_route["selector"] == "closeout_report"
     assert "completion_options" not in payload
     assert "completion_options" not in closeout
     assert "closeout_trust_inspection" in payload["drill_down"]["available_selectors"]

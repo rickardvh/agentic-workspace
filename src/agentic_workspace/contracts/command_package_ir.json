@@ -2715,6 +2715,46 @@
                 "help": "Return required proof commands for the provided repo-relative changed paths."
               },
               {
+                "name": "record_receipt",
+                "flags": [
+                  "--record-receipt"
+                ],
+                "action": "store_true",
+                "help": "Record a compact proof receipt from an actually run validation command."
+              },
+              {
+                "name": "receipt_command",
+                "flags": [
+                  "--receipt-command"
+                ],
+                "default": "",
+                "help": "Validation command or evidence to store in the proof receipt."
+              },
+              {
+                "name": "receipt_result",
+                "flags": [
+                  "--receipt-result"
+                ],
+                "default": "",
+                "help": "Validation result to store in the proof receipt, such as passed or failed."
+              },
+              {
+                "name": "receipt_plan",
+                "flags": [
+                  "--receipt-plan"
+                ],
+                "default": "",
+                "help": "Optional planning id that the proof receipt applies to."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show the receipt payload without writing it."
+              },
+              {
                 "name": "select",
                 "flags": [
                   "--select"
@@ -2763,10 +2803,10 @@
             "output": []
           },
           "effect_hints": {
-            "read_only": true,
+            "read_only": false,
             "destructive": false,
-            "idempotent": true,
-            "writes_repo_state": false,
+            "idempotent": false,
+            "writes_repo_state": true,
             "requires_preflight_gate": false
           },
           "conformance_refs": [

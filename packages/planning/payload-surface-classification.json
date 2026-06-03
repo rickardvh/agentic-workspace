@@ -32,6 +32,7 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
     ],
     "installed_paths": [
@@ -53,6 +54,7 @@
       ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-review.schema.json"
     ]
   },
@@ -425,6 +427,13 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Schema for optional finished-work reopening evidence so stale-closeout checks reject malformed inputs instead of silently normalizing them."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for compact closeout evidence retained when full execplan archive retention is skipped by size guardrails."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",

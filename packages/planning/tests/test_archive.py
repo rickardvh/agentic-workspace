@@ -890,12 +890,20 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
     options = {option["id"]: option for option in payload["completion_options"]}
 
     assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
     assert any(action["kind"] == "retention skipped" for action in payload["actions"])
+    assert any(action["kind"] == "retained closeout evidence" for action in payload["actions"])
     assert not archived_record_path.exists()
     assert not record_path.exists()
+    retained = json.loads(closeout_evidence_path.read_text(encoding="utf-8"))
+    assert retained["kind"] == "planning-closeout-evidence/v1"
+    assert retained["plan_id"] == "plan-alpha"
+    assert retained["retention"]["state"] == "archive-retention-skipped"
+    assert retained["execution_run"]["what happened"] == "implemented the retention skip closeout option fix."
+    assert retained["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
     assert options["resolve-closeout-blocker"]["allowed"] is False
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["archive-retention-status"]["allowed"] is True
@@ -918,6 +926,64 @@ def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Pa
         for action in payload["actions"]
     )
     assert record_path.exists()
+
+
+def test_planning_closeout_consumes_last_proof_receipt(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    receipt_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    _write(
+        receipt_path,
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "uv run pytest packages/planning/tests/test_archive.py::test_receipt -q",
+                "result": "passed",
+                "recorded_at": "2026-06-03T10:00:00+00:00",
+                "changed_paths": ["packages/planning/tests/test_archive.py"],
+                "plan_id": "plan-alpha",
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--what-happened",
+                "implemented receipt-backed closeout proof.",
+                "--scope-touched",
+                "packages/planning/tests/test_archive.py",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; the receipt command matches the closeout plan.",
+                "--outcome-summary",
+                "planning closeout can consume the latest successful proof receipt.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "proof receipt" for action in payload["actions"])
+    assert archived["execution_run"]["validations run"] == "uv run pytest packages/planning/tests/test_archive.py::test_receipt -q"
+    assert archived["proof_report"]["proof achieved now"] == ("yes; planning closeout consumed the latest successful proof receipt.")
+    receipt = json.loads(archived["proof_report"]["proof receipt"])
+    assert receipt["path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert receipt["changed_paths"] == ["packages/planning/tests/test_archive.py"]
 
 
 def test_planning_closeout_preserves_existing_last_proof(tmp_path: Path, capsys) -> None:

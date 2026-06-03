@@ -35,6 +35,7 @@ def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
     fingerprint = module.compute_generated_cli_fingerprint(repo_root=tmp_path)
     module._write_cached_fingerprint(fingerprint, cache_path=cache_path)
+    assert not cache_path.with_suffix(".tmp").exists()
 
     def fail_if_called(repo_root: Path, generator_script: Path) -> None:
         raise AssertionError(f"unexpected regeneration for {repo_root} via {generator_script}")

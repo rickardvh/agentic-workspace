@@ -42,6 +42,83 @@ The surrounding report payload keeps these fields separate:
 - `reports`
 - `module_reports`
 
+## Closeout Report Shape
+
+The `closeout_report` object is the operator-facing closeout projection.
+
+It keeps:
+
+- `profile`
+- `profile_policy`
+- `work_completed`
+- `interpreted_intent`
+- `changes`
+- `validation`
+- `gaps_and_residual_risk`
+- `closure_boundary`
+- `traceability`
+- `completeness`
+- `final_response_rendering`
+- `next_action`
+
+The profile policy is presentation-only:
+
+- `minimal`: trivial or no-plan closeout with no visible residue.
+- `compact`: ordinary bounded work with normal closeout trust.
+- `balanced`: active planning or partial evidence needs traceability.
+- `explanatory`: continuation, blocked closure, or review needs explanation.
+- `audit`: strict closeout, lower trust, incomplete evidence, missing verification, external divergence, or residue routing is present.
+
+The report is derived from Planning, Verification, `completion_contract`, and `closeout_trust`.
+It must not become execution state, a proof decision, or a second planning record.
+
+Use:
+
+```bash
+agentic-workspace report --target ./repo --section closeout_report --format json
+```
+
+Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
+Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
+
+When no active plan exists, `closeout_report.planning_evidence.authority` may be `retained-closeout-evidence` or `archived-planning-evidence`.
+Retained closeout evidence is the compact record written when full archive retention was skipped by size guardrails.
+Retained or archived evidence may populate the user-facing closeout summary, but it does not restore active Planning state or prove external issue closure.
+When refreshed external evidence shows an open issue named by a PR close keyword, closeout trust should explain the residue as `pending-pr-merge` and name the PR or branch plus the post-merge refresh command instead of treating it as ordinary unrouted residue.
+
+Use `closeout_report.final_response_rendering` to turn the report into final user-facing closeout text.
+It is a derived rendering packet, not a source of truth.
+It keeps:
+
+- `profile`
+- `rendering_mode`
+- `rendering_guidance`
+- `summary_lines`
+- `rendered_summary`
+- `must_include`
+- `must_not_claim`
+- `plain_done_allowed`
+- `raw_json_allowed`
+
+`final_response_rendering.rendered_summary` is the profile-bound, final-response-ready text packet.
+It uses built-in templates for the current rendering mode, such as terse, compact, or evidence-backed.
+It keeps:
+
+- `template_id`
+- `template_family`
+- `rendered_lines`
+- `rendered_text`
+- `required_fact_coverage`
+- `constraints`
+- `warnings`
+
+Minimal and guidance-only closeouts without trust, residue, or follow-up signals should stay terse.
+Guidance-only closeouts with audit, lower-trust, residue, or follow-up signals should stay compact but still render the caveat and disallow a plain-done claim.
+Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
+The final response should prefer `rendered_summary.rendered_text` as concise prose or bullets and must not dump raw JSON.
+`required_fact_coverage` must make omitted required facts visible before the agent claims completion.
+Custom wording or template selection is a future-safe extension only when it cannot hide `must_include`, `must_not_claim`, `plain_done_allowed`, or `raw_json_allowed`.
+
 ## Discovery Shape
 
 The `discovery` object is the pre-write, pre-seed setup layer.
@@ -139,6 +216,8 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what actually changed in that bounded run without broad diff reconstruction?
 - how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
 - what dangling larger intent or lower-trust closeout signals currently exist even when no execplan is active?
+- which closeout report profile should be used, why it escalated, and which selector produces the operator-facing report?
+- whether the operator-facing closeout report is complete, partial, or incomplete before claiming final completion?
 - whether optional external planning evidence is present, absent, invalid, or in conflict with checked-in planning visibility?
 - whether previously closed archived lanes still look honestly landed or now have reopening evidence that lowers closeout trust?
 - what findings or warnings need attention?
@@ -188,6 +267,9 @@ Only open raw module files or broader docs when the report points you to a follo
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when truth stays unchanged
   - stays invariant: machine-readable report truth, execution method, proof semantics, delegated-judgment boundaries, and ownership semantics
 - Treat standing-intent reporting as an inspection and routing surface, not as a new editable source of truth.
+- Treat `closeout_report` as derived presentation over Planning, Verification, `completion_contract`, and `closeout_trust`; do not write to it or let profile selection alter execution state.
+- Escalate closeout report density for strict, high-risk, lower-trust, continuation-bearing, externally divergent, or incomplete closeout evidence instead of hiding the gap behind a shorter final answer.
+- Keep residual risk and follow-up ownership explicit; when either is missing, route the gap to Planning, Verification, Memory, docs/checks, or issue follow-up rather than claiming final closure.
 
 ## Relationship To Lazy Discovery
 

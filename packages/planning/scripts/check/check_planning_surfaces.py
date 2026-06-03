@@ -357,6 +357,7 @@ def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
     schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
     external_schema_path = schema_dir / "planning-external-intent-evidence.schema.json"
     finished_schema_path = schema_dir / "planning-finished-work-evidence.schema.json"
+    closeout_schema_path = schema_dir / "planning-closeout-evidence.schema.json"
     checks = [
         (
             repo_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
@@ -377,6 +378,17 @@ def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
             "planning finished-work evidence",
         ),
     ]
+    closeout_evidence_dir = repo_root / ".agentic-workspace" / "planning" / "closeout-evidence"
+    closeout_records = sorted(closeout_evidence_dir.glob("*.closeout.json")) if closeout_evidence_dir.exists() else []
+    for closeout_record in closeout_records:
+        checks.append(
+            (
+                closeout_record,
+                closeout_schema_path,
+                "planning-closeout-evidence/v1",
+                "planning closeout evidence",
+            )
+        )
     warnings: list[PlanningWarning] = []
     for record_path, schema_path, expected_kind, record_label in checks:
         if record_path.exists():
@@ -523,6 +535,7 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
         planning_root / "decompositions",
         planning_root / "reviews",
         planning_root / "evidence",
+        planning_root / "closeout-evidence",
         planning_root / "schemas",
     )
     allowed_planning_root_names = {

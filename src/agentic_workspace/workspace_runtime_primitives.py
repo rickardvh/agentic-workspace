@@ -7216,6 +7216,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "during takeover, recovery, review, or closeout when package workflow use may affect trust",
     },
     {
+        "section": "closeout_report",
+        "kind": "agentic-workspace/closeout-report/v1",
+        "purpose": "operator-facing closeout report with profile, traceability, completeness, validation, gaps, and closure boundary",
+        "when_to_use": "before final user-facing closeout, especially for planned, high-risk, strict, or continuation-bearing work",
+    },
+    {
         "section": "continuation_next_actions",
         "kind": "agentic-workspace/continuation-next-actions/v1",
         "purpose": "evidence-ranked next actions, validation, risks, and stop conditions for continuation",
@@ -7549,6 +7555,770 @@ def _workflow_compliance_summary_payload(
     }
 
 
+_CLOSEOUT_REPORT_PROFILES: tuple[dict[str, str], ...] = (
+    {
+        "id": "minimal",
+        "purpose": "single-sentence closeout for trivial or no-plan work with no visible residual risk",
+        "include": "outcome, validation summary, and explicit no-known-residue statement",
+    },
+    {
+        "id": "compact",
+        "purpose": "ordinary bounded work closeout",
+        "include": "outcome, intent boundary, changed surfaces, validation, residual risk, follow-up owner",
+    },
+    {
+        "id": "balanced",
+        "purpose": "planned work or partial evidence that needs enough context for review without an audit dump",
+        "include": "compact fields plus traceability rows and completeness status",
+    },
+    {
+        "id": "explanatory",
+        "purpose": "operator-facing closeout when continuation, review, or ambiguity must be explained",
+        "include": "balanced fields plus why closure is partial, blocked, or review-dependent",
+    },
+    {
+        "id": "audit",
+        "purpose": "strict, high-risk, lower-trust, incomplete, or externally divergent closeout",
+        "include": "all report fields, blockers, source fields, trust impact, and next inspection commands",
+    },
+)
+
+
+def _closeout_report_profile_policy_payload(
+    *,
+    closeout_trust: dict[str, Any],
+    completion_contract: dict[str, Any],
+    verification: dict[str, Any],
+    completeness: dict[str, Any] | None = None,
+    config: WorkspaceConfig | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
+    completion_contract = completion_contract if isinstance(completion_contract, dict) else {}
+    verification = verification if isinstance(verification, dict) else {}
+    completeness = completeness if isinstance(completeness, dict) else {}
+    strict = bool(config.assurance.strict_closeout) if config is not None else False
+    trust = str(closeout_trust.get("trust", "")).strip().lower()
+    completion_decision = str(completion_contract.get("completion_decision", "")).strip().lower()
+    completeness_status = str(completeness.get("status", "")).strip().lower()
+    verification_status = str(verification.get("status", "")).strip().lower()
+    active_planning = str(completion_contract.get("status", "")).strip().lower() == "active-planning-derived"
+    lower_trust_count = _as_int(closeout_trust.get("lower_trust_closeout_count"))
+    completion_options = [item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)]
+    route_residue = any(item.get("id") == "route-residue" and item.get("allowed") is True for item in completion_options)
+    request_review = any(item.get("id") == "request-review" and item.get("allowed") is True for item in completion_options)
+    evidence_state = completion_contract.get("evidence_state", {})
+    evidence_state = evidence_state if isinstance(evidence_state, dict) else {}
+    external_closeout_safe = evidence_state.get("external_closeout_safe", completion_contract.get("external_evidence_closeout_safe"))
+    high_risk_reasons: list[str] = []
+    if strict and completeness_status not in {"guidance-only", "not-applicable"}:
+        high_risk_reasons.append("assurance.strict_closeout enabled")
+    if trust == "lower-trust" or lower_trust_count:
+        high_risk_reasons.append("closeout_trust lower-trust signals present")
+    if completeness_status == "incomplete":
+        high_risk_reasons.append("closeout report completeness is incomplete")
+    if verification_status in {"attention", "blocked", "missing-evidence"}:
+        high_risk_reasons.append(f"verification status is {verification_status}")
+    if external_closeout_safe is False:
+        high_risk_reasons.append("external evidence blocks closeout")
+    if request_review:
+        high_risk_reasons.append("closeout options require review")
+    if route_residue:
+        high_risk_reasons.append("durable residue route is available")
+    if high_risk_reasons:
+        selected = "audit"
+    elif completion_decision in {"continuation-required", "blocked"}:
+        selected = "explanatory"
+    elif active_planning or completeness_status == "partial":
+        selected = "balanced"
+    elif completeness_status in {"guidance-only", "not-applicable"}:
+        selected = "minimal"
+    elif trust == "normal":
+        selected = "compact"
+    else:
+        selected = "minimal"
+    if selected == "audit":
+        reason = "; ".join(high_risk_reasons)
+    elif selected == "explanatory":
+        reason = f"completion decision is {completion_decision}"
+    elif selected == "balanced":
+        reason = "active planning or partial evidence needs traceability"
+    elif selected == "compact":
+        reason = "ordinary closeout with normal trust"
+    else:
+        reason = "no active closeout evidence requires more than minimal reporting"
+    command = _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/closeout-report-profile-policy/v1",
+        "status": "selected",
+        "selected_profile": selected,
+        "reason": reason,
+        "escalation_source": high_risk_reasons[0] if high_risk_reasons else "profile-policy-default",
+        "high_risk": bool(high_risk_reasons),
+        "available_profiles": list(_CLOSEOUT_REPORT_PROFILES),
+        "escalation_policy": [
+            "minimal only when no active planning or residue evidence needs explanation",
+            "compact for ordinary bounded work with normal closeout trust",
+            "balanced when active planning, traceability, or partial evidence should be visible",
+            "explanatory when continuation, blocked closure, or review needs operator explanation",
+            "audit when strict closeout, lower trust, incomplete evidence, missing verification, external divergence, or residue routing is present",
+        ],
+        "next_command": command,
+        "command": command,
+        "surface_boundary": (
+            "Profile selection changes only the closeout presentation density; it does not change Planning, proof, "
+            "Verification, or closeout_trust state."
+        ),
+    }
+
+
+def _closeout_report_route_payload(
+    *,
+    closeout_trust: dict[str, Any] | None = None,
+    completion_contract: dict[str, Any] | None = None,
+    verification: dict[str, Any] | None = None,
+    completeness: dict[str, Any] | None = None,
+    config: WorkspaceConfig | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    profile = _closeout_report_profile_policy_payload(
+        closeout_trust=closeout_trust or {},
+        completion_contract=completion_contract or {},
+        verification=verification or {},
+        completeness=completeness or {},
+        config=config,
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/closeout-report-route/v1",
+        "status": "available",
+        "profile": profile["selected_profile"],
+        "reason": profile["reason"],
+        "escalation_source": profile["escalation_source"],
+        "next_command": profile["next_command"],
+        "selector": "closeout_report",
+        "profile_policy": {
+            "status": profile["status"],
+            "high_risk": profile["high_risk"],
+            "available_profiles": [item["id"] for item in profile["available_profiles"]],
+        },
+    }
+
+
+def _closeout_report_traceability_rows(
+    *,
+    active_planning_record: dict[str, Any],
+    closeout_trust: dict[str, Any],
+    completion_contract: dict[str, Any],
+    verification: dict[str, Any],
+) -> list[dict[str, Any]]:
+    execution = _as_dict(active_planning_record.get("execution_run"))
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    proof_report = _as_dict(active_planning_record.get("proof_report"))
+    completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
+    proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
+    assurance = _as_dict(closeout_trust.get("assurance_requirements"))
+    evidence_status = [item for item in _list_payload(assurance.get("evidence_status")) if isinstance(item, dict)]
+    verification_evidence = [item for item in _list_payload(verification.get("evidence_status")) if isinstance(item, dict)]
+    if not verification_evidence:
+        verification_evidence = [item for item in _list_payload(verification.get("evidence_bundle_status")) if isinstance(item, dict)]
+
+    def text_from(value: Any, *, fallback: str = "") -> str:
+        text = str(value or "").strip()
+        return text if text and text.lower() not in {"none", "null", "unknown"} else fallback
+
+    rows = [
+        {
+            "id": "intent-boundary",
+            "intent_or_requirement": text_from(
+                delegated.get("requested outcome") or delegated.get("requested_outcome"),
+                fallback="requested outcome from Planning",
+            ),
+            "evidence_surface": "planning.active.planning_record.delegated_judgment",
+            "evidence": text_from(completion_contract.get("must_be_true"), fallback="completion contract must_be_true"),
+            "status": "present" if active_planning_record else "missing",
+            "residual_risk_or_follow_up": text_from(intent_check.get("trust"), fallback="intent satisfaction not inspected"),
+        },
+        {
+            "id": "work-completed",
+            "intent_or_requirement": "what was completed",
+            "evidence_surface": "planning.active.planning_record.execution_run.what happened",
+            "evidence": text_from(execution.get("what happened") or execution.get("summary")),
+            "status": "present" if text_from(execution.get("what happened") or execution.get("summary")) else "missing",
+            "residual_risk_or_follow_up": text_from(execution.get("result for continuation") or execution.get("next step")),
+        },
+        {
+            "id": "changed-surfaces",
+            "intent_or_requirement": "changed surfaces",
+            "evidence_surface": "planning.active.planning_record.execution_run.changed surfaces",
+            "evidence": text_from(execution.get("changed surfaces") or execution.get("scope touched")),
+            "status": "present" if text_from(execution.get("changed surfaces") or execution.get("scope touched")) else "missing",
+            "residual_risk_or_follow_up": text_from(execution.get("scope touched")),
+        },
+        {
+            "id": "validation",
+            "intent_or_requirement": "validation evidence",
+            "evidence_surface": "planning.active.planning_record.proof_report",
+            "evidence": text_from(proof_report.get("validation proof") or execution.get("validations run")),
+            "status": "present" if text_from(proof_report.get("validation proof") or execution.get("validations run")) else "missing",
+            "residual_risk_or_follow_up": text_from(proof_confidence.get("residual_risk")),
+        },
+        {
+            "id": "closure-boundary",
+            "intent_or_requirement": "closure boundary",
+            "evidence_surface": "completion_contract.completion_boundary",
+            "evidence": text_from(
+                completion_boundary.get("final_satisfaction")
+                or completion_boundary.get("bounded_slice_success")
+                or completion_contract.get("completion_decision")
+            ),
+            "status": "present" if completion_boundary.get("status") in {"present", "guidance-only"} else "missing",
+            "residual_risk_or_follow_up": text_from(completion_boundary.get("required_residual_intent")),
+        },
+        {
+            "id": "assurance-verification",
+            "intent_or_requirement": "assurance and verification evidence",
+            "evidence_surface": "closeout_trust.assurance_requirements + verification",
+            "evidence": f"{len(evidence_status)} assurance status row(s); {len(verification_evidence)} verification evidence row(s)",
+            "status": "present"
+            if evidence_status or verification_evidence or assurance.get("status") in {"absent", "present"}
+            else "missing",
+            "residual_risk_or_follow_up": text_from(verification.get("status"), fallback="verification not configured"),
+        },
+    ]
+    return rows
+
+
+def _closeout_report_completeness_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    closeout_trust: dict[str, Any],
+    completion_contract: dict[str, Any],
+    traceability_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    execution = _as_dict(active_planning_record.get("execution_run"))
+    closure_check = _as_dict(active_planning_record.get("closure_check"))
+    proof_report = _as_dict(active_planning_record.get("proof_report"))
+    completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
+    proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
+    options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
+    keep_parent_open = _as_dict(options.get("keep-parent-open"))
+    route_residue = _as_dict(options.get("route-residue"))
+    follow_up_required = bool(
+        keep_parent_open.get("allowed")
+        or route_residue.get("allowed")
+        or intent_check.get("trust") in {"follow-up-required", "needs-review"}
+        or completion_contract.get("completion_decision") == "continuation-required"
+        or str(closure_check.get("larger-intent status") or closure_check.get("larger_intent_status") or "").strip().lower()
+        in {"open", "partial", "unfinished", "follow-up-required"}
+    )
+    owner = str(keep_parent_open.get("owner") or completion_boundary.get("required_follow_up_owner") or "").strip()
+
+    if not active_planning_record and str(completion_contract.get("status", "")).strip().lower() != "active-planning-derived":
+        return {
+            "kind": "agentic-workspace/closeout-report-completeness/v1",
+            "status": "guidance-only",
+            "complete": False,
+            "check_count": 0,
+            "missing_count": 0,
+            "partial_count": 0,
+            "checks": [],
+            "trust_effect": "not-applicable",
+            "strict_or_high_risk_rule": (
+                "Missing work or validation evidence is not a closeout failure when no active closeout claim "
+                "or required closeout evidence is present."
+            ),
+        }
+
+    def evidence_text(*values: Any) -> str:
+        for value in values:
+            if isinstance(value, (list, tuple)):
+                text = "; ".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                text = str(value or "").strip()
+            if text and text.lower() not in {"none", "null", "unknown", "[]"}:
+                return text
+        return ""
+
+    checks: list[dict[str, Any]] = []
+
+    def add_check(check_id: str, status: str, evidence: str, gap: str = "") -> None:
+        checks.append({"id": check_id, "status": status, "evidence": evidence, **({"gap": gap} if gap else {})})
+
+    add_check(
+        "intent-boundary",
+        "complete"
+        if evidence_text(completion_contract.get("must_be_true"), completion_boundary.get("final_satisfaction"))
+        else "incomplete",
+        evidence_text(completion_contract.get("must_be_true"), completion_boundary.get("final_satisfaction")),
+        "intent boundary is missing",
+    )
+    add_check(
+        "work-completed",
+        "complete" if evidence_text(execution.get("what happened"), execution.get("summary")) else "incomplete",
+        evidence_text(execution.get("what happened"), execution.get("summary")),
+        "work completed evidence is missing",
+    )
+    add_check(
+        "changed-surfaces",
+        "complete" if evidence_text(execution.get("changed surfaces"), execution.get("scope touched")) else "partial",
+        evidence_text(execution.get("changed surfaces"), execution.get("scope touched")),
+        "changed surfaces are not explicit",
+    )
+    add_check(
+        "validation",
+        "complete" if evidence_text(proof_report.get("validation proof"), execution.get("validations run")) else "incomplete",
+        evidence_text(proof_report.get("validation proof"), execution.get("validations run")),
+        "validation evidence is missing",
+    )
+    residual = evidence_text(
+        proof_confidence.get("residual_risk"),
+        proof_confidence.get("unproven_dimensions"),
+        completion_contract.get("decision_reasons"),
+    )
+    add_check(
+        "residual-risk",
+        "complete" if residual else "partial",
+        residual or "no residual risk explicitly recorded",
+        "residual risk statement is not explicit",
+    )
+    add_check(
+        "follow-up-owner",
+        "complete" if (not follow_up_required or owner) else "incomplete",
+        owner or ("no follow-up required" if not follow_up_required else ""),
+        "follow-up or residue is required but no owner is named",
+    )
+    missing_traceability = [row["id"] for row in traceability_rows if row.get("status") == "missing"]
+    add_check(
+        "traceability",
+        "complete" if not missing_traceability else "partial",
+        f"{len(traceability_rows) - len(missing_traceability)} of {len(traceability_rows)} traceability rows have evidence",
+        f"missing rows: {', '.join(missing_traceability)}" if missing_traceability else "",
+    )
+    incomplete = [check for check in checks if check["status"] == "incomplete"]
+    partial = [check for check in checks if check["status"] == "partial"]
+    status = "incomplete" if incomplete else "partial" if partial else "complete"
+    return {
+        "kind": "agentic-workspace/closeout-report-completeness/v1",
+        "status": status,
+        "complete": status == "complete",
+        "check_count": len(checks),
+        "missing_count": len(incomplete),
+        "partial_count": len(partial),
+        "checks": checks,
+        "trust_effect": "lower-trust" if status == "incomplete" else "review" if status == "partial" else "normal",
+        "strict_or_high_risk_rule": "Strict or high-risk closeout must not claim final completion while completeness is partial or incomplete.",
+    }
+
+
+def _closeout_report_final_response_rendering_payload(
+    *,
+    status: str,
+    profile_policy: dict[str, Any],
+    trust: str,
+    work_completed: str,
+    requested_outcome: str,
+    changed_surfaces: str,
+    validation_proof: str,
+    completion_decision: str,
+    completion_boundary: dict[str, Any],
+    completion_options: list[Any],
+    completeness: dict[str, Any],
+    residual_risk: str,
+    blockers: list[Any],
+    next_action: str,
+) -> dict[str, Any]:
+    profile = str(profile_policy.get("selected_profile") or "minimal")
+    profile_reason = str(profile_policy.get("reason") or "").strip()
+    completeness_status = str(completeness.get("status") or "").strip()
+    lower_trust = str(trust).strip().lower() == "lower-trust"
+    profile_requires_detail = profile in {"balanced", "explanatory", "audit"}
+    incomplete_or_partial = completeness_status in {"incomplete", "partial"}
+    guidance_only = status == "guidance-only" or completeness_status in {"guidance-only", "not-applicable"}
+    must_include: list[str] = []
+    summary_lines: list[str] = []
+    must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
+
+    def present(text: str) -> str:
+        return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
+
+    def rendered_summary_payload(
+        *,
+        status: str,
+        rendering_mode: str,
+        summary_lines: list[str],
+        must_include: list[str],
+        must_not_claim: list[str],
+        plain_done_allowed: bool,
+    ) -> dict[str, Any]:
+        template_id = f"builtin/{rendering_mode}"
+        rendered_lines = summary_lines[:6]
+        if rendering_mode == "terse" and not rendered_lines:
+            rendered_lines = ["Done."]
+        required_checks: list[dict[str, str]] = []
+        missing_required: list[str] = []
+        joined = " ".join(rendered_lines).lower()
+        fact_markers = {
+            "profile reason": ("closeout profile:", "because"),
+            "profile reason or caveat": ("closeout caveat:",),
+            "closure boundary": ("closure boundary:",),
+            "proof or validation": ("proof:", "validation:"),
+            "residue or follow-up status": ("residue:", "follow-up"),
+            "missing or partial evidence caveat": ("missing", "partial", "incomplete", "plain done"),
+            "outcome": ("outcome:", "done."),
+            "validation": ("proof:", "validation:"),
+        }
+        for fact in must_include:
+            markers = fact_markers.get(fact, (fact,))
+            found = any(marker in joined for marker in markers)
+            if not found:
+                missing_required.append(fact)
+            required_checks.append({"fact": fact, "status": "present" if found else "missing"})
+        warnings = []
+        if missing_required:
+            warnings.append("Rendered summary is missing required closeout fact(s): " + ", ".join(missing_required))
+        if not plain_done_allowed and rendered_lines == ["Done."]:
+            warnings.append("Rendered summary violates plain_done_allowed=false.")
+        return {
+            "kind": "agentic-workspace/final-closeout-summary/v1",
+            "status": "ready-with-warnings" if warnings else "ready",
+            "template_id": template_id,
+            "template_family": "builtin-profile-bound-closeout",
+            "rendering_mode": rendering_mode,
+            "rendered_lines": rendered_lines,
+            "rendered_text": "\n".join(rendered_lines),
+            "required_fact_coverage": {
+                "status": "missing-required-facts" if missing_required else "complete",
+                "checks": required_checks,
+                "missing_required_facts": missing_required,
+            },
+            "constraints": {
+                "must_include": list(dict.fromkeys(must_include)),
+                "must_not_claim": must_not_claim,
+                "plain_done_allowed": plain_done_allowed,
+                "raw_json_allowed": False,
+            },
+            "warnings": warnings,
+            "boundary": "Derived final-response presentation; canonical truth remains in closeout_report and its source fields.",
+        }
+
+    owners = [
+        str(item.get("owner") or "").strip()
+        for item in completion_options
+        if isinstance(item, dict)
+        and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
+        and item.get("owner")
+    ]
+    has_material_guidance_signal = bool(guidance_only and (lower_trust or profile_requires_detail or owners))
+
+    if guidance_only and not has_material_guidance_signal:
+        rendering_mode = "terse"
+        summary_lines = []
+        must_include = []
+        must_not_claim = must_not_claim + [
+            "Do not present missing active Planning evidence as a closeout failure when no closeout claim is being made."
+        ]
+        plain_done_allowed = True
+        return {
+            "kind": "agentic-workspace/final-closeout-rendering/v1",
+            "status": "guidance-only",
+            "profile": profile,
+            "rendering_mode": rendering_mode,
+            "rendering_guidance": "Keep the final response terse; no active closeout claim needs expanded reporting.",
+            "summary_lines": summary_lines,
+            "rendered_summary": rendered_summary_payload(
+                status="guidance-only",
+                rendering_mode=rendering_mode,
+                summary_lines=summary_lines,
+                must_include=must_include,
+                must_not_claim=must_not_claim,
+                plain_done_allowed=plain_done_allowed,
+            ),
+            "must_include": must_include,
+            "must_not_claim": must_not_claim,
+            "plain_done_allowed": plain_done_allowed,
+            "raw_json_allowed": False,
+            "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+        }
+
+    if guidance_only:
+        must_include.extend(["profile reason or caveat", "residue or follow-up status"])
+        summary_lines.append(
+            f"Closeout caveat: guidance-only {profile} profile"
+            + (f" because {profile_reason}" if profile_reason else "")
+            + "; do not render as plain done."
+        )
+    elif profile_requires_detail:
+        must_include.extend(["profile reason", "closure boundary", "proof or validation", "residue or follow-up status"])
+        summary_lines.append(f"Closeout profile: {profile}" + (f" because {profile_reason}" if profile_reason else "."))
+    elif profile == "compact":
+        must_include.extend(["outcome", "validation"])
+        summary_lines.append("Closeout: compact normal-trust summary is sufficient.")
+    else:
+        must_include.append("outcome")
+
+    outcome = present(work_completed) or present(requested_outcome)
+    if outcome:
+        summary_lines.append(f"Outcome: {outcome}")
+    if present(changed_surfaces):
+        summary_lines.append(f"Changed: {changed_surfaces}")
+    if present(validation_proof):
+        summary_lines.append(f"Proof: {validation_proof}")
+
+    boundary_text = present(completion_decision)
+    completion_boundary_text = present(
+        str(
+            completion_boundary.get("final_satisfaction")
+            or completion_boundary.get("bounded_slice_success")
+            or completion_boundary.get("required_residual_intent")
+            or ""
+        )
+    )
+    if completion_boundary_text:
+        boundary_text = f"{boundary_text}; {completion_boundary_text}" if boundary_text else completion_boundary_text
+    if boundary_text:
+        summary_lines.append(f"Closure boundary: {boundary_text}")
+
+    residue = present(residual_risk)
+    if owners:
+        residue = f"follow-up owner: {owners[0]}" + (f"; {residue}" if residue else "")
+    elif blockers:
+        residue = f"blocked by: {', '.join(str(item) for item in blockers[:3])}" + (f"; {residue}" if residue else "")
+    elif next_action:
+        residue = present(next_action)
+    if residue:
+        summary_lines.append(f"Residue: {residue}")
+
+    if lower_trust or incomplete_or_partial or has_material_guidance_signal:
+        must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
+    if incomplete_or_partial:
+        must_include.append("missing or partial evidence caveat")
+        summary_lines.append("Evidence caveat: missing or partial closeout evidence; do not claim plain done.")
+
+    rendering_mode = "compact" if guidance_only else "evidence-backed" if profile_requires_detail else "compact"
+    status_value = (
+        "required" if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal else "available"
+    )
+    plain_done_allowed = not (lower_trust or incomplete_or_partial or has_material_guidance_signal)
+    summary_lines = summary_lines[:6]
+    return {
+        "kind": "agentic-workspace/final-closeout-rendering/v1",
+        "status": status_value,
+        "profile": profile,
+        "rendering_mode": rendering_mode,
+        "rendering_guidance": (
+            "Render these closeout facts in the final user-facing response; keep them concise and omit empty fields."
+            if rendering_mode == "evidence-backed"
+            else "Use a short final response that names the caveat and any follow-up or residue; do not claim plain done."
+            if guidance_only
+            else "Use a short final response that names outcome and proof without ceremony."
+        ),
+        "summary_lines": summary_lines,
+        "rendered_summary": rendered_summary_payload(
+            status=status_value,
+            rendering_mode=rendering_mode,
+            summary_lines=summary_lines,
+            must_include=list(dict.fromkeys(must_include)),
+            must_not_claim=must_not_claim,
+            plain_done_allowed=plain_done_allowed,
+        ),
+        "must_include": list(dict.fromkeys(must_include)),
+        "must_not_claim": must_not_claim,
+        "plain_done_allowed": plain_done_allowed,
+        "raw_json_allowed": False,
+        "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+    }
+
+
+def _closeout_report_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    closeout_trust: dict[str, Any],
+    completion_contract: dict[str, Any],
+    workflow_compliance_summary: dict[str, Any],
+    verification: dict[str, Any],
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
+    completion_contract = completion_contract if isinstance(completion_contract, dict) else {}
+    verification = verification if isinstance(verification, dict) else {}
+    execution = _as_dict(active_planning_record.get("execution_run"))
+    proof_report = _as_dict(active_planning_record.get("proof_report"))
+    closure_check = _as_dict(active_planning_record.get("closure_check"))
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    evidence_source = _as_dict(active_planning_record.get("_closeout_evidence_source"))
+    default_evidence_authority = "active-planning-evidence" if active_planning_record else ""
+    evidence_authority = str(evidence_source.get("authority") or default_evidence_authority).strip()
+    evidence_is_archived = evidence_authority == "archived-planning-evidence"
+    evidence_is_retained = evidence_authority == "retained-closeout-evidence"
+    evidence_state = (
+        "retained" if evidence_is_retained else "archived" if evidence_is_archived else "active" if active_planning_record else "absent"
+    )
+    intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
+    completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
+    traceability_rows = _closeout_report_traceability_rows(
+        active_planning_record=active_planning_record,
+        closeout_trust=closeout_trust,
+        completion_contract=completion_contract,
+        verification=verification,
+    )
+    completeness = _closeout_report_completeness_payload(
+        active_planning_record=active_planning_record,
+        closeout_trust=closeout_trust,
+        completion_contract=completion_contract,
+        traceability_rows=traceability_rows,
+    )
+    profile_policy = _closeout_report_profile_policy_payload(
+        closeout_trust=closeout_trust,
+        completion_contract=completion_contract,
+        verification=verification,
+        completeness=completeness,
+        config=config,
+        cli_invoke=config.cli_invoke,
+    )
+    trust = str(closeout_trust.get("trust", "unknown"))
+    if profile_policy["selected_profile"] == "audit" and completeness["status"] != "complete":
+        trust = "lower-trust"
+    options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
+    first_blocking_option = next((item for item in options.values() if item.get("allowed") is False and item.get("blocking_fields")), {})
+    next_action = (
+        closeout_trust.get("recommended_next_action")
+        or _as_dict(closeout_trust.get("terminal_action")).get("recommended_next_action")
+        or "Use the closeout report evidence before making a final completion claim."
+    )
+    work_completed = str(execution.get("what happened") or execution.get("summary") or "").strip()
+    requested_outcome = str(
+        delegated.get("requested outcome") or delegated.get("requested_outcome") or completion_contract.get("must_be_true") or ""
+    ).strip()
+    changed_surfaces = str(execution.get("changed surfaces") or "").strip()
+    validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
+    completion_decision = str(completion_contract.get("completion_decision", "unknown"))
+    residual_risk = str(_as_dict(closeout_trust.get("proof_confidence")).get("residual_risk", ""))
+    blockers = first_blocking_option.get("blocking_fields", [])
+    final_response_rendering = _closeout_report_final_response_rendering_payload(
+        status="present" if active_planning_record else "guidance-only",
+        profile_policy=profile_policy,
+        trust=trust,
+        work_completed=work_completed,
+        requested_outcome=requested_outcome,
+        changed_surfaces=changed_surfaces,
+        validation_proof=validation_proof,
+        completion_decision=completion_decision,
+        completion_boundary=completion_boundary,
+        completion_options=closeout_trust.get("completion_options", []),
+        completeness=completeness,
+        residual_risk=residual_risk,
+        blockers=blockers if isinstance(blockers, list) else [],
+        next_action=str(next_action),
+    )
+    return {
+        "kind": "agentic-workspace/closeout-report/v1",
+        "status": "present" if active_planning_record else "guidance-only",
+        "authority": "derived-projection",
+        "planning_evidence": {
+            "authority": evidence_authority or "no-planning-evidence",
+            "source": evidence_source,
+            "state": evidence_state,
+            "rule": "Retained or archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
+        },
+        "profile": profile_policy["selected_profile"],
+        "profile_policy": profile_policy,
+        "trust": trust,
+        "work_completed": work_completed,
+        "interpreted_intent": {
+            "requested_outcome": requested_outcome,
+            "intent_satisfaction": {
+                key: intent_check.get(key)
+                for key in ("status", "trust", "required_follow_on", "continuation_surface")
+                if key in intent_check
+            },
+            "closure_decision": str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip(),
+        },
+        "changes": {
+            "changed_surfaces": changed_surfaces,
+            "scope_touched": str(execution.get("scope touched") or "").strip(),
+            "source": "planning.closeout_evidence.execution_run"
+            if evidence_is_retained
+            else "planning.archive.execplan.execution_run"
+            if evidence_is_archived
+            else "planning.active.planning_record.execution_run",
+        },
+        "validation": {
+            "proof": validation_proof,
+            "proof_achieved_now": str(proof_report.get("proof achieved now") or "").strip(),
+            "proof_confidence": closeout_trust.get("proof_confidence", {}),
+        },
+        "gaps_and_residual_risk": {
+            "completion_blockers": blockers,
+            "residual_risk": residual_risk,
+            "durable_residue_action": closeout_trust.get("durable_residue_action", {}),
+            "workflow_trust_impact": workflow_compliance_summary.get("trust_impact", "unknown")
+            if isinstance(workflow_compliance_summary, dict)
+            else "unknown",
+        },
+        "closure_boundary": {
+            "completion_decision": completion_contract.get("completion_decision", "unknown"),
+            "decision_reasons": completion_contract.get("decision_reasons", []),
+            "completion_boundary": completion_boundary,
+            "terminal_action": closeout_trust.get("terminal_action", {}),
+            "completion_options": closeout_trust.get("completion_options", []),
+        },
+        "traceability": {
+            "status": "present",
+            "row_count": len(traceability_rows),
+            "rows": traceability_rows,
+        },
+        "completeness": completeness,
+        "final_response_rendering": final_response_rendering,
+        "next_action": {
+            "summary": next_action,
+            "command": profile_policy["next_command"],
+            "run": profile_policy["next_command"],
+        },
+        "detail_commands": {
+            "closeout_report": profile_policy["next_command"],
+            "closeout_trust": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "completion_contract": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section completion_contract --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "source_fields": [
+            "planning.closeout_evidence.execution_run"
+            if evidence_is_retained
+            else "planning.archive.execplan.execution_run"
+            if evidence_is_archived
+            else "planning.active.planning_record.execution_run",
+            "planning.closeout_evidence.proof_report"
+            if evidence_is_retained
+            else "planning.archive.execplan.proof_report"
+            if evidence_is_archived
+            else "planning.active.planning_record.proof_report",
+            "planning.closeout_evidence.closure_check"
+            if evidence_is_retained
+            else "planning.archive.execplan.closure_check"
+            if evidence_is_archived
+            else "planning.active.planning_record.closure_check",
+            "report.closeout_trust",
+            "report.completion_contract",
+            "report.verification",
+        ],
+        "boundary": (
+            "This report is derived operator-facing presentation. It stores no execution state, does not decide proof, "
+            "and does not replace Planning, Verification, or closeout_trust as canonical owners."
+        ),
+    }
+
+
 def _derived_continuation_projection_payloads(
     *,
     target_root: Path,
@@ -7613,12 +8383,25 @@ def _derived_continuation_projection_payloads(
         verification=verification,
         cli_invoke=config.cli_invoke,
     )
+    closeout_planning_record = _closeout_planning_record_for_report(
+        active_planning_record=active_planning_record,
+        target_root=target_root,
+    )
+    closeout_report = _closeout_report_payload(
+        active_planning_record=closeout_planning_record,
+        closeout_trust=source_payload.get("closeout_trust", {}),
+        completion_contract=completion_contract,
+        workflow_compliance_summary=workflow_compliance_summary,
+        verification=verification,
+        config=config,
+    )
     return {
         "completion_contract": completion_contract,
         "repair_loop_residue": repair_loop_residue,
         "structured_findings": structured_findings,
         "external_evidence_safety": external_evidence_safety,
         "workflow_compliance_summary": workflow_compliance_summary,
+        "closeout_report": closeout_report,
         "continuation_next_actions": continuation_next_actions,
         "migration_pilot_template": _migration_pilot_template_payload(cli_invoke=config.cli_invoke),
         "compact_output_criteria": _compact_output_criteria_payload(cli_invoke=config.cli_invoke),
@@ -7676,6 +8459,7 @@ def _run_lazy_report_section_command(
         "structured_findings",
         "external_evidence_safety",
         "workflow_compliance_summary",
+        "closeout_report",
         "continuation_next_actions",
         "migration_pilot_template",
         "compact_output_criteria",
@@ -7698,6 +8482,20 @@ def _run_lazy_report_section_command(
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        if normalized == "closeout_report":
+            try:
+                from repo_planning_bootstrap.installer import planning_report
+
+                planning_module_report = planning_report(target=target_root)
+            except Exception:
+                planning_module_report = {"module": "planning", "health": "unknown", "findings": []}
+            closeout_trust = _report_closeout_trust_payload(
+                module_reports=[planning_module_report],
+                target_root=target_root,
+                config=config,
+                cli_invoke=config.cli_invoke,
+            )
+            payload["closeout_trust"] = closeout_trust
         payload["external_work_delta"] = external_work_delta
         payload["external_work_reconciliation"] = external_work_reconciliation
         payload.update(
@@ -8013,6 +8811,25 @@ def _run_report_router_command(
         if isinstance(entry, dict) and entry.get("installed") and entry.get("name")
     ] or _fast_installed_modules(target_root=target_root)
     external_work_delta = _external_work_delta_payload(target_root=target_root)
+    external_work_reconciliation = _external_work_reconciliation_payload(
+        module_reports=[], external_work_delta=external_work_delta, cli_invoke=config.cli_invoke
+    )
+    active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
+    external_evidence_safety = _external_evidence_safety_payload(
+        external_work_delta=external_work_delta,
+        external_work_reconciliation=external_work_reconciliation,
+        cli_invoke=config.cli_invoke,
+    )
+    completion_contract = _completion_contract_payload(
+        active_planning_record=active_planning_record,
+        external_evidence_safety=external_evidence_safety,
+        cli_invoke=config.cli_invoke,
+    )
+    closeout_report_route = _closeout_report_route_payload(
+        completion_contract=completion_contract,
+        config=config,
+        cli_invoke=config.cli_invoke,
+    )
     next_command = _command_with_cli_invoke(command="agentic-workspace doctor --target ./repo --format json", cli_invoke=config.cli_invoke)
     if str(status_payload.get("health", "unknown")) == "healthy":
         next_action = {"summary": "No immediate action", "commands": []}
@@ -8060,6 +8877,13 @@ def _run_report_router_command(
         "external_work_reconciliation": _external_work_reconciliation_payload(
             module_reports=[], external_work_delta=external_work_delta, cli_invoke=config.cli_invoke
         ),
+        "closeout_report": {
+            "kind": "agentic-workspace/closeout-report/v1",
+            "status": "route-only",
+            "profile": closeout_report_route["profile"],
+            "profile_policy": closeout_report_route["profile_policy"],
+            "routing": closeout_report_route,
+        },
         "successful_completion_cost": _successful_completion_cost_router_payload(cli_invoke=config.cli_invoke),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
         "next_action": next_action,
@@ -11140,7 +11964,72 @@ def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> di
     }
 
 
-def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+def _issue_refs_from_text(value: Any) -> set[str]:
+    raw = " ".join(str(item) for item in value) if isinstance(value, list) else str(value or "")
+    refs = {f"#{match}" for match in re.findall(r"#(\d+)\b", raw)}
+    refs.update(f"#{match}" for match in re.findall(r"\bgithub-(\d+)\b", raw, flags=re.IGNORECASE))
+    refs.update(f"#{match}" for match in re.findall(r"\bGitHub\s+(\d+)\b", raw, flags=re.IGNORECASE))
+    return refs
+
+
+def _close_keyword_issue_refs(text: str) -> list[str]:
+    refs: list[str] = []
+    for line in str(text or "").splitlines():
+        if not re.search(r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b", line):
+            continue
+        for match in re.findall(r"#(\d+)\b", line):
+            ref = f"#{match}"
+            if ref not in refs:
+                refs.append(ref)
+    return refs
+
+
+def _pending_pr_merge_evidence_by_issue(*, target_root: Path | None) -> dict[str, dict[str, Any]]:
+    if target_root is None:
+        return {}
+    payloads: list[dict[str, Any]] = []
+    for relative in (EXTERNAL_INTENT_CACHE_RELATIVE_PATH, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH):
+        evidence_path = target_root / relative
+        if not evidence_path.is_file():
+            continue
+        try:
+            payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            payloads.append(payload)
+    if not payloads:
+        return {}
+    items = [item for payload in payloads for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    open_issue_ids = {str(item.get("id", "")).strip() for item in items if str(item.get("status", "")).strip().lower() == "open"}
+    pending: dict[str, dict[str, Any]] = {}
+    for payload in payloads:
+        for pr in _list_payload(payload.get("pull_requests")):
+            if not isinstance(pr, dict):
+                continue
+            pr_state = str(pr.get("state", "")).strip().lower()
+            if pr_state in {"closed", "merged"}:
+                continue
+            refs = [str(ref).strip() for ref in _list_payload(pr.get("close_keyword_issue_ids")) if str(ref).strip()]
+            if not refs:
+                refs = _close_keyword_issue_refs(str(pr.get("body", "") or ""))
+            for ref in refs:
+                if ref not in open_issue_ids:
+                    continue
+                pending[ref] = {
+                    "status": "pending-pr-merge",
+                    "issue_id": ref,
+                    "pr_number": str(pr.get("number", "")).strip(),
+                    "pr_url": str(pr.get("url", "")).strip(),
+                    "branch": str(pr.get("head_ref", pr.get("headRefName", ""))).strip(),
+                    "title": str(pr.get("title", "")).strip(),
+                    "reconcile_command": "agentic-workspace external-intent refresh-github --target . --state all --format json",
+                    "rule": "A PR close keyword is pending evidence, not external issue closure; refresh after merge before marking residue closed.",
+                }
+    return pending
+
+
+def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
     closed_statuses = {"archive", "archived", "cancelled", "canceled", "closed", "complete", "completed", "dismissed", "done"}
 
     def is_open_status(value: Any) -> bool:
@@ -11214,6 +12103,27 @@ def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any])
     surfaces = [
         surface for surface in surfaces if str(surface.get("id") or surface.get("title") or surface.get("owner_surface") or "").strip()
     ]
+    pending_by_issue = _pending_pr_merge_evidence_by_issue(target_root=target_root)
+    pending_surfaces: list[dict[str, Any]] = []
+    if pending_by_issue:
+        annotated_surfaces: list[dict[str, Any]] = []
+        for surface in surfaces:
+            refs = (
+                _issue_refs_from_text(surface.get("refs", ""))
+                | _issue_refs_from_text(surface.get("title", ""))
+                | _issue_refs_from_text(surface.get("id", ""))
+            )
+            matching = [pending_by_issue[ref] for ref in sorted(refs) if ref in pending_by_issue]
+            if matching:
+                surface = {
+                    **surface,
+                    "external_disposition": "pending-pr-merge",
+                    "pending_pr_merge": matching[0],
+                    "residue_explanation": "Open externally because the PR has not merged or external evidence has not been refreshed after merge.",
+                }
+                pending_surfaces.append(surface)
+            annotated_surfaces.append(surface)
+        surfaces = annotated_surfaces
     if not surfaces:
         return {
             "status": "quiet",
@@ -11225,6 +12135,8 @@ def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any])
         "status": "present",
         "surface_count": len(surfaces),
         "surfaces": surfaces[:5],
+        "pending_pr_merge_count": len(pending_surfaces),
+        "pending_pr_merge_surfaces": pending_surfaces[:5],
         "owner_surfaces": sorted(
             {str(surface.get("owner_surface", "")).strip() for surface in surfaces if str(surface.get("owner_surface", "")).strip()}
         ),
@@ -11338,7 +12250,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
-        open_continuation = _open_package_owned_continuation_payload(planning_report=planning_report)
+        open_continuation = _open_package_owned_continuation_payload(planning_report=planning_report, target_root=target_root)
         if open_continuation.get("status") == "present":
             owner_surfaces = [str(item) for item in _list_payload(open_continuation.get("owner_surfaces"))]
             continuation_surface = owner_surfaces[0] if owner_surfaces else ".agentic-workspace/planning/"
@@ -11631,6 +12543,123 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
     return payload if isinstance(payload, dict) else {}
 
 
+def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    archive_root = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    if not archive_root.is_dir():
+        return {}
+    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    target_resolved = target_root.resolve()
+    for record_path in archive_root.glob("*.json"):
+        try:
+            resolved = record_path.resolve()
+            resolved.relative_to(target_resolved)
+        except (OSError, ValueError):
+            continue
+        try:
+            payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        evidence_fields = (
+            payload.get("execution_run"),
+            payload.get("proof_report"),
+            payload.get("closure_check"),
+            payload.get("finished_run_review"),
+        )
+        if not any(isinstance(field, dict) and field for field in evidence_fields):
+            continue
+        try:
+            mtime = resolved.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        candidates.append((mtime, resolved, payload))
+    if not candidates:
+        return {}
+    mtime, record_path, payload = max(candidates, key=lambda item: item[0])
+    relative = record_path.relative_to(target_resolved).as_posix()
+    payload = copy.deepcopy(payload)
+    payload["_closeout_evidence_source"] = {
+        "authority": "archived-planning-evidence",
+        "path": relative,
+        "sort_mtime": mtime,
+        "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
+        "rule": "Archived closeout evidence may inform user-facing reports, but it does not restore active planning state.",
+    }
+    return payload
+
+
+def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    evidence_root = target_root / ".agentic-workspace" / "planning" / "closeout-evidence"
+    if not evidence_root.is_dir():
+        return {}
+    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    target_resolved = target_root.resolve()
+    for record_path in evidence_root.glob("*.closeout.json"):
+        try:
+            resolved = record_path.resolve()
+            resolved.relative_to(target_resolved)
+        except (OSError, ValueError):
+            continue
+        try:
+            payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("kind") != "planning-closeout-evidence/v1":
+            continue
+        evidence_fields = (
+            payload.get("execution_run"),
+            payload.get("proof_report"),
+            payload.get("closure_check"),
+            payload.get("finished_run_review"),
+        )
+        if not any(isinstance(field, dict) and field for field in evidence_fields):
+            continue
+        try:
+            mtime = resolved.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        candidates.append((mtime, resolved, payload))
+    if not candidates:
+        return {}
+    mtime, record_path, payload = max(candidates, key=lambda item: item[0])
+    relative = record_path.relative_to(target_resolved).as_posix()
+    payload = copy.deepcopy(payload)
+    payload["_closeout_evidence_source"] = {
+        "authority": "retained-closeout-evidence",
+        "path": relative,
+        "sort_mtime": mtime,
+        "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
+        "rule": "Retained closeout evidence may inform user-facing reports when full archive retention was skipped; it does not restore active planning state.",
+    }
+    return payload
+
+
+def _closeout_planning_record_for_report(*, active_planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    if active_planning_record:
+        record = copy.deepcopy(active_planning_record)
+        record.setdefault(
+            "_closeout_evidence_source",
+            {
+                "authority": "active-planning-evidence",
+                "path": str(_as_dict(record.get("task")).get("surface") or ""),
+                "rule": "Active planning evidence is current workflow state.",
+            },
+        )
+        return record
+    retained = _recent_retained_closeout_evidence_for_report(target_root=target_root)
+    archived = _recent_archived_planning_record_for_closeout(target_root=target_root)
+    candidates = [record for record in (retained, archived) if record]
+    if not candidates:
+        return {}
+    return max(candidates, key=lambda record: float(_as_dict(record.get("_closeout_evidence_source")).get("sort_mtime") or 0.0))
+
+
 def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
@@ -11765,6 +12794,7 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
     ]
     changed_items = [item for item_id, item in current_by_id.items() if item_id in previous_by_id and item != previous_by_id[item_id]]
     recommended = open_items[0] if open_items else {}
+    pending_pr_merge = _pending_pr_merge_evidence_by_issue(target_root=target_root)
     status = "delta-present" if previous_items else "snapshot-only"
     return {
         "status": status,
@@ -11787,6 +12817,8 @@ def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
         "sample_new": [_external_work_summary(item) for item in new_items[:5]] if previous_items else [],
         "sample_changed": [_external_work_summary(item) for item in changed_items[:5]] if previous_items else [],
         "sample_closed": [_external_work_summary(item) for item in closed_items[:5]] if previous_items else [],
+        "pending_pr_merge_count": len(pending_pr_merge),
+        "pending_pr_merge": list(pending_pr_merge.values())[:5],
         "recommended_next_lane": _external_work_summary(recommended) if recommended else {},
         "delta_rule": "When previous_items is present, compare provider-agnostic item ids and statuses; otherwise report a compact current snapshot only.",
     }
@@ -12094,6 +13126,39 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
         "comments_count": _github_comments_count(issue.get("comments")),
     }
+
+
+def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> list[dict[str, Any]]:
+    try:
+        raw_pr = _run_gh_json(
+            [
+                "pr",
+                "view",
+                "--repo",
+                repo,
+                "--json",
+                "number,title,state,url,headRefName,baseRefName,isDraft,body",
+            ],
+            cwd=target_root,
+        )
+    except Exception:
+        return []
+    if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
+        return []
+    body = str(raw_pr.get("body", "") or "")
+    return [
+        {
+            "system": "github",
+            "number": int(raw_pr.get("number") or 0),
+            "title": str(raw_pr.get("title", "")).strip(),
+            "state": str(raw_pr.get("state", "")).strip().lower(),
+            "url": str(raw_pr.get("url", "")).strip(),
+            "head_ref": str(raw_pr.get("headRefName", "")).strip(),
+            "base_ref": str(raw_pr.get("baseRefName", "")).strip(),
+            "is_draft": bool(raw_pr.get("isDraft", False)),
+            "close_keyword_issue_ids": _close_keyword_issue_refs(body),
+        }
+    ]
 
 
 def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
@@ -12571,6 +13636,7 @@ def _refresh_github_external_intent_evidence(
         if item is not None
     ]
     items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
+    pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
     refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     fetched_item_count = len(items)
@@ -12602,6 +13668,8 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
+    if pull_requests:
+        next_payload["pull_requests"] = pull_requests
     previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
     if previous_items:
         next_payload["previous_items"] = previous_items
@@ -13506,6 +14574,23 @@ def _next_safe_action_packet(
     }
 
 
+def _startup_closeout_report_route(closeout_inspection: dict[str, Any]) -> dict[str, Any]:
+    trust = str(closeout_inspection.get("trust", "")).strip().lower()
+    detail_command = str(closeout_inspection.get("required_next_inspection") or closeout_inspection.get("detail_command") or "")
+    closeout_report_command = detail_command.replace("--section closeout_trust", "--section closeout_report")
+    if not closeout_report_command or closeout_report_command == detail_command:
+        closeout_report_command = "agentic-workspace report --target ./repo --section closeout_report --format json"
+    return {
+        "kind": "agentic-workspace/closeout-report-route/v1",
+        "status": "available",
+        "profile": "audit" if trust == "lower-trust" or closeout_inspection.get("status") == "required" else "compact",
+        "reason": str(closeout_inspection.get("reason") or "completion/status startup should route through closeout report"),
+        "escalation_source": "closeout_trust_inspection" if closeout_inspection.get("status") == "required" else "startup-route",
+        "next_command": closeout_report_command,
+        "selector": "closeout_report",
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -13652,6 +14737,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     closeout_inspection = payload.get("closeout_trust_inspection", {})
     if isinstance(closeout_inspection, dict) and closeout_inspection.get("status") in {"required", "clear"}:
         projected["closeout_trust_inspection"] = closeout_inspection
+        projected["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
     vague_orientation = payload.get("vague_outcome_orientation", {})
     if isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task") is True:
         if isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file":
@@ -14526,6 +15612,7 @@ def _start_payload(
     closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
     if closeout_inspection["status"] in {"required", "clear"}:
         payload["closeout_trust_inspection"] = closeout_inspection
+        payload["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
     if closeout_inspection["status"] == "required":
         command = str(closeout_inspection["required_next_inspection"])
         payload["immediate_next_allowed_action"] = {
@@ -14727,6 +15814,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "compliance_economics",
         "cli_invocation",
         "closeout_trust_inspection",
+        "closeout_report_route",
         "durable_intent",
         "workflow_obligations",
         "closeout_obligations",
@@ -15019,6 +16107,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "prep_only_handoff",
         "routine_work_context",
         "closeout_trust_inspection",
+        "closeout_report_route",
         "intent_discovery_dialogue",
         "vague_outcome_orientation",
         "intent_acknowledgement",
@@ -15292,6 +16381,7 @@ def _start_tiny_payload_fast(
     closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
     if closeout_inspection["status"] in {"required", "clear"}:
         payload["closeout_trust_inspection"] = closeout_inspection
+        payload["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
     if closeout_inspection["status"] == "required":
         command = str(closeout_inspection["required_next_inspection"])
         payload["immediate_next_allowed_action"] = {
@@ -23270,6 +24360,46 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
     }
 
 
+PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
+
+
+def _record_proof_receipt_payload(
+    *,
+    target_root: Path,
+    command: str,
+    result: str,
+    changed_paths: list[str],
+    plan_id: str = "",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    command = str(command or "").strip()
+    result = str(result or "").strip()
+    if not command:
+        raise WorkspaceUsageError("--receipt-command is required with --record-receipt.")
+    if not result:
+        raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
+    receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": command,
+        "result": result,
+        "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "changed_paths": _normalize_changed_paths(changed_paths),
+        "plan_id": str(plan_id or "").strip(),
+        "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+    }
+    if not dry_run:
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/proof-receipt-write/v1",
+        "status": "dry-run" if dry_run else "written",
+        "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "receipt": receipt,
+        "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
+    }
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -23280,9 +24410,30 @@ def _emit_proof(
     changed_paths: list[str] | None = None,
     profile: str = "full",
     select: str | None = None,
+    record_receipt: bool = False,
+    receipt_command: str = "",
+    receipt_result: str = "",
+    receipt_plan: str = "",
+    dry_run: bool = False,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     config = _load_workspace_config(target_root=target_root)
+    if record_receipt:
+        payload = _record_proof_receipt_payload(
+            target_root=target_root,
+            command=receipt_command,
+            result=receipt_result,
+            changed_paths=normalized_paths,
+            plan_id=receipt_plan,
+            dry_run=dry_run,
+        )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
+        if format_name == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+        else:
+            _emit_compact_answer_text(payload)
+        return
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
         payload = _tiny_proof_payload(
@@ -23508,6 +24659,11 @@ def _run_proof_report_adapter(args: argparse.Namespace) -> int:
         changed_paths=list(getattr(args, "changed", []) or []),
         profile=_diagnostic_profile(args, default="tiny"),
         select=getattr(args, "select", None),
+        record_receipt=bool(getattr(args, "record_receipt", False)),
+        receipt_command=str(getattr(args, "receipt_command", "") or ""),
+        receipt_result=str(getattr(args, "receipt_result", "") or ""),
+        receipt_plan=str(getattr(args, "receipt_plan", "") or ""),
+        dry_run=bool(getattr(args, "dry_run", False)),
     )
     return 0
 
@@ -26818,6 +27974,7 @@ def _proof_selection_for_changed_paths(
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
                 **({"weak_agent_safe_routing": lane["weak_agent_safe_routing"]} if lane.get("weak_agent_safe_routing") else {}),
+                **({"non_local_references": lane["non_local_references"]} if lane.get("non_local_references") else {}),
             }
             for lane in selected_lanes
         ],
