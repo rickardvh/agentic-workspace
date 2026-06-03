@@ -91,6 +91,12 @@
         "status": { "enum": ["none", "candidate", "needed", "promoted", "deferred"] },
         "target": { "type": "string" },
         "decision_refs": { "$ref": "#/$defs/string_array" },
+        "decision": { "type": "string" },
+        "rationale": { "type": "string" },
+        "tradeoffs": { "$ref": "#/$defs/string_array" },
+        "affected_surfaces": { "$ref": "#/$defs/string_array" },
+        "proof": { "type": "string" },
+        "durable_owner": { "type": "string" },
         "promotion_needed": { "type": "boolean" },
         "notes": { "type": "string" }
       }

@@ -1,0 +1,361 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement human review control surfaces for closeout, decisions, and review compression",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1240, #1241, and #1242 in full: closeout adoption rubric/examples, system-decision traceability, and closeout-first review-compression modes.",
+    "hard_constraints": "Keep closeout_report derived; do not make AW infer semantic decisions; do not add a dashboard, ADR engine, durable decision database, or mandatory ceremony for small work.",
+    "agent_may_decide": "Exact field names, derived packet shape, documentation placement, tests, and whether the issues fit one cohesive PR or a stack.",
+    "escalate_when": "A correct implementation requires a new durable store, broad unrelated refactor, or behavior that would make AW decide architecture/product semantics for the agent.",
+    "next_action": "Implement the derived decision-review and human-review surfaces, document the adoption and compression contracts, then validate schemas, docs, generated outputs, and runtime tests.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_report_cli.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "docs/reference/workspace-report.md",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json"
+    ],
+    "completion_criteria": [
+      "#1240 closeout adoption rubric and representative examples are documented and test-backed.",
+      "#1241 decision-review shape is implemented without making AW infer semantic decisions.",
+      "#1242 review-compression modes are available as closeout-first derived guidance and human-owned decisions remain explicit."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement #1240 closeout adoption examples and quality rubric.",
+    "Implement #1241 system-decision traceability review shape.",
+    "Implement #1242 closeout-first review-compression modes."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1240, #1241, and #1242 in full: closeout adoption rubric/examples, system-decision traceability, and closeout-first review-compression modes.",
+      "constraints": "Keep closeout_report derived; do not make AW infer semantic decisions; do not add a dashboard, ADR engine, durable decision database, or mandatory ceremony for small work.",
+      "latitude": "Exact field names, derived packet shape, documentation placement, tests, and whether the issues fit one cohesive PR or a stack.",
+      "escalation": "Escalate when a correct implementation requires a new durable store, broad unrelated refactor, or behavior that would make AW decide architecture/product semantics for the agent.",
+      "proof": "Passed: focused closeout_report tests; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor."
+    },
+    "execution": {
+      "milestone": "github-1240-1242-human-review-control-surfaces",
+      "status": "active",
+      "next_step": "Implement the derived decision-review and human-review surfaces, document the adoption and compression contracts, then validate schemas, docs, generated outputs, and runtime tests.",
+      "proof": "Runtime report tests, generated schema/reference checks, structured inventory, AW summary, and planning doctor."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "docs/reference/workspace-report.md",
+        ".agentic-workspace/docs/reporting-contract.md",
+        "tests/test_workspace_report_cli.py",
+        ".agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Humans can supervise agent-delivered work through closeout quality, decision facts, review modes, proof, risk, and ownership instead of reconstructing everything from diffs.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement human review control surfaces for closeout, decisions, and review compression",
+    "inferred intended outcome": "Make AW's closeout and report surfaces expose a usable human-control layer for ordinary, broad, lower-trust, and system-shaping work.",
+    "chosen concrete what": "Add derived decision-review and human-review guidance to closeout/report output, document the adoption and compression contracts, and cover representative examples in tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; .agentic-workspace/docs/reporting-contract.md; tests/test_workspace_report_cli.py; this execplan; generated report references only if schema/docs generation requires it.",
+    "max changed files": "About 8, unless generated reference/schema outputs require paired updates.",
+    "required validation commands": "uv run pytest tests/test_workspace_report_cli.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; AW summary and planning doctor.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from the active plan, implement decision-review and human-review packets over closeout_report, then validate report tests and generated/schema consistency.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1240, #1241, and #1242 in full: closeout adoption rubric/examples, system-decision traceability, and closeout-first review-compression modes.",
+    "hard constraints": "Keep closeout_report derived; do not make AW infer semantic decisions; do not add a dashboard, ADR engine, durable decision database, or mandatory ceremony for small work.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "traceability_refs": {
+    "domain_model_refs": [
+      "closeout_report",
+      "workspace_report.schema.json",
+      "planning-execplan.schema.json"
+    ],
+    "decision_refs": [
+      "Add derived human-review packets to closeout_report while keeping semantic decisions agent-authored in Planning."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "candidate",
+    "target": "Planning architecture_decision_promotion or later ADR/docs if this design becomes durable beyond closeout reporting.",
+    "decision_refs": [
+      "Add closeout_report.decision_review, closeout_report.review_compression, and closeout_report.closeout_adoption as derived report packets instead of a dashboard, decision database, or AW-owned semantic classifier."
+    ],
+    "decision": "Add derived human-review packets to closeout_report while keeping semantic decisions agent-authored in Planning.",
+    "rationale": "The three issues need human-control facts at closeout, but AW must not infer architecture/product decisions or create another durable state store.",
+    "tradeoffs": [
+      "Keeps closeout_report as the first review surface instead of adding a dashboard.",
+      "Requires agents to author decision facts in Planning before system-shaping closeout can be complete.",
+      "Leaves durable ADR/docs promotion to decision_pressure instead of embedding it in closeout_report."
+    ],
+    "affected_surfaces": [
+      "closeout_report",
+      "decision_pressure",
+      "Planning architecture_decision_promotion",
+      "workspace report schema/reference docs"
+    ],
+    "proof": "Focused closeout_report tests, make test-workspace, make lint-workspace, contract/schema checks, structured inventory, generated command package check, maintainer surfaces, schema-reference docs, AW summary, and AW planning doctor passed.",
+    "durable_owner": "Planning architecture_decision_promotion; decision_pressure for later promotion pressure",
+    "promotion_needed": false,
+    "notes": "No ADR is required for this PR unless later review decides the derived packet design should become a durable architecture decision."
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1240-1242-human-review-control-surfaces",
+    "status": "completed",
+    "scope": "Implement the three promoted issue outcomes without broad unrelated refactors.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement derived decision-review facts, closeout adoption guidance, review-compression modes, documentation, and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "docs/reference/workspace-report.md",
+    ".agentic-workspace/docs/reporting-contract.md",
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py -q",
+    "rg -n \"AW classified|AW routed|AW decided|decision_review|review_compression|closeout_adoption|closeout report profile, traceability, completeness, validation\" .agentic-workspace/docs src docs tests .agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement human review control surfaces for closeout, decisions, and review compression is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented derived closeout decision_review, review_compression, and closeout_adoption packets; documented the adoption rubric, decision-review owner split, and review-compression modes; added report tests for decision facts present, decision facts absent, schema/reference coverage, and closeout rendering.",
+    "scope touched": "reporting runtime, workspace report schema/reference, reporting contract docs, closeout report tests, and planning closeout evidence",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; .agentic-workspace/docs/reporting-contract.md; tests/test_workspace_report_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json",
+    "validations run": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected: implementation stayed in derived report/closeout surfaces and Planning evidence. Intent served: #1240 has adoption rubric/examples, #1241 has agent-authored decision-review facts with absence routing, and #1242 has closeout-first review-compression modes. No durable residue remains.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1240, #1241, and #1242 in full and create PRs when done.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Human review control surfaces are implemented and validated without adding a dashboard, durable decision store, ADR engine, or AW-owned semantic decision classifier.",
+    "validation confirmed": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-03: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1240, #1241, and #1242 in full and create PRs when done.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: focused closeout_report tests; stale-reference sweep reviewed intentional authority-boundary examples and new fields; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; check_generated_command_packages; ruff check selected surfaces; make maintainer-surfaces; make schema-reference-docs; AW summary; AW planning doctor.\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; .agentic-workspace/docs/reporting-contract.md; tests/test_workspace_report_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-1240-1242-human-review-control-surfaces.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

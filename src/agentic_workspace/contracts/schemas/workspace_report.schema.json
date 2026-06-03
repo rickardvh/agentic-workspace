@@ -294,9 +294,21 @@
         "authority_boundary": {
           "$ref": "#/$defs/authority_boundary",
           "description": "Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned."
+        },
+        "decision_review": {
+          "type": "object",
+          "description": "Derived review packet for agent-authored system decision facts, completeness, absence routing, and durable-owner guidance."
+        },
+        "review_compression": {
+          "type": "object",
+          "description": "Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts, detail routes, and human-owned decisions."
+        },
+        "closeout_adoption": {
+          "type": "object",
+          "description": "Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports."
         }
       },
-      "description": "Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
+      "description": "Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, closeout-first review-compression guidance, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
     },
     "continuation_next_actions": {
       "type": "object",

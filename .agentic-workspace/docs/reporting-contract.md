@@ -99,6 +99,9 @@ It keeps:
 - `closure_boundary`
 - `traceability`
 - `completeness`
+- `decision_review`
+- `review_compression`
+- `closeout_adoption`
 - `final_response_rendering`
 - `next_action`
 
@@ -122,6 +125,48 @@ agentic-workspace report --target ./repo --section closeout_report --format json
 
 Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
 Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
+
+Use `closeout_report.decision_review` for material system or product decisions.
+It is a derived review packet over agent-authored Planning facts, not an AW classifier.
+The active owner for decision facts is Planning, primarily `architecture_decision_promotion` and `traceability_refs.decision_refs`.
+`closeout_report.decision_review` may render those facts and check completeness, while `report --section decision_pressure` remains the routing and promotion-pressure surface.
+When system-shaping signals are present but no decision facts exist, `decision_review.status` should be `absent-required` and `decision_absent_because` must say that no agent-authored facts were found rather than pretending AW inferred the decision.
+
+Decision-review facts are:
+
+- decision made;
+- why it was made;
+- meaningful rejected alternatives or trade-offs;
+- affected subsystem, contract, public behavior, or operating loop;
+- proof or validation supporting the decision;
+- durable owner;
+- promotion status.
+
+Use `closeout_report.review_compression` to see what a human should inspect first for the selected work shape.
+It is closeout-first, derived, and non-authoritative.
+Its modes are:
+
+- `small-direct-edit`;
+- `planned-slice`;
+- `broad-pr`;
+- `system-shaping-change`;
+- `partial-or-lower-trust-closeout`;
+- `follow-up-or-residue-heavy-work`.
+
+Every compressed review must either say no material human decision remains beyond ordinary acceptance, or name the human-owned acceptance, risk, handoff, or decision-fact question and its owner.
+
+Use `closeout_report.closeout_adoption` as the operator-facing closeout quality rubric.
+The rubric asks whether the final response answers:
+
+- what did the agent think the user wanted?
+- what changed?
+- why is the closure claim honest?
+- what proof supports it?
+- what remains unproven?
+- what follow-up or residue remains?
+
+Terse closeout is acceptable only when `plain_done_allowed` is true and no lower-trust, partial, residue, or decision-gap signal is present.
+Broad, lower-trust, partial, or system-shaping work must show proof, closure boundary, residual risk, follow-up owner when present, authority boundary, and system-decision facts or routed absence.
 
 When no active plan exists, `closeout_report.planning_evidence.authority` may be `retained-closeout-evidence` or `archived-planning-evidence`.
 Retained closeout evidence is the compact record written when full archive retention was skipped by size guardrails.
@@ -157,6 +202,7 @@ It keeps:
 Minimal and guidance-only closeouts without trust, residue, or follow-up signals should stay terse.
 Guidance-only closeouts with audit, lower-trust, residue, or follow-up signals should stay compact but still render the caveat and disallow a plain-done claim.
 Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
+System-shaping closeouts should also render decision facts or a decision-gap line from `decision_review`.
 The final response should prefer `rendered_summary.rendered_text` as concise prose or bullets and must not dump raw JSON.
 `required_fact_coverage` must make omitted required facts visible before the agent claims completion.
 Custom wording or template selection is a future-safe extension only when it cannot hide `must_include`, `must_not_claim`, `plain_done_allowed`, or `raw_json_allowed`.

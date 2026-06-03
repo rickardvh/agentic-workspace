@@ -7916,6 +7916,306 @@ def _closeout_report_completeness_payload(
     }
 
 
+def _closeout_report_decision_review_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    proof_report: dict[str, Any],
+) -> dict[str, Any]:
+    promotion = _as_dict(active_planning_record.get("architecture_decision_promotion"))
+    traceability_refs = _as_dict(active_planning_record.get("traceability_refs"))
+    adaptive_assurance = _as_dict(active_planning_record.get("adaptive_assurance"))
+    invariant_refs = [str(item).strip() for item in _list_payload(active_planning_record.get("invariant_refs")) if str(item).strip()]
+    decision_refs = [
+        str(item).strip()
+        for item in (_list_payload(traceability_refs.get("decision_refs")) + _list_payload(promotion.get("decision_refs")))
+        if str(item).strip()
+    ]
+
+    def text(*keys: str) -> str:
+        for key in keys:
+            value = str(promotion.get(key) or "").strip()
+            if value and value.lower() not in {"none", "null", "unknown"}:
+                return value
+        return ""
+
+    def text_list(*keys: str) -> list[str]:
+        values: list[str] = []
+        for key in keys:
+            values.extend(str(item).strip() for item in _list_payload(promotion.get(key)) if str(item).strip())
+        return _dedupe(values)
+
+    affected_surfaces = text_list("affected_surfaces", "affected_subsystems", "affected_contracts")
+    if not affected_surfaces:
+        affected_surfaces = _dedupe(
+            [
+                str(item).strip()
+                for key in ("domain_model_refs", "risk_refs", "security_refs", "audit_refs")
+                for item in _list_payload(traceability_refs.get(key))
+                if str(item).strip()
+            ]
+        )
+    decision = text("decision", "summary", "title") or (decision_refs[0] if decision_refs else "")
+    rationale = text("rationale", "why", "notes")
+    tradeoffs = text_list("tradeoffs", "rejected_alternatives", "alternatives")
+    proof = text("proof", "validation") or str(proof_report.get("validation proof") or "").strip()
+    durable_owner = text("durable_owner", "owner", "target")
+    promotion_status = str(promotion.get("status") or "").strip()
+    facts = {
+        "decision": decision,
+        "rationale": rationale,
+        "tradeoffs": tradeoffs,
+        "affected_surfaces": affected_surfaces,
+        "proof": proof,
+        "durable_owner": durable_owner,
+        "promotion_status": promotion_status or "none",
+    }
+
+    system_shaping_signals: list[str] = []
+    if promotion or decision_refs:
+        system_shaping_signals.append("agent-authored decision candidate")
+    assurance_level = str(adaptive_assurance.get("level") or "").strip().lower()
+    if assurance_level in {"high", "critical"}:
+        system_shaping_signals.append(f"adaptive_assurance.level={assurance_level}")
+    for key in ("domain_model_refs", "risk_refs", "security_refs", "audit_refs"):
+        if _list_payload(traceability_refs.get(key)):
+            system_shaping_signals.append(f"traceability_refs.{key}")
+    if invariant_refs:
+        system_shaping_signals.append("invariant_refs")
+    system_shaping_signals = _dedupe(system_shaping_signals)
+
+    checks = [
+        {"fact": "decision made", "status": "present" if decision else "missing"},
+        {"fact": "why it was made", "status": "present" if rationale else "missing"},
+        {"fact": "meaningful rejected alternatives or trade-offs", "status": "present" if tradeoffs else "missing"},
+        {
+            "fact": "affected subsystem, contract, public behavior, or operating loop",
+            "status": "present" if affected_surfaces else "missing",
+        },
+        {"fact": "proof or validation supporting the decision", "status": "present" if proof else "missing"},
+        {"fact": "durable owner", "status": "present" if durable_owner else "missing"},
+        {"fact": "promotion status", "status": "present" if promotion_status else "missing"},
+    ]
+    missing_facts = [item["fact"] for item in checks if item["status"] == "missing"]
+    if decision or promotion:
+        status = "present" if not missing_facts else "partial"
+    elif system_shaping_signals:
+        status = "absent-required"
+    else:
+        status = "not-applicable"
+
+    decision_absent_because = ""
+    if status == "absent-required":
+        decision_absent_because = (
+            "System-shaping signals are present, but no agent-authored decision facts were found in "
+            "Planning architecture_decision_promotion or traceability_refs.decision_refs."
+        )
+
+    return {
+        "kind": "agentic-workspace/closeout-decision-review/v1",
+        "status": status,
+        "authority": "agent-authored-facts-derived-for-review",
+        "system_shaping_signals": system_shaping_signals,
+        "decision_facts": facts,
+        "completeness": {
+            "status": "complete" if status == "present" else "incomplete" if status == "absent-required" else status,
+            "checks": checks,
+            "missing_facts": missing_facts if status in {"partial", "absent-required"} else [],
+        },
+        "decision_absent_because": decision_absent_because,
+        "routing": {
+            "active_owner_surface": "planning.active.planning_record.architecture_decision_promotion + traceability_refs.decision_refs",
+            "derived_display_surface": "closeout_report.decision_review",
+            "promotion_pressure_surface": "report --section decision_pressure",
+            "durable_owner_options": ["Planning", "ADR/docs", "Memory", "config/checks", "issue follow-up"],
+        },
+        "rule": (
+            "The agent authors semantic system decisions; AW preserves, renders, checks completeness, and routes promotion "
+            "without inferring decisions from diffs."
+        ),
+    }
+
+
+def _closeout_report_review_compression_payload(
+    *,
+    profile_policy: dict[str, Any],
+    trust: str,
+    completeness: dict[str, Any],
+    decision_review: dict[str, Any],
+    residual_risk: str,
+    follow_up_owner: str,
+    detail_commands: dict[str, str],
+) -> dict[str, Any]:
+    profile = str(profile_policy.get("selected_profile") or "minimal")
+    completeness_status = str(completeness.get("status") or "").strip().lower()
+    decision_status = str(decision_review.get("status") or "").strip().lower()
+    lower_or_partial = str(trust).strip().lower() == "lower-trust" or completeness_status in {"partial", "incomplete"}
+    if decision_status in {"present", "partial", "absent-required"}:
+        selected_mode = "system-shaping-change"
+    elif lower_or_partial or profile == "explanatory":
+        selected_mode = "partial-or-lower-trust-closeout"
+    elif profile == "audit":
+        selected_mode = "broad-pr"
+    elif profile == "balanced":
+        selected_mode = "planned-slice"
+    elif profile == "compact":
+        selected_mode = "planned-slice"
+    else:
+        selected_mode = "small-direct-edit"
+
+    modes = [
+        {
+            "id": "small-direct-edit",
+            "first_inspection_facts": ["rendered summary", "proof statement if present", "plain_done_allowed"],
+            "detail_routes": ["closeout_report.final_response_rendering"],
+        },
+        {
+            "id": "planned-slice",
+            "first_inspection_facts": [
+                "intended outcome",
+                "changed surfaces",
+                "proof",
+                "closure boundary",
+                "completeness",
+                "follow-up owner",
+            ],
+            "detail_routes": ["closeout_report", "completion_contract"],
+        },
+        {
+            "id": "broad-pr",
+            "first_inspection_facts": [
+                "planned-slice facts",
+                "validation breadth",
+                "changed public or contract surfaces",
+                "unresolved issue residue",
+            ],
+            "detail_routes": ["closeout_report", "closeout_trust", "PR body"],
+        },
+        {
+            "id": "system-shaping-change",
+            "first_inspection_facts": [
+                "broad-pr facts",
+                "decision facts",
+                "decision proof",
+                "durable decision owner",
+                "decision absence routing when facts are missing",
+            ],
+            "detail_routes": ["closeout_report.decision_review", "decision_pressure"],
+        },
+        {
+            "id": "partial-or-lower-trust-closeout",
+            "first_inspection_facts": [
+                "blocking caveat",
+                "missing proof or intent evidence",
+                "residual risk",
+                "owner",
+                "allowed closure claim",
+            ],
+            "detail_routes": ["closeout_report", "closeout_trust", "completion_contract"],
+        },
+        {
+            "id": "follow-up-or-residue-heavy-work",
+            "first_inspection_facts": [
+                "residue owner",
+                "activation trigger",
+                "durable route",
+                "honest closure boundary",
+            ],
+            "detail_routes": ["closeout_trust", "Planning reviews", "issue follow-up"],
+        },
+    ]
+    human_owned: list[str] = []
+    if decision_status == "absent-required":
+        human_owned.append("accept whether system-shaping decision facts may remain absent or must be routed before merge")
+    if lower_or_partial:
+        human_owned.append("accept residual risk and missing proof or require more validation")
+    if follow_up_owner:
+        human_owned.append(f"accept follow-up ownership by {follow_up_owner}")
+    if not human_owned:
+        human_owned.append("no material human decision remains beyond ordinary acceptance of the delivered work")
+
+    return {
+        "kind": "agentic-workspace/closeout-review-compression/v1",
+        "status": "present",
+        "authority": "derived-review-guide",
+        "selected_mode": selected_mode,
+        "modes": modes,
+        "first_inspection": next((mode for mode in modes if mode["id"] == selected_mode), modes[0]),
+        "human_owned_decisions": human_owned,
+        "detail_commands": detail_commands,
+        "risk_note": residual_risk,
+        "rule": (
+            "Review compression tells humans what to inspect first; it does not replace acceptance, risk judgment, "
+            "or high-risk code review."
+        ),
+    }
+
+
+def _closeout_report_adoption_payload(
+    *,
+    profile_policy: dict[str, Any],
+    final_response_rendering: dict[str, Any],
+    decision_review: dict[str, Any],
+    review_compression: dict[str, Any],
+) -> dict[str, Any]:
+    rendered_summary = _as_dict(final_response_rendering.get("rendered_summary"))
+    coverage = _as_dict(rendered_summary.get("required_fact_coverage"))
+    missing_facts = _list_payload(coverage.get("missing_required_facts"))
+    warnings = _list_payload(rendered_summary.get("warnings"))
+    decision_gap = str(decision_review.get("status") or "") == "absent-required"
+    status = "needs-attention" if missing_facts or warnings or decision_gap else "ready"
+    return {
+        "kind": "agentic-workspace/closeout-adoption-rubric/v1",
+        "status": status,
+        "quality_bar": "Final closeout should make intent, change, proof, closure boundary, residual risk, follow-up, and decision facts reviewable without raw JSON.",
+        "human_control_questions": [
+            "what did the agent think the user wanted?",
+            "what changed?",
+            "why is the closure claim honest?",
+            "what proof supports it?",
+            "what remains unproven?",
+            "what follow-up or residue remains?",
+        ],
+        "terse_closeout_allowed_when": [
+            "profile is minimal or compact",
+            "plain_done_allowed is true",
+            "no lower-trust, partial, residue, or decision-gap signal is present",
+        ],
+        "must_be_visible_when_present": [
+            "proof, closure boundary, residual risk, follow-up owner, authority boundary, and system-decision facts or routed absence",
+        ],
+        "examples": [
+            {
+                "work_shape": "small direct edit",
+                "good": "Done. Validation passed.",
+                "anti_pattern": "Dumping closeout_report JSON for trivial work.",
+            },
+            {
+                "work_shape": "planned or broad work",
+                "good": "I judged this complete because the requested outcome, changed surfaces, proof, and closure boundary are all named.",
+                "anti_pattern": "Done; tests pass.",
+            },
+            {
+                "work_shape": "lower-trust or partial work",
+                "good": "The bounded slice landed, but proof or residue remains and the follow-up owner is named.",
+                "anti_pattern": "Plain done summary while plain_done_allowed is false.",
+            },
+            {
+                "work_shape": "system-shaping work",
+                "good": "Decision facts are shown, or their absence is explicitly routed through decision_review and decision_pressure.",
+                "anti_pattern": "Changed architecture without stating the agent-owned decision and durable owner.",
+            },
+        ],
+        "current_rendering": {
+            "profile": profile_policy.get("selected_profile"),
+            "rendering_mode": final_response_rendering.get("rendering_mode"),
+            "missing_required_facts": missing_facts,
+            "warnings": warnings,
+            "selected_review_mode": review_compression.get("selected_mode"),
+        },
+        "rule": "The rubric evaluates user-facing usefulness; canonical truth remains in closeout_report source fields.",
+    }
+
+
 def _closeout_report_final_response_rendering_payload(
     *,
     status: str,
@@ -7932,6 +8232,7 @@ def _closeout_report_final_response_rendering_payload(
     residual_risk: str,
     blockers: list[Any],
     next_action: str,
+    decision_review: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
     profile_reason = str(profile_policy.get("reason") or "").strip()
@@ -7943,6 +8244,7 @@ def _closeout_report_final_response_rendering_payload(
     must_include: list[str] = []
     summary_lines: list[str] = []
     must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
+    decision_review = _as_dict(decision_review)
 
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
@@ -7957,7 +8259,7 @@ def _closeout_report_final_response_rendering_payload(
         plain_done_allowed: bool,
     ) -> dict[str, Any]:
         template_id = f"builtin/{rendering_mode}"
-        rendered_lines = summary_lines[:6]
+        rendered_lines = summary_lines[:8]
         if rendering_mode == "terse" and not rendered_lines:
             rendered_lines = ["Done."]
         required_checks: list[dict[str, str]] = []
@@ -7973,6 +8275,7 @@ def _closeout_report_final_response_rendering_payload(
             "authority boundary": ("authority:", "agent owns"),
             "outcome": ("outcome:", "done."),
             "validation": ("proof:", "validation:"),
+            "decision facts": ("decision:", "decision gap:"),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -8074,6 +8377,18 @@ def _closeout_report_final_response_rendering_payload(
         summary_lines.append(f"Outcome: {outcome}")
     if present(changed_surfaces):
         summary_lines.append(f"Changed: {changed_surfaces}")
+    decision_status = str(decision_review.get("status") or "").strip()
+    decision_facts = _as_dict(decision_review.get("decision_facts"))
+    if decision_status in {"present", "partial"}:
+        must_include.append("decision facts")
+        decision_line = present(str(decision_facts.get("decision") or ""))
+        owner = present(str(decision_facts.get("durable_owner") or ""))
+        status_label = present(str(decision_facts.get("promotion_status") or ""))
+        suffix = "; ".join(item for item in [f"owner: {owner}" if owner else "", f"status: {status_label}" if status_label else ""] if item)
+        summary_lines.append(f"Decision: {decision_line}" + (f"; {suffix}" if suffix else ""))
+    elif decision_status == "absent-required":
+        must_include.append("decision facts")
+        summary_lines.append(f"Decision gap: {decision_review.get('decision_absent_because')}")
     if present(validation_proof):
         summary_lines.append(f"Proof: {validation_proof}")
 
@@ -8100,6 +8415,8 @@ def _closeout_report_final_response_rendering_payload(
         residue = present(next_action)
     if residue:
         summary_lines.append(f"Residue: {residue}")
+    elif profile_requires_detail:
+        summary_lines.append("Residue: none recorded.")
 
     if lower_trust or incomplete_or_partial or has_material_guidance_signal:
         must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
@@ -8112,7 +8429,7 @@ def _closeout_report_final_response_rendering_payload(
         "required" if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal else "available"
     )
     plain_done_allowed = not (lower_trust or incomplete_or_partial or has_material_guidance_signal)
-    summary_lines = summary_lines[:6]
+    summary_lines = summary_lines[:8]
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
         "status": status_value,
@@ -8208,6 +8525,10 @@ def _closeout_report_payload(
     completion_decision = str(completion_contract.get("completion_decision", "unknown"))
     residual_risk = str(_as_dict(closeout_trust.get("proof_confidence")).get("residual_risk", ""))
     blockers = first_blocking_option.get("blocking_fields", [])
+    decision_review = _closeout_report_decision_review_payload(
+        active_planning_record=active_planning_record,
+        proof_report=proof_report,
+    )
     final_response_rendering = _closeout_report_final_response_rendering_payload(
         status="present" if active_planning_record else "guidance-only",
         profile_policy=profile_policy,
@@ -8223,6 +8544,40 @@ def _closeout_report_payload(
         residual_risk=residual_risk,
         blockers=blockers if isinstance(blockers, list) else [],
         next_action=str(next_action),
+        decision_review=decision_review,
+    )
+    detail_commands = {
+        "closeout_report": profile_policy["next_command"],
+        "closeout_trust": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "completion_contract": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section completion_contract --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "decision_pressure": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section decision_pressure --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+    }
+    follow_up_owner = str(
+        _as_dict(options.get("keep-parent-open")).get("owner") or completion_boundary.get("required_follow_up_owner") or ""
+    ).strip()
+    review_compression = _closeout_report_review_compression_payload(
+        profile_policy=profile_policy,
+        trust=trust,
+        completeness=completeness,
+        decision_review=decision_review,
+        residual_risk=residual_risk,
+        follow_up_owner=follow_up_owner,
+        detail_commands=detail_commands,
+    )
+    closeout_adoption = _closeout_report_adoption_payload(
+        profile_policy=profile_policy,
+        final_response_rendering=final_response_rendering,
+        decision_review=decision_review,
+        review_compression=review_compression,
     )
     closeout_authority_boundary = _authority_boundary_payload(
         surface="closeout_report",
@@ -8305,23 +8660,16 @@ def _closeout_report_payload(
             "rows": traceability_rows,
         },
         "completeness": completeness,
+        "decision_review": decision_review,
+        "review_compression": review_compression,
+        "closeout_adoption": closeout_adoption,
         "final_response_rendering": final_response_rendering,
         "next_action": {
             "summary": next_action,
             "command": profile_policy["next_command"],
             "run": profile_policy["next_command"],
         },
-        "detail_commands": {
-            "closeout_report": profile_policy["next_command"],
-            "closeout_trust": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
-                cli_invoke=config.cli_invoke,
-            ),
-            "completion_contract": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section completion_contract --format json",
-                cli_invoke=config.cli_invoke,
-            ),
-        },
+        "detail_commands": detail_commands,
         "source_fields": [
             "planning.closeout_evidence.execution_run"
             if evidence_is_retained
