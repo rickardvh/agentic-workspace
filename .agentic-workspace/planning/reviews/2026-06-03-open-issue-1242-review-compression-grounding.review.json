@@ -1,0 +1,209 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1242 review compression",
+  "date": "2026-06-03",
+  "classification": "context-cost",
+  "goal": [
+    "Map existing AW review inputs before proposing a review-compression model.",
+    "Define draft review modes that preserve human judgment while reducing line-by-line reconstruction work."
+  ],
+  "scope": [
+    "Open issue #1242 as an investigation lane.",
+    "startup/report/summary/proof outputs, closeout_report, completion_contract, closeout_trust, authority_boundary, decision_pressure, Planning reviews, and PR evidence.",
+    "Representative broad/system-shaping examples from PR #1233 and PR #1244."
+  ],
+  "non_goals": [
+    "Do not implement a review dashboard in this issue.",
+    "Do not replace code review for high-risk work.",
+    "Do not claim summary sufficiency when proof, risk, or decision evidence is missing.",
+    "Do not add mandatory ceremony for small direct work."
+  ],
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "Can current AW surfaces be composed into a cheap human review path by work shape, or is a new surface needed?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1242",
+      "gh pr view 1233",
+      "gh pr view 1244",
+      "report --section closeout_report",
+      "report --section decision_pressure",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "docs/reference/workspace-report.md"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "gh issue view 1242 --json number,title,url,state,body,comments,labels,createdAt,updatedAt",
+      "gh pr view 1233 --json number,title,state,mergedAt,url,body,files,commits",
+      "gh pr view 1244 --json number,title,state,mergedAt,url,body,files,commits",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "rg -n \"closeout_report|final_response_rendering|authority_boundary|decision_pressure|completion_contract|task_contract\" .agentic-workspace/docs/reporting-contract.md docs/reference/workspace-report.md tests/test_workspace_report_cli.py src/agentic_workspace/workspace_runtime_primitives.py"
+    ],
+    "evidence sources": [
+      "#1242 issue body",
+      "PR #1233 and PR #1244 bodies and validation evidence",
+      "current closeout_report output",
+      "current decision_pressure output",
+      "reporting contract and workspace report reference",
+      "closeout_report tests"
+    ],
+    "limitation": "This review defines a grounded model from current surfaces. It does not run a human study or implement the model."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1242",
+      "label": "Draft review-compression model for human supervision",
+      "role": "review owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1242"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#1233",
+      "label": "Add operator-facing closeout reporting",
+      "role": "broad closeout example",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/1233"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#1244",
+      "label": "Clarify AW authority boundaries",
+      "role": "system-shaping authority example",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/1244"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "label": "current closeout_report output",
+      "role": "primary compression surface evidence"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "label": "current decision_pressure output",
+      "role": "decision-review dependency evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": ".agentic-workspace/docs/reporting-contract.md",
+      "label": "Reporting contract",
+      "role": "profile and rendering contract"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1242",
+      "kind": "review-only investigation",
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": ".agentic-workspace/planning/reviews/",
+      "implementation_allowed_now": false,
+      "reason": "The issue asks to define the model first and only then propose narrow follow-up issues."
+    }
+  ],
+  "summary": {
+    "draft_review_modes": [
+      {
+        "mode": "small direct edit",
+        "inspect": "final response rendered summary and proof statement only when no residue or lower-trust signal exists",
+        "current_surface": "closeout_report.final_response_rendering with minimal or compact profile"
+      },
+      {
+        "mode": "planned slice",
+        "inspect": "intended outcome, changed surfaces, proof, closure boundary, completeness, and follow-up owner",
+        "current_surface": "closeout_report plus Planning closeout evidence"
+      },
+      {
+        "mode": "broad PR",
+        "inspect": "planned-slice facts plus validation breadth, changed public/contract surfaces, and unresolved issue residue",
+        "current_surface": "closeout_report, closeout_trust, completion_contract, PR body"
+      },
+      {
+        "mode": "system-shaping change",
+        "inspect": "broad-PR facts plus material decision facts and durable owner",
+        "current_surface": "closeout_report plus #1241 decision-traceability model"
+      },
+      {
+        "mode": "partial or lower-trust closeout",
+        "inspect": "blocking caveat, missing proof or intent evidence, residual risk, owner, and allowed closure claim",
+        "current_surface": "closeout_report profile policy, final_response_rendering constraints, closeout_trust"
+      },
+      {
+        "mode": "follow-up or residue-heavy work",
+        "inspect": "residue owner, activation trigger, durable routing, and whether final closure is honest",
+        "current_surface": "Planning reviews, closeout_trust, completion_contract, issue follow-up"
+      }
+    ],
+    "primary_surface_recommendation": "Prefer closeout_report/final_response_rendering as the first compression surface; add decision facts through #1241 before creating any new review surface.",
+    "manual_human_judgment": "The human still owns acceptance of residual intent, risk tolerance, and whether the evidence is good enough for merge or closure."
+  },
+  "findings": [
+    {
+      "title": "AW already has enough review inputs to create overload",
+      "summary": "The current system exposes startup, implement, proof, summary, report sections, closeout_report, completion_contract, closeout_trust, decision_pressure, Planning reviews, and PR validation evidence. #1242 is right that more surfaces without a mode map can increase review cost.",
+      "evidence": "#1242 names the surface-sprawl risk directly. PR #1233 and #1244 bodies each contain substantial validation and dogfooding detail. Current closeout_report output includes profile policy, validation, residue, traceability, completeness, rendered summary, authority boundary, and detail commands.",
+      "risk if unchanged": "The human may receive more evidence but still lack a clear path for what to inspect first for the work shape in front of them.",
+      "suggested action": "Use #1242 to define review modes and first-inspection surfaces before adding any new report or dashboard.",
+      "confidence": "high",
+      "source class": "issue scope plus current report and PR evidence",
+      "promotion target": "#1242 review model",
+      "promotion trigger": "When deciding how to summarize a broad or system-shaping lane without asking the human to inspect every AW output."
+    },
+    {
+      "title": "closeout_report can be the primary compressor for most closeout review modes",
+      "summary": "The closeout_report profile policy already distinguishes minimal, compact, balanced, explanatory, and audit output, and final_response_rendering already supplies rendered text plus must_include and must_not_claim constraints.",
+      "evidence": "The reporting contract states balanced/explanatory/audit closeouts should render material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner. Current report --section closeout_report emits those fields and a rendered_summary. Tests assert terse minimal output and evidence-backed audit output.",
+      "risk if unchanged": "A new review-compression surface could duplicate closeout_report instead of making the first inspection path clearer.",
+      "suggested action": "Start with a closeout-first compression model: use rendered_summary for the user-facing answer, and let detail commands point to closeout_report, closeout_trust, completion_contract, or decision_pressure only when the mode requires it.",
+      "confidence": "high",
+      "source class": "contract plus current output plus regression tests",
+      "promotion target": "#1242 issue comment",
+      "promotion trigger": "When drafting implementation follow-ups for review compression."
+    },
+    {
+      "title": "System-shaping review compression depends on #1241 decision facts",
+      "summary": "The mode that cannot be satisfied by closeout_report alone is system-shaping review. It needs the concrete decisions, rationale, alternatives, affected contracts, proof, and durable owner from #1241.",
+      "evidence": "Current closeout_report traceability rows cover intent/work/proof/closure, not rejected alternatives or decision rationale. Current decision_pressure is not-configured and reports no decision candidates. #1241 explicitly asks for the missing decision-trace shape.",
+      "risk if unchanged": "Review compression could hide the exact thing humans need most for large agent-led work: why the system changed in a particular direction.",
+      "suggested action": "Make #1242 depend on the #1241 minimal decision-review shape for system-shaping mode. Do not declare broad PR review compressed until decision facts are visible or explicitly absent and routed.",
+      "confidence": "high",
+      "source class": "cross-issue comparison plus current command output",
+      "promotion target": "#1242 model with dependency on #1241",
+      "promotion trigger": "When defining system-shaping or broad PR review mode acceptance."
+    },
+    {
+      "title": "Compression must expose what the human still judges manually",
+      "summary": "The goal is not to replace review with summaries. The compressed view should explicitly name what remains a human acceptance, risk, or handoff decision.",
+      "evidence": "closeout_report authority_boundary lists human_owned_decisions such as acceptance of residual intent or follow-up ownership when residue exists. final_response_rendering constraints prevent plain-done claims for lower-trust or incomplete evidence. #1242 says summaries must not claim sufficiency when proof or risk evidence is missing.",
+      "risk if unchanged": "A polished summary could make the work feel reviewed when the actual acceptance, risk, or residual-intent decision has not been made.",
+      "suggested action": "Add a review-mode acceptance rule: every compressed review must include either 'no material human decision remains' or name the human-owned decision and owner surface.",
+      "confidence": "medium-high",
+      "source class": "authority-boundary contract plus issue success criteria",
+      "promotion target": "#1242 acceptance criteria",
+      "promotion trigger": "When converting the model into implementation or issue comments."
+    }
+  ],
+  "recommendation": {
+    "promote": "Do not promote implementation yet.",
+    "defer": "Keep #1242 as the model owner until the review modes are accepted and #1241 clarifies decision facts.",
+    "dismiss": "Do not dismiss; the current surfaces are useful but not yet organized into a low-cost human review path.",
+    "first_model": "Use closeout_report/final_response_rendering as the primary review compressor, with work-shape mode rules and explicit detail commands. Add decision facts through #1241 before introducing a new top-level surface.",
+    "possible_follow_up_after_refinement": "A narrow issue could add a derived review_mode packet or profile-bound closeout section only if the model cannot be expressed with current closeout_report fields."
+  },
+  "retention": {
+    "closeout shape": "keep until #1242 findings are promoted, dismissed, or superseded",
+    "trigger": "After #1242 has an issue comment or child issues that capture review modes and owner surfaces.",
+    "proof surface": "This review artifact plus promoted issue refinement."
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-03-open-issue-1242-review-compression-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-03: Review record created by create-review.",
+    "2026-06-03: Populated grounding review after inspecting #1242, PR #1233, PR #1244, closeout_report output, decision_pressure output, reporting contract, and workspace report reference."
+  ]
+}

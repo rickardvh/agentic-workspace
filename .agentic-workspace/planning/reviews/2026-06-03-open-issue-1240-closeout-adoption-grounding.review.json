@@ -1,0 +1,171 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1240 closeout adoption",
+  "date": "2026-06-03",
+  "classification": "review-promotion",
+  "goal": [
+    "Evaluate the shipped closeout-reporting surfaces against the human-control questions in #1240.",
+    "Decide whether the existing #1238/#1239 work is enough substrate or whether narrower follow-up issues are needed."
+  ],
+  "scope": [
+    "Open issue #1240 as an investigation lane, not an implementation lane.",
+    "Current closeout_report, final_response_rendering, profile policy, authority boundary, and traceability rows.",
+    "Recent closeout and authority-boundary PRs #1233 and #1244 as representative broad/system-shaping work."
+  ],
+  "non_goals": [
+    "Do not implement another closeout renderer in this review.",
+    "Do not add a dashboard or new mutable closeout state.",
+    "Do not close #1240 from this bounded review because the issue says partial review artifacts may not close it.",
+    "Do not require verbose final answers for ordinary minimal work."
+  ],
+  "review_mode": {
+    "mode": "review-promotion",
+    "review question": "Should #1240 promote more closeout UX implementation now, or first use shipped closeout outputs against representative examples?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": [
+      "gh issue view 1240",
+      "gh pr view 1233",
+      "gh pr view 1244",
+      "report --section closeout_report",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "tests/test_workspace_report_cli.py closeout rendering tests"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"Create a new branch for deeper investigation of open issues and make grounding reviews\" --format json",
+      "gh issue view 1240 --json number,title,url,state,body,comments,labels,createdAt,updatedAt",
+      "gh pr view 1233 --json number,title,state,mergedAt,url,body,files,commits",
+      "gh pr view 1244 --json number,title,state,mergedAt,url,body,files,commits",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "rg -n \"closeout_report|final_response_rendering|rendered_summary|authority_boundary|traceability\" .agentic-workspace/docs/reporting-contract.md docs/reference/workspace-report.md tests/test_workspace_report_cli.py src/agentic_workspace/workspace_runtime_primitives.py"
+    ],
+    "evidence sources": [
+      "#1240 issue body",
+      "PR #1233 merged body, files, commits, and validation list",
+      "PR #1244 merged body, files, commits, dogfooding note, and validation list",
+      "current closeout_report JSON in this repo",
+      "reporting contract closeout and authority-boundary sections",
+      "closeout_report regression tests"
+    ],
+    "representative examples": [
+      "PR #1233 operator-facing closeout reporting lane",
+      "PR #1244 authority-boundary and deep rename lane",
+      "current repo closeout_report output selected audit profile from archived evidence"
+    ],
+    "limitation": "This review grounded product behavior in contract, test, PR, and current report evidence. It did not collect external human usability feedback."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1240",
+      "label": "Draft operator-facing closeout adoption review",
+      "role": "review owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1240"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#1233",
+      "label": "Add operator-facing closeout reporting",
+      "role": "representative closeout implementation evidence",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/1233"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#1244",
+      "label": "Clarify AW authority boundaries",
+      "role": "representative system-shaping and authority UX evidence",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/1244"
+    },
+    {
+      "kind": "local-doc",
+      "target": ".agentic-workspace/docs/reporting-contract.md",
+      "label": "Closeout report and final response rendering contract",
+      "role": "canonical behavior contract"
+    },
+    {
+      "kind": "local-test",
+      "target": "tests/test_workspace_report_cli.py",
+      "label": "closeout_report rendering regression tests",
+      "role": "mechanical behavior proof"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "label": "current closeout report output",
+      "role": "dogfooding evidence"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1240",
+      "kind": "review-only investigation",
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": ".agentic-workspace/planning/reviews/",
+      "implementation_allowed_now": false,
+      "reason": "The issue explicitly asks for review and enrichment first, with implementation out of scope."
+    }
+  ],
+  "findings": [
+    {
+      "title": "Closeout rendering is real substrate, so #1240 should not reopen generic renderer work",
+      "summary": "PR #1233 already added a derived closeout_report with profile selection, traceability rows, completeness checks, and final_response_rendering. PR #1244 added authority boundaries so final reports can distinguish AW evidence/gates from agent-owned completion judgment.",
+      "evidence": "PR #1233 merged and closed #1238/#1239; the reporting contract states that final_response_rendering.rendered_summary is final-response-ready and must not dump raw JSON; tests assert terse Done output for minimal guidance-only closeout and evidence-backed rendered text for audit closeout; current report --section closeout_report emits rendered_summary plus required fact coverage.",
+      "risk if unchanged": "A follow-up implementation lane could duplicate shipped closeout machinery instead of measuring whether the shipped machinery answers the human-control questions.",
+      "suggested action": "Treat #1238/#1239 as implemented substrate. Keep #1240 focused on adoption review, example comparison, and acceptance criteria.",
+      "confidence": "high",
+      "source class": "merged PR plus contract plus regression tests plus current report output",
+      "promotion target": "#1240 issue comment or a narrow child issue only after an example reveals a concrete UX gap",
+      "promotion trigger": "A representative final response fails a human-control question even though closeout_report contains the required fact."
+    },
+    {
+      "title": "The remaining closeout gap is acceptance criteria by work shape, not more report fields",
+      "summary": "The current report has fields for interpreted intent, changed surfaces, validation, residual risk, closure boundary, traceability, completeness, and rendered summary. What is not yet explicit is the human-facing quality bar for each work shape.",
+      "evidence": "#1240 asks what a good closeout experience looks like for small edits, planned slices, broad PRs, system-shaping changes, partial closeouts, and lower-trust work. The contract defines minimal, compact, balanced, explanatory, and audit profiles, but does not yet turn that into an adoption rubric against example final answers.",
+      "risk if unchanged": "Tests can keep proving that the renderer emits required facts while the in-chat UX still fails to make non-trivial work understandable to the human.",
+      "suggested action": "Draft #1240 acceptance criteria from examples: small edit may stay terse; planned or broad work should show intent, changed surfaces, proof, closure boundary, and residue; lower-trust work must show the caveat and owner; system-shaping work should also show decision facts from #1241.",
+      "confidence": "high",
+      "source class": "issue acceptance text plus reporting contract comparison",
+      "promotion target": "#1240 refinement or issue comment",
+      "promotion trigger": "When #1240 needs to decide whether current final responses are acceptable across representative work shapes."
+    },
+    {
+      "title": "Authority wording is correct but may still need operator-language rendering",
+      "summary": "The current rendered audit line can say that AW reports evidence and gates while the agent owns completion judgment. That is internally correct and addresses the overstatement problem, but #1240 is about what the human notices and understands at closeout.",
+      "evidence": "The reporting contract gives before/after examples that avoid saying AW classified or routed advisory work. Current closeout_report final_response_rendering includes an authority fact, and #1244 dogfooding notes canonical field names. The issue asks whether closeout reports make intent, proof, closure boundaries, and residual risk understandable enough for supervision.",
+      "risk if unchanged": "The final answer can be correct about authority boundaries but still feel like AW jargon instead of a clear statement of what I judged, what AW observed, and what the human still owns.",
+      "suggested action": "Add an adoption criterion that rendered closeout text should prefer operator language such as 'I judged this complete because...' and 'AW observed these gates/caveats...' over unexplained authority-boundary terminology.",
+      "confidence": "medium",
+      "source class": "dogfooding interpretation grounded in contract and current output",
+      "promotion target": "#1240 issue comment, with possible later wording-only follow-up",
+      "promotion trigger": "When a representative final response includes authority facts but the user-facing meaning is still unclear."
+    }
+  ],
+  "recommendation": {
+    "promote": "Do not promote implementation yet.",
+    "defer": "Keep #1240 open as the owner for adoption criteria and representative final-response comparison.",
+    "dismiss": "Do not dismiss; the review shows the mechanics exist, but adoption quality remains an unresolved UX question.",
+    "next_review_slice": "Compare rendered summaries from #1233/#1244-style work against the six human-control questions in #1240.",
+    "draft_acceptance_criteria": [
+      "Small direct work may close with terse text only when there is no residue, lower trust, or material proof caveat.",
+      "Planned, broad, partial, lower-trust, or system-shaping work must show intended outcome, changed surfaces, proof, closure boundary, residual risk, and follow-up owner when present.",
+      "System-shaping closeout should include decision facts or explicitly say decision traceability is absent and routed.",
+      "The final answer should use operator language and avoid raw JSON or unexplained internal field names."
+    ]
+  },
+  "retention": {
+    "closeout shape": "keep until #1240 findings are promoted, dismissed, or superseded",
+    "trigger": "After #1240 has an issue comment or child issues that capture adoption criteria and representative examples.",
+    "proof surface": "This review artifact plus any issue comment promoted from it."
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-03-open-issue-1240-closeout-adoption-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-03: Review record created by create-review.",
+    "2026-06-03: Populated grounding review after inspecting #1240, PR #1233, PR #1244, current closeout_report output, reporting contract, and closeout tests."
+  ]
+}
