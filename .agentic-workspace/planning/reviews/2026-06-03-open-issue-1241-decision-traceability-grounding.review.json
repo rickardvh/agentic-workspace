@@ -1,0 +1,178 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1241 decision traceability",
+  "date": "2026-06-03",
+  "classification": "contract-integrity",
+  "goal": [
+    "Map current AW decision-related surfaces before proposing implementation.",
+    "Separate AW-supported routing and evidence from agent-owned architecture or product decisions."
+  ],
+  "scope": [
+    "Open issue #1241 as an investigation lane.",
+    "decision_pressure, durable intent, closeout_report traceability, authority_boundary, Planning closeout, and architecture-decision routing.",
+    "Recent system-shaping evidence from PR #1244 and closeout substrate from PR #1233."
+  ],
+  "non_goals": [
+    "Do not implement a new ADR system in this review.",
+    "Do not require formal decision records for every small change.",
+    "Do not add another durable state store for decision prose.",
+    "Do not describe AW as making semantic decisions on the agent's behalf."
+  ],
+  "review_mode": {
+    "mode": "contract-integrity",
+    "review question": "Do current AW decision surfaces honestly expose agent-made system decisions, or only route/prove surrounding evidence?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1241",
+      "report --section decision_pressure",
+      "report --section closeout_report",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "docs/reference/workspace-report.md",
+      "PR #1244 authority boundary evidence"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "gh issue view 1241 --json number,title,url,state,body,comments,labels,createdAt,updatedAt",
+      "gh pr view 1244 --json number,title,state,mergedAt,url,body,files,commits",
+      "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "rg -n \"decision_pressure|traceability|authority_boundary|completion_contract|task_contract\" src/agentic_workspace/workspace_runtime_primitives.py .agentic-workspace/docs/reporting-contract.md docs/reference/workspace-report.md tests/test_workspace_report_cli.py"
+    ],
+    "evidence sources": [
+      "#1241 issue body",
+      "current decision_pressure output",
+      "current closeout_report output",
+      "reporting contract authority-boundary and closeout sections",
+      "workspace-report reference rows",
+      "PR #1244 summary, dogfooding note, and changed files"
+    ],
+    "limitation": "This review inspected available AW surfaces and recent PR evidence. It does not claim to identify every system decision made in #1244 from code diff alone."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1241",
+      "label": "Draft decision traceability review for system-shaping agent work",
+      "role": "review owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1241"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#1244",
+      "label": "Clarify AW authority boundaries",
+      "role": "system-shaping example",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/1244"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "label": "decision_pressure current output",
+      "role": "decision routing evidence"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "label": "closeout_report current output",
+      "role": "traceability evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": ".agentic-workspace/docs/reporting-contract.md",
+      "label": "Reporting contract",
+      "role": "authority and closeout contract"
+    },
+    {
+      "kind": "local-doc",
+      "target": "docs/reference/workspace-report.md",
+      "label": "Workspace report reference",
+      "role": "schema-facing field inventory"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1241",
+      "kind": "review-only investigation",
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": ".agentic-workspace/planning/reviews/",
+      "implementation_allowed_now": false,
+      "reason": "The issue asks to map current surfaces and propose follow-ups before implementation."
+    }
+  ],
+  "findings": [
+    {
+      "title": "decision_pressure is a routing and promotion surface, not a decision trace",
+      "summary": "The current repo has decision_pressure status not-configured. It can report configuration, existing decision records, planning or Memory promotion pressure, and scaffold/promote actions, but it does not infer what architecture decision the agent made.",
+      "evidence": "Current report --section decision_pressure returns status not-configured, existing_decisions unavailable, planning_pressure candidate_count 0, closeout_decision_state no_decision, and rule: 'Agent owns architecture judgment; AW preserves and routes decision records without forcing every task to create one.'",
+      "risk if unchanged": "A later implementation could accidentally turn AW into a semantic decision classifier, repeating the authority-boundary problem #1243/#1244 just corrected.",
+      "suggested action": "Frame #1241 around agent-authored decision facts and AW-owned routing/provenance. AW can expose where a decision should live and whether evidence exists; the agent must state the decision and rationale.",
+      "confidence": "high",
+      "source class": "current command output plus reporting contract",
+      "promotion target": "#1241 issue refinement or child issue for a derived decision-review packet",
+      "promotion trigger": "When system-shaping closeout needs a compact decision row that is not present in Planning, closeout_report, or decision_pressure."
+    },
+    {
+      "title": "closeout_report traceability covers intent, work, proof, and closure but not decision rationale",
+      "summary": "The closeout traceability rows are useful review evidence, but they are not enough for the decision facts #1241 names: decision made, why, rejected alternatives, trade-offs, affected contract, validation, and durable owner.",
+      "evidence": "Current closeout_report traceability rows include intent-boundary, work-completed, changed-surfaces, validation, closure-boundary, and assurance-verification. The reporting contract says traceability rows connect intent or requirement to evidence surface and residual risk. It does not define rows for rejected alternatives or decision rationale.",
+      "risk if unchanged": "For PRs like #1244, a human can see what changed and what proof ran, but still must reconstruct why deep renaming was chosen and which alternatives were rejected from PR prose, chat context, or diff inspection.",
+      "suggested action": "Define a minimal decision-review shape for system-shaping work: decision, rationale, meaningful alternatives or trade-offs, affected subsystem/contract, proof, durable owner, and promotion status.",
+      "confidence": "high",
+      "source class": "current report output plus contract comparison",
+      "promotion target": "#1241 refined acceptance criteria or a narrow child issue",
+      "promotion trigger": "When a system-shaping closeout has changed contracts/docs/runtime behavior but no explicit decision rationale row."
+    },
+    {
+      "title": "Authority boundaries are necessary but do not name the concrete decisions",
+      "summary": "PR #1244 correctly prevents agents from saying AW classified, routed, or decided advisory work. That solves authority attribution, but it does not by itself tell the human which architecture/product decision the agent made.",
+      "evidence": "PR #1244 added authority_boundary packets across startup, implement, proof, and closeout/report surfaces and deep-renamed advisory fields. Current closeout_report authority_boundary says AW reports evidence and gates while the agent owns final wording, proof/acceptance judgment, and material caveat selection.",
+      "risk if unchanged": "The UX can become honest but still incomplete: the human knows who owns the judgment, but not what judgment shaped the system.",
+      "suggested action": "Keep authority_boundary as framing, and add decision facts only when the agent has actually made a material system/product choice. Do not overload authority_boundary with decision prose.",
+      "confidence": "high",
+      "source class": "merged PR plus current report output",
+      "promotion target": "#1241 decision-review model",
+      "promotion trigger": "When authority_boundary appears in closeout but the actual system decision remains implicit."
+    },
+    {
+      "title": "The durable owner is a combination of Planning, decision_pressure, and host-owned docs or Memory",
+      "summary": "No single current surface should own all decision traceability. Planning can capture active decision facts, closeout_report can render review facts, decision_pressure can route promotion, and repo-owned ADR/docs/Memory/config/checks can hold durable outcomes when needed.",
+      "evidence": "#1241 explicitly lists Planning, durable intent, closeout reporting, decision pressure, structured findings, and architecture-decision routing. Current decision_pressure exposes scaffold/promote actions but reports no configured target in this repo. closeout_report declares itself a derived presentation surface and not execution state.",
+      "risk if unchanged": "A new decision-trace store could duplicate Planning or repo-owned architecture docs and create more surfaces for the human to reconcile.",
+      "suggested action": "Recommend a combination model: agent records material decision facts in Planning or closeout evidence; closeout_report renders them for review; decision_pressure decides only promotion pressure and command-owned scaffolding; durable accepted decisions land in repo docs/ADR/Memory/config/checks as appropriate.",
+      "confidence": "medium-high",
+      "source class": "issue scope plus contract and current routing output",
+      "promotion target": "#1241 issue comment",
+      "promotion trigger": "When choosing owner surfaces for any follow-up implementation."
+    }
+  ],
+  "recommendation": {
+    "promote": "Do not promote implementation until #1241 records the minimal decision-review shape and owner split.",
+    "defer": "Keep #1241 as the owner for decision-traceability investigation.",
+    "dismiss": "Do not dismiss; current surfaces cover routing and closeout evidence but not concrete decision rationale or rejected alternatives.",
+    "minimal_decision_review_shape": [
+      "decision made",
+      "why it was made",
+      "meaningful rejected alternatives or trade-offs",
+      "affected subsystem, contract, or public surface",
+      "proof or validation supporting the decision",
+      "durable owner: Planning, ADR/docs, Memory, config/checks, or issue follow-up",
+      "promotion status: none, candidate, promoted, dismissed"
+    ],
+    "owner_model": "Planning captures active decision facts; closeout_report renders review facts; decision_pressure routes durable promotion; host-owned docs/ADR/Memory/config/checks hold accepted durable outcomes."
+  },
+  "retention": {
+    "closeout shape": "keep until #1241 findings are promoted, dismissed, or superseded",
+    "trigger": "After #1241 has an issue comment or child issues that capture decision fact shape and owner model.",
+    "proof surface": "This review artifact plus promoted issue refinement."
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-03-open-issue-1241-decision-traceability-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-03: Review record created by create-review.",
+    "2026-06-03: Populated grounding review after inspecting #1241, PR #1244, decision_pressure output, closeout_report output, reporting contract, and workspace report reference."
+  ]
+}
