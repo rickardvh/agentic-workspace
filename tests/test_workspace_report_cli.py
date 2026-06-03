@@ -1068,6 +1068,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert operating_posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert payload["config_enforcement"]["status"] == "present"
     assert any(route["field"] == "workspace.optimization_bias" for route in payload["config_enforcement"]["weak_field_routes"])
+
     assert "config_effect_audit" in payload["schema"]["shared_fields"]
     assert payload["config_effect_audit"]["kind"] == "workspace-config-effect-audit/v1"
     assert payload["config_effect_audit"]["field_count_by_effect"]["advisory-operational"] >= 3
@@ -1204,6 +1205,20 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert measures["unresolved_external_work_routing"]["provider_rule"].startswith(
         "Core planning only consumes provider-agnostic external work evidence"
     )
+
+
+def test_report_workspace_schema_documents_closeout_authority_boundary() -> None:
+    from agentic_workspace.contract_tooling import contract_schema
+
+    schema = contract_schema("workspace_report.schema.json")
+    closeout_report = schema["properties"]["closeout_report"]
+    authority_boundary = closeout_report["properties"]["authority_boundary"]
+
+    assert authority_boundary["$ref"] == "#/$defs/authority_boundary"
+    assert "AW-enforced" in authority_boundary["description"]
+    rendered = Path("docs/reference/workspace-report.md").read_text(encoding="utf-8")
+    assert "closeout_report.authority_boundary" in rendered
+    assert "Authority boundary showing which closeout/report signals" in rendered
 
 
 def test_report_router_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:

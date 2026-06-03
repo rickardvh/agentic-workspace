@@ -88,6 +88,18 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
 | `workflow_compliance_summary` | object | yes |  | Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action. |  |  |
 | `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
+| `closeout_report.authority_boundary` | ref `#/$defs/authority_boundary` | no |  | Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned. |  |  |
+| `closeout_report.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
+| `closeout_report.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
+| `closeout_report.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
+| `closeout_report.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
+| `closeout_report.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
+| `closeout_report.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `closeout_report.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
+| `closeout_report.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
+| `closeout_report.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `closeout_report.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
+| `closeout_report.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |
 | `compact_output_criteria` | object | yes |  | Criteria for compact CLI outputs to remain sufficient for cheap continuation. |  |  |

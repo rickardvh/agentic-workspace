@@ -58,6 +58,16 @@ Use it to separate:
 
 Agents should report these categories separately. Do not say "AW classified" or "AW routed" when the boundary says AW only observed facts, suggested a route, or exposed proof guidance. Preserve real hard gates as authoritative when `enforced_by_aw` is non-empty.
 
+### Authority Boundary Examples
+
+Use the authority boundary to write final reports like this:
+
+- `start`: before, "AW classified this as a small task." After, "AW observed no hard blocker and suggested `choose-smallest-workflow-shape`; I judged the task bounded."
+- `implement --changed`: before, "AW routed this to direct implementation." After, "AW observed changed paths, named proof hints, and exposed candidate routes; I chose the route and proof scope."
+- `report --section closeout_report`: before, "AW decided the work is done." After, "AW reported closeout evidence and hard caveats; I own the completion claim against proof and acceptance."
+
+Dogfooding rule: the in-chat closeout report should be able to say what AW enforced, observed, recommended, and left to agent judgment without using "AW classified" or "AW routed" for advisory signals.
+
 ## Closeout Report Shape
 
 The `closeout_report` object is the operator-facing closeout projection.
