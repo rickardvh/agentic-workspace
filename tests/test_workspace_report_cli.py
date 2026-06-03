@@ -1387,6 +1387,8 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
 
     report = json.loads(capsys.readouterr().out)["answer"]
     assert report["status"] == "guidance-only"
+    assert report["authority_boundary"]["surface"] == "closeout_report"
+    assert "final user-facing wording" in report["authority_boundary"]["agent_owned_decisions"]
     assert report["profile"] == "minimal"
     assert report["profile_policy"]["high_risk"] is False
     assert report["completeness"]["status"] == "guidance-only"
@@ -1513,6 +1515,8 @@ def test_report_closeout_report_prefers_retained_closeout_evidence_over_older_ar
         ".agentic-workspace/planning/closeout-evidence/retained-closeout.closeout.json"
     )
     assert report["work_completed"] == "Rendered the retained closeout evidence."
+    assert report["authority_boundary"]["surface"] == "closeout_report"
+    assert "whether proof and acceptance justify a completion claim" in report["authority_boundary"]["agent_owned_decisions"]
     assert report["changes"]["source"] == "planning.closeout_evidence.execution_run"
     assert "planning.closeout_evidence.proof_report" in report["source_fields"]
 
@@ -1596,13 +1600,16 @@ def test_report_closeout_report_guidance_only_rendering_surfaces_audit_caveat() 
     assert rendering["profile"] == "audit"
     assert rendering["rendering_mode"] == "compact"
     assert any(line.startswith("Closeout caveat: guidance-only audit profile") for line in rendering["summary_lines"])
+    assert "authority:" in rendering["summary_lines"][0]
     assert any(line.startswith("Residue: follow-up owner: .agentic-workspace/planning/state.toml") for line in rendering["summary_lines"])
     rendered = rendering["rendered_summary"]
     assert rendered["template_id"] == "builtin/compact"
     assert "Closeout caveat: guidance-only audit profile" in rendered["rendered_text"]
+    assert "agent owns completion judgment" in rendered["rendered_text"]
     assert "Residue: follow-up owner: .agentic-workspace/planning/state.toml" in rendered["rendered_text"]
     assert rendered["required_fact_coverage"]["status"] == "complete"
     assert "profile reason or caveat" in rendering["must_include"]
+    assert "authority boundary" in rendering["must_include"]
     assert "residue or follow-up status" in rendering["must_include"]
     assert rendering["plain_done_allowed"] is False
     assert rendering["raw_json_allowed"] is False
@@ -3133,12 +3140,15 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert "profile reason" in rendering["must_include"]
     assert "proof or validation" in rendering["must_include"]
     assert "closure boundary" in rendering["must_include"]
+    assert "authority boundary" in rendering["must_include"]
     assert any(line.startswith("Closeout profile: audit because assurance.strict_closeout enabled") for line in rendering["summary_lines"])
+    assert "authority:" in rendering["summary_lines"][0]
     assert any(line.startswith("Proof: uv run pytest tests/test_workspace_report_cli.py -q passed") for line in rendering["summary_lines"])
     assert any(line.startswith("Residue:") for line in rendering["summary_lines"])
     rendered = rendering["rendered_summary"]
     assert rendered["template_id"] == "builtin/evidence-backed"
     assert "Closeout profile: audit because assurance.strict_closeout enabled" in rendered["rendered_text"]
+    assert "agent owns completion judgment" in rendered["rendered_text"]
     assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
     assert "Closure boundary:" in rendered["rendered_text"]
     assert "Residue:" in rendered["rendered_text"]

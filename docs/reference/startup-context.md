@@ -97,6 +97,18 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.closure_blockers` | array of string | yes |  | Reasons closure or completion claims are blocked. |  |  |
 | `next_safe_action.continuation_owner_required` | boolean | yes |  | Whether unfinished intent needs an explicit continuation owner before closeout. |  |  |
 | `next_safe_action.memory_consultation_status` | string | yes |  | Memory consultation or durable-residue status relevant to the next action. |  |  |
+| `next_safe_action.authority_boundary` | object | yes |  | Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgment. |  |  |
+| `next_safe_action.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
+| `next_safe_action.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
+| `next_safe_action.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
+| `next_safe_action.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
+| `next_safe_action.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
+| `next_safe_action.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `next_safe_action.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
+| `next_safe_action.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
+| `next_safe_action.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `next_safe_action.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
+| `next_safe_action.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `next_safe_action.fallback_if_cli_unavailable` | string | yes |  | Conservative fallback when the preferred CLI cannot be used. |  |  |
 | `next_safe_action.source_fields` | array of enum `"immediate_next_allowed_action"`, `"workflow_sufficiency"`, `"skill_routing"`, `"memory_consult"`, `"planning_safety_gate"`, `"proof"`, `"closeout_trust_inspection"`, `"continuation_state"` | yes |  | Startup fields used to derive the packet. |  |  |
 | `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down. |  |  |

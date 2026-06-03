@@ -42,12 +42,29 @@ The surrounding report payload keeps these fields separate:
 - `reports`
 - `module_reports`
 
+## Authority Boundary
+
+Reportable AW packets may include `authority_boundary`.
+
+Use it to separate:
+
+- `enforced_by_aw`: hard gates or constraints AW is applying.
+- `observed_by_aw`: mechanical facts, path buckets, state, or evidence AW observed.
+- `recommended_by_aw`: advisory next actions or support signals.
+- `candidate_routes`: possible routes AW surfaced without making them semantic authority.
+- `proof_hints`: proof burden or validation hints.
+- `agent_owned_decisions`: semantic work-shape, route, proof-proportionality, or completion judgments the agent must own.
+- `human_owned_decisions`: intent, acceptance, or handoff decisions that require human ownership when present.
+
+Agents should report these categories separately. Do not say "AW classified" or "AW routed" when the boundary says AW only observed facts, suggested a route, or exposed proof guidance. Preserve real hard gates as authoritative when `enforced_by_aw` is non-empty.
+
 ## Closeout Report Shape
 
 The `closeout_report` object is the operator-facing closeout projection.
 
 It keeps:
 
+- `authority_boundary`
 - `profile`
 - `profile_policy`
 - `work_completed`
@@ -71,6 +88,7 @@ The profile policy is presentation-only:
 
 The report is derived from Planning, Verification, `completion_contract`, and `closeout_trust`.
 It must not become execution state, a proof decision, or a second planning record.
+Use `closeout_report.authority_boundary` to distinguish closeout gates and observed evidence from the agent-owned final completion judgment.
 
 Use:
 

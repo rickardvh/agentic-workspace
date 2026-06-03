@@ -781,6 +781,11 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert isinstance(packet["closure_blockers"], list)
     assert isinstance(packet["continuation_owner_required"], bool)
     assert packet["memory_consultation_status"] in {"recommended", "unknown"}
+    boundary = packet["authority_boundary"]
+    assert boundary["kind"] == "agentic-workspace/authority-boundary/v1"
+    assert boundary["surface"] == "next_safe_action"
+    assert "semantic work shape when no forbidden action applies" in boundary["agent_owned_decisions"]
+    assert "candidate_routes" in boundary
     assert packet["source_fields"] == [
         "immediate_next_allowed_action",
         "workflow_sufficiency",
@@ -845,6 +850,11 @@ def test_start_changed_path_next_safe_action_marks_proof_required(tmp_path: Path
     assert packet["module_slot"] == "workspace.proof"
     assert packet["preferred_cli"] == "agentic-workspace proof --changed README.md --format json"
     assert packet["preferred_cli_effect"] == "validating"
+    boundary = packet["authority_boundary"]
+    assert boundary["authority_class"] == "hard-gate"
+    assert "proof required before completion claim" in boundary["enforced_by_aw"]
+    assert "select-changed-path-proof" in boundary["recommended_by_aw"]
+    assert "no file proof unless the task later becomes an edit" not in boundary["proof_hints"]
 
 
 def test_start_completion_question_requires_closeout_trust_when_followup_remains(tmp_path: Path, capsys) -> None:

@@ -791,6 +791,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     guidance = context["guidance"]
     assert guidance["rule"].startswith("AW exposes facts")
     assert guidance["work_shape_guidance"]["agent_decision_required"] is True
+    guidance_boundary = guidance["work_shape_guidance"]["authority_boundary"]
+    assert guidance_boundary["kind"] == "agentic-workspace/authority-boundary/v1"
+    assert guidance_boundary["surface"] == "work_shape_guidance"
+    assert "semantic work shape" in guidance_boundary["agent_owned_decisions"]
+    assert any(item.startswith("dirty_shape=") for item in guidance_boundary["observed_by_aw"])
     acknowledgement = context["intent_acknowledgement"]
     assert acknowledgement["decision"] == "proceed-with-stated-assumption"
     assert acknowledgement["fields"] == [
@@ -802,6 +807,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert acknowledgement["proceed_unless_corrected"] is True
     assert context["delegation_decision"]["status"] == "evaluated"
     assert context["delegation_decision"]["mode"] in {"suggest", "auto"}
+    delegation_boundary = context["delegation_decision"]["authority_boundary"]
+    assert delegation_boundary["surface"] == "delegation_decision"
+    assert "delegation fit without lowering proof" in delegation_boundary["agent_owned_decisions"]
     assert context["acceptance_reconciliation"]["task_text_available"] is True
     assert context["acceptance"]["status"] == "inferred"
     assert context["acceptance"]["closeout_required"] is True
