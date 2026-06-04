@@ -90,6 +90,55 @@ of primary evaluator prompts and appear only as post-score review metadata.
 Memory receives durable lessons or repeated gaps after verification. It should
 not store raw transcript content or active evidence.
 
+## Behavior-Preserving Refactors
+
+For refactors and modernization work, use Verification to record current
+behavior evidence before making or closing preservation claims. Keep the record
+compact and claim-boundary focused:
+
+```toml
+[scenarios.parser_characterization]
+protocol_id = "parser_refactor_characterization"
+title = "Parser characterization"
+steps = ["Run representative parser fixtures before and after the refactor"]
+expected_observations = ["Existing valid-input outputs remain byte-for-byte stable"]
+pass_evidence_labels = ["parser_characterization_passed"]
+fail_evidence_labels = ["parser_characterization_changed"]
+
+[protocols.parser_refactor_characterization]
+title = "Parser refactor characterization"
+purpose = "Current-behavior proof for a behavior-preserving parser refactor."
+applies_to_paths = ["src/parser/**", "tests/fixtures/parser/**"]
+scenario_refs = ["parser_characterization"]
+expected_evidence = ["parser_characterization_passed"]
+review_owner = "parser-review"
+
+[evidence_bundles.parser_refactor_2026_06]
+protocol_id = "parser_refactor_characterization"
+scenario_id = "parser_characterization"
+outcome = "passed"
+evidence_items = ["parser_characterization_passed"]
+transcript_summaries = ["Representative parser fixtures matched before and after; raw outputs not retained."]
+claim_boundaries = ["work"]
+residual_risk = "Malformed legacy inputs are not characterized."
+retention_until = "2026-12-31"
+
+[known_gaps.parser_malformed_legacy_gap]
+protocol_id = "parser_refactor_characterization"
+scenario_id = "parser_characterization"
+reason = "Malformed legacy-input behavior lacks fixtures and domain acceptance."
+owner = "parser-review"
+evidence_labels = ["malformed_legacy_characterization"]
+blocked_claims = ["close-parent-lane"]
+residual_risk = "Do not claim full parser behavior preservation until this gap is closed or accepted."
+```
+
+Closeout may cite this evidence as characterization/current-behavior proof. If
+only ordinary tests ran, closeout should say that explicitly and caveat any
+`no behavior changed`, `business logic preserved`, compatibility, migration, or
+dependency-upgrade claim unless domain acceptance or a stronger evidence class is
+recorded.
+
 ## Non-Goals
 
 - No generic QA management system.

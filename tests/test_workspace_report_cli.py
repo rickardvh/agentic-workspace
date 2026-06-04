@@ -3558,6 +3558,95 @@ def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp
     assert rendered["rendered_text"] != "Done."
 
 
+def test_report_closeout_report_caveats_unsupported_behavior_preservation_claim(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "refactor-preservation.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Refactor Preservation",
+            "active_milestone": {"id": "refactor-preservation", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Refactor parser helpers while preserving behavior.",
+                "hard constraints": "Do not claim no behavior changed without preservation evidence.",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Refactored parser helpers.",
+                "scope touched": "parser helpers",
+                "changed surfaces": "src/parser.py; tests/test_parser.py",
+                "validations run": "uv run pytest tests/test_parser.py",
+                "result for continuation": "close with caveat",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_parser.py passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["parser output behavior preserved"],
+                    "proof_dimensions": ["focused regression tests"],
+                    "unproven_after_tests": ["legacy malformed-input behavior"],
+                    "preservation_claims": ["no behavior changed for parser output"],
+                    "allowed_behavior_changes": ["internal helper names may change"],
+                    "unknown_behavior": ["legacy malformed-input behavior has no fixture"],
+                    "proof_classes": ["ordinary-tests"],
+                    "human_confirmation_needed": ["domain owner confirms malformed-input behavior if needed"],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "Implementation is complete, but preservation proof remains caveated.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'refactor-preservation', title = 'Refactor preservation', surface = '.agentic-workspace/planning/execplans/refactor-preservation.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    preservation = report["validation"]["behavior_preservation"]
+    assert preservation["status"] == "claim-needs-evidence"
+    assert preservation["unsupported_claims"] == ["no behavior changed for parser output"]
+    assert preservation["ordinary_test_only"] is True
+    assert "semantic-risk changed surfaces" in report["review_compression"]["first_inspection_contract"]["first_inspection_facts"]
+    assert report["review_compression"]["selected_mode"] == "behavior-preserving-refactor"
+    assert any("preservation caveat" in item for item in report["review_compression"]["human_owned_decisions"])
+    assert report["profile"] == "audit"
+    assert report["trust"] == "lower-trust"
+    checks = {check["id"]: check for check in report["completeness"]["checks"]}
+    assert checks["behavior-preservation-claim"]["status"] == "incomplete"
+    rows = {row["id"]: row for row in report["traceability"]["rows"]}
+    assert rows["behavior-preservation"]["status"] == "missing"
+    options = {option["id"]: option for option in report["closure_boundary"]["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "behavior_preservation" in options["claim-work-complete"]["blocking_fields"]
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert "behavior preservation caveat" in rendering["must_include"]
+    assert "behavior preservation proof" in rendering["must_include"]
+    rendered = rendering["rendered_summary"]
+    assert "Behavior proof: ordinary-tests" in rendered["rendered_text"]
+    assert "Behavior caveat:" in rendered["rendered_text"]
+    assert "no behavior changed" in " ".join(rendering["must_not_claim"])
+    assert rendered["required_fact_coverage"]["status"] == "complete"
+
+
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

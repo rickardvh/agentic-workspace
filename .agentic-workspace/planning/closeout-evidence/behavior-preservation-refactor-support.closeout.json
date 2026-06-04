@@ -1,0 +1,99 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Behavior preservation refactor support",
+  "plan_id": "behavior-preservation-refactor-support",
+  "created_at": "2026-06-04T17:30:43.856049+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/behavior-preservation-refactor-support.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/behavior-preservation-refactor-support.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "behavior-preservation-refactor-support",
+    "status": "completed",
+    "scope": "Runtime closeout/proof/report support plus existing Planning, Verification, Memory, and reporting guidance surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1289 and child issues #1291-#1298.",
+    "hard constraints": "Use existing surfaces; no new refactoring module, state store, or authoritative business-logic inference.",
+    "agent may decide locally": "Exact names, caveat wording, examples, tests, and reference updates.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented behavior-preservation support across existing AW Planning guidance, Verification examples, proof/closeout report packets, final-response rendering, Memory promotion guidance, and review-compression mode.",
+    "scope touched": "workspace closeout/proof/report runtime, workspace_report schema/reference docs, planning execplan guidance/template, reporting contract, verification docs, Memory guidance, and focused tests",
+    "changed surfaces": ".agentic-workspace/docs/knowledge-promotion-workflow.md; .agentic-workspace/docs/reporting-contract.md; .agentic-workspace/planning/execplans/README.md; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; docs/verification.md; docs/reference/workspace-report.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within existing AW surfaces; unsupported no-behavior-change claims are now caveated and blocked from broad closeout claims; AW reports recorded evidence/gaps while agents and humans own semantic preservation sufficiency.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1289 and its child issues.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Behavior-preserving refactors now have explicit planning fields, characterization proof examples, closeout behavior proof/caveat facts, final-response rendering requirements, Memory promotion guidance, and semantic-risk review-compression focus.",
+    "validation confirmed": "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q; uv run pytest tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action tests/test_workspace_proof_cli.py::test_proof_changed_surfaces_compact_intent_proof_prompt tests/test_workspace_proof_cli.py::test_proof_changed_verbose_surfaces_proof_confidence -q; rg -n \"behavior_preservation|behavior-preserving-refactor|preservation_claims|allowed_behavior_changes|unknown_behavior|proof_classes|preservation_evidence|business logic preserved|no behavior changed|ordinary tests\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json docs src/agentic_workspace/contracts/schemas src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make schema-reference-docs",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

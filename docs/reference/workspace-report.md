@@ -87,7 +87,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
 | `workflow_compliance_summary` | object | yes |  | Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action. |  |  |
-| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
+| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behavior-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
 | `closeout_report.authority_boundary` | ref `#/$defs/authority_boundary` | no |  | Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned. |  |  |
 | `closeout_report.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
 | `closeout_report.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
@@ -103,7 +103,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.intent_evidence` | object | no |  | Closeout intent provenance showing whether interpreted intent came from planning evidence, user text, issue/reference evidence, handoff evidence, or agent inference. |  |  |
 | `closeout_report.interpreted_intent` | object | no |  | Requested outcome, intent-source evidence, satisfaction status, and closure decision rendered for the closeout report. |  |  |
 | `closeout_report.decision_review` | object | no |  | Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance. |  |  |
-| `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, detail routes, and human-owned decisions. |  |  |
+| `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behavior-preserving refactor semantic-risk focus, detail routes, and human-owned decisions. |  |  |
+| `closeout_report.validation` | object | no |  | Closeout validation projection, including proof confidence and behavior_preservation facts when preservation claims, proof classes, unsupported claims, or caveats were recorded. |  |  |
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |

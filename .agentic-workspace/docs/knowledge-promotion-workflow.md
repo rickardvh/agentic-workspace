@@ -41,3 +41,23 @@ In the `Execution Summary` of the archived plan, record where the knowledge was 
 - **Do not over-specify**: Keep Memory focused on interpretive value, not a copy of the source code.
 - **Do not hide friction**: Knowledge promotion should explain *how* to handle friction, not hide the fact that the friction exists.
 - **Prefer Repo-Native**: Always prefer checked-in docs/config over Memory when the knowledge is stable enough to be a hard rule.
+
+## Refactoring Facts
+
+Promote a refactoring discovery to Memory only when it will prevent expensive
+rediscovery in future work. Good Memory candidates include:
+
+- non-obvious behavior that must be preserved;
+- legacy quirks with a business or domain rationale;
+- dependency, runtime, or migration constraints discovered during the refactor;
+- tests, fixtures, snapshots, or verification protocols that protect important behavior;
+- dead-code or unused-path findings that are not yet safe to remove;
+- anti-rediscovery warnings for future agents.
+
+Reject transient observations such as "I read this file", raw test output,
+one-off implementation notes, or guesses about business behavior without
+evidence. A useful refactoring Memory note should include a compact summary,
+evidence/source refs, `use_when`, `stale_when`, confidence, and retention or
+promotion expectation. When the lesson becomes stable policy, promote it onward
+to docs, config, checks, or tests instead of letting Memory become hidden
+business-logic authority.
