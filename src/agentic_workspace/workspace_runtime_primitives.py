@@ -15534,14 +15534,20 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
+        read_only_response = payload.get("read_only_response", {})
+        read_only_compact_default = bool(isinstance(read_only_response, dict) and read_only_response.get("compact_default") is True)
         projected["task_intent"] = {
             "status": "present",
             "carry_forward_rule": task_intent.get("carry_forward_rule", ""),
             "requested_outcomes": task_intent.get("requested_outcomes", [])[:8],
-            "acceptance": _tiny_acceptance_payload(acceptance),
             "implement_changed_command": task_intent.get("implement_changed_command"),
         }
-        projected["acceptance"] = _tiny_acceptance_payload(acceptance)
+        if read_only_compact_default:
+            projected["task_intent"]["response_posture"] = read_only_response
+            projected["read_only_response"] = read_only_response
+        else:
+            projected["task_intent"]["acceptance"] = _tiny_acceptance_payload(acceptance)
+            projected["acceptance"] = _tiny_acceptance_payload(acceptance)
         if isinstance(task_intent.get("promotion_guidance"), dict):
             projected["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
         for optional_key in ("task_argument_mode", "task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
@@ -16060,6 +16066,7 @@ _START_TINY_ONLY_SELECTORS = {
     "planning_safety_gate",
     "planning_revision",
     "routine_work_context",
+    "read_only_response",
     "skill_routing",
     "task_intent",
     "workflow_sufficiency",
@@ -16235,6 +16242,9 @@ def _start_payload(
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
         payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
+    read_only_response = _read_only_response_posture_payload(task_text=task_text, changed_paths=changed_paths)
+    if read_only_response["status"] == "read-only-reporting":
+        payload["read_only_response"] = read_only_response
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -16601,6 +16611,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "routine_work_context",
+        "read_only_response",
         "proof",
         "repair_plan_profile",
         "next",
@@ -16619,6 +16630,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.objective_drift",
         "context.reuse_pressure",
         "context.routine_work_context",
+        "context.read_only_response",
         "context.detail_commands",
         "routing",
         "acceptance_reconciliation",
@@ -16857,6 +16869,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     prep_only_active = "prep_only_handoff" in payload
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
+        read_only_response = payload.get("read_only_response", {})
+        read_only_compact_default = bool(isinstance(read_only_response, dict) and read_only_response.get("compact_default") is True)
         context["task"] = (
             {
                 "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
@@ -16866,14 +16880,24 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             if prep_only_active
             else {
                 "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
+                "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
+                "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
+                "response_posture": read_only_response,
+                "detail_selector": "acceptance",
+            }
+            if read_only_compact_default
+            else {
+                "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
                 "carry_forward_rule": task_intent.get("carry_forward_rule", "") if isinstance(task_intent, dict) else "",
                 "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
                 "implement_changed_command": task_intent.get("implement_changed_command") if isinstance(task_intent, dict) else None,
                 "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
             }
         )
-        if isinstance(task_intent, dict) and "acceptance" in task_intent and not prep_only_active:
+        if isinstance(task_intent, dict) and "acceptance" in task_intent and not prep_only_active and not read_only_compact_default:
             context["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
+        if read_only_compact_default:
+            context["read_only_response"] = read_only_response
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
             if isinstance(task_intent, dict) and optional_key in task_intent:
                 context["task"][optional_key] = task_intent[optional_key]
@@ -16892,6 +16916,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append(f"cli_compatibility={payload['cli_compatibility'].get('status')}")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
+    available_selectors = _available_selectors_for_payload(payload)
+    if "read_only_response" in payload and "acceptance" not in available_selectors:
+        insert_at = (
+            available_selectors.index("durable_intent_promotion")
+            if "durable_intent_promotion" in available_selectors
+            else len(available_selectors)
+        )
+        available_selectors.insert(insert_at, "acceptance")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -16930,7 +16962,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                     cli_invoke=cli_invoke,
                 ),
             ],
-            "available_selectors": _available_selectors_for_payload(payload),
+            "available_selectors": available_selectors,
         },
     }
     if "task_intent" in payload:
@@ -17123,6 +17155,9 @@ def _start_tiny_payload_fast(
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
         payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
+    read_only_response = _read_only_response_posture_payload(task_text=task_text, changed_paths=changed_paths)
+    if read_only_response["status"] == "read-only-reporting":
+        payload["read_only_response"] = read_only_response
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -18157,6 +18192,92 @@ def _task_intent_carry_forward_payload(
         "implement_changed_command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
         "closeout_rule": "Before closeout, map requested outcomes to delivered surfaces and proof; self-authored tests alone are not enough.",
         **optional,
+    }
+
+
+def _read_only_response_posture_payload(*, task_text: str | None, changed_paths: Sequence[str] = ()) -> dict[str, Any]:
+    task = " ".join(str(task_text or "").split())
+    if not task:
+        return {
+            "kind": "agentic-workspace/read-only-response-posture/v1",
+            "status": "not-applicable",
+            "reason": "no task text was provided",
+            "compact_default": False,
+        }
+    if _normalize_changed_paths(changed_paths):
+        return {
+            "kind": "agentic-workspace/read-only-response-posture/v1",
+            "status": "not-applicable",
+            "reason": "changed paths are present, so implementation/proof guidance remains the default",
+            "compact_default": False,
+        }
+    normalized = f" {task.lower()} "
+    read_only_markers = (
+        " report ",
+        " summarize ",
+        " summarise ",
+        " review ",
+        " inspect ",
+        " check ",
+        " status ",
+        " postmortem ",
+        " what ",
+        " why ",
+        " how ",
+        " have you ",
+        " did you ",
+        " is ",
+        " are ",
+        " can you tell ",
+    )
+    mutation_markers = (
+        " implement ",
+        " fix ",
+        " change ",
+        " update ",
+        " add ",
+        " remove ",
+        " delete ",
+        " create ",
+        " file ",
+        " commit ",
+        " push ",
+        " merge ",
+        " close ",
+        " address ",
+        " follow ",
+        " switch ",
+        " pull ",
+    )
+    matched_read_only = [marker.strip() for marker in read_only_markers if marker in normalized]
+    matched_mutation = [marker.strip() for marker in mutation_markers if marker in normalized]
+    compact_default = bool(matched_read_only and not matched_mutation)
+    return {
+        "kind": "agentic-workspace/read-only-response-posture/v1",
+        "status": "read-only-reporting" if compact_default else "implementation-oriented",
+        "compact_default": compact_default,
+        "matched_read_only_signals": matched_read_only[:4],
+        "matched_mutation_signals": matched_mutation[:4],
+        "default_projection": "suppress-acceptance-boilerplate" if compact_default else "keep-implementation-acceptance",
+        "detail_selector": "acceptance",
+        "rule": (
+            "For obvious status, review, or reporting questions with no changed paths or mutation signals, keep the default "
+            "startup answer focused on hard gates and relevant signals; acceptance remains selectable when needed."
+        ),
+        "authority_boundary": _authority_boundary_payload(
+            surface="read_only_response",
+            observed_by_aw=[
+                f"changed_path_count={len(_normalize_changed_paths(changed_paths))}",
+                *[f"read_only_signal={signal}" for signal in matched_read_only[:2]],
+                *[f"mutation_signal={signal}" for signal in matched_mutation[:2]],
+            ],
+            recommended_by_aw=["compact read-only startup projection"] if compact_default else [],
+            agent_owned_decisions=[
+                "whether the user is asking for analysis/status rather than implementation",
+                "whether to select acceptance detail anyway",
+            ],
+            rule="AW exposes posture signals; the agent owns whether the task is truly read-only.",
+        ),
     }
 
 
