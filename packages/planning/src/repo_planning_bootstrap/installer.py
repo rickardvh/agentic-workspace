@@ -8051,6 +8051,18 @@ def _active_closeout_distillation_contract(
     }
 
 
+EXECUTION_SUMMARY_KNOWLEDGE_KEY = "knowledge promoted (Memory/Docs/Config)"
+LEGACY_EXECUTION_SUMMARY_KNOWLEDGE_KEY = "knowledge promoted (memory/docs/config)"
+
+
+def _canonical_execution_summary(execution_summary: Mapping[str, Any]) -> dict[str, str]:
+    canonical = {str(key): str(value) for key, value in execution_summary.items()}
+    legacy_value = canonical.pop(LEGACY_EXECUTION_SUMMARY_KNOWLEDGE_KEY, None)
+    if EXECUTION_SUMMARY_KNOWLEDGE_KEY not in canonical and legacy_value is not None:
+        canonical[EXECUTION_SUMMARY_KNOWLEDGE_KEY] = legacy_value
+    return canonical
+
+
 def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str, str]) -> dict[str, list[dict[str, str]]]:
     buckets = {
         "discard": [],
@@ -8069,10 +8081,10 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
                 if isinstance(raw_items, list):
                     buckets[bucket].extend(_normalize_distillation_items(raw_items))
 
-    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    execution_summary = _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {})
     closure_check = _record_section_dict(record, "closure_check") or {}
     required_continuation = _record_section_dict(record, "required_continuation") or {}
-    knowledge = execution_summary.get("knowledge promoted (memory/docs/config)", "").strip()
+    knowledge = str(execution_summary.get(EXECUTION_SUMMARY_KNOWLEDGE_KEY, "")).strip()
     posterity = execution_summary.get("post-work posterity capture", "").strip()
     follow_on = execution_summary.get("follow-on routed to", "").strip()
 
@@ -8465,7 +8477,7 @@ def _active_handoff_contract(
             "validation confirmed",
             "follow-on routed to",
             "post-work posterity capture",
-            "knowledge promoted (memory/docs/config)",
+            EXECUTION_SUMMARY_KNOWLEDGE_KEY,
             "resume from",
         ],
         "finished_run_review_fields": [
@@ -9711,7 +9723,7 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
         "validation confirmed",
         "follow-on routed to",
         "post-work posterity capture",
-        "knowledge promoted (memory/docs/config)",
+        EXECUTION_SUMMARY_KNOWLEDGE_KEY,
         "resume from",
     ):
         if key in execution_summary:
@@ -9770,7 +9782,7 @@ def _generated_closeout_adapter(
     durable_residue = _record_section_dict(patch, "durable_residue") or {}
     memory_learning = _record_section_dict(patch, "memory_learning_capture") or {}
     execution_run = _record_section_dict(record, "execution_run") or {}
-    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    execution_summary = _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {})
 
     changed_surfaces = execution_run.get("changed surfaces", "").strip() or execution_run.get("scope touched", "").strip() or "not recorded"
     unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
@@ -10263,7 +10275,7 @@ def _prepare_execplan_closeout(
     required_continuation = _record_section_dict(record, "required_continuation") or {}
     delegated_judgment = _record_section_dict(record, "delegated_judgment") or {}
     intent_interpretation = _record_section_dict(record, "intent_interpretation") or {}
-    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    execution_summary = _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {})
     execution_run = _record_section_dict(record, "execution_run") or {}
     finished_run_review = _record_section_dict(record, "finished_run_review") or {}
     iterative_follow_through = _record_section_dict(record, "iterative_follow_through") or {}
@@ -10369,6 +10381,7 @@ def _prepare_execplan_closeout(
     )
 
     patch: dict[str, Any] = {
+        "execution_summary": execution_summary,
         "intent_satisfaction": {
             "original intent": original_intent,
             "was original intent fully satisfied?": normalized_intent_satisfied,
@@ -10901,7 +10914,7 @@ def closeout_execplan(
 
     execution_run = _record_section_dict(record, "execution_run") or {}
     finished_run_review = _record_section_dict(record, "finished_run_review") or {}
-    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    execution_summary = _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {})
     run_evidence_inputs = {
         "what happened": provided(what_happened),
         "scope touched": provided(scope_touched),
@@ -10992,8 +11005,8 @@ def closeout_execplan(
         execution_summary["follow-on routed to"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
         if is_placeholder(execution_summary.get("post-work posterity capture")):
             execution_summary["post-work posterity capture"] = "archive closeout distillation"
-        if is_placeholder(execution_summary.get("knowledge promoted (Memory/Docs/Config)")):
-            execution_summary["knowledge promoted (Memory/Docs/Config)"] = "none"
+        if is_placeholder(execution_summary.get(EXECUTION_SUMMARY_KNOWLEDGE_KEY)):
+            execution_summary[EXECUTION_SUMMARY_KNOWLEDGE_KEY] = "none"
         execution_summary["resume from"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive"
         record["execution_summary"] = execution_summary
         closure_check = _record_section_dict(record, "closure_check") or {}
@@ -13573,7 +13586,7 @@ def _build_execplan_record_from_todo_item(
             "validation confirmed": "pending",
             "follow-on routed to": "none yet",
             "post-work posterity capture": "pending",
-            "knowledge promoted (Memory/Docs/Config)": "none",
+            EXECUTION_SUMMARY_KNOWLEDGE_KEY: "none",
             "resume from": "current milestone",
         },
         "durable_residue": {
@@ -13852,9 +13865,9 @@ def _execplan_active_milestone(path: Path) -> dict[str, str]:
 def _execplan_execution_summary(path: Path) -> dict[str, str]:
     record = _record_section_dict(_load_execplan_record(path), "execution_summary")
     if record is not None:
-        return record
+        return _canonical_execution_summary(record)
     lines = _read_lines(path)
-    return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
+    return _canonical_execution_summary(_extract_kv_fields(_section_lines(lines, "Execution Summary")))
 
 
 def _execplan_proof_report(path: Path) -> dict[str, str]:

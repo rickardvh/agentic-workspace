@@ -215,7 +215,6 @@
     "validation confirmed": "uv run pytest focused intake/checker/contract tests -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make lint-planning; make lint-workspace; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-planning",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

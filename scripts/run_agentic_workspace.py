@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -74,7 +75,32 @@ def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
     return fingerprint if isinstance(fingerprint, str) and fingerprint else None
 
 
-def _write_cached_fingerprint(fingerprint: dict[str, object], *, cache_path: Path = CACHE_PATH) -> None:
+def _replace_cache_file_with_retries(
+    source_path: Path,
+    target_path: Path,
+    *,
+    replace_path: Callable[[Path, Path], object] | None = None,
+    sleep: Callable[[float], object] = time.sleep,
+    attempts: int = 5,
+) -> None:
+    replacer = replace_path or (lambda source, target: source.replace(target))
+    for attempt in range(attempts):
+        try:
+            replacer(source_path, target_path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            sleep(0.05 * (attempt + 1))
+
+
+def _write_cached_fingerprint(
+    fingerprint: dict[str, object],
+    *,
+    cache_path: Path = CACHE_PATH,
+    replace_path: Callable[[Path, Path], object] | None = None,
+    sleep: Callable[[float], object] = time.sleep,
+) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         **fingerprint,
@@ -84,7 +110,7 @@ def _write_cached_fingerprint(fingerprint: dict[str, object], *, cache_path: Pat
     temporary_path = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
     try:
         temporary_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        temporary_path.replace(cache_path)
+        _replace_cache_file_with_retries(temporary_path, cache_path, replace_path=replace_path, sleep=sleep)
     finally:
         temporary_path.unlink(missing_ok=True)
 

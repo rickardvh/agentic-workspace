@@ -211,7 +211,6 @@
     "validation confirmed": "generate --check; primitive conformance; generated package static proof; Python conformance; Docker conformance; completion blocker metrics; contract tooling; structured inventory; targeted ruff; tests/test_workspace_cli.py; make lint-workspace; make test-workspace",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

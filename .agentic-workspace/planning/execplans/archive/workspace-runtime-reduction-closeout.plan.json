@@ -221,7 +221,6 @@
     "validation confirmed": "make test-workspace; make lint-workspace; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; focused pytest suites for generated proof, primitive executor, and workspace packaging",
     "follow-on routed to": "#1084 / #1079 runtime module split continuation",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "#1084 / #1079 runtime module split continuation",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

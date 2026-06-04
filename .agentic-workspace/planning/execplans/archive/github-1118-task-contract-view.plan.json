@@ -233,7 +233,6 @@
     "validation confirmed": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

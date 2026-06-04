@@ -233,7 +233,6 @@
     "validation confirmed": "Passed: focused startup/SkillSpec equivalence pytest, make test-workspace, make lint-workspace, contract tooling check, structured file inventory check, contract/scripts ruff, make maintainer-surfaces, planning summary health, planning doctor, and schema-reference docs.",
     "follow-on routed to": "#960 parent PR/issue reconciliation",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "#960 parent PR/issue reconciliation",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

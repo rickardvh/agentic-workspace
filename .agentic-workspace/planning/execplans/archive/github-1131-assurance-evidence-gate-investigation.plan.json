@@ -264,7 +264,6 @@
     "validation confirmed": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
     "follow-on routed to": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

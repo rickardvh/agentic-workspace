@@ -253,7 +253,6 @@
     "validation confirmed": "Passed proof bundle: focused closeout_report rendering tests (4 passed); py_compile workspace_runtime_primitives.py; generated command package refresh and check; make schema-reference-docs; make render-schema-reference; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; make maintainer-surfaces.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

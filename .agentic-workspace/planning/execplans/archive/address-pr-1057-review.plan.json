@@ -225,7 +225,6 @@
     "validation confirmed": "Focused pytest, make test-planning, make lint-planning, make test-workspace, make lint-workspace, workspace summary, planning doctor, and memory doctor passed.",
     "follow-on routed to": "issue #1058 and .agentic-workspace/memory/repo/current/routing-feedback.md",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "Memory routing-feedback note",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "Memory routing-feedback note"
   },

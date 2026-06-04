@@ -215,7 +215,6 @@
     "validation confirmed": "Focused closeout active-run regression; make test-planning; make lint-planning; agentic-workspace summary --verbose; agentic-workspace doctor --modules planning; git diff --check",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

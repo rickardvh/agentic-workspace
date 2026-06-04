@@ -234,7 +234,6 @@
     "validation confirmed": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
     "follow-on routed to": "No required #1059 follow-up; dogfooding closeout-residue signal filed as #1062.",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

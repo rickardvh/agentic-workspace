@@ -82,3 +82,30 @@ def test_launcher_regenerates_and_recaches_when_fingerprint_changes(tmp_path: Pa
         module._read_cached_fingerprint(cache_path=cache_path)
         == module.compute_generated_cli_fingerprint(repo_root=tmp_path)["fingerprint"]
     )
+
+
+def test_launcher_retries_transient_permission_error_when_writing_fingerprint(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
+    fingerprint = module.compute_generated_cli_fingerprint(repo_root=tmp_path)
+    calls: list[tuple[Path, Path]] = []
+    sleeps: list[float] = []
+
+    def flaky_replace(source: Path, target: Path) -> object:
+        calls.append((source, target))
+        if len(calls) == 1:
+            raise PermissionError("target cache was briefly locked")
+        return source.replace(target)
+
+    module._write_cached_fingerprint(
+        fingerprint,
+        cache_path=cache_path,
+        replace_path=flaky_replace,
+        sleep=sleeps.append,
+    )
+
+    assert len(calls) == 2
+    assert sleeps == [0.05]
+    assert module._read_cached_fingerprint(cache_path=cache_path) == fingerprint["fingerprint"]
+    assert not list(cache_path.parent.glob(f"{cache_path.name}.*.tmp"))

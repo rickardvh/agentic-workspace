@@ -233,7 +233,6 @@
     "validation confirmed": "uv run ruff format scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py; uv run pytest tests/test_generated_command_package_proof_runner.py -q; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; PYTHONUTF8=1 uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; make test-workspace; make lint-workspace",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

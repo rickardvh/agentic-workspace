@@ -239,7 +239,6 @@
     "validation confirmed": "uv run python -m pytest packages/planning/tests/test_summary.py::test_planning_summary_ignores_slash_separated_category_phrases_in_execplan_next_action packages/planning/tests/test_summary.py::test_planning_summary_warns_when_execplan_next_action_references_missing_file packages/planning/tests/test_summary.py::test_planning_summary_ignores_conceptual_slash_phrases_in_execplan_next_action; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

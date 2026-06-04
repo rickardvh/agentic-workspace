@@ -221,7 +221,6 @@
     "validation confirmed": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
     "follow-on routed to": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
     "post-work posterity capture": "archive closeout; P3/P4 remain in state.toml",
-    "knowledge promoted (memory/docs/config)": "runtime/defaults/closeout guidance",
     "resume from": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

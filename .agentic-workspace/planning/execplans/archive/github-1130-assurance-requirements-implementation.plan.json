@@ -253,7 +253,6 @@
     "validation confirmed": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

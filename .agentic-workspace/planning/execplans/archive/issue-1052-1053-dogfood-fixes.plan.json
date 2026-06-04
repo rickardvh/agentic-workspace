@@ -260,7 +260,6 @@
     "validation confirmed": "Focused pytest repeated --changed and active-plan isolation tests passed; generated command package static/conformance/Docker checks passed; make test-workspace and make lint-workspace passed; CI to be verified on PR.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

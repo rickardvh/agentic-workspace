@@ -229,7 +229,6 @@
     "validation confirmed": "focused SkillSpec/planning pytest; uv run python scripts/generate/generate_skillspec_targets.py --check; ruff; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs; make maintainer-surfaces; make test-workspace; make lint-workspace; planning summary/doctor",
     "follow-on routed to": "#960 remaining skill/proof routing lane",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "#960 remaining skill/proof routing lane",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

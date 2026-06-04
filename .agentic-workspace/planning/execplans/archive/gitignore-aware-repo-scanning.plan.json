@@ -239,7 +239,6 @@
     "validation confirmed": "uv run pytest tests/test_repository_scanning.py tests/test_workspace_implement_cli.py tests/test_workspace_report_cli.py tests/test_workspace_summary_cli.py::test_external_intent_refresh_applies_stale_candidate_reconciliation_and_preserves_delta -q; uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make test-workspace; make lint-workspace",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

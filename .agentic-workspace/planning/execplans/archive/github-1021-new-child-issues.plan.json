@@ -215,7 +215,6 @@
     "validation confirmed": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

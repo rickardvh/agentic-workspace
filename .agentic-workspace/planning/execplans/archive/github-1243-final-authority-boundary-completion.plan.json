@@ -237,7 +237,6 @@
     "validation confirmed": "Focused report/schema tests passed; docs diff inspected; contract tooling passed; structured inventory passed; targeted ruff passed; maintainer-surfaces passed; schema-reference-docs passed; generated command package check passed; planning surfaces passed; make test-workspace passed; make lint-workspace passed; AW summary and planning doctor passed.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

@@ -238,7 +238,6 @@
     "validation confirmed": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
     "follow-on routed to": "#989 framework-native plugin definitions",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "#989 framework-native plugin definitions",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

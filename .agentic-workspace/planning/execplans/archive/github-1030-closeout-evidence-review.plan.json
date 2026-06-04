@@ -215,7 +215,6 @@
     "validation confirmed": "focused pytest closeout tests; generated command package checks; make lint-planning; make lint-workspace; make test-planning; make test-workspace; agentic-workspace summary; agentic-workspace doctor --modules planning; git diff --check",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

@@ -547,6 +547,8 @@ candidates = []
     record = json.loads(record_path.read_text(encoding="utf-8"))
     record["execution_summary"]["validation confirmed"] = "pytest"
     record["execution_summary"]["outcome delivered"] = "Implemented the bounded slice."
+    record["execution_summary"].pop("knowledge promoted (Memory/Docs/Config)", None)
+    record["execution_summary"]["knowledge promoted (memory/docs/config)"] = "none"
     record["iterative_follow_through"] = {
         "what this slice enabled": "none yet",
         "intentionally deferred": "none",
@@ -602,6 +604,8 @@ candidates = []
         "None for this archived slice; reopen only if new evidence invalidates the proof."
     )
     assert archived["iterative_follow_through"]["next likely slice"] == "No required continuation remains for this archived slice."
+    assert "knowledge promoted (memory/docs/config)" not in archived["execution_summary"]
+    assert archived["execution_summary"]["knowledge promoted (Memory/Docs/Config)"] == "none"
     assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
     assert archived["delegation_outcome_feedback"]["proof result"] != "pending"
     assert archived["improvement_signal_review"]["status"] == "not_checked"
@@ -781,6 +785,10 @@ candidates = []
     )
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path, status="active")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["execution_summary"].pop("knowledge promoted (Memory/Docs/Config)", None)
+    record["execution_summary"]["knowledge promoted (memory/docs/config)"] = "none"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
 
     assert (
         planning_cli.main(
@@ -824,6 +832,8 @@ candidates = []
     assert archived["finished_run_review"]["scope respected"] == "yes; closeout evidence matches the bounded implementation scope."
     assert archived["finished_run_review"]["proof status"] == "passed"
     assert archived["execution_summary"]["outcome delivered"] == "closeout writer records real finish-run evidence before archiving."
+    assert "knowledge promoted (memory/docs/config)" not in archived["execution_summary"]
+    assert archived["execution_summary"]["knowledge promoted (Memory/Docs/Config)"] == "none"
     assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
     assert archived["machine_readable_contract"]["intent"]["outcome"] == "this item needs a bounded execution contract."
     assert archived["machine_readable_contract"]["intent"]["constraints"] == (

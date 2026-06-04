@@ -1,0 +1,326 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Fix generated CLI cache and closeout archive duplicate-key bugs",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Fix #1247 and #1248 directly on master: make generated CLI fingerprint cache writes retry-safe on Windows and remove case-variant duplicate keys from generated/checked-in Planning closeout evidence.",
+    "hard_constraints": "Keep the fixes bounded to launcher cache writing, Planning closeout execution-summary canonicalization, regression tests, and duplicate archive evidence cleanup.",
+    "agent_may_decide": "Exact retry helper shape, focused regression tests, and JSON-aware archive cleanup mechanics.",
+    "escalate_when": "A correct fix requires changing the generated CLI refresh model, broad Planning schema changes, or rewriting historical archive semantics beyond duplicate-key cleanup.",
+    "next_action": "Validate the implemented cache retry, closeout canonicalization, duplicate-key scan, and workspace/planning checks.",
+    "proof_expectations": [
+      "make test-workspace",
+      "make lint-workspace",
+      "make test-planning",
+      "make lint-planning",
+      "make typecheck-planning",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "scripts/run_agentic_workspace.py",
+      "tests/test_agentic_workspace_launcher.py",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_archive.py",
+      ".agentic-workspace/planning/execplans/archive/*.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/github-1247-1248-bug-fixes.plan.json"
+    ],
+    "completion_criteria": [
+      "#1247 has retry-safe generated CLI fingerprint cache replacement with regression coverage.",
+      "#1248 has canonical Planning execution-summary key handling, generated closeout regressions, and no checked-in case-variant archive duplicate keys."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Fix generated CLI cache and closeout archive duplicate-key bugs."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Fix #1247 and #1248 directly on master.",
+      "constraints": "Keep scope bounded to cache-write retry safety, closeout execution-summary canonicalization, archive duplicate cleanup, and tests.",
+      "latitude": "Choose focused implementation details and validation commands.",
+      "escalation": "Escalate if the fix requires broad generated CLI lifecycle redesign or unrelated Planning archive semantics.",
+      "proof": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check."
+    },
+    "execution": {
+      "milestone": "github-1247-1248-bug-fixes",
+      "status": "active",
+      "next_step": "Run selected proof and close the bugs.",
+      "proof": "Focused launcher/archive tests plus workspace and Planning validation."
+    },
+    "scope": {
+      "touched": [
+        "scripts/run_agentic_workspace.py",
+        "tests/test_agentic_workspace_launcher.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_archive.py",
+        ".agentic-workspace/planning/execplans/archive/*.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Source-checkout AW commands and Planning closeout evidence should be robust under Windows dogfooding.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Merged. Solve the bug issues directly on master",
+    "inferred intended outcome": "Fix open bug issues #1247 and #1248 on master without a PR.",
+    "chosen concrete what": "Add retry-safe cache replacement, canonicalize Planning closeout execution-summary keys, clean duplicate archive evidence, and validate.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/run_agentic_workspace.py; tests/test_agentic_workspace_launcher.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; duplicate-bearing .agentic-workspace/planning/execplans/archive/*.plan.json; this execplan; planning state.",
+    "max changed files": "About 50 because historical duplicate-bearing archive artifacts are cleaned one line each.",
+    "required validation commands": "Focused launcher/archive tests, duplicate-key scan, make test-workspace, make lint-workspace, make test-planning, make lint-planning, make typecheck-planning, AW summary, AW planning doctor.",
+    "ask-before-refactor threshold": "Ask before changing generated CLI refresh policy or Planning archive schema.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from implemented fixes for #1247/#1248, run proof, close issues, commit and push master.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix #1247 and #1248 directly on master.",
+    "hard constraints": "Do not broaden beyond cache retry safety, closeout key canonicalization, archive duplicate cleanup, and tests.",
+    "agent may decide locally": "Helper names, test placement, and validation breadth.",
+    "escalate when": "A fix requires broader lifecycle redesign or historical archive reinterpretation."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1247-1248-bug-fixes",
+    "status": "completed",
+    "scope": "Fix #1247 and #1248 directly on master.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run focused and full proof for cache retry and duplicate-key cleanup."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/run_agentic_workspace.py",
+    "tests/test_agentic_workspace_launcher.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_archive.py",
+    ".agentic-workspace/planning/execplans/archive/*.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make test-workspace",
+    "make lint-workspace",
+    "make test-planning",
+    "make lint-planning",
+    "make typecheck-planning",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#1247 and #1248 are fixed, validated, committed, pushed to master, and closed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Fixed generated CLI fingerprint cache replacement to retry transient Windows PermissionError; canonicalized Planning execution_summary knowledge-promotion keys; cleaned checked-in archive evidence with case-variant duplicate keys; added focused regressions.",
+    "scope touched": "workspace launcher, launcher tests, Planning closeout writer, Planning archive tests, checked-in duplicate-bearing archive evidence, and planning closeout state",
+    "changed surfaces": "scripts/run_agentic_workspace.py; tests/test_agentic_workspace_launcher.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/planning/execplans/archive/*.plan.json; .agentic-workspace/planning/state.toml",
+    "validations run": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected: changes are limited to #1247/#1248 fixes, tests, duplicate archive evidence cleanup, and plan closeout.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check."
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix open bug issues #1247 and #1248 directly on master.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Fixed #1247 and #1248 directly on master with retry-safe cache replacement and duplicate-key-free Planning closeout evidence.",
+    "validation confirmed": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-04: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Fix open bug issues #1247 and #1248 directly on master.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused launcher/archive regressions passed; checked-in archive duplicate-key scan passed; concurrent AW summary/doctor smoke passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; make maintainer-surfaces; check_generated_command_packages; AW summary; AW planning doctor; git diff --check.\nChanged surfaces: scripts/run_agentic_workspace.py; tests/test_agentic_workspace_launcher.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/planning/execplans/archive/*.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

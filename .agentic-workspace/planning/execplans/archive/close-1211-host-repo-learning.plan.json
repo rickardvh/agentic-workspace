@@ -255,7 +255,6 @@
     "validation confirmed": "uv run pytest tests/test_workspace_proof_cli.py -q: passed; make test-workspace: passed; make lint-workspace: passed; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success: passed; uv run python scripts/check/check_structured_file_inventory.py --quiet-success: passed; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py: passed; make maintainer-surfaces: passed; uv run agentic-workspace summary --target . --format json: passed; uv run agentic-workspace doctor --target . --modules planning --format json: passed; make schema-reference-docs: passed",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },

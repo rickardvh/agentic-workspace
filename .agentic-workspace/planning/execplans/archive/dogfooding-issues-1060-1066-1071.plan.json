@@ -237,7 +237,6 @@
     "validation confirmed": "focused pytest; ruff; planning summary; planning doctor; make test-memory; make lint-memory; make test-workspace; make lint-workspace",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
-    "knowledge promoted (memory/docs/config)": "none",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },
