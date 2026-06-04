@@ -1,0 +1,157 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1251 intent-discovery compliance",
+  "date": "2026-06-04",
+  "classification": "intent-discovery",
+  "goal": [
+    "Ground #1251 in current startup, intent acknowledgement, Planning, closeout, and skill surfaces.",
+    "Identify the smallest implementation that makes inferred or assumption-based intent visible without blocking ordinary work."
+  ],
+  "scope": [
+    "Issue #1251 and the workspace-intent-discovery skill.",
+    "start and implement outputs that include intent_acknowledgement and acceptance reconciliation.",
+    "Planning and closeout fields that preserve interpreted intent and closure boundaries."
+  ],
+  "non_goals": [
+    "Do not require clarification for every vague prompt.",
+    "Do not replace agent judgment with keyword-based prompt classes.",
+    "Do not implement new gates before the evidence path is clear."
+  ],
+  "review_mode": {
+    "mode": "workflow-compliance",
+    "review question": "Where should evidence of user clarification, issue-derived intent, or agent assumptions be visible before broad work proceeds?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1251",
+      ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+      "start --task output",
+      "implement --changed output",
+      "closeout_report interpreted_intent fields"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "rg -n \"intent_acknowledgement|durable_intent|intent-discovery|interpreted_intent|acceptance_reconciliation\" .agentic-workspace src tests packages"
+    ],
+    "evidence sources": [
+      "#1251 issue body",
+      ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+      "current start and implement JSON",
+      "closeout_report interpreted_intent and closure_boundary",
+      "reporting and planning tests around intent fields"
+    ],
+    "limitation": "This review did not create a full vague-prompt fixture matrix; it identifies the implementation seam for that matrix."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1251",
+      "label": "Intent-discovery compliance and evidence path",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1251"
+    },
+    {
+      "kind": "local-skill",
+      "target": ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+      "label": "Intent discovery skill",
+      "role": "behavioral guidance"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py start --task ... --format json",
+      "label": "startup intent acknowledgement",
+      "role": "current output evidence"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --task ... --format json",
+      "label": "implement acceptance reconciliation",
+      "role": "current output evidence"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1251",
+      "kind": "review/trust gap",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "startup/implement intent acknowledgement plus Planning closeout interpreted-intent evidence"
+    }
+  ],
+  "summary": {
+    "current_state": "start and implement already include intent_acknowledgement and acceptance_reconciliation packets, but they do not yet expose a rich source-of-intent chain such as user clarification, issue evidence, or agent assumption.",
+    "implementation_posture": "Add evidence-path clarity before adding hard clarification gates.",
+    "first_slice": "Create fixtures for vague/high-stakes prompts showing ask, proceed-with-assumption, and issue-evidence-derived intent."
+  },
+  "findings": [
+    {
+      "title": "The evidence path exists in pieces but is not yet reviewable as a chain",
+      "summary": "Intent appears in start/implement acceptance packets and closeout interpreted_intent, but the user or takeover agent cannot cheaply see whether it came from clarification, issue evidence, or agent inference.",
+      "evidence": "Current start output includes intent_acknowledgement with decision proceed-with-stated-assumption and fields such as inferred_intent, concrete_first_slice, non_goals_or_deferred_scope, and correction_point. implement output includes acceptance_reconciliation and objective_drift status.",
+      "risk if unchanged": "Agents can narrow broad work to plausible bounded slices without making the source and risk of that interpretation visible.",
+      "suggested action": "Add or formalize an intent_source/evidence packet that can be carried from startup into Planning and closeout.",
+      "confidence": "high",
+      "source": "current start and implement output",
+      "promotion target": "#1251 implementation",
+      "promotion trigger": "When a task proceeds with assumptions or issue-derived intent rather than user clarification."
+    },
+    {
+      "title": "Proceed-with-assumptions should remain allowed but auditable",
+      "summary": "The current behavior rightly avoids blocking every ambiguous task. The gap is not permission; it is auditability and correction.",
+      "evidence": "Current start output says proceed_unless_corrected true and clarify_only_if_blocked true. AW also tells the agent to ask only if scope, authority, risk, or intent is genuinely blocked.",
+      "risk if unchanged": "A stricter fix could make AW annoying for ordinary work, while the current state can hide risky assumptions.",
+      "suggested action": "Keep proceed-with-assumptions, but require visible assumption text and correction point for broad, high-stakes, or externally sourced work.",
+      "confidence": "high",
+      "source": "start output and #1251 issue intent",
+      "promotion target": "#1251 acceptance criteria",
+      "promotion trigger": "When defining clarification versus proceed behavior."
+    },
+    {
+      "title": "Closeout should expose intent source, not only intent satisfaction",
+      "summary": "closeout_report currently reports interpreted_intent and intent_satisfaction status, but the implementation should preserve whether the interpretation came from user text, issue fields, or agent assumptions.",
+      "evidence": "Current closeout_report.interpreted_intent shows requested_outcome and intent_satisfaction, while closure_boundary reports completion decision and sources from planning active fields.",
+      "risk if unchanged": "A final report may say the intent was satisfied while hiding that the intent was inferred under uncertainty.",
+      "suggested action": "Add source and confidence facts to the closeout/report chain when intent was not directly clarified by the user.",
+      "confidence": "medium-high",
+      "source": "closeout_report interpreted_intent and closure_boundary output",
+      "promotion target": "#1251 plus closeout_report tests",
+      "promotion trigger": "When implementing vague-prompt fixtures."
+    },
+    {
+      "title": "The first tests should be scenario-based, not keyword-based",
+      "summary": "The issue exists because skill text alone is not enough to make agents preserve intent. Tests should exercise scenarios and expected evidence, not prompt keyword classifiers.",
+      "evidence": "#1251 explicitly warns that agents prefer to start working when they can invent a plausible bounded slice. Recent AW direction also rejects prompt phrase exceptions and asks agents to own semantic judgment with AW support.",
+      "risk if unchanged": "The implementation could rebuild the hard-coded heuristic behavior the repo has been moving away from.",
+      "suggested action": "Create fixtures for vague broad request, high-stakes ambiguous request, issue-evidence request, and ordinary direct request; assert evidence posture and allowed action rather than keyword categories.",
+      "confidence": "high",
+      "source": "#1251 issue body and current authority-boundary direction",
+      "promotion target": "#1251 tests",
+      "promotion trigger": "Before adding any new gate."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a bounded evidence-path implementation after fixtures define ask/proceed/issue-evidence scenarios.",
+    "defer": "Defer broad hard gates for vague language.",
+    "dismiss": "Do not dismiss; current packets are not enough to reconstruct intent source cheaply.",
+    "first_slice": "Add scenario fixtures and a compact intent-source/assumption/correction-point packet through start/implement and closeout/report where applicable.",
+    "validation": "Focused startup/report tests plus AW summary and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1251 implementation or issue refinement captures the evidence path",
+    "trigger": "Findings promoted into tests, contract, or narrower follow-up",
+    "proof surface": "This review, #1251, startup/implement fixtures, and closeout/report tests"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1251-intent-discovery-compliance-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1251, intent-discovery skill, start/implement output, and closeout_report intent fields."
+  ]
+}

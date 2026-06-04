@@ -1,0 +1,166 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1257 memory freshness and contradiction signals",
+  "date": "2026-06-04",
+  "classification": "memory-trust",
+  "goal": [
+    "Ground #1257 in current Memory manifest, memory report, memory index, and doctor output.",
+    "Identify the first freshness/supersession signal that improves trust without turning Memory into active planning state."
+  ],
+  "scope": [
+    "Issue #1257 and durable Memory trust surfaces.",
+    ".agentic-workspace/memory/repo/manifest.toml, memory report output, memory index loading rules, and doctor findings.",
+    "Relationship to proof-route freshness in #1252."
+  ],
+  "non_goals": [
+    "Do not rewrite all memory notes in this review.",
+    "Do not make stale memory a hard blocker by default.",
+    "Do not use Memory as an issue tracker or active task board."
+  ],
+  "review_mode": {
+    "mode": "memory-freshness",
+    "review question": "What metadata and consult output are needed so agents can trust, confirm, or ignore durable Memory notes?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1257",
+      "uv run python scripts/run_agentic_workspace.py memory report --target . --format json",
+      ".agentic-workspace/memory/repo/manifest.toml",
+      ".agentic-workspace/memory/repo/index.md",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --format json"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py memory report --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+      "Get-Content .agentic-workspace/memory/repo/manifest.toml",
+      "Get-Content .agentic-workspace/memory/repo/index.md",
+      "rg -n \"stale_when|last_confirmed|superseded|trust|memory_consult|Memory\" .agentic-workspace packages src tests docs"
+    ],
+    "evidence sources": [
+      "#1257 issue body",
+      "memory report output",
+      "Memory manifest",
+      "Memory index",
+      "doctor output",
+      "#1252 proof-route lifecycle review"
+    ],
+    "limitation": "This review grounds the product shape; it does not migrate memory metadata."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1257",
+      "label": "Memory freshness and contradiction signals",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1257"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py memory report --target . --format json",
+      "label": "Memory report",
+      "role": "current trust output"
+    },
+    {
+      "kind": "local-file",
+      "target": ".agentic-workspace/memory/repo/manifest.toml",
+      "label": "Memory manifest",
+      "role": "metadata owner"
+    },
+    {
+      "kind": "local-file",
+      "target": ".agentic-workspace/memory/repo/index.md",
+      "label": "Memory index",
+      "role": "loading policy"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1252",
+      "label": "Proof-route lifecycle",
+      "role": "related freshness lane",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1252"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1257",
+      "kind": "cross-cutting proposal",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "Memory manifest metadata and memory consult/report output"
+    }
+  ],
+  "summary": {
+    "current_state": "The manifest already has stale_when and routing metadata, and memory report exposes note counts and habitual pull. Tiny report trust is not evaluated, and notes do not yet carry last_confirmed or superseded_by style signals.",
+    "implementation_posture": "Build on manifest metadata and consult/report output. Keep freshness advisory unless an existing hard invariant is violated.",
+    "first_slice": "Add last_confirmed/superseded_by metadata and a memory consult/report fixture showing fresh, stale, and superseded notes."
+  },
+  "findings": [
+    {
+      "title": "Memory has routing metadata but not enough trust metadata",
+      "summary": "The manifest tells agents where notes route from and when they may stale, but it does not yet tell agents when a note was last confirmed or what supersedes it.",
+      "evidence": "manifest.toml entries include note_type, authority, canonicality, routes_from, stale_when, routing_only, and task_relevance. The issue asks for freshness/supersession signals such as last_confirmed and superseded_by.",
+      "risk if unchanged": "Agents must infer freshness from dates, recent PR history, or manual broad reading.",
+      "suggested action": "Add minimal note-level freshness fields and expose them through memory consult/report.",
+      "confidence": "high",
+      "source": "Memory manifest and #1257 issue body",
+      "promotion target": "#1257 schema/manifest slice",
+      "promotion trigger": "When touching Memory manifest or consult output."
+    },
+    {
+      "title": "Tiny memory report does not evaluate trust",
+      "summary": "The current memory report is healthy and compact, but trust and promotion_pressure are not evaluated in tiny mode. For freshness work, the output needs at least a compact attention signal when selected notes are stale or superseded.",
+      "evidence": "memory report shows health healthy, manifest_status present, note_count 6, habitual_pull available, but trust.status not-evaluated and promotion_pressure.status not-evaluated.",
+      "risk if unchanged": "Agents can follow the memory consultation route without seeing whether relevant notes are old or contradicted.",
+      "suggested action": "Expose a compact memory trust summary only when freshness/supersession attention exists; keep verbose detail behind a command.",
+      "confidence": "medium-high",
+      "source": "memory report output",
+      "promotion target": "#1257 consult/report output",
+      "promotion trigger": "When freshness metadata exists."
+    },
+    {
+      "title": "Doctor already reveals memory-managed drift, but that is not note freshness",
+      "summary": "Doctor reports a safe memory lifecycle repair and current-note role problems, showing lifecycle diagnostics exist. That should not be confused with durable note freshness.",
+      "evidence": "doctor health is attention-needed and reports stale module-managed memory surfaces plus routing-feedback role warnings, while memory report itself is healthy.",
+      "risk if unchanged": "Implementation could conflate managed payload drift with stale durable knowledge.",
+      "suggested action": "Separate memory install/lifecycle health from memory note trust in output names and tests.",
+      "confidence": "high",
+      "source": "doctor and memory report output",
+      "promotion target": "#1257 reporting contract",
+      "promotion trigger": "When adding trust/freshness statuses."
+    },
+    {
+      "title": "Coordinate with proof-route freshness but keep a broader Memory model",
+      "summary": "Proof routes are a special case of durable learned knowledge. General Memory freshness should support proof routes without being limited to them.",
+      "evidence": "#1257 explicitly relates to #1252 but covers durable Memory freshness and contradiction trust signals beyond proof routes.",
+      "risk if unchanged": "Proof-route freshness and general memory freshness could diverge into incompatible metadata.",
+      "suggested action": "Define shared freshness fields that proof-route notes can reuse, with proof-specific lifecycle state layered on top.",
+      "confidence": "medium-high",
+      "source": "#1257 and #1252 relationship",
+      "promotion target": "#1257 plus #1252 coordination",
+      "promotion trigger": "Before implementing either lane's metadata."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a metadata/output fixture slice.",
+    "defer": "Defer contradiction clustering and broad migration.",
+    "dismiss": "Do not dismiss; durable memory trust is necessary for repo-learning to avoid becoming stale heuristic reuse.",
+    "first_slice": "Add last_confirmed/superseded_by metadata and memory consult/report tests for fresh, stale, and superseded notes.",
+    "validation": "Memory tests/report fixtures plus structured inventory, AW summary, and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1257 metadata and consult/report expectations are promoted",
+    "trigger": "Findings promoted into memory schema, report tests, or issue refinement",
+    "proof surface": "This review, #1257, Memory manifest, memory report, and #1252 coordination"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1257-memory-freshness-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1257, Memory report, manifest, index, doctor output, and proof-route lifecycle relationship."
+  ]
+}

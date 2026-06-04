@@ -1,0 +1,164 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1258 generated-source freshness and direct-edit policy",
+  "date": "2026-06-04",
+  "classification": "generated-surface-trust",
+  "goal": [
+    "Ground #1258 in current generated CLI freshness, doctor generated-surface diagnostics, generated package checks, and ordinary agent UX.",
+    "Identify the smallest output surface that should expose canonical source, freshness, refresh command, direct-edit policy, and validation."
+  ],
+  "scope": [
+    "Issue #1258 and generated-source trust surfaces.",
+    "scripts/run_agentic_workspace.py fingerprint cache behavior, generated package checks, doctor output, generated workspace packages, and collaboration-safety guidance.",
+    "Ordinary agent-facing outputs when generated files are touched or inspected."
+  ],
+  "non_goals": [
+    "Do not change the generator in this review.",
+    "Do not make generated files the canonical editing surface.",
+    "Do not add maintainer-only detail to every ordinary report."
+  ],
+  "review_mode": {
+    "mode": "generated-surface-ux",
+    "review question": "Where should ordinary agents see generated-source freshness and direct-edit policy before editing or trusting generated files?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1258",
+      "scripts/run_agentic_workspace.py",
+      "tests/test_agentic_workspace_launcher.py",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+      "scripts/check/check_generated_command_packages.py",
+      "docs/collaboration-safety.md"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+      "rg -n \"generated|stale_generated_surfaces|direct-edit|canonical source|refresh command|generated-cli-fingerprint|ensure_generated_cli_current\" scripts src tests docs generated packages",
+      "uv run python scripts/check/check_generated_command_packages.py"
+    ],
+    "evidence sources": [
+      "#1258 issue body",
+      "scripts/run_agentic_workspace.py generated CLI fingerprint code",
+      "tests/test_agentic_workspace_launcher.py",
+      "doctor output generated_artifacts/stale_generated_surfaces fields",
+      "docs/collaboration-safety.md generated surface guidance",
+      "generated command package check"
+    ],
+    "limitation": "This review grounds the UX need; it does not decide which output surface must be changed first."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1258",
+      "label": "Generated-source freshness and direct-edit policy in ordinary outputs",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1258"
+    },
+    {
+      "kind": "local-code",
+      "target": "scripts/run_agentic_workspace.py",
+      "label": "Generated CLI freshness launcher",
+      "role": "freshness/cache behavior"
+    },
+    {
+      "kind": "local-test",
+      "target": "tests/test_agentic_workspace_launcher.py",
+      "label": "Launcher freshness tests",
+      "role": "regression surface"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+      "label": "Doctor generated surface fields",
+      "role": "current ordinary output evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": "docs/collaboration-safety.md",
+      "label": "Collaboration safety generated guidance",
+      "role": "policy precedent"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1258",
+      "kind": "review/trust gap",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "doctor/report/implement generated-surface packet"
+    }
+  ],
+  "summary": {
+    "current_state": "The launcher keeps generated CLI current via fingerprint cache and tests, and doctor has stale_generated_surfaces/generated_artifacts fields. Ordinary outputs still do not expose a compact generated-source packet when generated paths are encountered.",
+    "implementation_posture": "Surface policy in one high-value ordinary output first, probably implement --changed for generated paths or doctor/report if diagnostics already know the stale generated surface.",
+    "first_slice": "Add a generated_surface_trust packet with canonical source, freshness status, refresh command, direct-edit policy, and validation command for changed generated paths."
+  },
+  "findings": [
+    {
+      "title": "Freshness is enforced for the generated CLI, but trust is not visible to ordinary agents",
+      "summary": "The launcher now computes a fingerprint and refreshes generated CLI output, but agents inspecting generated paths need a user-facing explanation of source, freshness, and safe action.",
+      "evidence": "scripts/run_agentic_workspace.py defines generated input patterns, CACHE_SCHEMA generated-cli-fingerprint/v1, compute_generated_cli_fingerprint, ensure_generated_cli_current, and retry-safe cache writes. tests/test_agentic_workspace_launcher.py covers cache match, regeneration, and transient PermissionError retry.",
+      "risk if unchanged": "Agents may mistrust generated output, edit it directly, or miss the fact that the launcher already refreshes a specific generated surface.",
+      "suggested action": "Expose generated CLI freshness and canonical source in ordinary output when generated workspace CLI paths are touched or when doctor detects drift.",
+      "confidence": "high",
+      "source": "launcher code and launcher tests",
+      "promotion target": "#1258 implementation",
+      "promotion trigger": "When implement --changed or doctor/report sees generated paths."
+    },
+    {
+      "title": "Doctor has generated fields but not an ordinary policy packet",
+      "summary": "Doctor currently reports generated_artifacts and stale_generated_surfaces, but when there is no drift it does not teach agents what to do with generated files.",
+      "evidence": "doctor output includes generated_artifacts: [] and stale_generated_surfaces: []. It also reports repair plans for managed memory surfaces, showing the lifecycle surface can name safe actions when configured.",
+      "risk if unchanged": "The signal only appears when something is stale, leaving ordinary generated-path edits under-guided.",
+      "suggested action": "Add the packet to implement --changed for generated paths first; optionally let doctor show it when stale_generated_surfaces is non-empty.",
+      "confidence": "medium-high",
+      "source": "doctor output",
+      "promotion target": "#1258 first bounded slice",
+      "promotion trigger": "When selecting the first output surface."
+    },
+    {
+      "title": "The policy should reuse collaboration-safety guidance",
+      "summary": "The repo already says generated or derived surfaces should be repaired from canonical source and rerendered, not hand-edited. #1258 should make that operational in AW output.",
+      "evidence": "docs/collaboration-safety.md says if a generated or derived surface is stale, identify the canonical source and rerender command before editing generated output by hand, and do not turn generated surfaces into a second handbook.",
+      "risk if unchanged": "The rule remains in docs but does not reach the agent at the moment a generated path is changed.",
+      "suggested action": "The generated_surface_trust packet should include direct_edit_policy and refresh_command fields, with docs/collaboration-safety.md as policy precedent.",
+      "confidence": "high",
+      "source": "docs/collaboration-safety.md",
+      "promotion target": "#1258 output contract",
+      "promotion trigger": "When generated path routing is implemented."
+    },
+    {
+      "title": "Validation must include generated package checks",
+      "summary": "Any generated-surface policy change must keep generated package consistency in proof, not only unit tests.",
+      "evidence": "scripts/check/check_generated_command_packages.py is the established proof command for generated command package consistency and was used in recent generated CLI freshness work.",
+      "risk if unchanged": "Output guidance could drift from actual generator/package behavior.",
+      "suggested action": "Require check_generated_command_packages plus focused generated-path output tests for #1258 implementation.",
+      "confidence": "high",
+      "source": "generated package check and recent validation practice",
+      "promotion target": "#1258 validation requirements",
+      "promotion trigger": "When modifying generated-surface reporting."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a bounded output-packet implementation for generated paths.",
+    "defer": "Defer broad generator changes or all-surface reporting expansion.",
+    "dismiss": "Do not dismiss; the generated CLI is maintained but ordinary generated-path trust remains under-surfaced.",
+    "first_slice": "Add generated_surface_trust to implement --changed for generated paths, with canonical_source, freshness_status, refresh_command, direct_edit_policy, and validation_command.",
+    "validation": "Focused output tests, launcher tests if touched, check_generated_command_packages, AW summary, and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1258 generated-surface packet lands or is superseded",
+    "trigger": "Findings promoted into output contract, tests, or issue refinement",
+    "proof surface": "This review, #1258, launcher tests, doctor output, collaboration safety doc, and generated package checks"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1258-generated-surface-trust-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1258, launcher freshness code/tests, doctor generated-surface fields, collaboration safety guidance, and generated package proof expectations."
+  ]
+}

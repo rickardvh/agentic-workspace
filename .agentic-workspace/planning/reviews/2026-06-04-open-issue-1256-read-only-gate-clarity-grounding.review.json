@@ -1,0 +1,156 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1256 read-only planning gate clarity",
+  "date": "2026-06-04",
+  "classification": "routing-ux",
+  "goal": [
+    "Ground #1256 in current next_safe_action, planning gates, operation read_only metadata, and dogfooding evidence.",
+    "Identify the smallest output contract that clarifies read-only exploration without weakening implementation gates."
+  ],
+  "scope": [
+    "Issue #1256 and current start/implement outputs.",
+    "Planning hard gates versus read-only review, issue triage, and report generation.",
+    "Operation contract read_only metadata and the 2026-06-04 Codex/Copilot evaluation friction."
+  ],
+  "non_goals": [
+    "Do not allow implementation without active planning when AW reports a hard gate.",
+    "Do not make prompt keyword matching decide review versus implementation.",
+    "Do not remove proof or completion-claim gates."
+  ],
+  "review_mode": {
+    "mode": "routing-ux",
+    "review question": "How should AW tell agents that implementation is blocked but read-only review/exploration is still allowed?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1256",
+      "start output for review task",
+      "implement output for planning-only review files",
+      "operation contracts with effects.read_only",
+      "2026-06-04 Codex/Copilot evaluation dogfooding notes"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "rg -n \"read_only|implementation_allowed|allowed_next_actions|candidate-lane-promotion|required_next_action|effects\" src packages tests .agentic-workspace"
+    ],
+    "evidence sources": [
+      "#1256 issue body",
+      "start next_safe_action output",
+      "implement planning_safety_gate output",
+      "operation contract effects.read_only metadata",
+      "Copilot evaluation dogfooding note"
+    ],
+    "limitation": "This review compares current outputs and dogfooding evidence; it does not implement the new field."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1256",
+      "label": "Read-only and exploration allowance under planning gates",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1256"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py start --task ... --format json",
+      "label": "Startup next_safe_action",
+      "role": "current UX evidence"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --format json",
+      "label": "Implement planning safety gate",
+      "role": "current UX evidence"
+    },
+    {
+      "kind": "local-contract",
+      "target": "src/agentic_workspace/contracts/operation_primitives.json",
+      "label": "Operation read-only metadata",
+      "role": "existing contract precedent"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1256",
+      "kind": "dogfooding friction",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "next_safe_action and planning_safety_gate output contract"
+    }
+  ],
+  "summary": {
+    "current_state": "AW clearly reports implementation_allowed and forbidden implementation actions, and operation contracts already know read_only effects. The missing UX is a top-level, task-facing statement that read-only review/exploration/reporting may continue under an implementation gate.",
+    "implementation_posture": "Add explicit permission and claim boundaries; do not weaken hard gates.",
+    "first_slice": "Add read_only_allowed or exploration_allowed plus allowed_read_only_actions to next_safe_action/planning_safety_gate fixtures."
+  },
+  "findings": [
+    {
+      "title": "Implementation gates are clear, but read-only allowance is implicit",
+      "summary": "Current outputs tell agents whether implementation is allowed, but not always whether review, issue triage, or report generation can proceed without promoting a plan.",
+      "evidence": "start output foregrounds next_safe_action, allowed_next_actions, forbidden_actions, implementation_allowed, proof_required, and completion_claim_allowed. #1256 records that Copilot interpreted candidate-lane-promotion-required as blocking a read-only review task.",
+      "risk if unchanged": "Agents may create plans just to inspect issues or produce reviews, increasing ceremony and mutating state unnecessarily.",
+      "suggested action": "Add a compact read_only_allowed/exploration_allowed signal next to implementation_allowed, with examples of allowed non-mutating actions.",
+      "confidence": "high",
+      "source": "current start output and #1256 dogfooding evidence",
+      "promotion target": "#1256 implementation",
+      "promotion trigger": "When next_safe_action reports implementation_allowed false."
+    },
+    {
+      "title": "The new field should preserve completion-claim boundaries",
+      "summary": "Read-only allowance must not be confused with permission to claim completion, close issues, or proceed with implementation.",
+      "evidence": "Current outputs already carry completion_claim_allowed false and proof_required where relevant. implement output for these review files requires proof before closeout even though implementation is planning-only.",
+      "risk if unchanged": "A broad 'allowed' signal could make agents overclaim after a review or skip proof/ownership for implementation.",
+      "suggested action": "Pair read_only_allowed with explicit claim_boundary: review/exploration allowed, implementation gated when applicable, completion claims still require proof and acceptance reconciliation.",
+      "confidence": "high",
+      "source": "start and implement outputs",
+      "promotion target": "#1256 output contract",
+      "promotion trigger": "When adding read-only permission fields."
+    },
+    {
+      "title": "Existing operation metadata can supply the vocabulary",
+      "summary": "Many operation contracts already classify commands as read-only reports. The UX contract can reuse that concept rather than invent a prompt-text classifier.",
+      "evidence": "Operation contracts include effects.read_only for memory/report/help/list-files and other commands. The user intent is review/exploration; AW should expose command/action classes, not prompt keyword matches.",
+      "risk if unchanged": "The fix could become another heuristic prompt classifier instead of a general command-safety affordance.",
+      "suggested action": "Define read-only allowance in terms of action classes and command effects: report, summary, issue inspection, file reads, review artifacts; exclude mutations unless explicitly allowed.",
+      "confidence": "medium-high",
+      "source": "operation contracts and #1256 issue scope",
+      "promotion target": "#1256 implementation design",
+      "promotion trigger": "When choosing how to compute allowed_read_only_actions."
+    },
+    {
+      "title": "The test should recreate the dogfooding confusion",
+      "summary": "The regression should cover a review-shaped or issue-triage task under a candidate-lane gate and assert that read-only work is allowed while implementation remains blocked.",
+      "evidence": "Copilot's evaluation ran in a detached worktree and reported candidate-lane-promotion-required hard-gate confusion for a read-only task. The current main-repo start output for issue creation is less strict, so fixtures need to force the gated state.",
+      "risk if unchanged": "A field may work only in ordinary no-gate startup and fail in the state that caused the problem.",
+      "suggested action": "Add a fixture with roadmap candidates or broad-work pressure, then assert read_only_allowed true, implementation_allowed false, and completion_claim_allowed false.",
+      "confidence": "high",
+      "source": "dogfooding note and current output contrast",
+      "promotion target": "#1256 tests",
+      "promotion trigger": "Before claiming the UX gap is fixed."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a small output-contract/test slice.",
+    "defer": "Defer broader planning-gate redesign.",
+    "dismiss": "Do not dismiss; this is direct dogfooding friction with a small likely fix.",
+    "first_slice": "Add read_only_allowed/exploration_allowed, allowed_read_only_actions, and claim_boundary fields to next_safe_action or planning_safety_gate, with gated review-task fixtures.",
+    "validation": "Focused startup/implement tests plus AW summary and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1256 field contract and tests land or are superseded",
+    "trigger": "Findings promoted into next_safe_action tests or issue refinement",
+    "proof surface": "This review, #1256, start/implement outputs, and dogfooding evaluations"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1256-read-only-gate-clarity-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1256, start/implement outputs, operation read-only metadata, and 2026-06-04 evaluation notes."
+  ]
+}

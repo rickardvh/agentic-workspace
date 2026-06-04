@@ -1,0 +1,164 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1254 planning residue retention governance",
+  "date": "2026-06-04",
+  "classification": "residue-governance",
+  "goal": [
+    "Ground #1254 in current Planning summaries, archived execplans, retained closeout evidence, reviews, and Memory/report surfaces.",
+    "Recommend retention and promotion rules that reduce future context cost without losing useful continuation evidence."
+  ],
+  "scope": [
+    "Issue #1254 and current planning residue surfaces.",
+    "Planning summary, state, reviews, archived execplans, closeout evidence, Memory routing, and structured inventory guardrails.",
+    "Recent cleanup behavior and current open review backlog."
+  ],
+  "non_goals": [
+    "Do not delete or prune residue in this review.",
+    "Do not move historical artifacts by hand.",
+    "Do not treat Memory as active execution state."
+  ],
+  "review_mode": {
+    "mode": "continuation-cost",
+    "review question": "Which residue should be retained, promoted, pruned, or de-emphasized so agents can resume cheaply?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1254",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      ".agentic-workspace/planning/reviews",
+      ".agentic-workspace/planning/execplans/archive",
+      ".agentic-workspace/memory/repo/index.md",
+      "scripts/check/check_structured_file_inventory.py"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "Get-ChildItem .agentic-workspace/planning/reviews -File",
+      "rg -n \"retention|residue|archive|closeout_evidence|review_residue|Memory\" .agentic-workspace src packages tests scripts"
+    ],
+    "evidence sources": [
+      "#1254 issue body",
+      "current planning summary",
+      "review artifact inventory",
+      "archived execplan inventory",
+      "Memory index loading rule",
+      "structured file inventory retention guardrails"
+    ],
+    "limitation": "This review inventories governance needs; it does not adjudicate every historical artifact."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1254",
+      "label": "Planning residue retention and promotion governance",
+      "role": "review owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1254"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "label": "Current planning summary",
+      "role": "active-state evidence"
+    },
+    {
+      "kind": "local-directory",
+      "target": ".agentic-workspace/planning/reviews",
+      "label": "Planning reviews",
+      "role": "review residue surface"
+    },
+    {
+      "kind": "local-directory",
+      "target": ".agentic-workspace/planning/execplans/archive",
+      "label": "Archived execplans",
+      "role": "closeout evidence surface"
+    },
+    {
+      "kind": "local-script",
+      "target": "scripts/check/check_structured_file_inventory.py",
+      "label": "Structured inventory guardrails",
+      "role": "retention validation"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1254",
+      "kind": "continuation/handoff friction",
+      "implementation_allowed_after_review": false,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "review artifact, then narrower retention/report/promotion follow-ups"
+    }
+  ],
+  "summary": {
+    "current_state": "Planning summary is clean with no active execplans, but there are many review and archive artifacts and six roadmap candidates. Memory index warns against bulk reading and says active state belongs in planning/status.",
+    "implementation_posture": "Review residue classes and promotion rules before pruning or adding new report output.",
+    "first_slice": "Inventory residue classes and define retention actions: keep, shrink, promote to Memory/docs/issues, de-emphasize in summary, or prune through owned commands."
+  },
+  "findings": [
+    {
+      "title": "Current active state is clean, but historical residue remains expensive to navigate",
+      "summary": "The repo has no active execplans or todos, yet a large review/archive corpus remains available. That is useful evidence but can become the default reading path for agents.",
+      "evidence": "summary reports todo.active_count 0, execplans.active_count 0, planning_surface_health clean, and roadmap candidate_count 6. The reviews directory contains many planning-review records, and archived execplans preserve closeout evidence.",
+      "risk if unchanged": "Agents may over-read historical reviews and archived plans before acting, raising context cost and stale-context risk.",
+      "suggested action": "Define report/summary guidance that distinguishes active execution state from historical review/archive evidence and points to recent or relevant artifacts only.",
+      "confidence": "high",
+      "source": "summary output and planning review/archive inventory",
+      "promotion target": "#1254 review recommendations",
+      "promotion trigger": "When implementing residue guidance or cleanup."
+    },
+    {
+      "title": "Residue needs class-specific promotion rules",
+      "summary": "Planning reviews, archived execplans, retained closeout evidence, Memory notes, and issue comments serve different jobs. Treating them uniformly as residue will either discard useful evidence or keep too much.",
+      "evidence": "#1254 names archived execplans, retained closeout evidence, planning reviews, Memory, reporting contracts, and external-intent evidence. The Memory index says durable repo knowledge belongs in Memory, while active intent belongs in planning/status.",
+      "risk if unchanged": "Reusable learning stays in archives where agents will not route to it, while evidence-only artifacts become over-promoted to Memory or docs.",
+      "suggested action": "Create class rules: active intent to Planning/issues, reusable non-canonical knowledge to Memory, stable rules to docs/contracts/checks, evidence-only to review/archive, obsolete artifacts to command-owned pruning.",
+      "confidence": "high",
+      "source": "#1254 and Memory index",
+      "promotion target": "#1254 governance model",
+      "promotion trigger": "Before pruning, promotion, or report changes."
+    },
+    {
+      "title": "Structured inventory already has retention guardrails for large reviews",
+      "summary": "The repo has a partial retention mechanism: large review/audit records require retention metadata. #1254 can build on this instead of inventing a new governance system.",
+      "evidence": "scripts/check/check_structured_file_inventory.py checks planning-review/v1 records with many issue_classifications for retention fields and source refs.",
+      "risk if unchanged": "The governance lane could create parallel validation instead of extending existing inventory checks.",
+      "suggested action": "Extend structured inventory/reporting only where the existing guardrails cannot express residue class, freshness, or promotion state.",
+      "confidence": "medium-high",
+      "source": "structured inventory checker",
+      "promotion target": "#1254 implementation follow-up",
+      "promotion trigger": "When adding retention validation."
+    },
+    {
+      "title": "Open review issues should be linked to reviews but not treated as closed by review creation",
+      "summary": "The current task creates grounding reviews for open issues, but those artifacts are evidence and implementation guidance, not final satisfaction.",
+      "evidence": "Open issues #1249-#1258 generally state partial PR may close no and require final completion evidence beyond a review artifact.",
+      "risk if unchanged": "A review PR could be mistaken for issue completion, losing the implementation intent.",
+      "suggested action": "Issue comments should link the review and explicitly say the issue remains open for implementation or refinement.",
+      "confidence": "high",
+      "source": "open issue bodies and current task",
+      "promotion target": "issue comments",
+      "promotion trigger": "When linking this review branch to issues."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote review-only residue governance first.",
+    "defer": "Defer deletion or migration until residue classes and owner commands are agreed.",
+    "dismiss": "Do not dismiss; continuation cost is a real long-horizon friction.",
+    "first_slice": "Create a residue class matrix and map each class to keep/shrink/promote/prune/de-emphasize rules.",
+    "validation": "structured inventory check, AW summary, and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1254 residue class rules are promoted or superseded",
+    "trigger": "Findings promoted into issue refinement, report guidance, or cleanup implementation",
+    "proof surface": "This review, #1254, structured inventory guardrails, and planning summary"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1254-planning-residue-governance-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1254, planning summary, review/archive residue surfaces, Memory index, and structured inventory guardrails."
+  ]
+}

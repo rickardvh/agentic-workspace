@@ -1,0 +1,166 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1255 model-zoo dogfooding feedback taxonomy",
+  "date": "2026-06-04",
+  "classification": "evaluation-framework",
+  "goal": [
+    "Ground #1255 in the existing agent evaluation roadmap, feedback prompt, long-horizon episode harness, and 2026-06-04 Codex/Copilot evaluation results.",
+    "Identify the first structured dogfooding slice that produces comparable feedback without building the full model-zoo harness."
+  ],
+  "scope": [
+    "Issue #1255 and current evaluation artifacts.",
+    "agent-evaluation-roadmap.md, agent-feedback-prompt.txt, scripts/model_cli_harness, and tests/test_long_horizon_episode.py.",
+    "The Codex GPT 5.4 mini and Copilot Claude 4.6 Sonnet evaluation reports stored under .agentic-workspace/local/evaluations."
+  ],
+  "non_goals": [
+    "Do not build the full benchmark runner in this review.",
+    "Do not let automated evaluation replace human product judgment.",
+    "Do not require every dogfooding note to be a benchmark run."
+  ],
+  "review_mode": {
+    "mode": "evaluation-grounding",
+    "review question": "What first-stage taxonomy and fixture work is needed before model-zoo results can drive planning?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1255",
+      "agent-evaluation-roadmap.md",
+      "agent-feedback-prompt.txt",
+      "tests/test_long_horizon_episode.py",
+      ".agentic-workspace/local/evaluations/codex-gpt-5.4-mini-focus-review.md",
+      ".agentic-workspace/local/evaluations/copilot-claude-4.6-sonnet-focus-review.md"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "gh issue list --state open --limit 100 --json number,title,labels,url,body",
+      "Get-Content agent-evaluation-roadmap.md -TotalCount 140",
+      "Get-Content agent-feedback-prompt.txt -TotalCount 120",
+      "Get-Content tests/test_long_horizon_episode.py -TotalCount 120",
+      "Get-Content .agentic-workspace/local/evaluations/codex-gpt-5.4-mini-focus-review.md",
+      "Get-Content .agentic-workspace/local/evaluations/copilot-claude-4.6-sonnet-focus-review.md -TotalCount 220"
+    ],
+    "evidence sources": [
+      "#1255 issue body",
+      "agent-evaluation-roadmap.md Stage 1 and Stage 2",
+      "agent-feedback-prompt.txt",
+      "test_long_horizon_episode.py fixture/schema tests",
+      "2026-06-04 external evaluation artifacts"
+    ],
+    "limitation": "This review treats the local evaluation artifacts as evidence but does not check them into the repo or run additional models."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1255",
+      "label": "Model-zoo dogfooding feedback taxonomy",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1255"
+    },
+    {
+      "kind": "local-doc",
+      "target": "agent-evaluation-roadmap.md",
+      "label": "Evaluation roadmap",
+      "role": "stage plan"
+    },
+    {
+      "kind": "local-doc",
+      "target": "agent-feedback-prompt.txt",
+      "label": "Agent feedback prompt",
+      "role": "current qualitative feedback shape"
+    },
+    {
+      "kind": "local-test",
+      "target": "tests/test_long_horizon_episode.py",
+      "label": "Long-horizon episode tests",
+      "role": "harness schema precedent"
+    },
+    {
+      "kind": "local-evidence",
+      "target": ".agentic-workspace/local/evaluations",
+      "label": "Codex/Copilot evaluation outputs",
+      "role": "dogfooding source evidence"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1255",
+      "kind": "cross-cutting proposal",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "checked-in taxonomy/capture format and later benchmark fixtures"
+    }
+  ],
+  "summary": {
+    "current_state": "The roadmap already defines Stage 1 taxonomy and Stage 2 benchmark runner goals. The prompt produces useful qualitative reviews, and test_long_horizon_episode.py proves a long-horizon episode format exists, but no checked-in taxonomy or comparable feedback record exists yet.",
+    "implementation_posture": "Start with Stage 1. Do not build a large harness before the failure taxonomy and capture shape are validated against real runs.",
+    "first_slice": "Add a compact taxonomy and capture template/schema, then backfill one sample record from the 2026-06-04 Codex/Copilot evaluation."
+  },
+  "findings": [
+    {
+      "title": "The roadmap already names the right stages; the missing artifact is a checked-in feedback record shape",
+      "summary": "Stage 1 asks for a compact failure taxonomy and rules for when dogfooding friction becomes cleanup, review finding, or roadmap candidate. #1255 should implement that first, not skip to the benchmark runner.",
+      "evidence": "agent-evaluation-roadmap.md Stage 1 lists startup/routing confusion, proof ambiguity, ownership ambiguity, plan curation drift, restart reread cost, handoff insufficiency, and mixed-agent posture confusion as taxonomy examples.",
+      "risk if unchanged": "Future model runs will keep producing prose that is hard to compare or aggregate.",
+      "suggested action": "Create a schema-backed dogfooding feedback record with model, surface, task, failure_class, severity, evidence, suggested lane, and status.",
+      "confidence": "high",
+      "source": "agent-evaluation-roadmap.md and #1255",
+      "promotion target": "#1255 first implementation slice",
+      "promotion trigger": "Before running more model-zoo evaluations."
+    },
+    {
+      "title": "The existing feedback prompt is useful but not comparable",
+      "summary": "agent-feedback-prompt.txt asks the right operational questions, but its output structure is prose sections. It does not force normalized failure classes, severity, or surface IDs.",
+      "evidence": "The prompt asks for verdict, benefits, friction points, overhead, discovery cost, handoff/restart, proof/trust, agent-agnostic fit, and concrete improvements.",
+      "risk if unchanged": "Strong agents will keep producing high-quality narrative reports while smaller-agent failures remain hard to cluster.",
+      "suggested action": "Keep the prose prompt as qualitative input, but add a structured capture layer that extracts comparable records.",
+      "confidence": "high",
+      "source": "agent-feedback-prompt.txt",
+      "promotion target": "#1255 taxonomy and capture template",
+      "promotion trigger": "When converting the 2026-06-04 evaluations into durable evidence."
+    },
+    {
+      "title": "The long-horizon episode harness can be reused after taxonomy stabilization",
+      "summary": "The test harness already has episode, fixture, adapter, evaluator, and result-shape precedent. That makes Stage 2 plausible, but taxonomy should come first.",
+      "evidence": "tests/test_long_horizon_episode.py writes fake adapters and validates long-horizon evaluation result fields such as intent_satisfied, scope_respected, proof_sufficient, restartable_from_repo_state, completion_claim_honest, mistake_classes, and aw_effect.",
+      "risk if unchanged": "A runner-first implementation could optimize for easy-to-run scenarios before defining what failures matter.",
+      "suggested action": "Use the existing episode result shape as inspiration for taxonomy fields, then add fixtures once the record shape is accepted.",
+      "confidence": "medium-high",
+      "source": "tests/test_long_horizon_episode.py",
+      "promotion target": "#1255 second slice",
+      "promotion trigger": "After taxonomy/capture template lands."
+    },
+    {
+      "title": "The 2026-06-04 evaluations are good seed records",
+      "summary": "Codex and Copilot independently surfaced closeout UX, decision traceability, proof/routing, generated-surface trust, and evaluation taxonomy gaps. These should seed the first structured records.",
+      "evidence": "The local evaluation reports led directly to issues #1255-#1258 and reinforced existing issues #1249-#1254.",
+      "risk if unchanged": "The run's useful evidence stays in local scratch and final chat text instead of becoming durable product signal.",
+      "suggested action": "Add one or two sample records summarizing these evaluations, while keeping full transcripts out of checked-in Memory unless intentionally promoted.",
+      "confidence": "high",
+      "source": ".agentic-workspace/local/evaluations and created issues",
+      "promotion target": "#1255 sample feedback records",
+      "promotion trigger": "When implementing the capture format."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote Stage 1 taxonomy/capture implementation.",
+    "defer": "Defer full model registry, automated judge, and large benchmark suite.",
+    "dismiss": "Do not dismiss; cross-agent evidence is now producing real planning signal.",
+    "first_slice": "Add failure taxonomy, capture template/schema, and one sample record from the 2026-06-04 evaluations.",
+    "validation": "Schema/inventory validation plus a focused test if records are machine-validated."
+  },
+  "retention": {
+    "closeout shape": "keep until #1255 taxonomy/capture format lands or is superseded",
+    "trigger": "Findings promoted into taxonomy files, tests, or issue refinement",
+    "proof surface": "This review, #1255, roadmap, prompt, and sample dogfooding records"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1255-model-zoo-evaluation-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1255, evaluation roadmap, feedback prompt, long-horizon episode tests, and 2026-06-04 external evaluation outputs."
+  ]
+}
