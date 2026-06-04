@@ -145,6 +145,77 @@ def test_planning_summary_exposes_live_state_authoring_affordance_when_clean(tmp
     assert "closed_work_item_rule" not in affordances
 
 
+def test_planning_summary_exposes_residue_governance_review_routing(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    reviews_dir = tmp_path / ".agentic-workspace" / "planning" / "reviews"
+    _write(
+        reviews_dir / "2026-06-04-command-generation.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Command generation seam review",
+                "date": "2026-06-04",
+                "classification": "extraction-seam",
+                "findings": [
+                    {
+                        "title": "Non-AW fixture needed",
+                        "summary": "Command generation needs a non-AW portability fixture.",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+    _write(
+        reviews_dir / "2026-06-01-memory.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Memory review",
+                "date": "2026-06-01",
+                "classification": "memory",
+                "findings": [],
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact", task_text="command generation seam")
+
+    residue = summary["residue_governance"]
+    assert residue["status"] == "present"
+    assert residue["matrix_class_count"] >= 6
+    assert residue["review_routing"]["status"] == "matches"
+    assert residue["review_routing"]["do_not_bulk_read"] is True
+    assert residue["review_routing"]["read_first"][0] == ".agentic-workspace/planning/reviews/2026-06-04-command-generation.review.json"
+    assert residue["review_routing"]["relevant_reviews"][0]["matched_tokens"]
+
+
+def test_planning_tiny_summary_surfaces_recent_review_residue_without_bulk_reading(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    reviews_dir = tmp_path / ".agentic-workspace" / "planning" / "reviews"
+    _write(
+        reviews_dir / "2026-06-04-retention.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Residue retention review",
+                "date": "2026-06-04",
+                "classification": "residue-governance",
+                "findings": [],
+            },
+            indent=2,
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path, profile="tiny")
+
+    residue = summary["residue_governance"]
+    assert residue["review_count"] == 1
+    assert residue["review_routing"]["status"] == "recent-only"
+    assert residue["review_routing"]["read_first"] == [".agentic-workspace/planning/reviews/2026-06-04-retention.review.json"]
+
+
 def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -451,6 +522,7 @@ def test_planning_tiny_report_uses_fast_summary_path(tmp_path: Path, monkeypatch
         "finding_count",
         "findings",
         "next_action",
+        "residue_governance",
         "detail_commands",
     }
     assert report["status"]["active_todo_count"] == 0
