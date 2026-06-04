@@ -3558,6 +3558,291 @@ def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp
     assert rendered["rendered_text"] != "Done."
 
 
+def test_report_closeout_report_caveats_unsupported_behavior_preservation_claim(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "refactor-preservation.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Refactor Preservation",
+            "active_milestone": {"id": "refactor-preservation", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Refactor parser helpers while preserving behavior.",
+                "hard constraints": "Do not claim no behavior changed without preservation evidence.",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Refactored parser helpers.",
+                "scope touched": "parser helpers",
+                "changed surfaces": "src/parser.py; tests/test_parser.py",
+                "validations run": "uv run pytest tests/test_parser.py",
+                "result for continuation": "close with caveat",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_parser.py passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["parser output behavior preserved"],
+                    "proof_dimensions": ["focused regression tests"],
+                    "unproven_after_tests": ["legacy malformed-input behavior"],
+                    "preservation_claims": ["no behavior changed for parser output"],
+                    "allowed_behavior_changes": ["internal helper names may change"],
+                    "unknown_behavior": ["legacy malformed-input behavior has no fixture"],
+                    "proof_classes": ["ordinary-tests"],
+                    "human_confirmation_needed": ["domain owner confirms malformed-input behavior if needed"],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "Implementation is complete, but preservation proof remains caveated.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'refactor-preservation', title = 'Refactor preservation', surface = '.agentic-workspace/planning/execplans/refactor-preservation.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    preservation = report["validation"]["behavior_preservation"]
+    assert preservation["status"] == "claim-needs-evidence"
+    assert preservation["unsupported_claims"] == ["no behavior changed for parser output"]
+    assert preservation["ordinary_test_only"] is True
+    assert "semantic-risk changed surfaces" in report["review_compression"]["first_inspection_contract"]["first_inspection_facts"]
+    assert report["review_compression"]["selected_mode"] == "behavior-preserving-refactor"
+    assert any("preservation caveat" in item for item in report["review_compression"]["human_owned_decisions"])
+    assert report["profile"] == "audit"
+    assert report["trust"] == "lower-trust"
+    checks = {check["id"]: check for check in report["completeness"]["checks"]}
+    assert checks["behavior-preservation-claim"]["status"] == "incomplete"
+    rows = {row["id"]: row for row in report["traceability"]["rows"]}
+    assert rows["behavior-preservation"]["status"] == "missing"
+    options = {option["id"]: option for option in report["closure_boundary"]["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "behavior_preservation" in options["claim-work-complete"]["blocking_fields"]
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert "behavior preservation caveat" in rendering["must_include"]
+    assert "behavior preservation proof" in rendering["must_include"]
+    rendered = rendering["rendered_summary"]
+    assert "Behavior proof: ordinary-tests" in rendered["rendered_text"]
+    assert "Behavior caveat:" in rendered["rendered_text"]
+    assert "no behavior changed" in " ".join(rendering["must_not_claim"])
+    assert rendered["required_fact_coverage"]["status"] == "complete"
+
+
+def test_report_closeout_report_represents_behavior_preserving_refactor_operating_pattern(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.parser_characterization]
+protocol_id = "parser_refactor_characterization"
+title = "Parser characterization"
+steps = ["Run representative parser fixtures before and after the helper extraction"]
+expected_observations = ["Stable valid-input parse trees match current behavior"]
+pass_evidence_labels = ["parser_regression_pytest_passed"]
+fail_evidence_labels = ["parser_characterization_changed"]
+manual_boundary = "Domain owner must review malformed-input behavior before parent closure."
+
+[protocols.parser_refactor_characterization]
+title = "Parser refactor characterization"
+purpose = "Current-behavior evidence for a parser helper refactor."
+applies_to_paths = ["src/parser/**", "tests/fixtures/parser/**"]
+scenario_refs = ["parser_characterization"]
+expected_evidence = ["parser_regression_pytest_passed"]
+review_owner = "parser-review"
+retention = "retain-summary"
+
+[evidence_bundles.parser_refactor_2026_06]
+protocol_id = "parser_refactor_characterization"
+scenario_id = "parser_characterization"
+changed_paths = ["src/parser/helpers.py", "tests/fixtures/parser/valid_cases.json"]
+executor = "test-agent"
+executed_at = "2026-06-04T12:00:00Z"
+outcome = "passed"
+evidence_items = ["parser_regression_pytest_passed"]
+transcript_summaries = ["Representative valid-input fixtures matched current behavior; raw fixture output not retained."]
+residual_risk = "Malformed legacy inputs remain uncharacterized."
+claim_boundaries = ["work"]
+reviewer = "parser-review"
+retention_until = "2099-01-01"
+
+[known_gaps.parser_malformed_legacy_gap]
+protocol_id = "parser_refactor_characterization"
+scenario_id = "parser_characterization"
+reason = "Malformed legacy-input behavior lacks fixtures and domain acceptance."
+owner = "parser-review"
+status = "open"
+evidence_labels = ["malformed_legacy_characterization"]
+blocked_claims = ["close-parent-lane"]
+residual_risk = "Do not claim parent-lane behavior preservation until this gap is characterized or accepted."
+reopen_trigger = "parent lane asks for full parser behavior-preservation closure"
+""",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "parser-refactor.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Parser Refactor",
+            "active_milestone": {"id": "parser-refactor", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Extract parser helpers while preserving current valid-input behavior.",
+                "hard constraints": "Do not claim parent-lane behavior preservation until malformed legacy inputs are characterized.",
+                "agent may decide locally": "Internal helper names and file layout.",
+                "escalate when": "Characterization evidence changes or domain acceptance is unavailable.",
+            },
+            "immediate_next_action": ["Close work with explicit behavior caveat; keep parent closure blocked by known gap."],
+            "invariants": [
+                "Valid-input parse tree behavior must remain stable.",
+                "AW reports evidence and gaps; agent and parser-review own semantic preservation sufficiency.",
+            ],
+            "validation_commands": [
+                "uv run pytest tests/test_parser.py",
+                "uv run python scripts/run_agentic_workspace.py report --section verification --format json",
+            ],
+            "completion_criteria": [
+                "Planning records preservation claims, allowed behavior changes, unknown behavior, proof classes, and human confirmation needs.",
+                "Verification records characterization evidence and the malformed-input known gap.",
+                "Closeout reports ordinary-test-only caveat and semantic-risk review focus.",
+                "Memory promotion is explicitly not needed for this fixture because no durable host-specific lesson was discovered.",
+            ],
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test-agent",
+                "what happened": "Extracted parser helpers and kept representative valid-input fixtures stable.",
+                "scope touched": "parser helper extraction",
+                "changed surfaces": "src/parser/helpers.py; src/parser/rules.py; tests/fixtures/parser/valid_cases.json",
+                "validations run": "uv run pytest tests/test_parser.py; verification evidence bundle parser_refactor_2026_06 present",
+                "result for continuation": "close work with caveat",
+                "next step": "do not close parent until malformed legacy behavior is characterized or accepted",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_parser.py passed; verification evidence bundle parser_refactor_2026_06 present",
+                "acceptance reconciliation": "valid-input behavior preservation -> ordinary regression tests and Verification bundle present; malformed-input behavior -> known gap",
+                "proof achieved now": "yes, with behavior-preservation caveat",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["valid-input parse tree behavior remains stable"],
+                    "proof_dimensions": ["ordinary regression tests", "verification characterization evidence"],
+                    "unproven_after_tests": ["malformed legacy-input behavior"],
+                    "preservation_claims": ["no behavior changed for valid parser output"],
+                    "allowed_behavior_changes": ["internal helper names may change", "private helper file layout may change"],
+                    "unknown_behavior": ["malformed legacy-input behavior has no fixture"],
+                    "proof_classes": ["ordinary-tests"],
+                    "preservation_evidence": ["parser_regression_pytest_passed", "parser_refactor_2026_06"],
+                    "human_confirmation_needed": ["parser-review accepts malformed-input gap before parent closure"],
+                },
+            },
+            "execution_summary": {
+                "outcome delivered": "Parser helper extraction completed with a behavior-preservation caveat.",
+                "validation confirmed": "ordinary tests and Verification evidence bundle were recorded",
+                "follow-on routed to": "parser-review for parent-lane malformed-input acceptance only",
+                "knowledge promoted (Memory/Docs/Config)": (
+                    "none; this fixture recorded evidence in Planning and Verification, and no durable "
+                    "non-obvious host behavior was discovered that future agents would need in Memory"
+                ),
+            },
+            "durable_residue": {
+                "status": "none",
+                "learned constraint": "none",
+                "canonical owner now": "verification",
+                "promotion trigger": "Promote to Memory only if malformed-input behavior becomes a repeated rediscovery hazard.",
+                "retention after promotion": "retain-summary-until-fixture-or-domain-rule-supersedes-it",
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "open",
+                "closure decision": "archive-but-keep-lane-open",
+                "why this decision is honest": "Work-scope preservation has ordinary test and Verification evidence, while the parent malformed-input boundary remains a known gap.",
+                "evidence carried forward": "parser_refactor_2026_06 evidence bundle and parser_malformed_legacy_gap known gap",
+                "reopen trigger": "Malformed-input behavior must be claimed as preserved.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'parser-refactor', title = 'Parser refactor', surface = '.agentic-workspace/planning/execplans/parser-refactor.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "verification", "--format", "json"]) == 0
+
+    verification = json.loads(capsys.readouterr().out)["answer"]
+    assert verification["configured_protocols"][0]["id"] == "parser_refactor_characterization"
+    assert verification["configured_scenarios"][0]["id"] == "parser_characterization"
+    assert verification["evidence_bundle_status"][0]["protocol_id"] == "parser_refactor_characterization"
+    assert verification["evidence_bundle_status"][0]["state"] == "present"
+    assert verification["known_gaps"][0]["id"] == "parser_malformed_legacy_gap"
+    assert verification["evidence_bundle_status"][0]["claim_boundaries"] == ["work"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    preservation = report["validation"]["behavior_preservation"]
+    assert preservation["claims"] == ["no behavior changed for valid parser output"]
+    assert preservation["allowed_behavior_changes"] == ["internal helper names may change", "private helper file layout may change"]
+    assert preservation["unknown_behavior"] == ["malformed legacy-input behavior has no fixture"]
+    assert preservation["proof_classes"] == ["ordinary-tests"]
+    assert preservation["evidence"] == ["parser_regression_pytest_passed", "parser_refactor_2026_06"]
+    assert preservation["supporting_proof_classes"] == []
+    assert preservation["status"] == "claim-needs-evidence"
+    assert "malformed legacy-input behavior has no fixture" in " ".join(preservation["caveats"])
+    assert "parser-review accepts malformed-input gap before parent closure" in " ".join(preservation["caveats"])
+    assert report["review_compression"]["selected_mode"] == "behavior-preserving-refactor"
+    review_focus = preservation["review_focus"]
+    assert "changed business-rule or domain paths" in review_focus
+    assert "persistence, migration, or data-shape code" in review_focus
+    assert "serialization, public contracts, API, or CLI output" in review_focus
+    assert "dependency/runtime semantics" in review_focus
+    assert "deleted compatibility paths" in review_focus
+    assert "updated fixtures, snapshots, or golden outputs" in review_focus
+    assert "known gaps and unproven behavior" in review_focus
+    authority = preservation["authority_boundary"]
+    assert "agent-recorded preservation claims" in authority["observed_by_aw"]
+    assert "semantic preservation sufficiency" in authority["agent_owned_decisions"]
+    assert "business/domain acceptance when requested or unproven" in authority["human_owned_decisions"]
+    assert any("preservation caveat" in item for item in report["review_compression"]["human_owned_decisions"])
+    options = {option["id"]: option for option in report["closure_boundary"]["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "behavior_preservation" in options["claim-work-complete"]["blocking_fields"]
+    assert report["final_response_rendering"]["plain_done_allowed"] is False
+    rendered_text = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
+    assert "Behavior proof: ordinary-tests" in rendered_text
+    assert "Behavior caveat:" in rendered_text
+    assert "no behavior changed" in " ".join(report["final_response_rendering"]["must_not_claim"])
+    traceability = {row["id"]: row for row in report["traceability"]["rows"]}
+    assert "1 verification evidence row(s)" in traceability["assurance-verification"]["evidence"]
+
+
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

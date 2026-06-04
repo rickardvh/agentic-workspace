@@ -1,0 +1,80 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Behavior preservation refactor support",
+  "plan_id": "behavior-preservation-refactor-support",
+  "created_at": "2026-06-04T17:30:43.856049+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/behavior-preservation-refactor-support.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/behavior-preservation-refactor-support.plan.json",
+  "retention": {
+    "state": "compact-closeout-evidence",
+    "reason": "Full archive exceeded structured-file inventory guardrails; compact evidence preserves reportable closure facts."
+  },
+  "active_milestone": {
+    "id": "behavior-preservation-refactor-support",
+    "status": "completed",
+    "scope": "Planning, Verification, proof/report, closeout_report, final_response_rendering, Memory guidance, and review_compression support for behavior-preserving refactors."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1289 and child issues #1291-#1298.",
+    "hard constraints": "Use existing surfaces; no new refactoring module, state store, or authoritative business-logic inference.",
+    "agent may decide locally": "Exact names, caveat wording, examples, tests, and reference updates.",
+    "duplicate issue handling": "#1294/#1295 share the same closeout-caveat implementation; #1297/#1298 share the same review-compression semantic-risk implementation."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "what happened": "Implemented behavior-preservation support across existing AW Planning guidance, Verification examples, proof/closeout report packets, final-response rendering, Memory promotion guidance, and review-compression mode.",
+    "changed surfaces": ".agentic-workspace/docs/knowledge-promotion-workflow.md; .agentic-workspace/docs/reporting-contract.md; .agentic-workspace/planning/execplans/README.md; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; docs/verification.md; docs/reference/workspace-report.md; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+    "validations run": "focused closeout/report caveat test; focused proof tiny/verbose tests; stale-reference sweep; AW summary and planning doctor; maintainer surfaces; contract tooling; structured inventory; ruff; workspace tests; lint; schema-reference docs",
+    "result for continuation": "bounded closeout complete"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Existing AW surfaces only; AW reports recorded evidence and gaps while agents/humans own semantic preservation sufficiency.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused closeout/report and proof-output tests plus maintainer/static/workspace validation passed.",
+    "proof achieved now": "yes",
+    "evidence for proof achieved state": "Representative caveat test covers unsupported preservation claims, blocked broad claims, final response rendering, and review-compression mode."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1289 and child issues #1291-#1298.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1289 parent pattern spans Planning, Verification, proof/report, closeout, Memory guidance, and review compression; duplicate child pairs are explicitly handled.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#1291 planning fields, #1292 Verification examples, #1293 proof/report distinction, #1294/#1295 closeout caveats, #1296 Memory guidance, and #1297/#1298 review-compression guidance are all represented by concrete code, docs, or tests.",
+    "evidence carried forward": "PR #1303 closure matrix and tests/test_workspace_report_cli.py behavior-preservation fixtures.",
+    "reopen trigger": "New evidence shows a child issue lacks representative Planning, Verification, Memory, proof/report, closeout, or review-compression coverage."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No separate residue remains after compact closeout evidence and PR body closure matrix.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Behavior-preserving refactors have explicit planning fields, characterization proof examples, closeout behavior proof/caveat facts, final-response rendering requirements, Memory promotion guidance, and semantic-risk review-compression focus.",
+    "validation confirmed": "focused tests, maintainer/static checks, full workspace tests, lint, and schema-reference docs",
+    "follow-on routed to": "none",
+    "knowledge promoted (Memory/Docs/Config)": "docs and runtime/tests in PR #1303"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": ["Repeated raw proof command strings from the oversized archive."],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": ["PR #1303 closure matrix carries issue-by-issue evidence."],
+      "issue_follow_up": []
+    }
+  }
+}

@@ -126,6 +126,25 @@ agentic-workspace report --target ./repo --section closeout_report --format json
 Use `closeout_report.completeness` to see missing intent boundary, completed-work, changed-surface, validation, residual-risk, follow-up-owner, or traceability evidence before making final closeout claims.
 Use `closeout_report.traceability.rows` to connect each intent or requirement to its evidence surface and residual risk or follow-up.
 
+For behavior-preserving refactors, closeout must keep the preservation boundary
+separate from ordinary validation. Planning or proof evidence may record:
+
+- `preservation_claims`;
+- `allowed_behavior_changes`;
+- `unknown_behavior`;
+- `proof_classes`;
+- `preservation_evidence`;
+- `human_confirmation_needed`.
+
+`closeout_report.validation.behavior_preservation` reports those recorded facts,
+the evidence classes, unsupported claims, known gaps, and review focus. It must
+not infer business behavior from changed paths, filenames, or tests passing. A
+`no behavior changed`, `safe refactor`, `business logic preserved`,
+compatibility, migration-complete, or dependency-upgrade-compatible claim needs
+characterization, golden-master, current-behavior, compatibility, migration
+dry-run, manual-scenario, or domain-acceptance evidence, or it must render a
+behavior caveat and block broad completion claims.
+
 Use `closeout_report.decision_review` for material system or product decisions.
 It is a derived review packet over agent-authored Planning facts, not an AW classifier.
 The active owner for decision facts is Planning, primarily `architecture_decision_promotion` and `traceability_refs.decision_refs`.
@@ -161,6 +180,7 @@ Its modes are:
 - `planned-slice`;
 - `broad-pr`;
 - `system-shaping-change`;
+- `behavior-preserving-refactor`;
 - `partial-or-lower-trust-closeout`;
 - `follow-up-or-residue-heavy-work`.
 
@@ -171,6 +191,13 @@ Every mode must name:
 - rendered facts that must appear in the final response for that work shape;
 - secondary detail routes;
 - the policy for when raw report/detail inspection is still needed.
+
+For `behavior-preserving-refactor`, the first inspection path should emphasize
+semantic-risk surfaces before line-count breadth: changed business-rule paths,
+persistence/migration/data-shape code, serialization or public contracts,
+dependency/runtime semantics, deleted compatibility paths, updated fixtures or
+snapshots, and unproven behavior gaps. These are advisory review targets; the
+agent and human own the preservation judgment.
 
 Use `closeout_report.closeout_adoption` as the operator-facing closeout quality rubric.
 The rubric asks whether the final response answers:
@@ -220,6 +247,9 @@ Minimal and guidance-only closeouts without trust, residue, or follow-up signals
 Guidance-only closeouts with audit, lower-trust, residue, or follow-up signals should stay compact but still render the caveat and disallow a plain-done claim.
 Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
 System-shaping closeouts should also render decision facts or a decision-gap line from `decision_review`.
+Behavior-preserving refactor closeouts should render behavior proof class and
+behavior caveat lines when preservation claims exist, especially when ordinary
+tests passed but characterization or compatibility proof is missing.
 `final_response_rendering.selected_review_mode` and `final_response_rendering.first_inspection_contract` must match `review_compression.selected_mode` and its selected contract so the rendered chat summary cannot drift from the review-compression guidance.
 The final response should prefer `rendered_summary.rendered_text` as concise prose or bullets and must not dump raw JSON.
 `required_fact_coverage` must make omitted required facts visible before the agent claims completion.

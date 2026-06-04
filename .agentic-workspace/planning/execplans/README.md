@@ -18,6 +18,8 @@ Use `archive-plan --apply-cleanup` only when you want the helper to also remove 
 
 After `agentic-workspace planning new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
 
+For behavior-preserving refactors, modernization, extraction, migration, dependency upgrades, or "safe/no behavior changed" work, use existing plan fields before broad code changes when the boundary is not obvious. Put preservation invariants in `invariants`, allowed changes and stop conditions in `execution_bounds`/`stop_conditions`, and expected preservation proof in `validation_commands`. Mirror closeout evidence into `proof_report.intent_proof` using its `preservation_claims`, `allowed_behavior_changes`, `unknown_behavior`, `proof_classes`, `preservation_evidence`, and `human_confirmation_needed` fields so reports can distinguish ordinary test pass from preservation evidence and can caveat unsupported no-behavior-change claims.
+
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
 ## Source And Projection Roles

@@ -369,6 +369,35 @@ The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full refer
 
 Starter note templates are part of that installed contract too. Use `.agentic-workspace/memory/repo/templates/memory-note.template.md`, `.agentic-workspace/memory/repo/templates/invariant.template.md`, and `.agentic-workspace/memory/repo/templates/runbook.template.md` when you add the first real repo-specific notes for those classes.
 
+### Durable Refactoring Facts
+
+Use Memory for a refactoring discovery only when future agents would otherwise
+pay meaningful rediscovery cost. Good candidates include a non-obvious behavior
+invariant, a legacy quirk with domain rationale, a dependency or runtime
+constraint, the purpose of a fixture or verification protocol that protects
+important behavior, an unsafe dead-code candidate that is not yet removable, or
+an anti-rediscovery warning for future agents.
+
+Do not store transient observations, execution logs, raw transcripts, broad task
+chatter, or "I inspected this file" notes. Keep raw characterization output in
+tests, fixtures, Verification evidence, or local artifacts as appropriate;
+Memory should carry the compact interpretive fact and routing value.
+
+Expected shape:
+
+```markdown
+summary: "Parser accepts the legacy trailing delimiter because importer v1 emitted it."
+evidence: ["tests/fixtures/parser/valid_cases.json", "verification:parser_refactor_2026_06"]
+use_when: "Refactoring parser normalization or replacing parser fixtures"
+stale_when: "Importer v1 compatibility is removed or parser behavior is documented in canonical parser docs"
+owner: "parser-review"
+authority: "advisory context; parser docs/tests own enforceable behavior"
+retention: "retain until promoted to parser docs/tests or demoted after the compatibility path is removed"
+```
+
+If the refactor produces no durable lesson, say that in Planning closeout instead
+of creating a Memory note.
+
 For manifest discoverability, the quickest installed guidance path is:
 
 - `.agentic-workspace/memory/repo/manifest.toml` for the machine-readable note map and optional improvement-pressure fields

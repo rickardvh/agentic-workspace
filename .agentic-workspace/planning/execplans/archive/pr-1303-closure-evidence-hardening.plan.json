@@ -1,0 +1,320 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "PR 1303 closure evidence hardening",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Strengthen PR #1303 so closure of #1289 and child issues #1291-#1298 is supported by representative behavior-preserving refactor evidence, not wording alone.",
+    "hard_constraints": "Keep scope inside existing AW Planning, Verification, Memory, proof/report, closeout_report, final_response_rendering, review_compression, and authority-boundary surfaces; do not add a refactoring module, broad dashboard, new state store, or automatic business-logic classifier.",
+    "agent_may_decide": "Exact compact fixture, assertions, documentation wording, closeout residue, and PR body matrix needed to make closure evidence honest.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add representative closure evidence, run focused and workspace validation, update PR body, and close this plan.",
+    "proof_expectations": [
+      "focused report tests for unsupported and representative behavior-preservation closeout",
+      "proof tiny/verbose focused tests if proof output remains touched",
+      "contract tooling, structured inventory, maintainer surfaces, workspace tests, lint, and schema reference docs"
+    ],
+    "touched_scope": [
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/docs/knowledge-promotion-workflow.md",
+      "docs/verification.md",
+      ".agentic-workspace/planning closeout evidence/state for this plan"
+    ],
+    "completion_criteria": [
+      "A representative test demonstrates Planning preservation boundary, Verification characterization/known-gap concepts, proof classification, closeout caveat/support behavior, review-compression semantic-risk focus, and Memory non-promotion rationale.",
+      "Verification docs show characterization evidence using protocols, scenarios, evidence_bundles, known_gaps, and claim_boundaries.",
+      "Memory guidance covers promotion examples, anti-dump boundaries, use_when, stale_when, evidence, owner/authority, and retention.",
+      "PR body includes an explicit issue-to-evidence closure matrix and duplicate handling for #1294/#1295 and #1297/#1298."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for PR 1303 closure evidence hardening."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Strengthen PR #1303 closure evidence for #1289 and child issues.",
+      "constraints": "Use existing AW surfaces only; no new refactoring module, state store, dashboard, or automatic business-logic classifier.",
+      "latitude": "Choose compact evidence, assertions, and documentation wording that keep closeout/report quiet while preventing unsafe overclaiming.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed."
+    },
+    "execution": {
+      "milestone": "pr-1303-closure-evidence-hardening",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_report_cli.py",
+        ".agentic-workspace/docs/knowledge-promotion-workflow.md",
+        "docs/verification.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "PR #1303 can honestly close #1289 and child issues because representative evidence covers the full behavior-preserving refactor operating pattern.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "none for this archived slice; rerun proof only if the PR closure evidence changes",
+    "next likely slice": "none if the representative evidence and PR body matrix satisfy the requested closure standard"
+  },
+  "intent_interpretation": {
+    "literal request": "Make the closure of #1289 and all child issues honestly supportable in PR #1303.",
+    "inferred intended outcome": "Add compact representative evidence across existing AW surfaces and update the PR body closure matrix.",
+    "chosen concrete what": "Add a sibling representative report fixture, strengthen Verification/Memory examples, run required validation, and update PR #1303 body.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "tests/test_workspace_report_cli.py, docs/verification.md, .agentic-workspace/docs/knowledge-promotion-workflow.md, PR body, and planning closeout residue for this active plan.",
+    "max changed files": "About 6 files plus command-owned planning state/closeout evidence.",
+    "required validation commands": "Use implement --changed proof selection; at minimum run focused report tests, relevant proof tests, contract tooling, structured inventory, maintainer surfaces, workspace tests, lint, and schema-reference docs.",
+    "ask-before-refactor threshold": "Ask before changing runtime semantics beyond what the representative evidence needs.",
+    "stop before touching": "New refactoring modules, new stores, dashboards, automatic business classifiers, or unrelated backlog."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Strengthen PR #1303 closure evidence, validate, update PR body matrix, and close this plan.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make PR #1303 closure of #1289 and child issues honestly supportable.",
+    "hard constraints": "Use existing AW surfaces only; no new refactoring module, state store, dashboard, or automatic business-logic classifier.",
+    "agent may decide locally": "Exact compact test/docs evidence and PR body wording.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "pr-1303-closure-evidence-hardening",
+    "status": "completed",
+    "scope": "Representative behavior-preservation closure evidence for PR #1303.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add representative evidence and run selected proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/docs/knowledge-promotion-workflow.md",
+    "docs/verification.md"
+  ],
+  "invariants": [
+    "Keep behavior-preservation support repo- and agent-agnostic: AW reports recorded evidence and guidance; agents/humans own semantic preservation judgment."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim -q",
+    "focused representative behavior-preservation report test",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "make test-workspace",
+    "make lint-workspace",
+    "make schema-reference-docs"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Representative closure evidence exists across Planning, Verification, proof/report, closeout, Memory guidance, and review compression.",
+    "PR body matrix maps #1289 and #1291-#1298 to concrete evidence and explicitly handles duplicate pairs.",
+    "Required validation passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added representative behavior-preserving refactor closure evidence for PR #1303, strengthened Verification and Memory guidance, compacted oversized closeout evidence, and prepared PR body closure matrix.",
+    "scope touched": "tests/test_workspace_report_cli.py, docs/verification.md, .agentic-workspace/docs/knowledge-promotion-workflow.md, compact closeout evidence, and planning closeout residue",
+    "changed surfaces": "tests/test_workspace_report_cli.py; docs/verification.md; .agentic-workspace/docs/knowledge-promotion-workflow.md; .agentic-workspace/planning/closeout-evidence/behavior-preservation-refactor-support.closeout.json",
+    "validations run": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Representative fixture now demonstrates Planning preservation fields, Verification characterization evidence and known gap, proof/report ordinary-test caveat, closeout blocked broad claims, final response behavior caveat, review-compression semantic-risk focus, and Memory non-promotion rationale.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for PR 1303 closure evidence hardening.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1303 now has concrete evidence supporting honest closure of #1289 and child issues #1291-#1298, with duplicate pairs handled explicitly.",
+    "validation confirmed": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-04: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for PR 1303 closure evidence hardening.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused report tests passed; focused proof-output tests passed; AW summary and planning doctor passed; git diff docs proof inspected; maintainer surfaces passed; contract tooling passed; structured inventory passed; scoped ruff passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed.\nChanged surfaces: tests/test_workspace_report_cli.py; docs/verification.md; .agentic-workspace/docs/knowledge-promotion-workflow.md; .agentic-workspace/planning/closeout-evidence/behavior-preservation-refactor-support.closeout.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

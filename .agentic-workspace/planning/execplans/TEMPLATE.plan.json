@@ -246,7 +246,20 @@
   "proof_report": {
     "validation proof": "",
     "proof achieved now": "",
-    "evidence for \"proof achieved\" state": ""
+    "evidence for \"proof achieved\" state": "",
+    "intent_proof": {
+      "status": "not_recorded",
+      "claim_boundary": "work",
+      "intended_behavior": [],
+      "proof_dimensions": [],
+      "unproven_after_tests": [],
+      "preservation_claims": [],
+      "allowed_behavior_changes": [],
+      "unknown_behavior": [],
+      "proof_classes": [],
+      "preservation_evidence": [],
+      "human_confirmation_needed": []
+    }
   },
   "intent_satisfaction": {
     "original intent": "",

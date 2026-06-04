@@ -7599,6 +7599,8 @@ def _closeout_report_profile_policy_payload(
     completeness = completeness if isinstance(completeness, dict) else {}
     strict = bool(config.assurance.strict_closeout) if config is not None else False
     trust = str(closeout_trust.get("trust", "")).strip().lower()
+    proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     completion_decision = str(completion_contract.get("completion_decision", "")).strip().lower()
     completeness_status = str(completeness.get("status", "")).strip().lower()
     verification_status = str(verification.get("status", "")).strip().lower()
@@ -7615,6 +7617,8 @@ def _closeout_report_profile_policy_payload(
         high_risk_reasons.append("assurance.strict_closeout enabled")
     if trust == "lower-trust" or lower_trust_count:
         high_risk_reasons.append("closeout_trust lower-trust signals present")
+    if behavior_preservation.get("status") == "claim-needs-evidence":
+        high_risk_reasons.append("behavior-preservation claim lacks supporting evidence")
     if completeness_status == "incomplete":
         high_risk_reasons.append("closeout report completeness is incomplete")
     if verification_status in {"attention", "blocked", "missing-evidence"}:
@@ -7720,6 +7724,7 @@ def _closeout_report_traceability_rows(
     proof_report = _as_dict(active_planning_record.get("proof_report"))
     completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
     proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     assurance = _as_dict(closeout_trust.get("assurance_requirements"))
     evidence_status = [item for item in _list_payload(assurance.get("evidence_status")) if isinstance(item, dict)]
@@ -7768,6 +7773,24 @@ def _closeout_report_traceability_rows(
             "residual_risk_or_follow_up": text_from(proof_confidence.get("residual_risk")),
         },
         {
+            "id": "behavior-preservation",
+            "intent_or_requirement": "behavior-preservation claim and proof boundary",
+            "evidence_surface": "planning.active.planning_record.proof_report.intent_proof",
+            "evidence": text_from(
+                "; ".join(_list_payload(behavior_preservation.get("proof_classes"))),
+                fallback=text_from("; ".join(_list_payload(behavior_preservation.get("evidence")))),
+            ),
+            "status": "present"
+            if behavior_preservation.get("status") in {"present", "supported", "not-claimed"}
+            else "missing"
+            if behavior_preservation.get("status") == "claim-needs-evidence"
+            else "present",
+            "residual_risk_or_follow_up": text_from(
+                "; ".join(_list_payload(behavior_preservation.get("caveats"))),
+                fallback=text_from("; ".join(_list_payload(behavior_preservation.get("unknown_behavior")))),
+            ),
+        },
+        {
             "id": "closure-boundary",
             "intent_or_requirement": "closure boundary",
             "evidence_surface": "completion_contract.completion_boundary",
@@ -7805,6 +7828,7 @@ def _closeout_report_completeness_payload(
     proof_report = _as_dict(active_planning_record.get("proof_report"))
     completion_boundary = _as_dict(completion_contract.get("completion_boundary"))
     proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
     keep_parent_open = _as_dict(options.get("keep-parent-open"))
@@ -7887,6 +7911,17 @@ def _closeout_report_completeness_payload(
         residual or "no residual risk explicitly recorded",
         "residual risk statement is not explicit",
     )
+    preservation_status = str(behavior_preservation.get("status") or "").strip()
+    preservation_claims = _list_payload(behavior_preservation.get("claims"))
+    preservation_caveats = _list_payload(behavior_preservation.get("caveats"))
+    if preservation_claims:
+        add_check(
+            "behavior-preservation-claim",
+            "complete" if preservation_status in {"present", "supported"} and not preservation_caveats else "incomplete",
+            "; ".join(str(item) for item in preservation_claims),
+            "; ".join(str(item) for item in preservation_caveats)
+            or "behavior-preservation claim lacks explicit characterization, compatibility, manual-scenario, or domain-acceptance evidence",
+        )
     add_check(
         "follow-up-owner",
         "complete" if (not follow_up_required or owner) else "incomplete",
@@ -8208,6 +8243,32 @@ def _closeout_report_review_mode_contracts() -> list[dict[str, Any]]:
             "secondary_detail_policy": "Route to decision_review and decision_pressure when decision facts are missing or need durable promotion.",
         },
         {
+            "id": "behavior-preserving-refactor",
+            "work_shape": "behavior-preserving refactor",
+            "first_inspection_facts": [
+                "preservation boundary",
+                "allowed behavior changes",
+                "current-behavior or compatibility proof class",
+                "known behavior gaps",
+                "semantic-risk changed surfaces",
+                "human or domain acceptance needs",
+            ],
+            "rendered_must_include": [
+                "outcome",
+                "changed surfaces",
+                "proof or validation",
+                "behavior preservation proof",
+                "behavior preservation caveat",
+                "residue or follow-up status",
+                "authority boundary",
+            ],
+            "rendered_should_include": ["allowed behavior changes", "known behavior gaps", "review focus"],
+            "detail_routes": ["closeout_report.validation.proof_confidence.behavior_preservation", "verification", "closeout_trust"],
+            "secondary_detail_policy": (
+                "Inspect semantic-risk surfaces first; AW reports evidence and gaps, while the agent and human own preservation sufficiency."
+            ),
+        },
+        {
             "id": "partial-or-lower-trust-closeout",
             "work_shape": "partial or lower-trust closeout",
             "first_inspection_facts": [
@@ -8255,13 +8316,18 @@ def _closeout_report_selected_review_mode(
     trust: str,
     completeness: dict[str, Any],
     decision_review: dict[str, Any],
+    behavior_preservation: dict[str, Any] | None = None,
 ) -> str:
     profile = str(profile_policy.get("selected_profile") or "minimal")
     completeness_status = str(completeness.get("status") or "").strip().lower()
     decision_status = str(decision_review.get("status") or "").strip().lower()
+    behavior_preservation = _as_dict(behavior_preservation)
+    preservation_status = str(behavior_preservation.get("status") or "").strip().lower()
     lower_or_partial = str(trust).strip().lower() == "lower-trust" or completeness_status in {"partial", "incomplete"}
     if decision_status in {"present", "partial", "absent-required"}:
         return "system-shaping-change"
+    if preservation_status in {"present", "supported", "claim-needs-evidence"}:
+        return "behavior-preserving-refactor"
     if lower_or_partial or profile == "explanatory":
         return "partial-or-lower-trust-closeout"
     if profile == "audit":
@@ -8285,18 +8351,22 @@ def _closeout_report_review_compression_payload(
     trust: str,
     completeness: dict[str, Any],
     decision_review: dict[str, Any],
+    behavior_preservation: dict[str, Any] | None = None,
     residual_risk: str,
     follow_up_owner: str,
     detail_commands: dict[str, str],
 ) -> dict[str, Any]:
     completeness_status = str(completeness.get("status") or "").strip().lower()
     decision_status = str(decision_review.get("status") or "").strip().lower()
+    behavior_preservation = _as_dict(behavior_preservation)
+    preservation_status = str(behavior_preservation.get("status") or "").strip().lower()
     lower_or_partial = str(trust).strip().lower() == "lower-trust" or completeness_status in {"partial", "incomplete"}
     selected_mode = _closeout_report_selected_review_mode(
         profile_policy=profile_policy,
         trust=trust,
         completeness=completeness,
         decision_review=decision_review,
+        behavior_preservation=behavior_preservation,
     )
     modes = _closeout_report_review_mode_contracts()
     first_inspection = _closeout_report_review_mode_contract(selected_mode)
@@ -8305,6 +8375,10 @@ def _closeout_report_review_compression_payload(
         human_owned.append("accept whether system-shaping decision facts may remain absent or must be routed before merge")
     if lower_or_partial:
         human_owned.append("accept residual risk and missing proof or require more validation")
+    if preservation_status == "claim-needs-evidence":
+        human_owned.append("accept the explicit preservation caveat or require characterization, compatibility, manual, or domain proof")
+    elif preservation_status in {"present", "supported"}:
+        human_owned.append("accept whether recorded preservation proof is sufficient for the claimed behavior boundary")
     if follow_up_owner:
         human_owned.append(f"accept follow-up ownership by {follow_up_owner}")
     if not human_owned:
@@ -8437,6 +8511,7 @@ def _closeout_report_final_response_rendering_payload(
     blockers: list[Any],
     next_action: str,
     decision_review: dict[str, Any] | None = None,
+    behavior_preservation: dict[str, Any] | None = None,
     review_mode: str = "",
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
@@ -8450,6 +8525,7 @@ def _closeout_report_final_response_rendering_payload(
     summary_lines: list[str] = []
     must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
     decision_review = _as_dict(decision_review)
+    behavior_preservation = _as_dict(behavior_preservation)
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
 
     def present(text: str) -> str:
@@ -8483,6 +8559,9 @@ def _closeout_report_final_response_rendering_payload(
             "changed surfaces": ("changed:",),
             "validation": ("proof:", "validation:"),
             "decision facts": ("decision:", "decision gap:"),
+            "behavior preservation proof": ("behavior proof:",),
+            "behavior preservation caveat": ("behavior caveat:",),
+            "review focus": ("review focus:",),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -8533,10 +8612,15 @@ def _closeout_report_final_response_rendering_payload(
         if present(changed_surfaces):
             behavior_lines.append(f"Changed: {changed_surfaces}")
         proof_lines = [f"Proof: {validation_proof}"] if present(validation_proof) else []
+        preservation_proof = "; ".join(str(item) for item in _list_payload(behavior_preservation.get("proof_classes")) if str(item))
+        if preservation_proof:
+            proof_lines.append(f"Behavior proof: {preservation_proof}")
 
         caveat_lines: list[str] = []
         for line in summary_lines:
-            if line.startswith(("Closeout caveat:", "Closure boundary:", "Residue:", "Evidence caveat:", "Decision gap:")):
+            if line.startswith(
+                ("Closeout caveat:", "Closure boundary:", "Residue:", "Evidence caveat:", "Decision gap:", "Behavior caveat:")
+            ):
                 caveat_lines.append(line)
         if not caveat_lines and not plain_done_allowed:
             caveat_lines.append("Caveat: closeout requires non-terse reporting before claiming completion.")
@@ -8562,7 +8646,7 @@ def _closeout_report_final_response_rendering_payload(
                 "title": "Proof",
                 "required": any(item in must_include for item in ("proof or validation", "validation")),
                 "lines": proof_lines,
-                "source_fields": ["proof.validation_proof", "proof.intent_proof"],
+                "source_fields": ["proof.validation_proof", "proof.intent_proof", "proof.behavior_preservation"],
             },
             {
                 "id": "caveats",
@@ -8707,6 +8791,21 @@ def _closeout_report_final_response_rendering_payload(
         summary_lines.append(f"Decision gap: {decision_review.get('decision_absent_because')}")
     if present(validation_proof):
         summary_lines.append(f"Proof: {validation_proof}")
+    preservation_claims = [str(item) for item in _list_payload(behavior_preservation.get("claims")) if str(item).strip()]
+    preservation_proof_classes = [str(item) for item in _list_payload(behavior_preservation.get("proof_classes")) if str(item).strip()]
+    preservation_caveats = [str(item) for item in _list_payload(behavior_preservation.get("caveats")) if str(item).strip()]
+    preservation_status = str(behavior_preservation.get("status") or "").strip()
+    if preservation_claims:
+        if preservation_proof_classes:
+            summary_lines.append(f"Behavior proof: {'; '.join(preservation_proof_classes[:4])}")
+        if preservation_caveats:
+            summary_lines.append(f"Behavior caveat: {'; '.join(preservation_caveats[:2])}")
+        elif preservation_status in {"present", "supported"}:
+            summary_lines.append("Behavior caveat: preservation sufficiency remains agent/human judgment against the recorded boundary.")
+        must_include.extend(["behavior preservation proof", "behavior preservation caveat"])
+        must_not_claim.append(
+            "Do not claim no behavior changed, business logic preserved, migration complete, or compatibility proved unless behavior_preservation evidence supports that claim or the caveat is rendered."
+        )
 
     boundary_text = present(completion_decision)
     completion_boundary_text = present(
@@ -8858,7 +8957,9 @@ def _closeout_report_payload(
     changed_surfaces = str(execution.get("changed surfaces") or "").strip()
     validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
     completion_decision = str(completion_contract.get("completion_decision", "unknown"))
-    residual_risk = str(_as_dict(closeout_trust.get("proof_confidence")).get("residual_risk", ""))
+    proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
+    behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
+    residual_risk = str(proof_confidence.get("residual_risk", ""))
     blockers = first_blocking_option.get("blocking_fields", [])
     decision_review = _closeout_report_decision_review_payload(
         active_planning_record=active_planning_record,
@@ -8869,6 +8970,7 @@ def _closeout_report_payload(
         trust=trust,
         completeness=completeness,
         decision_review=decision_review,
+        behavior_preservation=behavior_preservation,
     )
     final_response_rendering = _closeout_report_final_response_rendering_payload(
         status="present" if active_planning_record else "guidance-only",
@@ -8886,6 +8988,7 @@ def _closeout_report_payload(
         blockers=blockers if isinstance(blockers, list) else [],
         next_action=str(next_action),
         decision_review=decision_review,
+        behavior_preservation=behavior_preservation,
         review_mode=selected_review_mode,
     )
     detail_commands = {
@@ -8911,6 +9014,7 @@ def _closeout_report_payload(
         trust=trust,
         completeness=completeness,
         decision_review=decision_review,
+        behavior_preservation=behavior_preservation,
         residual_risk=residual_risk,
         follow_up_owner=follow_up_owner,
         detail_commands=detail_commands,
@@ -8982,6 +9086,7 @@ def _closeout_report_payload(
             "proof": validation_proof,
             "proof_achieved_now": str(proof_report.get("proof achieved now") or "").strip(),
             "proof_confidence": closeout_trust.get("proof_confidence", {}),
+            "behavior_preservation": behavior_preservation,
         },
         "gaps_and_residual_risk": {
             "completion_blockers": blockers,
@@ -11990,6 +12095,8 @@ def _closeout_completion_options(
     intent_proof_status = str(intent_proof_check.get("status", "not_recorded")).strip().lower() or "not_recorded"
     intent_proof_supports_work = intent_proof_status in {"representative", "sufficient_for_claim"}
     intent_proof_needs_review = intent_proof_status == "needs_review"
+    behavior_preservation = _behavior_preservation_confidence_payload(intent_proof_check)
+    unsupported_preservation = behavior_preservation.get("status") == "claim-needs-evidence"
     larger_closure = closure_scope.get("larger_intent_closure", {})
     larger_closure = larger_closure if isinstance(larger_closure, dict) else {}
     larger_status = str(larger_closure.get("status", "")).strip().lower()
@@ -12036,6 +12143,8 @@ def _closeout_completion_options(
         completion_blockers.append("continuation_owner")
     if not intent_proof_supports_work:
         completion_blockers.append("intent_proof")
+    if unsupported_preservation:
+        completion_blockers.append("behavior_preservation")
     assurance_claim_blockers = _assurance_claim_blockers(assurance_requirements)
 
     slice_blockers = [
@@ -12052,6 +12161,7 @@ def _closeout_completion_options(
         and acceptance_ok
         and not residue_required
         and not intent_proof_needs_review
+        and not unsupported_preservation
         and not assurance_claim_blockers.get("claim-slice-complete")
     )
     claim_work_allowed = (
@@ -12070,6 +12180,7 @@ def _closeout_completion_options(
         status in {"unavailable", "invalid"}
         or intent_trust == "needs-review"
         or intent_proof_needs_review
+        or unsupported_preservation
         or str(strict_gate.get("status", "")) == "requires-review"
         or assurance_review_required
     )
@@ -12127,11 +12238,13 @@ def _closeout_completion_options(
         _completion_option(
             "request-review",
             allowed=request_review_allowed,
-            why="intent satisfaction or strict closeout evidence requires human/domain review"
+            why="intent satisfaction, preservation proof, assurance, or strict closeout evidence requires human/domain review"
             if request_review_allowed
             else "a concrete closeout action is available without requiring review",
             blocking_fields=["intent_satisfaction"]
             if intent_trust == "needs-review"
+            else ["behavior_preservation"]
+            if unsupported_preservation
             else ["assurance_requirements"]
             if assurance_review_required
             else None,
@@ -13501,6 +13614,18 @@ def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root:
         "intended_behavior": [str(item) for item in _list_payload(raw_intent_proof.get("intended_behavior")) if str(item).strip()][:5],
         "proof_dimensions": [str(item) for item in _list_payload(raw_intent_proof.get("proof_dimensions")) if str(item).strip()][:5],
         "unproven_after_tests": [str(item) for item in _list_payload(raw_intent_proof.get("unproven_after_tests")) if str(item).strip()][
+            :5
+        ],
+        "preservation_claims": [str(item) for item in _list_payload(raw_intent_proof.get("preservation_claims")) if str(item).strip()][:5],
+        "allowed_behavior_changes": [
+            str(item) for item in _list_payload(raw_intent_proof.get("allowed_behavior_changes")) if str(item).strip()
+        ][:5],
+        "unknown_behavior": [str(item) for item in _list_payload(raw_intent_proof.get("unknown_behavior")) if str(item).strip()][:5],
+        "human_confirmation_needed": [
+            str(item) for item in _list_payload(raw_intent_proof.get("human_confirmation_needed")) if str(item).strip()
+        ][:5],
+        "proof_classes": [str(item) for item in _list_payload(raw_intent_proof.get("proof_classes")) if str(item).strip()][:8],
+        "preservation_evidence": [str(item) for item in _list_payload(raw_intent_proof.get("preservation_evidence")) if str(item).strip()][
             :5
         ],
         "evidence": str(raw_intent_proof.get("evidence", raw_intent_proof.get("reason", ""))),
@@ -26279,6 +26404,18 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
     return _compact_tiny_required_proof_commands(non_verification_commands or required_commands)
 
 
+def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
+    if not isinstance(intent_proof, dict):
+        return {}
+    compact = dict(intent_proof)
+    compact.pop("behavior_preservation_prompt", None)
+    compact.pop("rule", None)
+    for key in ("intended_behavior", "unproven_after_tests"):
+        if compact.get(key) == []:
+            compact.pop(key, None)
+    return compact
+
+
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
@@ -26312,7 +26449,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
                 }
             if include_intent_proof:
-                next_decision["intent_proof"] = answer["intent_proof"]
+                next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
             next_decision.setdefault(
                 "detail_command",
                 _command_with_cli_invoke(
@@ -26348,7 +26485,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 "required": primary.get("required", bool(required_commands)),
             },
             "required_commands": required_commands,
-            **({"intent_proof": answer["intent_proof"]} if include_intent_proof else {}),
+            **({"intent_proof": _compact_tiny_intent_proof(answer["intent_proof"])} if include_intent_proof else {}),
             **(
                 {"proof_command_adjustments": answer["proof_command_adjustments"]}
                 if isinstance(answer, dict) and answer.get("proof_command_adjustments")
@@ -29429,9 +29566,100 @@ def _intent_proof_prompt_payload(
             "representative user path",
             "negative or boundary case",
             "integration or consumer behavior",
+            "behavior-preservation claim and allowed behavior changes",
+            "characterization, golden-master, compatibility, migration dry-run, or manual scenario evidence",
         ],
+        "behavior_preservation_prompt": {
+            "status": "agent-owned",
+            "record_when": "refactor, modernization, extraction, dependency upgrade, migration, or safe/no-behavior-change claim is part of the work",
+            "fields": [
+                "preservation_claims",
+                "allowed_behavior_changes",
+                "unknown_behavior",
+                "proof_classes",
+                "human_confirmation_needed",
+            ],
+            "rule": "Ordinary tests passing can be one evidence class, but it does not by itself prove a no-behavior-change or business-logic-preserved claim.",
+        },
         "unproven_after_tests": [],
         "rule": "Intent-proof is an agent judgment prompt; AW selects proof commands but does not score test quality automatically.",
+    }
+
+
+_BEHAVIOR_PRESERVATION_SUPPORTING_PROOF_CLASSES = {
+    "characterization",
+    "golden-master",
+    "current-behavior",
+    "compatibility",
+    "api-compatibility",
+    "cli-output-compatibility",
+    "migration-dry-run",
+    "manual-scenario",
+    "domain-acceptance",
+    "human-domain-acceptance",
+}
+
+
+def _behavior_preservation_confidence_payload(intent_proof: dict[str, Any]) -> dict[str, Any]:
+    claims = [str(item).strip() for item in _list_payload(intent_proof.get("preservation_claims")) if str(item).strip()][:5]
+    allowed_changes = [str(item).strip() for item in _list_payload(intent_proof.get("allowed_behavior_changes")) if str(item).strip()][:5]
+    unknown_behavior = [str(item).strip() for item in _list_payload(intent_proof.get("unknown_behavior")) if str(item).strip()][:5]
+    human_confirmation = [str(item).strip() for item in _list_payload(intent_proof.get("human_confirmation_needed")) if str(item).strip()][
+        :5
+    ]
+    proof_classes = [
+        str(item).strip().lower().replace("_", "-") for item in _list_payload(intent_proof.get("proof_classes")) if str(item).strip()
+    ][:8]
+    evidence = [str(item).strip() for item in _list_payload(intent_proof.get("preservation_evidence")) if str(item).strip()][:5]
+    supported_classes = [item for item in proof_classes if item in _BEHAVIOR_PRESERVATION_SUPPORTING_PROOF_CLASSES]
+    ordinary_only = bool(proof_classes) and not supported_classes
+    unsupported_claims = claims if claims and (ordinary_only or (not proof_classes and not evidence)) else []
+    caveats: list[str] = []
+    if unsupported_claims:
+        caveats.append(
+            "Preservation claim is recorded, but no characterization, golden-master, compatibility, migration dry-run, manual scenario, or domain-acceptance evidence is recorded."
+        )
+    if unknown_behavior:
+        caveats.append("Unknown or undocumented behavior remains: " + "; ".join(unknown_behavior[:3]))
+    if human_confirmation:
+        caveats.append("Human/domain confirmation remains: " + "; ".join(human_confirmation[:3]))
+    if not claims:
+        status = "not-claimed"
+    elif unsupported_claims:
+        status = "claim-needs-evidence"
+    else:
+        status = "supported" if supported_classes or evidence else "present"
+    return {
+        "kind": "agentic-workspace/behavior-preservation-proof/v1",
+        "status": status,
+        "claims": claims,
+        "allowed_behavior_changes": allowed_changes,
+        "unknown_behavior": unknown_behavior,
+        "human_confirmation_needed": human_confirmation,
+        "proof_classes": proof_classes,
+        "supporting_proof_classes": supported_classes,
+        "ordinary_test_only": ordinary_only,
+        "evidence": evidence,
+        "unsupported_claims": unsupported_claims,
+        "caveats": caveats,
+        "review_focus": [
+            "changed business-rule or domain paths",
+            "persistence, migration, or data-shape code",
+            "serialization, public contracts, API, or CLI output",
+            "dependency/runtime semantics",
+            "deleted compatibility paths",
+            "updated fixtures, snapshots, or golden outputs",
+            "known gaps and unproven behavior",
+        ],
+        "authority_boundary": {
+            "observed_by_aw": ["agent-recorded preservation claims", "agent-recorded proof classes"],
+            "agent_owned_decisions": ["semantic preservation sufficiency", "material caveat selection"],
+            "human_owned_decisions": ["business/domain acceptance when requested or unproven"],
+        },
+        "rule": (
+            "AW reports recorded preservation claims, evidence classes, and gaps; it does not infer business behavior "
+            "or decide that behavior was preserved."
+        ),
     }
 
 
@@ -29486,6 +29714,7 @@ def _proof_confidence_payload(
         "residual_risk": residual_risk_by_status.get(
             status, "Proof confidence cannot be classified from the available intent-proof evidence."
         ),
+        "behavior_preservation": _behavior_preservation_confidence_payload(intent_proof),
         "evidence_state": str(proof_execution_evidence.get("status", "")) or "unknown",
         "rule": "Proof confidence interprets proof strength; it does not execute proof or score test quality automatically.",
     }
