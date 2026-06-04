@@ -1,0 +1,184 @@
+{
+  "kind": "agentic-workspace/dogfooding-feedback-pack/v1",
+  "schema_version": "agentic-workspace/dogfooding-feedback/v1",
+  "pack_id": "2026-06-04-codex-copilot-stage1",
+  "created_at": "2026-06-04",
+  "source_refs": [
+    ".agentic-workspace/local/evaluations/codex-gpt-5.4-mini-focus-review.md",
+    ".agentic-workspace/local/evaluations/copilot-claude-4.6-sonnet-focus-review.md",
+    "agent-evaluation-roadmap.md",
+    "agent-feedback-prompt.txt"
+  ],
+  "taxonomy": [
+    {
+      "id": "startup_routing_confusion",
+      "description": "Agent fails to enter through the configured repo workflow or cannot recover when the first startup command is awkward.",
+      "surfaces": ["AGENTS.md", "start", "preflight"],
+      "default_route": "issue"
+    },
+    {
+      "id": "proof_ambiguity",
+      "description": "Agent cannot identify which proof lane is required or treats weak proof as sufficient for the claim.",
+      "surfaces": ["implement", "proof", "closeout_report"],
+      "default_route": "issue"
+    },
+    {
+      "id": "ownership_ambiguity",
+      "description": "Agent cannot tell whether AW, the agent, a host repo surface, or a human owns the decision or residue.",
+      "surfaces": ["authority_boundary", "decision_pressure", "Memory", "Planning"],
+      "default_route": "issue"
+    },
+    {
+      "id": "restart_reread_cost",
+      "description": "Continuation requires broad rereading because the compact state does not name the right current evidence or route.",
+      "surfaces": ["summary", "planning reviews", "closeout evidence"],
+      "default_route": "planning"
+    },
+    {
+      "id": "closeout_reporting_gap",
+      "description": "Final user-facing report does not make outcome, proof, caveats, residue, or review-first facts inspectable cheaply.",
+      "surfaces": ["closeout_report", "final_response_rendering"],
+      "default_route": "issue"
+    },
+    {
+      "id": "decision_traceability_gap",
+      "description": "System-shaping rationale, tradeoffs, proof, durable owner, or missing-decision route is not reviewable.",
+      "surfaces": ["decision_review", "decision_pressure", "Planning"],
+      "default_route": "issue"
+    },
+    {
+      "id": "generated_surface_trust_gap",
+      "description": "Agent cannot tell whether a generated surface is fresh, directly editable, or needs a refresh command.",
+      "surfaces": ["doctor", "implement", "generated outputs"],
+      "default_route": "issue"
+    },
+    {
+      "id": "evaluation_capture_gap",
+      "description": "Dogfooding output is prose-only or local scratch, making cross-agent failures hard to compare or aggregate.",
+      "surfaces": ["model-cli-harness", "agent feedback records"],
+      "default_route": "harness"
+    }
+  ],
+  "capture_template": {
+    "required_record_fields": ["id", "evaluated_at", "task", "agents", "findings", "prioritization_signal"],
+    "required_finding_fields": [
+      "failure_class",
+      "severity",
+      "summary",
+      "evidence",
+      "agent_scope",
+      "suggested_lane",
+      "status"
+    ],
+    "severity_scale": ["low", "medium", "high", "critical"],
+    "status_values": ["new", "routed", "implemented", "deferred", "dismissed"]
+  },
+  "benchmark_fixtures": [
+    {
+      "id": "startup-routing-first-contact",
+      "task_shape": "fresh repo orientation",
+      "prompt": "Inspect this repo enough to identify the safe next action for the user's requested work.",
+      "primary_surface": "AGENTS.md plus start output",
+      "success_signal": "Agent runs the configured AW start command before broad raw file inspection and reports the agent-owned work-shape judgment.",
+      "why_frozen": "Startup routing confusion appeared in external runs and is a cheap cross-agent first-contact probe."
+    },
+    {
+      "id": "proof-route-learned-host",
+      "task_shape": "host proof selection",
+      "prompt": "Make a small code change in an unfamiliar host repo and choose validation without assuming AW's own pytest workflow.",
+      "primary_surface": "implement/proof output plus host repo evidence",
+      "success_signal": "Agent distinguishes discovered proof hints from confirmed proof routes and avoids hard-coded pytest selection.",
+      "why_frozen": "Both evaluations highlighted proof ambiguity and repo-assumption risk."
+    },
+    {
+      "id": "closeout-decision-reporting",
+      "task_shape": "system-shaping closeout",
+      "prompt": "Close out a broad system-shaping slice and report what changed, proof, caveats, and decision ownership.",
+      "primary_surface": "closeout_report, decision_review, decision_pressure",
+      "success_signal": "Final report names first-inspection facts, proof, residual risk, and agent-authored decision facts or routed absence.",
+      "why_frozen": "Closeout UX and decision traceability were the strongest shared priority signals."
+    }
+  ],
+  "records": [
+    {
+      "id": "2026-06-04-focus-review-comparison",
+      "evaluated_at": "2026-06-04",
+      "task": {
+        "id": "external-focus-review",
+        "prompt_ref": "local evaluation prompt for next engineering lanes",
+        "summary": "Ask two external agent surfaces to identify the next AW engineering focus areas from current repo evidence."
+      },
+      "agents": [
+        {
+          "agent": "Codex CLI",
+          "model": "gpt-5.4-mini",
+          "surface": "codex",
+          "run_ref": ".agentic-workspace/local/evaluations/codex-gpt-5.4-mini-focus-review.md"
+        },
+        {
+          "agent": "Copilot CLI",
+          "model": "claude-sonnet-4.6",
+          "surface": "copilot",
+          "run_ref": ".agentic-workspace/local/evaluations/copilot-claude-4.6-sonnet-focus-review.md"
+        }
+      ],
+      "findings": [
+        {
+          "id": "closeout-reporting-shared-priority",
+          "failure_class": "closeout_reporting_gap",
+          "severity": "high",
+          "summary": "Both evaluations treated closeout/report UX as a top trust loop for long-horizon work.",
+          "evidence": [
+            "Codex ranked closeout reporting profiles and review compression in its top three focus areas.",
+            "Copilot emphasized closeout reporting acceptance criteria and user-facing report quality."
+          ],
+          "agent_scope": "multi-agent",
+          "suggested_lane": "#1249 closeout/report first-inspection compression",
+          "issue_refs": ["#1249"],
+          "status": "routed"
+        },
+        {
+          "id": "decision-traceability-shared-priority",
+          "failure_class": "decision_traceability_gap",
+          "severity": "high",
+          "summary": "Both evaluations identified decision traceability as necessary for system-shaping work.",
+          "evidence": [
+            "Codex called for decision facts, alternatives, proof, and durable owner.",
+            "Copilot identified decision traceability as a trust gap for architecture/product changes."
+          ],
+          "agent_scope": "multi-agent",
+          "suggested_lane": "#1250 decision traceability owner model",
+          "issue_refs": ["#1250"],
+          "status": "routed"
+        },
+        {
+          "id": "feedback-shape-missing",
+          "failure_class": "evaluation_capture_gap",
+          "severity": "medium",
+          "summary": "The useful cross-agent signal was still local prose until this Stage 1 record shape.",
+          "evidence": [
+            "The source evaluation files lived under .agentic-workspace/local/evaluations.",
+            "#1255 was created because prose-only evaluation output was hard to aggregate."
+          ],
+          "agent_scope": "multi-agent",
+          "suggested_lane": "#1255 model-zoo dogfooding feedback taxonomy",
+          "issue_refs": ["#1255"],
+          "status": "implemented"
+        }
+      ],
+      "prioritization_signal": {
+        "summary": "Shared high-severity findings should outrank single-agent ergonomic friction unless proof or safety is at risk.",
+        "recommended_next_action": "Use repeated failure_class counts plus severity to order implementation lanes before expanding the runner."
+      }
+    }
+  ],
+  "aggregation": {
+    "repeated_failure_classes": ["closeout_reporting_gap", "decision_traceability_gap", "evaluation_capture_gap"],
+    "top_issue_refs": ["#1249", "#1250", "#1255"],
+    "deferred_work": [
+      "Full model registry",
+      "Automated scoring and judge-agent integration",
+      "Large benchmark runner expansion beyond the first frozen fixture set"
+    ]
+  }
+}

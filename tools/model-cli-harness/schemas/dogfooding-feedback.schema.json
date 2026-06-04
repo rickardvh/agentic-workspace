@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/dogfooding-feedback-pack.schema.json",
+  "title": "Dogfooding Feedback Pack",
+  "description": "Stage 1 structured feedback pack for comparing long-horizon agent dogfooding runs before building a full model-zoo runner.",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "pack_id",
+    "created_at",
+    "taxonomy",
+    "capture_template",
+    "benchmark_fixtures",
+    "records",
+    "aggregation"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/dogfooding-feedback-pack/v1"
+    },
+    "schema_version": {
+      "const": "agentic-workspace/dogfooding-feedback/v1"
+    },
+    "pack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "taxonomy": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "surfaces",
+          "default_route"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/failure_class"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surfaces": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_route": {
+            "enum": [
+              "issue",
+              "planning",
+              "memory",
+              "docs",
+              "checks",
+              "harness",
+              "dismissed"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "capture_template": {
+      "type": "object",
+      "required": [
+        "required_record_fields",
+        "required_finding_fields",
+        "severity_scale",
+        "status_values"
+      ],
+      "properties": {
+        "required_record_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_finding_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "severity_scale": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/severity"
+          }
+        },
+        "status_values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding_status"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "benchmark_fixtures": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "task_shape",
+          "prompt",
+          "primary_surface",
+          "success_signal",
+          "why_frozen"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "task_shape": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "primary_surface": {
+            "type": "string",
+            "minLength": 1
+          },
+          "success_signal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why_frozen": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "evaluated_at",
+          "task",
+          "agents",
+          "findings",
+          "prioritization_signal"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evaluated_at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "task": {
+            "type": "object",
+            "required": [
+              "id",
+              "prompt_ref",
+              "summary"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "prompt_ref": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "agents": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "agent",
+                "model",
+                "surface",
+                "run_ref"
+              ],
+              "properties": {
+                "agent": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
+                "run_ref": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "findings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "failure_class",
+                "severity",
+                "summary",
+                "evidence",
+                "agent_scope",
+                "suggested_lane",
+                "status"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "failure_class": {
+                  "$ref": "#/$defs/failure_class"
+                },
+                "severity": {
+                  "$ref": "#/$defs/severity"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "agent_scope": {
+                  "enum": [
+                    "single-agent",
+                    "multi-agent",
+                    "model-tier-specific",
+                    "harness-only"
+                  ]
+                },
+                "suggested_lane": {
+                  "type": "string"
+                },
+                "issue_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "status": {
+                  "$ref": "#/$defs/finding_status"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "prioritization_signal": {
+            "type": "object",
+            "required": [
+              "summary",
+              "recommended_next_action"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string"
+              },
+              "recommended_next_action": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "aggregation": {
+      "type": "object",
+      "required": [
+        "repeated_failure_classes",
+        "top_issue_refs",
+        "deferred_work"
+      ],
+      "properties": {
+        "repeated_failure_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/failure_class"
+          }
+        },
+        "top_issue_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deferred_work": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "failure_class": {
+      "enum": [
+        "startup_routing_confusion",
+        "proof_ambiguity",
+        "ownership_ambiguity",
+        "plan_curation_drift",
+        "restart_reread_cost",
+        "handoff_insufficiency",
+        "mixed_agent_posture_confusion",
+        "closeout_reporting_gap",
+        "decision_traceability_gap",
+        "generated_surface_trust_gap",
+        "evaluation_capture_gap"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "finding_status": {
+      "enum": [
+        "new",
+        "routed",
+        "implemented",
+        "deferred",
+        "dismissed"
+      ]
+    }
+  }
+}

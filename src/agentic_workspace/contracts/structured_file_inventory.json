@@ -634,6 +634,18 @@
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
+      "pattern": "tools/model-cli-harness/feedback/*.json",
+      "format": "json",
+      "owner": "model-cli-harness",
+      "status": "schema-backed",
+      "schema_or_validator": "tools/model-cli-harness/schemas/dogfooding-feedback.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Stage 1 dogfooding feedback packs normalize cross-agent evaluation records, taxonomy, and frozen benchmark fixture seeds before full runner automation.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority."
+    },
+    {
       "pattern": "tools/model-cli-harness/episodes/*.json",
       "format": "json",
       "owner": "model-cli-harness",

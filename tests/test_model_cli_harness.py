@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HARNESS_PATH = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
 
@@ -57,6 +59,30 @@ def test_model_cli_harness_default_output_root_uses_workspace_local_scratch() ->
     harness = _load_harness()
 
     assert harness.DEFAULT_OUTPUT_ROOT == REPO_ROOT / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness"
+
+
+def test_model_cli_harness_validates_stage1_dogfooding_feedback_pack() -> None:
+    schema = json.loads(
+        (REPO_ROOT / "tools" / "model-cli-harness" / "schemas" / "dogfooding-feedback.schema.json").read_text(encoding="utf-8")
+    )
+    pack = json.loads(
+        (REPO_ROOT / "tools" / "model-cli-harness" / "feedback" / "2026-06-04-codex-copilot-stage1.json").read_text(encoding="utf-8")
+    )
+
+    Draft202012Validator.check_schema(schema)
+    errors = list(Draft202012Validator(schema).iter_errors(pack))
+
+    assert errors == []
+    assert len(pack["benchmark_fixtures"]) >= 3
+    assert {finding["failure_class"] for record in pack["records"] for finding in record["findings"]} >= {
+        "closeout_reporting_gap",
+        "decision_traceability_gap",
+        "evaluation_capture_gap",
+    }
+    assert {agent["model"] for record in pack["records"] for agent in record["agents"]} == {
+        "gpt-5.4-mini",
+        "claude-sonnet-4.6",
+    }
 
 
 def test_model_cli_harness_reads_configured_startup_instruction_file(tmp_path: Path) -> None:

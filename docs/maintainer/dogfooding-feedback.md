@@ -51,6 +51,21 @@ Classify friction into one of these buckets before routing it:
 - proof or review surface issue
 - monorepo-only friction
 
+For model-zoo and external-agent evaluations, use the Stage 1 feedback pack instead of prose-only notes.
+The schema is `tools/model-cli-harness/schemas/dogfooding-feedback.schema.json`.
+Checked-in packs live under `tools/model-cli-harness/feedback/`.
+
+Each pack must include:
+
+- the normalized failure taxonomy used by the run;
+- the capture template fields required from each record and finding;
+- at least three frozen task fixtures that can later become runner scenarios;
+- one or more captured records naming model, agent surface, task, failure class, severity, evidence, suggested lane, status, and issue refs;
+- an aggregation summary that turns repeated classes into prioritization signal.
+
+Use the checked-in `tools/model-cli-harness/feedback/2026-06-04-codex-copilot-stage1.json` pack as the first template.
+The local source transcripts can stay under `.agentic-workspace/local/evaluations`; the checked-in pack should carry only the durable, comparable evidence needed for prioritization.
+
 ## Admission Rule
 
 New planning or contract work should enter the queue only when at least one of these is true:
