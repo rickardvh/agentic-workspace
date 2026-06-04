@@ -9961,7 +9961,13 @@ def _prepared_canonical_core_closeout(
     return canonical_core
 
 
-def _prepared_machine_readable_contract_closeout(*, record: dict[str, Any], validation_evidence: str) -> dict[str, Any]:
+def _prepared_machine_readable_contract_closeout(
+    *,
+    record: dict[str, Any],
+    validation_evidence: str,
+    normalized_closure: str,
+    routed_unsolved_intent: str,
+) -> dict[str, Any]:
     raw_contract = _record_section_value(record, "machine_readable_contract")
     contract = copy.deepcopy(raw_contract) if isinstance(raw_contract, dict) else {}
     intent = dict(contract.get("intent", {})) if isinstance(contract.get("intent"), dict) else {}
@@ -9970,8 +9976,13 @@ def _prepared_machine_readable_contract_closeout(*, record: dict[str, Any], vali
     proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
     if _closeout_sequence_needs_normalization(intent.get("proof")):
         intent["proof"] = proof
-    if _closeout_sequence_needs_normalization(execution.get("proof")):
-        execution["proof"] = proof
+    execution["status"] = "completed"
+    execution["next_step"] = (
+        f"Continue via {routed_unsolved_intent}."
+        if normalized_closure == "archive-but-keep-lane-open"
+        else "No required continuation remains for this archived slice."
+    )
+    execution["proof"] = proof
     if _closeout_sequence_needs_normalization(scope.get("touched")):
         scope["touched"] = ["closeout scope recorded in closure_check and generated_closeout."]
     if intent:
@@ -9981,6 +9992,16 @@ def _prepared_machine_readable_contract_closeout(*, record: dict[str, Any], vali
     if scope:
         contract["scope"] = scope
     return contract
+
+
+def _prepared_post_decomposition_delegation_closeout(*, record: dict[str, Any], normalized_closure: str) -> dict[str, str]:
+    existing = _record_section_dict(record, "post_decomposition_delegation") or {}
+    prepared = dict(existing)
+    if _closeout_value_needs_normalization(prepared.get("status")):
+        prepared["status"] = (
+            "closed-with-continuation-routed" if normalized_closure == "archive-but-keep-lane-open" else "skipped-local-bounded-slice"
+        )
+    return prepared
 
 
 def _prepared_execution_bounds_closeout(*, record: dict[str, Any], validation_evidence: str) -> dict[str, Any]:
@@ -9995,6 +10016,25 @@ def _prepared_execution_bounds_closeout(*, record: dict[str, Any], validation_ev
         if _closeout_sequence_needs_normalization(bounds.get(key)):
             bounds[key] = replacement
     return bounds
+
+
+def _prepared_intent_interpretation_closeout(*, record: dict[str, Any], outcome_delivered: str) -> dict[str, str]:
+    existing = _record_section_dict(record, "intent_interpretation") or {}
+    prepared = dict(existing)
+    outcome = outcome_delivered.strip() or "The bounded slice completed with recorded closeout evidence."
+    if _closeout_sequence_needs_normalization(prepared.get("chosen concrete what")):
+        prepared["chosen concrete what"] = outcome
+    if _closeout_sequence_needs_normalization(prepared.get("review guidance")):
+        prepared["review guidance"] = "Inspect generated_closeout, closure_check, proof_report, and closeout_distillation."
+    return prepared
+
+
+def _prepared_context_budget_closeout(*, record: dict[str, Any]) -> dict[str, str]:
+    existing = _record_section_dict(record, "context_budget") or {}
+    prepared = dict(existing)
+    if _closeout_sequence_needs_normalization(prepared.get("tiny resumability note")):
+        prepared["tiny resumability note"] = "Archived slice is complete; reopen only if closeout evidence is invalidated."
+    return prepared
 
 
 def _prepared_iterative_follow_through(
@@ -10424,11 +10464,20 @@ def _prepare_execplan_closeout(
     patch["machine_readable_contract"] = _prepared_machine_readable_contract_closeout(
         record=record,
         validation_evidence=validation_evidence,
+        normalized_closure=normalized_closure,
+        routed_unsolved_intent=routed_unsolved_intent,
     )
     patch["execution_bounds"] = _prepared_execution_bounds_closeout(
         record=record,
         validation_evidence=validation_evidence,
     )
+    patch["intent_interpretation"] = _prepared_intent_interpretation_closeout(
+        record=record,
+        outcome_delivered=str(execution_summary.get("outcome delivered", "")).strip(),
+    )
+    patch["context_budget"] = _prepared_context_budget_closeout(record=record)
+    if _closeout_sequence_needs_normalization(record.get("immediate_next_action")):
+        patch["immediate_next_action"] = ["No required continuation remains for this archived slice."]
     if _closeout_sequence_needs_normalization(record.get("touched_paths")):
         patch["touched_paths"] = ["closeout scope recorded in closure_check and generated_closeout."]
     if _closeout_sequence_needs_normalization(record.get("validation_commands")):
@@ -10444,6 +10493,10 @@ def _prepare_execplan_closeout(
     patch["delegation_outcome_feedback"] = _prepared_delegation_outcome_feedback(
         record=record,
         proof_now=proof_now,
+        normalized_closure=normalized_closure,
+    )
+    patch["post_decomposition_delegation"] = _prepared_post_decomposition_delegation_closeout(
+        record=record,
         normalized_closure=normalized_closure,
     )
     patch["improvement_signal_review"] = _prepared_improvement_signal_review(record)
