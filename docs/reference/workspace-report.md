@@ -100,14 +100,14 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
 | `closeout_report.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
 | `closeout_report.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
-| `closeout_report.decision_review` | object | no |  | Derived review packet for agent-authored system decision facts, completeness, absence routing, and durable-owner guidance. |  |  |
+| `closeout_report.decision_review` | object | no |  | Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance. |  |  |
 | `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, detail routes, and human-owned decisions. |  |  |
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |
 | `compact_output_criteria` | object | yes |  | Criteria for compact CLI outputs to remain sufficient for cheap continuation. |  |  |
 | `automation_readiness` | object | yes |  | Provider-agnostic automation-readiness checklist that keeps execution outside AW. |  |  |
-| `decision_pressure` | object | yes |  | Host architecture-decision configuration or discovered ADR target, existing decision index, promotion pressure, and command-owned scaffold routes. |  |  |
+| `decision_pressure` | object | yes |  | Routing-only architecture-decision pressure surface with owner-model split, host decision target discovery, existing decision index, promotion pressure, and command-owned scaffold routes. |  |  |
 | `maintenance_pressure` | object | yes |  | Maintainer-facing pressure signals and optional follow-up routes. |  |  |
 | `closeout_trust` | object | yes |  | Trust signals for whether recent or current work can be safely closed. |  |  |
 | `external_work_reconciliation` | object | yes |  | Provider-agnostic reconciliation between checked-in planning and external work evidence. |  |  |

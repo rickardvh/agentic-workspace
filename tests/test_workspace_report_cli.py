@@ -102,6 +102,10 @@ def test_report_decision_pressure_shows_unconfigured_repo(tmp_path: Path, capsys
     assert answer["status"] == "not-configured"
     assert answer["configuration"]["configured"] is False
     assert answer["actions"]["scaffold"]["available"] is False
+    owner_model = answer["owner_model"]
+    assert owner_model["semantic_decision_owner"] == "agent"
+    assert "diffs" in owner_model["routing_only_rule"]
+    assert owner_model["owner_split"]["host_durable_targets"][0]["status"] == "not-configured"
 
 
 def test_report_assurance_requirements_section_projects_configured_requirements(tmp_path: Path, capsys) -> None:
@@ -735,6 +739,9 @@ def test_decision_pressure_scaffolds_configured_decision_record(tmp_path: Path, 
     assert answer["status"] == "configured"
     assert answer["configuration"]["target"] == "docs/decisions/"
     assert answer["existing_decisions"]["decision_count"] == 0
+    assert answer["owner_model"]["owner_split"]["host_durable_targets"][0]["status"] == "available"
+    assert answer["owner_model"]["owner_split"]["host_durable_targets"][0]["target"] == "docs/decisions/"
+    assert "configuration discovery" in answer["owner_model"]["owner_split"]["decision_pressure"]
     assert "planning decision-scaffold" in answer["actions"]["scaffold"]["command"]
     assert "--target ./repo" not in answer["actions"]["scaffold"]["command"]
     assert answer["actions"]["scaffold"]["command_target"]["target"] == "<repo>"
@@ -3273,6 +3280,8 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     row_ids = {row["id"] for row in report["traceability"]["rows"]}
     assert {"intent-boundary", "work-completed", "changed-surfaces", "validation", "closure-boundary"} <= row_ids
     assert report["decision_review"]["status"] == "not-applicable"
+    assert report["decision_review"]["owner_model"]["absence_policy"]["not_applicable"].startswith("Small")
+    assert report["decision_review"]["owner_model"]["routing_only_rule"].startswith("AW must not infer")
     assert report["review_compression"]["selected_mode"] == "broad-pr"
     assert report["review_compression"]["first_inspection_contract"]["id"] == "broad-pr"
     assert report["closeout_adoption"]["status"] == "ready"
@@ -3361,6 +3370,9 @@ def test_report_closeout_report_renders_system_decision_facts(tmp_path: Path, ca
     report = json.loads(capsys.readouterr().out)["answer"]
     decision_review = report["decision_review"]
     assert decision_review["status"] == "present"
+    assert decision_review["owner_model"]["semantic_decision_owner"] == "agent"
+    assert "presence and completeness checks" in decision_review["owner_model"]["owner_split"]["aw_derived_review"]
+    assert "decision" in decision_review["owner_model"]["owner_split"]["agent_authored_facts"]
     assert decision_review["decision_facts"]["decision"] == "Use a derived decision-review packet instead of a durable decision store."
     assert decision_review["decision_facts"]["rationale"].startswith("The agent owns")
     assert decision_review["decision_facts"]["tradeoffs"] == ["Avoids a new ADR engine", "Keeps closeout_report derived"]
@@ -3432,6 +3444,8 @@ def test_report_closeout_report_routes_missing_system_decision_facts(tmp_path: P
     report = json.loads(capsys.readouterr().out)["answer"]
     decision_review = report["decision_review"]
     assert decision_review["status"] == "absent-required"
+    assert decision_review["owner_model"]["absence_policy"]["visible_and_routed"].startswith("Material system-shaping signals")
+    assert "changed paths" in decision_review["owner_model"]["routing_only_rule"]
     assert "no agent-authored decision facts" in decision_review["decision_absent_because"]
     assert decision_review["routing"]["promotion_pressure_surface"] == "report --section decision_pressure"
     assert report["review_compression"]["selected_mode"] == "system-shaping-change"

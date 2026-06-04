@@ -297,7 +297,7 @@
         },
         "decision_review": {
           "type": "object",
-          "description": "Derived review packet for agent-authored system decision facts, completeness, absence routing, and durable-owner guidance."
+          "description": "Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance."
         },
         "review_compression": {
           "type": "object",
@@ -328,7 +328,7 @@
     },
     "decision_pressure": {
       "type": "object",
-      "description": "Host architecture-decision configuration or discovered ADR target, existing decision index, promotion pressure, and command-owned scaffold routes."
+      "description": "Routing-only architecture-decision pressure surface with owner-model split, host decision target discovery, existing decision index, promotion pressure, and command-owned scaffold routes."
     },
     "maintenance_pressure": {
       "type": "object",
