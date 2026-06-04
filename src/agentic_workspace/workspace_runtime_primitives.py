@@ -20627,7 +20627,6 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
         for value in [
             str(canonical_core.get("continuation_owner") or "").strip().lower(),
             str(required_continuation.get("owner surface") or "").strip().lower(),
-            str(required_continuation.get("activation trigger") or "").strip().lower(),
             str(durable_residue.get("canonical owner now") or "").strip().lower(),
             str(execution_summary.get("follow-on routed to") or "").strip().lower(),
             str(execution_summary.get("resume from") or "").strip().lower(),

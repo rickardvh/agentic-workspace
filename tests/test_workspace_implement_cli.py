@@ -1246,6 +1246,64 @@ def test_implement_allows_completed_archived_plan_residue_with_routed_continuati
     assert facts["archived_planning_residue"]["records"][0]["closure_decision"] == "archive-but-keep-lane-open"
 
 
+def test_implement_rejects_archived_plan_residue_with_only_activation_trigger(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    archive_path = ".agentic-workspace/planning/execplans/archive/trigger-only.plan.json"
+    _write(
+        tmp_path / archive_path,
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "trigger-only",
+                "machine_readable_contract": {"execution": {"status": "completed"}},
+                "required_continuation": {
+                    "required follow-on for the larger intended outcome": "yes",
+                    "activation trigger": "when the next slice starts",
+                },
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                archive_path,
+                "--task",
+                "Publish the completed slice.",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "violation"
+    facts = gate["changed_path_facts"]
+    assert facts["archived_planning_residue"]["status"] == "incomplete-or-stale"
+    record = facts["archived_planning_residue"]["records"][0]
+    assert record["eligible"] is False
+    assert record["closure_decision"] == "archive-but-keep-lane-open"
+    assert "closure decision is not archive-and-close or routed continuation" in record["reason"]
+    assert "larger intent remains open without routed continuation" in record["reason"]
+    assert "intent satisfaction is incomplete" in record["reason"]
+
+
 def test_implement_allows_closeout_evidence_and_state_cleanup_publication_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

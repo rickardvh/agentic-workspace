@@ -2990,8 +2990,16 @@ def _validate_no_shared_python_function_call_operation_ir() -> list[str]:
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
         REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts" / "operations",
         REPO_ROOT / "generated" / "planning" / "python" / "operations",
+        REPO_ROOT / "generated" / "planning" / "typescript" / "resources" / "operations",
         REPO_ROOT / "generated" / "memory" / "python" / "operations",
+        REPO_ROOT / "generated" / "memory" / "typescript" / "resources" / "operations",
         REPO_ROOT / "generated" / "verification" / "python" / "operations",
+        REPO_ROOT / "generated" / "verification" / "typescript" / "resources" / "operations",
+        REPO_ROOT / "generated" / "planning" / "typescript" / "resources" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "memory" / "python" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "memory" / "typescript" / "resources" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "verification" / "python" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "verification" / "typescript" / "resources" / "_contracts" / "operations",
     )
     for operation_root in operation_roots:
         if not operation_root.is_dir():
