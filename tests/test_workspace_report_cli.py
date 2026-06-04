@@ -1531,6 +1531,20 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
     assert "Closure boundary:" in rendered["rendered_text"]
     assert "Residue:" in rendered["rendered_text"]
     assert rendered["required_fact_coverage"]["status"] == "complete"
+    chat_template = rendering["chat_report_template"]
+    assert chat_template["kind"] == "agentic-workspace/final-chat-report-template/v1"
+    assert chat_template["status"] == "ready"
+    assert chat_template["template_id"] == "builtin/sectioned-closeout-chat"
+    assert chat_template["section_order"] == ["user_visible_change", "proof", "caveats", "authority"]
+    sections = {section["id"]: section for section in chat_template["sections"]}
+    assert "Changed: workspace_runtime_primitives.py; tests/test_workspace_report_cli.py" in sections["user_visible_change"]["lines"]
+    assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in sections["proof"]["lines"]
+    assert any(line.startswith("Closure boundary:") for line in sections["caveats"]["lines"])
+    assert any("agent owns final wording" in line for line in sections["authority"]["lines"])
+    assert "**Changed**" in chat_template["rendered_markdown"]
+    assert "**Proof**" in chat_template["rendered_markdown"]
+    assert "**Caveats**" in chat_template["rendered_markdown"]
+    assert "**Authority**" in chat_template["rendered_markdown"]
 
 
 def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_active_plan(tmp_path: Path, capsys) -> None:
