@@ -15106,6 +15106,36 @@ def _preferred_cli_effect(preferred_cli: str) -> str:
     return "read-only"
 
 
+def _read_only_allowance_packet(
+    *,
+    implementation_allowed: bool,
+    completion_claim_allowed: bool,
+    gate_result: str,
+    required_next_action: str,
+) -> dict[str, Any]:
+    implementation_state = "allowed" if implementation_allowed else "blocked-until-planning-ownership"
+    completion_state = "allowed-after-proof" if completion_claim_allowed else "blocked-until-proof-and-acceptance"
+    return {
+        "read_only_allowed": True,
+        "exploration_allowed": True,
+        "allowed_read_only_actions": [
+            "inspect files and planning state",
+            "review issues, PRs, logs, docs, and command output",
+            "run read-only AW start, preflight, skills, summary, status, report, or doctor commands",
+            "draft review, triage, evaluation, or implementation recommendations without editing source",
+        ],
+        "claim_boundary": {
+            "implementation": implementation_state,
+            "completion_claim": completion_state,
+            "gate_result": gate_result,
+            "required_before_implementation": [] if implementation_allowed else [required_next_action],
+            "rule": (
+                "Read-only exploration/review may continue; implementation and completion claims still need gate, proof, and acceptance."
+            ),
+        },
+    }
+
+
 def _next_safe_action_packet(
     *,
     immediate: dict[str, Any],
@@ -15178,6 +15208,14 @@ def _next_safe_action_packet(
     if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
         proof_required = True
     implementation_allowed = not forbidden_actions and not skill.startswith("planning")
+    completion_claim_allowed = not forbidden_actions and action not in {"choose-smallest-workflow-shape"}
+    gate_result = decision or action
+    read_only_allowance = _read_only_allowance_packet(
+        implementation_allowed=implementation_allowed,
+        completion_claim_allowed=completion_claim_allowed,
+        gate_result=gate_result,
+        required_next_action=action,
+    )
     authority_boundary = _authority_boundary_payload(
         surface="next_safe_action",
         enforced_by_aw=[
@@ -15189,6 +15227,7 @@ def _next_safe_action_packet(
             f"preferred_cli_effect={command_effect}",
             f"module_slot={module_slot}",
             f"memory_consultation_status={memory_status}",
+            f"read_only_allowed={read_only_allowance['read_only_allowed']}",
         ],
         recommended_by_aw=[action, skill, preferred_cli],
         proof_hints=[proof_hint],
@@ -15217,8 +15256,12 @@ def _next_safe_action_packet(
         "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
         "implementation_allowed": implementation_allowed,
+        "read_only_allowed": read_only_allowance["read_only_allowed"],
+        "exploration_allowed": read_only_allowance["exploration_allowed"],
+        "allowed_read_only_actions": read_only_allowance["allowed_read_only_actions"],
         "proof_required": proof_required,
-        "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
+        "completion_claim_allowed": completion_claim_allowed,
+        "claim_boundary": read_only_allowance["claim_boundary"],
         "closure_blockers": closure_blockers,
         "continuation_owner_required": continuation_owner_required,
         "memory_consultation_status": memory_status,
@@ -16632,6 +16675,11 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "delegation_decision_required": gate.get("delegation_decision_required"),
         "authority_boundary": _compact_authority_boundary(gate.get("authority_boundary")),
     }
+    if gate.get("implementation_allowed") is False or gate.get("workflow_sufficient") is False:
+        compact["read_only_allowed"] = gate.get("read_only_allowed")
+        compact["exploration_allowed"] = gate.get("exploration_allowed")
+        compact["allowed_read_only_actions"] = gate.get("allowed_read_only_actions")
+        compact["claim_boundary"] = gate.get("claim_boundary")
     if "changed_path_facts" in gate or "changed_path_classification" in gate:
         compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
     if "work_shape_guidance" in gate:
@@ -20683,6 +20731,12 @@ def _planning_safety_gate_payload(
             "are support signals for agent judgment."
         ),
     )
+    read_only_allowance = _read_only_allowance_packet(
+        implementation_allowed=workflow_sufficient,
+        completion_claim_allowed=workflow_sufficient,
+        gate_result=decision,
+        required_next_action=required_next_action,
+    )
     return {
         "kind": "agentic-workspace/planning-safety-gate/v1",
         "status": status,
@@ -20727,6 +20781,10 @@ def _planning_safety_gate_payload(
         "active_delegation_requirement": active_delegation_requirement,
         "active_parent_decomposition_requirement": active_parent_decomposition_requirement,
         "implementation_allowed": workflow_sufficient,
+        "read_only_allowed": read_only_allowance["read_only_allowed"],
+        "exploration_allowed": read_only_allowance["exploration_allowed"],
+        "allowed_read_only_actions": read_only_allowance["allowed_read_only_actions"],
+        "claim_boundary": read_only_allowance["claim_boundary"],
         "new_plan_command": _command_with_cli_invoke(
             command=_command_with_expected_planning_revision(
                 "agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",

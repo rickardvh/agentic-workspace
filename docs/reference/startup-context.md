@@ -92,8 +92,17 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.allowed_next_actions` | array of string | yes |  | Actions allowed before the next wider context read or implementation step. |  |  |
 | `next_safe_action.forbidden_actions` | array of string | yes |  | Actions forbidden by this packet until a newer compact packet supersedes it. |  |  |
 | `next_safe_action.implementation_allowed` | boolean | yes |  | Whether implementation may begin from this packet without additional planning, proof setup, or skill-guided escalation. |  |  |
+| `next_safe_action.read_only_allowed` | boolean | yes |  | Whether non-mutating inspection, review, issue triage, or report generation may continue from this packet. |  |  |
+| `next_safe_action.exploration_allowed` | boolean | yes |  | Whether exploratory read-only work may continue even when implementation is gated. |  |  |
+| `next_safe_action.allowed_read_only_actions` | array of string | yes |  | Examples of read-only action classes allowed before implementation ownership changes. |  |  |
 | `next_safe_action.proof_required` | boolean | yes |  | Whether proof is required before claiming the next action is complete. |  |  |
 | `next_safe_action.completion_claim_allowed` | boolean | yes |  | Whether the packet permits claiming completion at the current claim level. |  |  |
+| `next_safe_action.claim_boundary` | object | yes |  | Boundary packet that prevents read-only allowance from being mistaken for implementation or completion permission. |  |  |
+| `next_safe_action.claim_boundary.implementation` | enum `"allowed"`, `"blocked-until-planning-ownership"` | yes |  | Implementation permission state represented independently from read-only allowance. |  |  |
+| `next_safe_action.claim_boundary.completion_claim` | enum `"allowed-after-proof"`, `"blocked-until-proof-and-acceptance"` | yes |  | Completion-claim permission state represented independently from read-only allowance. |  |  |
+| `next_safe_action.claim_boundary.gate_result` | string | yes |  | Gate or action result that explains the implementation boundary. |  |  |
+| `next_safe_action.claim_boundary.required_before_implementation` | array of string | yes |  | Required action ids or commands before implementation may proceed. |  |  |
+| `next_safe_action.claim_boundary.rule` | string | yes |  | Human-readable rule distinguishing exploration permission from implementation and completion claims. |  |  |
 | `next_safe_action.closure_blockers` | array of string | yes |  | Reasons closure or completion claims are blocked. |  |  |
 | `next_safe_action.continuation_owner_required` | boolean | yes |  | Whether unfinished intent needs an explicit continuation owner before closeout. |  |  |
 | `next_safe_action.memory_consultation_status` | string | yes |  | Memory consultation or durable-residue status relevant to the next action. |  |  |
