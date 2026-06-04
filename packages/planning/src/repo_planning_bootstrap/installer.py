@@ -467,7 +467,7 @@ def _write_schema_backed_planning_record(*, record_path: Path, record: dict[str,
     if findings:
         raise ValueError(f"planning record does not validate against {schema_path.name}: {'; '.join(findings)}")
     record_path.parent.mkdir(parents=True, exist_ok=True)
-    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def planning_record_schema_findings(record_path: Path) -> list[str]:
@@ -11029,6 +11029,30 @@ def _load_last_proof_receipt(*, target_root: Path, record: dict[str, Any], plan:
     return None, "receipt has neither matching plan_id nor changed-path scope"
 
 
+def _read_closeout_proof_file(*, target_root: Path, proof_file: str) -> tuple[str, str, str]:
+    raw_path = proof_file.strip()
+    if not raw_path:
+        return "", "", "--proof-file was empty"
+    proof_path = Path(raw_path)
+    if not proof_path.is_absolute():
+        proof_path = target_root / proof_path
+    try:
+        resolved_target = target_root.resolve()
+        resolved_path = proof_path.resolve()
+        relative_path = resolved_path.relative_to(resolved_target).as_posix()
+    except (OSError, ValueError):
+        return "", "", "--proof-file must point to a file inside the target repository"
+    if not resolved_path.exists() or not resolved_path.is_file():
+        return "", relative_path, "--proof-file path does not exist or is not a file"
+    try:
+        proof = resolved_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        return "", relative_path, f"--proof-file could not be read: {exc}"
+    if not proof:
+        return "", relative_path, "--proof-file did not contain proof text"
+    return proof, relative_path, ""
+
+
 def closeout_execplan(
     plan: str,
     *,
@@ -11038,6 +11062,7 @@ def closeout_execplan(
     intent_status: str = "satisfied",
     residue: str = "none",
     proof_from: str = "last",
+    proof_file: str | None = None,
     residue_owner: str | None = None,
     retain_archive: bool = True,
     what_happened: str | None = None,
@@ -11116,10 +11141,25 @@ def closeout_execplan(
         return clean(value)
 
     proof_request = clean(proof_from)
+    proof_file_ref = ""
     proof_report = _record_section_dict(record, "proof_report") or {}
     existing_proof = clean(proof_report.get("validation proof"))
     receipt: dict[str, Any] | None = None
-    if proof_request and proof_request.lower() != "last":
+    if provided(proof_file):
+        proof, proof_file_ref, proof_file_error = _read_closeout_proof_file(target_root=target_root, proof_file=provided(proof_file))
+        if proof_file_error:
+            result.warnings.append(
+                {
+                    "warning_class": "closeout_proof_file_unusable",
+                    "path": proof_file_ref or PLANNING_STATE_PATH.as_posix(),
+                    "message": proof_file_error,
+                    "suggested_fix": "Write proof evidence to a repo-contained text file and rerun closeout with --proof-file <path>.",
+                }
+            )
+            result.add("manual review", target_root / (proof_file_ref or PLANNING_STATE_PATH.as_posix()), proof_file_error)
+            return result
+        proof_source = "file"
+    elif proof_request and proof_request.lower() != "last":
         proof = proof_request
         proof_source = "explicit"
     elif existing_proof and not is_placeholder(existing_proof):
@@ -11200,6 +11240,87 @@ def closeout_execplan(
 
     status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
     owner = residue_owner or default_owner
+
+    if dry_run:
+        follow_on = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
+        normalized_preview = {
+            "active_milestone": {"status": "completed", "ready": "ready", "blocked": "none"},
+            "execution_run": {
+                "run status": "completed",
+                "what happened": run_evidence_inputs["what happened"] or clean(execution_run.get("what happened")),
+                "scope touched": run_evidence_inputs["scope touched"] or clean(execution_run.get("scope touched")),
+                "changed surfaces": run_evidence_inputs["changed surfaces"] or clean(execution_run.get("changed surfaces")),
+                "validations run": proof,
+                "result for continuation": (
+                    f"continue from {continuation_owner}"
+                    if closure_decision == "archive-but-keep-lane-open"
+                    else "bounded closeout complete"
+                ),
+                "next step": (
+                    f"promote the next bounded slice from {continuation_owner}"
+                    if closure_decision == "archive-but-keep-lane-open"
+                    else "archive this execplan"
+                ),
+            },
+            "finished_run_review": {
+                "review status": "complete",
+                "scope respected": provided(review_summary) or "yes; closeout accepted the bounded claim.",
+                "proof status": "passed",
+                "intent served": (
+                    "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
+                ),
+                "follow-on decision": follow_on,
+            },
+            "execution_summary": {
+                "outcome delivered": provided(outcome_summary)
+                or clean(execution_summary.get("outcome delivered"))
+                or "closeout accepted the finished run evidence",
+                "validation confirmed": proof,
+                "follow-on routed to": follow_on,
+                "post-work posterity capture": "archive closeout distillation",
+                "resume from": continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive",
+            },
+            "proof_report": {
+                "validation proof": proof,
+                "proof achieved now": "yes; planning closeout dry-run resolved explicit proof evidence.",
+                'evidence for "proof achieved" state': proof,
+            },
+            "closure_check": {
+                "closeout scope": normalized_claim,
+                "slice status": "completed",
+                "larger-intent status": "open" if closure_decision == "archive-but-keep-lane-open" else "closed",
+                "closure decision": closure_decision,
+                "why this decision is honest": (
+                    f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}."
+                ),
+                "evidence carried forward": proof,
+                "reopen trigger": (
+                    f"Reopen when {continuation_owner} activates a fresh bounded slice."
+                    if closure_decision == "archive-but-keep-lane-open"
+                    else "None unless new evidence shows the closeout was incomplete."
+                ),
+            },
+            "durable_residue": {"status": status, "canonical owner now": owner},
+        }
+        if proof_source == "file":
+            normalized_preview["proof_report"]["proof source"] = proof_file_ref
+        result.add("would update", record_path, f"normalized closeout state: {json.dumps(normalized_preview, sort_keys=True)}")
+        result.add("would archive", record_path, "archive validation would run against the normalized closeout state")
+        result.completion_options.extend(
+            [
+                {
+                    "id": "claim-slice-complete",
+                    "allowed": False,
+                    "why": "dry-run preview only; rerun without --dry-run before claiming completion",
+                },
+                {
+                    "id": "closeout-dry-run-status",
+                    "allowed": True,
+                    "why": "dry-run preview uses normalized completed closeout state rather than pending archive fields",
+                },
+            ]
+        )
+        return result
 
     if not dry_run:
         active_milestone = _record_section_dict(record, "active_milestone") or {}
@@ -11290,12 +11411,16 @@ def closeout_execplan(
             else "when the routed closeout residue is acted on",
             "retention after promotion": "retain",
         }
-        if proof and proof_source == "explicit":
+        if proof and proof_source in {"explicit", "file"}:
             record["proof_report"] = {
                 "validation proof": proof,
-                "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+                "proof achieved now": "yes; planning closeout recorded explicit proof input."
+                if proof_source == "explicit"
+                else "yes; planning closeout recorded proof input from a repo-contained proof file.",
                 'evidence for "proof achieved" state': proof,
             }
+            if proof_source == "file":
+                record["proof_report"]["proof source"] = proof_file_ref
         elif proof and proof_source == "existing":
             record["proof_report"] = proof_report
         elif proof and proof_source == "receipt":
@@ -12030,6 +12155,7 @@ def archive_execplan(
     retention_skip_reason = (
         "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead"
     )
+    archive_record = _compact_closeout_archive_record(closeout_record)
 
     if retain_archive:
         if destination.exists() and destination.suffix == ".md":
@@ -12140,6 +12266,7 @@ def archive_execplan(
             record_path=record_path,
             plan_path=plan_path,
             has_record=has_record,
+            record_override=archive_record,
         )
         if archive_size_warning is not None:
             if apply_cleanup:
@@ -12213,8 +12340,10 @@ def archive_execplan(
         archive_dir.mkdir(parents=True, exist_ok=True)
         if has_record:
             shutil.move(str(record_path), str(destination_record))
+            if archive_record != closeout_record:
+                _write_execplan_record(record_path=destination_record, record=archive_record)
         else:
-            _write_execplan_record(record_path=destination_record, record=closeout_record)
+            _write_execplan_record(record_path=destination_record, record=archive_record)
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
     else:
@@ -12235,7 +12364,11 @@ def archive_execplan(
         if record_path.exists():
             record_path.unlink()
     if cleanup_todo_lines is not None and not (cleanup_roadmap_state["changed"] and apply_cleanup):
-        (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
+        (target_root / ".agentic-workspace/planning/state.toml").write_text(
+            "\n".join(cleanup_todo_lines).rstrip() + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
     if cleanup_roadmap_state["changed"] and apply_cleanup:
         state_to_write = cleanup_roadmap_state["state"]
         if cleanup_todo_lines is not None and isinstance(state_to_write, dict):
@@ -12338,6 +12471,28 @@ def _write_closeout_evidence_record(*, record_path: Path, record: dict[str, Any]
     _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=CLOSEOUT_EVIDENCE_SCHEMA_PATH)
 
 
+def _compact_closeout_archive_record(record: dict[str, Any]) -> dict[str, Any]:
+    proof_report = _record_section_dict(record, "proof_report") or {}
+    validation_proof = str(proof_report.get("validation proof", "")).strip()
+    if len(validation_proof) < 200:
+        return record
+    replacement = "See proof_report.validation proof."
+
+    def compact(value: Any, path: tuple[str, ...]) -> Any:
+        if isinstance(value, str):
+            if value == validation_proof and path != ("proof_report", "validation proof"):
+                return replacement
+            return value
+        if isinstance(value, list):
+            return [compact(item, path + (str(index),)) for index, item in enumerate(value)]
+        if isinstance(value, dict):
+            return {str(key): compact(item, path + (str(key),)) for key, item in value.items()}
+        return value
+
+    compacted = compact(record, ())
+    return compacted if isinstance(compacted, dict) else record
+
+
 def _archive_size_guardrail_warning(
     *,
     target_root: Path,
@@ -12345,11 +12500,14 @@ def _archive_size_guardrail_warning(
     record_path: Path,
     plan_path: Path,
     has_record: bool,
+    record_override: dict[str, Any] | None = None,
 ) -> dict[str, str] | None:
     max_bytes = _structured_file_inventory_max_bytes(target_root, ".agentic-workspace/planning/execplans/archive/*.plan.json")
     if max_bytes is None:
         return None
-    if has_record:
+    if record_override is not None:
+        projected_bytes = len((json.dumps(record_override, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    elif has_record:
         projected_bytes = record_path.stat().st_size if record_path.exists() else 0
     else:
         record = _build_execplan_record_from_markdown(plan_path)
@@ -14960,7 +15118,7 @@ def _remove_close_item_state_candidate(state: dict[str, Any], candidate: dict[st
 def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path = target_root / PLANNING_STATE_PATH
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8")
+    state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8", newline="\n")
 
 
 def _merge_todo_state_from_toml_lines(state: dict[str, Any], lines: list[str]) -> dict[str, Any]:

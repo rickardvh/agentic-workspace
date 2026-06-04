@@ -630,6 +630,13 @@ const commandDefinitions = [
             },
             {
               "flags": [
+                "--proof-file"
+              ],
+              "help": "Read closeout proof text from a repo-contained file instead of a shell-sensitive argument.",
+              "name": "proof_file"
+            },
+            {
+              "flags": [
                 "--residue-owner"
               ],
               "help": "Canonical owner for non-empty residue or deferred intent.",

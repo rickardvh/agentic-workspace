@@ -861,6 +861,150 @@ candidates = []
     assert any(
         action["kind"] == "dogfooding reflection" and "issues, Memory, planning" in action["detail"] for action in payload["actions"]
     )
+    assert b"\r\n" not in (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
+
+
+def test_planning_closeout_reads_shell_sensitive_proof_from_file(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    proof_text = 'uv run pytest tests/test_a.py -q; rg "alpha|beta" src\\pkg --glob "*.py"'
+    _write(tmp_path / ".agentic-workspace" / "local" / "closeout-proof.txt", proof_text + "\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-file",
+                ".agentic-workspace/local/closeout-proof.txt",
+                "--what-happened",
+                "recorded closeout proof through a file input.",
+                "--scope-touched",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--changed-surfaces",
+                "planning closeout command",
+                "--review-summary",
+                "yes; file proof was read as data.",
+                "--outcome-summary",
+                "proof capture no longer requires shell-sensitive inline text.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert archived["proof_report"]["validation proof"] == proof_text
+    assert archived["proof_report"]["proof source"] == ".agentic-workspace/local/closeout-proof.txt"
+    assert archived["execution_run"]["validations run"] == proof_text
+
+
+def test_planning_closeout_dry_run_previews_normalized_completed_state(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py::test_closeout_dry_run -q",
+                "--what-happened",
+                "completed dry-run closeout preview normalization.",
+                "--scope-touched",
+                "packages/planning closeout dry-run",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--review-summary",
+                "yes; dry-run reports the final completed state.",
+                "--outcome-summary",
+                "dry-run no longer previews pending archive state.",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    rendered = json.dumps(payload, sort_keys=True).lower()
+
+    assert any(action["kind"] == "would update" and "normalized closeout state" in action["detail"] for action in payload["actions"])
+    assert "current milestone validation remains pending" not in rendered
+    assert "continue the current milestone until the completion criteria are met" not in rendered
+    assert '"pending"' not in rendered
+    assert record_path.exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
+
+
+def test_planning_closeout_compacts_repeated_long_proof_before_archive_size_guardrail(tmp_path: Path, capsys) -> None:
+    long_proof = ('uv run pytest packages/planning/tests/test_archive.py -q; rg "alpha|beta" packages/planning; ' * 80).strip()
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 35000},
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                long_proof,
+                "--what-happened",
+                "closed a plan with long multi-command proof.",
+                "--scope-touched",
+                "packages/planning closeout proof compaction",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; repeated proof text is compacted before archive retention.",
+                "--outcome-summary",
+                "long proof closeout archives without size-guardrail false positives.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert archived_path.exists()
+    assert archived["proof_report"]["validation proof"] == long_proof
+    assert archived["execution_run"]["validations run"] == "See proof_report.validation proof."
+    assert archived["closure_check"]["evidence carried forward"] == "See proof_report.validation proof."
 
 
 def test_planning_closeout_treats_retention_size_skip_as_non_blocking(tmp_path: Path, capsys) -> None:
