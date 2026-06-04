@@ -937,6 +937,7 @@ candidates = []
     assert retained["plan_id"] == "plan-alpha"
     assert retained["retention"]["state"] == "archive-retention-skipped"
     assert retained["execution_run"]["what happened"] == "implemented the retention skip closeout option fix."
+    assert retained["execution_run"]["next step"] == "compact closeout evidence retained; no active planning work remains"
     assert retained["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
     assert options["resolve-closeout-blocker"]["allowed"] is False
     assert options["claim-slice-complete"]["allowed"] is True

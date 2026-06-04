@@ -12325,6 +12325,12 @@ def _closeout_evidence_record(
         value = closeout_record.get(section)
         if isinstance(value, dict) and value:
             record[section] = copy.deepcopy(value)
+    execution_run = record.get("execution_run")
+    closure_check = record.get("closure_check")
+    if isinstance(execution_run, dict) and isinstance(closure_check, dict):
+        closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
+        if closure_decision == "archive-and-close":
+            execution_run["next step"] = "compact closeout evidence retained; no active planning work remains"
     return record
 
 
