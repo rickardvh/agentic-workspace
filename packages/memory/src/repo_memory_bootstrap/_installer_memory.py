@@ -126,6 +126,10 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 use_when=tuple(_string_list(raw.get("use_when"))),
                 routes_from=tuple(_string_list(raw.get("routes_from"))),
                 stale_when=tuple(_string_list(raw.get("stale_when"))),
+                last_confirmed=str(raw.get("last_confirmed", "") or "").strip(),
+                valid_until=str(raw.get("valid_until", "") or "").strip(),
+                superseded_by=tuple(_string_list(raw.get("superseded_by"))),
+                contradicted_by=tuple(_string_list(raw.get("contradicted_by"))),
                 evidence=tuple(_string_list(raw.get("evidence"))),
                 related_validations=tuple(_string_list(raw.get("related_validations"))),
                 routing_only=bool(raw.get("routing_only", False)),
@@ -230,12 +234,14 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
                 "use_when",
                 "routes_from",
                 "stale_when",
+                "superseded_by",
+                "contradicted_by",
                 "evidence",
                 "related_validations",
             ):
                 if field in raw and not _is_string_array(raw[field]):
                     findings.append(f"manifest notes.{note_path}.{field} must be an array of strings")
-            for field in ("summary", "promotion_target", "promotion_trigger", "retention_after_promotion"):
+            for field in ("summary", "last_confirmed", "valid_until", "promotion_target", "promotion_trigger", "retention_after_promotion"):
                 if field in raw and (not isinstance(raw[field], str) or not raw[field].strip()):
                     findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string when present")
             for field in ("routing_only", "high_level", "improvement_candidate"):

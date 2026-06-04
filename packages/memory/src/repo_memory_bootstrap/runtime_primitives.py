@@ -449,6 +449,11 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
             print(f"Route justification: {result.route_summary['justification']}")
         if result.route_summary.get("warning"):
             print(f"Route warning: {result.route_summary['warning']}")
+        selected_trust = cast(dict[str, Any], result.route_summary.get("selected_note_trust", {}))
+        if isinstance(selected_trust, dict) and selected_trust.get("attention_count"):
+            print(
+                f"Route note trust: status={selected_trust.get('status', 'unknown')}, attention={selected_trust.get('attention_count', 0)}"
+            )
     if result.missing_note_hint:
         print(f"Routing feedback: {result.missing_note_hint}")
     if result.review_summary:
@@ -570,7 +575,7 @@ def _print_report(report: dict[str, object]) -> None:
         )
         if isinstance(state_counts, dict) and state_counts:
             print(
-                f"Trust states: {state_counts.get('supported', 0)} supported / {state_counts.get('questionable', 0)} questionable / {state_counts.get('stale', 0)} stale / {state_counts.get('elimination_candidate', 0)} elimination-biased"
+                f"Trust states: {state_counts.get('supported', 0)} supported / {state_counts.get('questionable', 0)} questionable / {state_counts.get('stale', 0)} stale / {state_counts.get('superseded', 0)} superseded / {state_counts.get('contradicted', 0)} contradicted / {state_counts.get('elimination_candidate', 0)} elimination-biased"
             )
     recurring_friction = cast(dict[str, Any], report.get("recurring_friction", {}))
     if isinstance(recurring_friction, dict) and recurring_friction.get("status") == "present":
