@@ -836,6 +836,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "summary --" not in startup_text or _start_primary_action(payload)["action"] == "continue-active-planning-record"
     assert _start_context(payload)["acceptance"]["items"]
     assert _start_context(payload)["acceptance"]["items"][0]["status"] == "unchecked"
+    assert "issue_reference_intent" not in _start_context(payload)
     assert "acceptance" in payload["drill_down"]["available_selectors"]
     assert "durable_intent_promotion" in payload["drill_down"]["available_selectors"]
     assert "available_selectors" in payload["drill_down"]
@@ -1816,7 +1817,7 @@ candidates = [
     assert next_action["claim_boundary"]["required_before_implementation"] == ["select-or-promote-candidate-lane"]
 
 
-def test_start_marks_bare_issue_ref_scope_unknown_without_external_evidence(tmp_path: Path, capsys) -> None:
+def test_start_routes_issue_ref_task_to_external_intent_refresh_without_ambiguity(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "state.toml",
@@ -1834,16 +1835,31 @@ candidates = []
 """,
     )
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement #1189", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement #1234", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["next_safe_action"] == "refresh-external-issue-intent"
+    assert payload["next_safe_action"]["preferred_cli_effect"] == "read-only"
+    assert "external-intent refresh-github" in payload["next_safe_action"]["preferred_cli"]
+    assert "not user-intent ambiguity" in _start_primary_action(payload)["summary"]
+    issue_intent = _start_context(payload)["issue_reference_intent"]
+    assert issue_intent["kind"] == "agentic-workspace/issue-reference-intent/v1"
+    assert issue_intent["status"] == "details-needed"
+    assert issue_intent["intent_state"] == "issue-details-need-fetching"
+    assert issue_intent["not_intent_ambiguity"] is True
+    assert issue_intent["issue_refs"] == ["#1234"]
+    assert issue_intent["missing_issue_refs"] == ["#1234"]
+    assert issue_intent["required_next_action"] == "refresh-external-issue-intent"
+    assert "external-intent refresh-github" in issue_intent["next_command"]
+    assert "without issue refs, startup should not assume GitHub" in issue_intent["repo_agnostic_rule"]
+    assert "issue_reference_intent" in payload["drill_down"]["available_selectors"]
     gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "attention"
     assert gate["gate_result"] == "external-issue-scope-unknown"
     assert gate["implementation_allowed"] is True
     assert gate["issue_scope_evidence"]["status"] == "unknown"
     assert gate["issue_scope_evidence"]["risk"] == "high"
-    assert gate["issue_scope_evidence"]["missing_issue_refs"] == ["#1189"]
+    assert gate["issue_scope_evidence"]["missing_issue_refs"] == ["#1234"]
     assert "external-intent refresh-github" in gate["issue_scope_evidence"]["refresh_command"]
 
 
