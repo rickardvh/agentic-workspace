@@ -144,6 +144,7 @@ Decision-review facts are:
 
 Use `closeout_report.review_compression` to see what a human should inspect first for the selected work shape.
 It is closeout-first, derived, and non-authoritative.
+It is also the first-inspection contract that `closeout_report.final_response_rendering` must honor for user-facing closeout text.
 Its modes are:
 
 - `small-direct-edit`;
@@ -154,6 +155,12 @@ Its modes are:
 - `follow-up-or-residue-heavy-work`.
 
 Every compressed review must either say no material human decision remains beyond ordinary acceptance, or name the human-owned acceptance, risk, handoff, or decision-fact question and its owner.
+Every mode must name:
+
+- first-inspection facts;
+- rendered facts that must appear in the final response for that work shape;
+- secondary detail routes;
+- the policy for when raw report/detail inspection is still needed.
 
 Use `closeout_report.closeout_adoption` as the operator-facing closeout quality rubric.
 The rubric asks whether the final response answers:
@@ -203,6 +210,7 @@ Minimal and guidance-only closeouts without trust, residue, or follow-up signals
 Guidance-only closeouts with audit, lower-trust, residue, or follow-up signals should stay compact but still render the caveat and disallow a plain-done claim.
 Balanced, explanatory, audit, partial, or lower-trust closeouts should render the material human-facing facts: profile reason, closure boundary, changed work, proof, residual risk, routed residue, and follow-up owner.
 System-shaping closeouts should also render decision facts or a decision-gap line from `decision_review`.
+`final_response_rendering.selected_review_mode` and `final_response_rendering.first_inspection_contract` must match `review_compression.selected_mode` and its selected contract so the rendered chat summary cannot drift from the review-compression guidance.
 The final response should prefer `rendered_summary.rendered_text` as concise prose or bullets and must not dump raw JSON.
 `required_fact_coverage` must make omitted required facts visible before the agent claims completion.
 Custom wording or template selection is a future-safe extension only when it cannot hide `must_include`, `must_not_claim`, `plain_done_allowed`, or `raw_json_allowed`.

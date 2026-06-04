@@ -8035,6 +8035,155 @@ def _closeout_report_decision_review_payload(
     }
 
 
+def _closeout_report_review_mode_contracts() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "small-direct-edit",
+            "work_shape": "small direct edit",
+            "first_inspection_facts": ["rendered summary", "proof statement if present", "plain_done_allowed"],
+            "rendered_must_include": [],
+            "rendered_should_include": ["outcome", "validation when present"],
+            "detail_routes": ["closeout_report.final_response_rendering"],
+            "secondary_detail_policy": "Do not require raw closeout_report inspection when the rendered summary is terse and complete.",
+        },
+        {
+            "id": "planned-slice",
+            "work_shape": "planned slice",
+            "first_inspection_facts": [
+                "intended outcome",
+                "changed surfaces",
+                "proof",
+                "closure boundary",
+                "completeness",
+                "follow-up owner",
+            ],
+            "rendered_must_include": [
+                "outcome",
+                "changed surfaces",
+                "proof or validation",
+                "closure boundary",
+                "residue or follow-up status",
+            ],
+            "rendered_should_include": ["completeness when non-complete"],
+            "detail_routes": ["closeout_report", "completion_contract"],
+            "secondary_detail_policy": "Inspect full closeout_report only when the rendered slice summary omits a required fact.",
+        },
+        {
+            "id": "broad-pr",
+            "work_shape": "broad PR or strict closeout",
+            "first_inspection_facts": [
+                "planned-slice facts",
+                "validation breadth",
+                "changed public or contract surfaces",
+                "unresolved issue residue",
+            ],
+            "rendered_must_include": [
+                "profile reason",
+                "changed surfaces",
+                "proof or validation",
+                "closure boundary",
+                "residue or follow-up status",
+                "authority boundary",
+            ],
+            "rendered_should_include": ["validation breadth", "public or contract surface when present"],
+            "detail_routes": ["closeout_report", "closeout_trust", "PR body"],
+            "secondary_detail_policy": "Use detail routes to audit breadth, public surface impact, or unresolved issue residue.",
+        },
+        {
+            "id": "system-shaping-change",
+            "work_shape": "system-shaping change",
+            "first_inspection_facts": [
+                "broad-pr facts",
+                "decision facts",
+                "decision proof",
+                "durable decision owner",
+                "decision absence routing when facts are missing",
+            ],
+            "rendered_must_include": [
+                "profile reason",
+                "changed surfaces",
+                "proof or validation",
+                "closure boundary",
+                "residue or follow-up status",
+                "authority boundary",
+                "decision facts",
+            ],
+            "rendered_should_include": ["decision proof", "durable decision owner"],
+            "detail_routes": ["closeout_report.decision_review", "decision_pressure"],
+            "secondary_detail_policy": "Route to decision_review and decision_pressure when decision facts are missing or need durable promotion.",
+        },
+        {
+            "id": "partial-or-lower-trust-closeout",
+            "work_shape": "partial or lower-trust closeout",
+            "first_inspection_facts": [
+                "blocking caveat",
+                "missing proof or intent evidence",
+                "residual risk",
+                "owner",
+                "allowed closure claim",
+            ],
+            "rendered_must_include": [
+                "profile reason or caveat",
+                "missing or partial evidence caveat",
+                "closure boundary",
+                "residue or follow-up status",
+                "authority boundary",
+            ],
+            "rendered_should_include": ["proof gap", "allowed closure claim"],
+            "detail_routes": ["closeout_report", "closeout_trust", "completion_contract"],
+            "secondary_detail_policy": "Keep caveats in the user-facing closeout and inspect detail routes before accepting the risk.",
+        },
+        {
+            "id": "follow-up-or-residue-heavy-work",
+            "work_shape": "follow-up or residue-heavy work",
+            "first_inspection_facts": [
+                "residue owner",
+                "activation trigger",
+                "durable route",
+                "honest closure boundary",
+            ],
+            "rendered_must_include": [
+                "closure boundary",
+                "residue or follow-up status",
+                "authority boundary",
+            ],
+            "rendered_should_include": ["activation trigger", "durable route"],
+            "detail_routes": ["closeout_trust", "Planning reviews", "issue follow-up"],
+            "secondary_detail_policy": "Inspect residue routes before treating the parent intent as fully closed.",
+        },
+    ]
+
+
+def _closeout_report_selected_review_mode(
+    *,
+    profile_policy: dict[str, Any],
+    trust: str,
+    completeness: dict[str, Any],
+    decision_review: dict[str, Any],
+) -> str:
+    profile = str(profile_policy.get("selected_profile") or "minimal")
+    completeness_status = str(completeness.get("status") or "").strip().lower()
+    decision_status = str(decision_review.get("status") or "").strip().lower()
+    lower_or_partial = str(trust).strip().lower() == "lower-trust" or completeness_status in {"partial", "incomplete"}
+    if decision_status in {"present", "partial", "absent-required"}:
+        return "system-shaping-change"
+    if lower_or_partial or profile == "explanatory":
+        return "partial-or-lower-trust-closeout"
+    if profile == "audit":
+        return "broad-pr"
+    if profile in {"balanced", "compact"}:
+        return "planned-slice"
+    return "small-direct-edit"
+
+
+def _closeout_report_review_mode_contract(mode_id: str) -> dict[str, Any]:
+    for mode in _closeout_report_review_mode_contracts():
+        if mode["id"] == mode_id:
+            return {key: list(value) if isinstance(value, list) else value for key, value in mode.items()}
+    fallback = _closeout_report_review_mode_contracts()[0]
+    return {key: list(value) if isinstance(value, list) else value for key, value in fallback.items()}
+
+
 def _closeout_report_review_compression_payload(
     *,
     profile_policy: dict[str, Any],
@@ -8045,84 +8194,17 @@ def _closeout_report_review_compression_payload(
     follow_up_owner: str,
     detail_commands: dict[str, str],
 ) -> dict[str, Any]:
-    profile = str(profile_policy.get("selected_profile") or "minimal")
     completeness_status = str(completeness.get("status") or "").strip().lower()
     decision_status = str(decision_review.get("status") or "").strip().lower()
     lower_or_partial = str(trust).strip().lower() == "lower-trust" or completeness_status in {"partial", "incomplete"}
-    if decision_status in {"present", "partial", "absent-required"}:
-        selected_mode = "system-shaping-change"
-    elif lower_or_partial or profile == "explanatory":
-        selected_mode = "partial-or-lower-trust-closeout"
-    elif profile == "audit":
-        selected_mode = "broad-pr"
-    elif profile == "balanced":
-        selected_mode = "planned-slice"
-    elif profile == "compact":
-        selected_mode = "planned-slice"
-    else:
-        selected_mode = "small-direct-edit"
-
-    modes = [
-        {
-            "id": "small-direct-edit",
-            "first_inspection_facts": ["rendered summary", "proof statement if present", "plain_done_allowed"],
-            "detail_routes": ["closeout_report.final_response_rendering"],
-        },
-        {
-            "id": "planned-slice",
-            "first_inspection_facts": [
-                "intended outcome",
-                "changed surfaces",
-                "proof",
-                "closure boundary",
-                "completeness",
-                "follow-up owner",
-            ],
-            "detail_routes": ["closeout_report", "completion_contract"],
-        },
-        {
-            "id": "broad-pr",
-            "first_inspection_facts": [
-                "planned-slice facts",
-                "validation breadth",
-                "changed public or contract surfaces",
-                "unresolved issue residue",
-            ],
-            "detail_routes": ["closeout_report", "closeout_trust", "PR body"],
-        },
-        {
-            "id": "system-shaping-change",
-            "first_inspection_facts": [
-                "broad-pr facts",
-                "decision facts",
-                "decision proof",
-                "durable decision owner",
-                "decision absence routing when facts are missing",
-            ],
-            "detail_routes": ["closeout_report.decision_review", "decision_pressure"],
-        },
-        {
-            "id": "partial-or-lower-trust-closeout",
-            "first_inspection_facts": [
-                "blocking caveat",
-                "missing proof or intent evidence",
-                "residual risk",
-                "owner",
-                "allowed closure claim",
-            ],
-            "detail_routes": ["closeout_report", "closeout_trust", "completion_contract"],
-        },
-        {
-            "id": "follow-up-or-residue-heavy-work",
-            "first_inspection_facts": [
-                "residue owner",
-                "activation trigger",
-                "durable route",
-                "honest closure boundary",
-            ],
-            "detail_routes": ["closeout_trust", "Planning reviews", "issue follow-up"],
-        },
-    ]
+    selected_mode = _closeout_report_selected_review_mode(
+        profile_policy=profile_policy,
+        trust=trust,
+        completeness=completeness,
+        decision_review=decision_review,
+    )
+    modes = _closeout_report_review_mode_contracts()
+    first_inspection = _closeout_report_review_mode_contract(selected_mode)
     human_owned: list[str] = []
     if decision_status == "absent-required":
         human_owned.append("accept whether system-shaping decision facts may remain absent or must be routed before merge")
@@ -8139,7 +8221,8 @@ def _closeout_report_review_compression_payload(
         "authority": "derived-review-guide",
         "selected_mode": selected_mode,
         "modes": modes,
-        "first_inspection": next((mode for mode in modes if mode["id"] == selected_mode), modes[0]),
+        "first_inspection": first_inspection,
+        "first_inspection_contract": first_inspection,
         "human_owned_decisions": human_owned,
         "detail_commands": detail_commands,
         "risk_note": residual_risk,
@@ -8233,6 +8316,7 @@ def _closeout_report_final_response_rendering_payload(
     blockers: list[Any],
     next_action: str,
     decision_review: dict[str, Any] | None = None,
+    review_mode: str = "",
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
     profile_reason = str(profile_policy.get("reason") or "").strip()
@@ -8245,6 +8329,7 @@ def _closeout_report_final_response_rendering_payload(
     summary_lines: list[str] = []
     must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
     decision_review = _as_dict(decision_review)
+    review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
 
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
@@ -8274,6 +8359,7 @@ def _closeout_report_final_response_rendering_payload(
             "missing or partial evidence caveat": ("missing", "partial", "incomplete", "plain done"),
             "authority boundary": ("authority:", "agent owns"),
             "outcome": ("outcome:", "done."),
+            "changed surfaces": ("changed:",),
             "validation": ("proof:", "validation:"),
             "decision facts": ("decision:", "decision gap:"),
         }
@@ -8333,6 +8419,8 @@ def _closeout_report_final_response_rendering_payload(
             "status": "guidance-only",
             "profile": profile,
             "rendering_mode": rendering_mode,
+            "selected_review_mode": review_contract["id"],
+            "first_inspection_contract": review_contract,
             "rendering_guidance": "Keep the final response terse; no active closeout claim needs expanded reporting.",
             "summary_lines": summary_lines,
             "rendered_summary": rendered_summary_payload(
@@ -8424,6 +8512,8 @@ def _closeout_report_final_response_rendering_payload(
         must_include.append("missing or partial evidence caveat")
         summary_lines.append("Evidence caveat: missing or partial closeout evidence; do not claim plain done.")
 
+    must_include.extend(str(item) for item in _list_payload(review_contract.get("rendered_must_include")))
+
     rendering_mode = "compact" if guidance_only else "evidence-backed" if profile_requires_detail else "compact"
     status_value = (
         "required" if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal else "available"
@@ -8435,6 +8525,8 @@ def _closeout_report_final_response_rendering_payload(
         "status": status_value,
         "profile": profile,
         "rendering_mode": rendering_mode,
+        "selected_review_mode": review_contract["id"],
+        "first_inspection_contract": review_contract,
         "rendering_guidance": (
             "Render these closeout facts in the final user-facing response; keep them concise and omit empty fields."
             if rendering_mode == "evidence-backed"
@@ -8529,6 +8621,12 @@ def _closeout_report_payload(
         active_planning_record=active_planning_record,
         proof_report=proof_report,
     )
+    selected_review_mode = _closeout_report_selected_review_mode(
+        profile_policy=profile_policy,
+        trust=trust,
+        completeness=completeness,
+        decision_review=decision_review,
+    )
     final_response_rendering = _closeout_report_final_response_rendering_payload(
         status="present" if active_planning_record else "guidance-only",
         profile_policy=profile_policy,
@@ -8545,6 +8643,7 @@ def _closeout_report_payload(
         blockers=blockers if isinstance(blockers, list) else [],
         next_action=str(next_action),
         decision_review=decision_review,
+        review_mode=selected_review_mode,
     )
     detail_commands = {
         "closeout_report": profile_policy["next_command"],
