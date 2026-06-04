@@ -8492,6 +8492,104 @@ def _closeout_report_final_response_rendering_payload(
             "boundary": "Derived final-response presentation; canonical truth remains in closeout_report and its source fields.",
         }
 
+    def chat_report_template_payload(
+        *,
+        rendering_status: str,
+        rendering_mode: str,
+        summary_lines: list[str],
+        must_include: list[str],
+        plain_done_allowed: bool,
+    ) -> dict[str, Any]:
+        outcome = present(work_completed) or present(requested_outcome)
+        behavior_lines = []
+        if outcome:
+            behavior_lines.append(f"Outcome: {outcome}")
+        if present(changed_surfaces):
+            behavior_lines.append(f"Changed: {changed_surfaces}")
+        proof_lines = [f"Proof: {validation_proof}"] if present(validation_proof) else []
+
+        caveat_lines: list[str] = []
+        for line in summary_lines:
+            if line.startswith(("Closeout caveat:", "Closure boundary:", "Residue:", "Evidence caveat:", "Decision gap:")):
+                caveat_lines.append(line)
+        if not caveat_lines and not plain_done_allowed:
+            caveat_lines.append("Caveat: closeout requires non-terse reporting before claiming completion.")
+
+        authority_lines = [
+            "Authority: AW reports closeout evidence, gates, and caveats; the agent owns final wording, completion judgment, and material caveat selection."
+        ]
+        if decision_review.get("status") in {"present", "partial", "absent-required"}:
+            authority_lines.append(
+                "Decision authority: AW renders recorded decision facts or their absence; the agent owns the semantic decision."
+            )
+
+        sections = [
+            {
+                "id": "user_visible_change",
+                "title": "Changed",
+                "required": "changed surfaces" in must_include or "outcome" in must_include,
+                "lines": behavior_lines,
+                "source_fields": ["work_completed", "changes.changed_surfaces", "interpreted_intent.requested_outcome"],
+            },
+            {
+                "id": "proof",
+                "title": "Proof",
+                "required": any(item in must_include for item in ("proof or validation", "validation")),
+                "lines": proof_lines,
+                "source_fields": ["proof.validation_proof", "proof.intent_proof"],
+            },
+            {
+                "id": "caveats",
+                "title": "Caveats",
+                "required": any(
+                    item in must_include
+                    for item in (
+                        "closure boundary",
+                        "residue or follow-up status",
+                        "missing or partial evidence caveat",
+                        "profile reason or caveat",
+                    )
+                ),
+                "lines": caveat_lines,
+                "source_fields": ["completion_boundary", "residual_risk", "completion_options", "blockers", "next_action"],
+            },
+            {
+                "id": "authority",
+                "title": "Authority",
+                "required": "authority boundary" in must_include,
+                "lines": authority_lines,
+                "source_fields": ["authority_boundary", "final_response_rendering.boundary", "decision_review"],
+            },
+        ]
+        missing_required_sections = [section["id"] for section in sections if section["required"] and not section["lines"]]
+        rendered_markdown_lines: list[str] = []
+        for section in sections:
+            if not section["lines"] and not section["required"]:
+                continue
+            rendered_markdown_lines.append(f"**{section['title']}**")
+            rendered_markdown_lines.extend(f"- {line}" for line in section["lines"])
+        return {
+            "kind": "agentic-workspace/final-chat-report-template/v1",
+            "status": "ready-with-missing-required-sections" if missing_required_sections else "ready",
+            "template_id": "builtin/sectioned-closeout-chat",
+            "rendering_status": rendering_status,
+            "rendering_mode": rendering_mode,
+            "section_order": [section["id"] for section in sections],
+            "sections": sections,
+            "missing_required_sections": missing_required_sections,
+            "rendered_markdown": "\n".join(rendered_markdown_lines),
+            "customization_points": [
+                "section titles",
+                "section order",
+                "omit empty optional sections",
+                "terse vs evidence-backed wording density",
+            ],
+            "rule": (
+                "Use this as the final chat-response scaffold when closeout details matter; keep canonical truth in "
+                "closeout_report fields and do not paste raw JSON."
+            ),
+        }
+
     owners = [
         str(item.get("owner") or "").strip()
         for item in completion_options
@@ -8509,6 +8607,13 @@ def _closeout_report_final_response_rendering_payload(
             "Do not present missing active Planning evidence as a closeout failure when no closeout claim is being made."
         ]
         plain_done_allowed = True
+        chat_report_template = chat_report_template_payload(
+            rendering_status="guidance-only",
+            rendering_mode=rendering_mode,
+            summary_lines=summary_lines,
+            must_include=must_include,
+            plain_done_allowed=plain_done_allowed,
+        )
         return {
             "kind": "agentic-workspace/final-closeout-rendering/v1",
             "status": "guidance-only",
@@ -8526,6 +8631,7 @@ def _closeout_report_final_response_rendering_payload(
                 must_not_claim=must_not_claim,
                 plain_done_allowed=plain_done_allowed,
             ),
+            "chat_report_template": chat_report_template,
             "must_include": must_include,
             "must_not_claim": must_not_claim,
             "plain_done_allowed": plain_done_allowed,
@@ -8615,6 +8721,14 @@ def _closeout_report_final_response_rendering_payload(
     )
     plain_done_allowed = not (lower_trust or incomplete_or_partial or has_material_guidance_signal)
     summary_lines = summary_lines[:8]
+    unique_must_include = list(dict.fromkeys(must_include))
+    chat_report_template = chat_report_template_payload(
+        rendering_status=status_value,
+        rendering_mode=rendering_mode,
+        summary_lines=summary_lines,
+        must_include=unique_must_include,
+        plain_done_allowed=plain_done_allowed,
+    )
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
         "status": status_value,
@@ -8634,11 +8748,12 @@ def _closeout_report_final_response_rendering_payload(
             status=status_value,
             rendering_mode=rendering_mode,
             summary_lines=summary_lines,
-            must_include=list(dict.fromkeys(must_include)),
+            must_include=unique_must_include,
             must_not_claim=must_not_claim,
             plain_done_allowed=plain_done_allowed,
         ),
-        "must_include": list(dict.fromkeys(must_include)),
+        "chat_report_template": chat_report_template,
+        "must_include": unique_must_include,
         "must_not_claim": must_not_claim,
         "plain_done_allowed": plain_done_allowed,
         "raw_json_allowed": False,
