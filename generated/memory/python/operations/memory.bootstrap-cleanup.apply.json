@@ -34,12 +34,8 @@
     "steps": [
       {
         "arguments": {
-          "function": "cleanup_bootstrap_workspace",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
+          "target": {
+            "value": "target"
           }
         },
         "description": "Remove the temporary Memory bootstrap workspace when it exists.",
@@ -48,7 +44,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.bootstrap.cleanup"
       },
       {
         "arguments": {},
@@ -87,7 +83,7 @@
     {
       "description": "Remove the temporary Memory bootstrap workspace when it exists.",
       "id": "cleanup_bootstrap_workspace",
-      "uses": "python.function.call"
+      "uses": "memory.bootstrap.cleanup"
     },
     {
       "description": "Emit the bootstrap-cleanup result in the requested format.",

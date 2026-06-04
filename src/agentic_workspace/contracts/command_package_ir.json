@@ -5547,6 +5547,195 @@
               "handler": "runtime_handler",
               "function": "apply_planning_delegation_decision_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.adopt.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "adopt_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.close-item.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "close_planning_item",
+              "kwargs": {
+                "item": {
+                  "value": "item"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "reason": {
+                  "value": "reason"
+                },
+                "issue": {
+                  "value": "issue"
+                },
+                "expected_planning_revision": {
+                  "value": "expect_planning_revision"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
+            },
+            {
+              "primitive": "planning.create-review.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "create_review_record",
+              "kwargs": {
+                "slug": {
+                  "value": "slug"
+                },
+                "title": {
+                  "value": "title"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "scope": {
+                  "value": "scope"
+                },
+                "classification": {
+                  "value": "classification"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "render_markdown": {
+                  "value": "render_markdown"
+                }
+              }
+            },
+            {
+              "primitive": "planning.bootstrap.doctor.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "doctor_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.handoff.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "planning_handoff",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.init.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "local_only": {
+                  "value": "local"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.install.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "local_only": {
+                  "value": "local"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.bootstrap.status.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "collect_status",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.uninstall.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "uninstall_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
+            },
+            {
+              "primitive": "planning.upgrade.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "upgrade_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.verify-payload.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "verify_payload",
+              "kwargs": {}
             }
           ],
           "context_roots": [
@@ -5614,7 +5803,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.adopt.apply",
               "output.emit"
             ]
           },
@@ -6180,7 +6369,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.close-item.apply",
               "output.emit"
             ]
           },
@@ -6303,7 +6492,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.create-review.apply",
               "output.emit"
             ]
           },
@@ -6554,7 +6743,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.bootstrap.doctor.load",
               "output.emit"
             ]
           },
@@ -6632,7 +6821,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.handoff.load",
               "output.emit"
             ]
           },
@@ -6684,7 +6873,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.init.apply",
               "output.emit"
             ]
           },
@@ -6794,7 +6983,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.install.apply",
               "output.emit"
             ]
           },
@@ -7685,7 +7874,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.bootstrap.status.load",
               "output.emit"
             ]
           },
@@ -7841,7 +8030,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.uninstall.apply",
               "output.emit"
             ]
           },
@@ -7927,7 +8116,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.upgrade.apply",
               "output.emit"
             ]
           },
@@ -8039,7 +8228,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "planning.verify-payload.load",
               "output.emit"
             ]
           },
@@ -8425,6 +8614,377 @@
               "handler": "runtime_handler",
               "function": "_emit_memory_operation_output",
               "import_module": "repo_memory_bootstrap.runtime_primitives"
+            },
+            {
+              "primitive": "memory.install.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "project_name": {
+                  "value": "project_name"
+                },
+                "project_purpose": {
+                  "value": "project_purpose"
+                },
+                "key_repo_docs": {
+                  "value": "key_repo_docs"
+                },
+                "key_subsystems": {
+                  "value": "key_subsystems"
+                },
+                "primary_build_command": {
+                  "value": "primary_build_command"
+                },
+                "primary_test_command": {
+                  "value": "primary_test_command"
+                },
+                "other_key_commands": {
+                  "value": "other_key_commands"
+                },
+                "policy_profile": {
+                  "value": "policy_profile"
+                }
+              }
+            },
+            {
+              "primitive": "memory.init.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "project_name": {
+                  "value": "project_name"
+                },
+                "project_purpose": {
+                  "value": "project_purpose"
+                },
+                "key_repo_docs": {
+                  "value": "key_repo_docs"
+                },
+                "key_subsystems": {
+                  "value": "key_subsystems"
+                },
+                "primary_build_command": {
+                  "value": "primary_build_command"
+                },
+                "primary_test_command": {
+                  "value": "primary_test_command"
+                },
+                "other_key_commands": {
+                  "value": "other_key_commands"
+                },
+                "policy_profile": {
+                  "value": "policy_profile"
+                }
+              }
+            },
+            {
+              "primitive": "memory.adopt.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "adopt_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "apply_local_entrypoint": {
+                  "value": "apply_local_entrypoint"
+                },
+                "project_name": {
+                  "value": "project_name"
+                },
+                "project_purpose": {
+                  "value": "project_purpose"
+                },
+                "key_repo_docs": {
+                  "value": "key_repo_docs"
+                },
+                "key_subsystems": {
+                  "value": "key_subsystems"
+                },
+                "primary_build_command": {
+                  "value": "primary_build_command"
+                },
+                "primary_test_command": {
+                  "value": "primary_test_command"
+                },
+                "other_key_commands": {
+                  "value": "other_key_commands"
+                },
+                "policy_profile": {
+                  "value": "policy_profile"
+                }
+              }
+            },
+            {
+              "primitive": "memory.upgrade.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "upgrade_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "apply_local_entrypoint": {
+                  "value": "apply_local_entrypoint"
+                },
+                "project_name": {
+                  "value": "project_name"
+                },
+                "project_purpose": {
+                  "value": "project_purpose"
+                },
+                "key_repo_docs": {
+                  "value": "key_repo_docs"
+                },
+                "key_subsystems": {
+                  "value": "key_subsystems"
+                },
+                "primary_build_command": {
+                  "value": "primary_build_command"
+                },
+                "primary_test_command": {
+                  "value": "primary_test_command"
+                },
+                "other_key_commands": {
+                  "value": "other_key_commands"
+                },
+                "policy_profile": {
+                  "value": "policy_profile"
+                }
+              }
+            },
+            {
+              "primitive": "memory.migrate_layout.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "migrate_layout",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
+            },
+            {
+              "primitive": "memory.uninstall.apply",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "uninstall_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "project_name": {
+                  "value": "project_name"
+                },
+                "project_purpose": {
+                  "value": "project_purpose"
+                },
+                "key_repo_docs": {
+                  "value": "key_repo_docs"
+                },
+                "key_subsystems": {
+                  "value": "key_subsystems"
+                },
+                "primary_build_command": {
+                  "value": "primary_build_command"
+                },
+                "primary_test_command": {
+                  "value": "primary_test_command"
+                },
+                "other_key_commands": {
+                  "value": "other_key_commands"
+                }
+              }
+            },
+            {
+              "primitive": "memory.bootstrap.cleanup",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "cleanup_bootstrap_workspace",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "memory.capture_note.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "suggest_memory_note_capture",
+              "kwargs": {
+                "slug": {
+                  "value": "slug"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "summary": {
+                  "value": "summary"
+                },
+                "files": {
+                  "value": "files"
+                },
+                "surfaces": {
+                  "value": "surface"
+                },
+                "existing_note": {
+                  "value": "existing_note"
+                },
+                "force_new_reason": {
+                  "value": "force_new_reason"
+                }
+              }
+            },
+            {
+              "primitive": "memory.note.create",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "create_memory_note",
+              "kwargs": {
+                "slug": {
+                  "value": "slug"
+                },
+                "title": {
+                  "value": "title"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "folder": {
+                  "value": "folder"
+                },
+                "note_type": {
+                  "value": "note_type"
+                },
+                "summary": {
+                  "value": "summary"
+                },
+                "applies_to": {
+                  "value": "applies_to"
+                },
+                "use_when": {
+                  "value": "use_when"
+                },
+                "routes_from": {
+                  "value": "routes_from"
+                },
+                "stale_when": {
+                  "value": "stale_when"
+                },
+                "evidence": {
+                  "value": "evidence"
+                },
+                "memory_role": {
+                  "value": "memory_role"
+                },
+                "promotion_target": {
+                  "value": "promotion_target"
+                },
+                "promotion_trigger": {
+                  "value": "promotion_trigger"
+                },
+                "retention_after_promotion": {
+                  "value": "retention_after_promotion"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
+            },
+            {
+              "primitive": "memory.route.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "route_memory",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "files": {
+                  "value": "files"
+                },
+                "surfaces": {
+                  "value": "surface"
+                }
+              }
+            },
+            {
+              "primitive": "memory.sync_memory.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "sync_memory",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "files": {
+                  "value": "files"
+                },
+                "notes": {
+                  "value": "notes"
+                }
+              }
+            },
+            {
+              "primitive": "memory.route_review.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "review_routes",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "memory.search.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.runtime_search",
+              "function": "search_memory",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "query": {
+                  "value": "query"
+                }
+              }
             }
           ]
         },
@@ -8756,7 +9316,7 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "payload.lifecycle-plan",
-              "python.function.call",
+              "memory.install.apply",
               "output.emit.install-result"
             ]
           },
@@ -8913,7 +9473,7 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "payload.lifecycle-plan",
-              "python.function.call",
+              "memory.init.apply",
               "output.emit.install-result"
             ]
           },
@@ -9070,7 +9630,7 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "payload.lifecycle-plan",
-              "python.function.call",
+              "memory.adopt.apply",
               "output.emit.install-result"
             ]
           },
@@ -9233,7 +9793,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.upgrade.apply",
               "output.emit"
             ]
           },
@@ -9319,7 +9879,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.migrate_layout.apply",
               "output.emit"
             ]
           },
@@ -9466,7 +10026,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.uninstall.apply",
               "output.emit"
             ]
           },
@@ -9544,7 +10104,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.bootstrap.cleanup",
               "output.emit"
             ]
           },
@@ -9672,7 +10232,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.capture_note.load",
               "output.emit"
             ]
           },
@@ -9872,7 +10432,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.note.create",
               "output.emit"
             ]
           },
@@ -10402,7 +10962,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.route.load",
               "output.emit"
             ]
           },
@@ -10498,7 +11058,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.sync_memory.load",
               "output.emit"
             ]
           },
@@ -10576,7 +11136,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.route_review.load",
               "output.emit"
             ]
           },
@@ -10660,7 +11220,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.search.load",
               "output.emit"
             ]
           },

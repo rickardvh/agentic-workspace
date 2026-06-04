@@ -1,0 +1,99 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Complete issue 1278 domain primitive migration",
+  "plan_id": "issue-1278-final-domain-primitive-migration",
+  "created_at": "2026-06-04T15:03:00.660930+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-1278-final-domain-primitive-migration.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-1278-final-domain-primitive-migration.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "issue-1278-final-domain-primitive-migration",
+    "status": "completed",
+    "scope": "Migrate remaining Planning and Memory operation-contract python.function.call bridges to named domain primitives.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete GitHub #1278 by removing python.function.call from shared package operation contracts.",
+    "hard constraints": "Preserve python.function.call as external-adapter implementation/test support and keep callable metadata in target binding tables.",
+    "agent may decide locally": "Primitive names, grouping, guardrails, generated refresh mechanics, and proof commands.",
+    "escalate when": "A correct fix requires broader generator changes, deleting python.function.call support, or changing the issue close condition."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Completed issue #1278 by migrating remaining Planning and Memory shared operation IR away from python.function.call to named package-domain primitives, preserving Python target bindings and adding explicit TypeScript native-domain behavior.",
+    "scope touched": "Planning and Memory package operation contracts, command package IR, adapter projection snapshots, generated Python/TypeScript package resources, runtime boundary inventory, TypeScript runtime primitive support, generated package checker, proof-runner expectation.",
+    "changed surfaces": "packages/planning and packages/memory operation contracts; src/agentic_workspace/contracts command/runtime/inventory surfaces; generated planning/memory/workspace/verification package outputs; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "No shared Planning/Memory/Verification package or generated operation resource exposes uses: python.function.call; python.function.call remains only as the external adapter primitive and tests/documentation debt marker.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "filed #1280 for stale closeout next-step wording discovered during dogfooding"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Complete issue 1278 domain primitive migration.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "issue",
+    "learned constraint": "Archive-retention-skipped closeout evidence must not keep next-step wording that implies a future archive action remains.",
+    "motivation worth preserving": "Dogfooding found a closeout UX consistency gap after the #1278 implementation proof passed.",
+    "canonical owner now": "#1280",
+    "promotion trigger": "closeout evidence next-step wording is corrected for archive-retention-skipped runs",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issue #1278 acceptance is satisfied: migrated command families name domain primitives in shared IR, Python binds those primitives internally, TypeScript has explicit native-domain behavior, generated checks guard against fallback regression, and inventories/checks are green.",
+    "validation confirmed": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py; make test-memory; make lint-memory; make test-planning; make lint-planning; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; rg no shared operation IR uses python.function.call",
+    "follow-on routed to": "#1280",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

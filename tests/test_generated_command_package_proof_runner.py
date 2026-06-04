@@ -330,14 +330,8 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["python_bridge_symbols"] == []
     assert runtime_metrics["generic_debt_symbol_count"] == 0
     assert runtime_metrics["baseline_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
-    assert runtime_metrics["new_symbols_since_baseline"] == [
-        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
-        "repo_memory_bootstrap.runtime_search|search_memory"
-    ]
-    assert runtime_metrics["removed_symbols_since_baseline"] == [
-        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
-        "repo_memory_bootstrap.installer|search_memory"
-    ]
+    assert runtime_metrics["new_symbols_since_baseline"] == []
+    assert runtime_metrics["removed_symbols_since_baseline"] == []
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
     assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3

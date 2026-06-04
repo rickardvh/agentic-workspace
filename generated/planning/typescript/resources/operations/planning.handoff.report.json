@@ -33,12 +33,8 @@
     "steps": [
       {
         "arguments": {
-          "function": "planning_handoff",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the active planning handoff payload for the requested target.",
@@ -47,7 +43,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "planning.handoff.load"
       },
       {
         "arguments": {},
@@ -85,7 +81,7 @@
     {
       "description": "Load the active planning handoff payload for the requested target.",
       "id": "load_handoff",
-      "uses": "python.function.call"
+      "uses": "planning.handoff.load"
     },
     {
       "description": "Emit the planning handoff in the requested format.",

@@ -63,30 +63,26 @@
     "steps": [
       {
         "arguments": {
-          "function": "create_review_record",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "classification": {
-              "value": "classification"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "render_markdown": {
-              "value": "render_markdown"
-            },
-            "scope": {
-              "value": "scope"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "target": {
-              "value": "target"
-            },
-            "title": {
-              "value": "title"
-            }
+          "classification": {
+            "value": "classification"
+          },
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "render_markdown": {
+            "value": "render_markdown"
+          },
+          "scope": {
+            "value": "scope"
+          },
+          "slug": {
+            "value": "slug"
+          },
+          "target": {
+            "value": "target"
+          },
+          "title": {
+            "value": "title"
           }
         },
         "description": "Call the planning module lifecycle primitive with generated parser inputs.",
@@ -95,7 +91,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "planning.create-review.apply"
       },
       {
         "arguments": {},
@@ -133,7 +129,7 @@
     {
       "description": "Create a schema-valid planning review record skeleton through generated operation IR.",
       "id": "apply_lifecycle_operation",
-      "uses": "python.function.call"
+      "uses": "planning.create-review.apply"
     },
     {
       "description": "Emit the planning lifecycle result in the requested format.",

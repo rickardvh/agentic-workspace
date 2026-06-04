@@ -109,57 +109,53 @@
     "steps": [
       {
         "arguments": {
-          "function": "create_memory_note",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "applies_to": {
-              "value": "applies_to"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "evidence": {
-              "value": "evidence"
-            },
-            "folder": {
-              "value": "folder"
-            },
-            "memory_role": {
-              "value": "memory_role"
-            },
-            "note_type": {
-              "value": "note_type"
-            },
-            "promotion_target": {
-              "value": "promotion_target"
-            },
-            "promotion_trigger": {
-              "value": "promotion_trigger"
-            },
-            "retention_after_promotion": {
-              "value": "retention_after_promotion"
-            },
-            "routes_from": {
-              "value": "routes_from"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "stale_when": {
-              "value": "stale_when"
-            },
-            "summary": {
-              "value": "summary"
-            },
-            "target": {
-              "value": "target"
-            },
-            "title": {
-              "value": "title"
-            },
-            "use_when": {
-              "value": "use_when"
-            }
+          "applies_to": {
+            "value": "applies_to"
+          },
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "evidence": {
+            "value": "evidence"
+          },
+          "folder": {
+            "value": "folder"
+          },
+          "memory_role": {
+            "value": "memory_role"
+          },
+          "note_type": {
+            "value": "note_type"
+          },
+          "promotion_target": {
+            "value": "promotion_target"
+          },
+          "promotion_trigger": {
+            "value": "promotion_trigger"
+          },
+          "retention_after_promotion": {
+            "value": "retention_after_promotion"
+          },
+          "routes_from": {
+            "value": "routes_from"
+          },
+          "slug": {
+            "value": "slug"
+          },
+          "stale_when": {
+            "value": "stale_when"
+          },
+          "summary": {
+            "value": "summary"
+          },
+          "target": {
+            "value": "target"
+          },
+          "title": {
+            "value": "title"
+          },
+          "use_when": {
+            "value": "use_when"
           }
         },
         "description": "Create or dry-run a Memory note and matching manifest entry.",
@@ -168,7 +164,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.note.create"
       },
       {
         "arguments": {},
@@ -207,7 +203,7 @@
     {
       "description": "Create or dry-run a Memory note and matching manifest entry.",
       "id": "create_memory_note",
-      "uses": "python.function.call"
+      "uses": "memory.note.create"
     },
     {
       "description": "Emit the create-note result in the requested format.",

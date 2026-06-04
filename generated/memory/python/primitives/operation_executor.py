@@ -114,6 +114,19 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
                 'output.emit': _handle_output_emit,
+                'memory.install.apply': _handle_memory_install_apply,
+                'memory.init.apply': _handle_memory_init_apply,
+                'memory.adopt.apply': _handle_memory_adopt_apply,
+                'memory.upgrade.apply': _handle_memory_upgrade_apply,
+                'memory.migrate_layout.apply': _handle_memory_migrate_layout_apply,
+                'memory.uninstall.apply': _handle_memory_uninstall_apply,
+                'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
+                'memory.capture_note.load': _handle_memory_capture_note_load,
+                'memory.note.create': _handle_memory_note_create,
+                'memory.route.load': _handle_memory_route_load,
+                'memory.sync_memory.load': _handle_memory_sync_memory_load,
+                'memory.route_review.load': _handle_memory_route_review_load,
+                'memory.search.load': _handle_memory_search_load,
             },
         )
         emitted = values.get('emitted')
@@ -188,3 +201,81 @@ def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], conte
     from .memory_runtime import _emit_memory_operation_output
 
     return _emit_memory_operation_output(values, arguments, context)
+
+
+def _handle_memory_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import adopt_bootstrap
+
+    return adopt_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import upgrade_bootstrap
+
+    return upgrade_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_migrate_layout_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import migrate_layout
+
+    return migrate_layout(dry_run=values.get('dry_run'), target=values.get('target'))
+
+
+def _handle_memory_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import uninstall_bootstrap
+
+    return uninstall_bootstrap(dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import cleanup_bootstrap_workspace
+
+    return cleanup_bootstrap_workspace(target=values.get('target'))
+
+
+def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import suggest_memory_note_capture
+
+    return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
+
+
+def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import create_memory_note
+
+    return create_memory_note(applies_to=values.get('applies_to'), dry_run=values.get('dry_run'), evidence=values.get('evidence'), folder=values.get('folder'), memory_role=values.get('memory_role'), note_type=values.get('note_type'), promotion_target=values.get('promotion_target'), promotion_trigger=values.get('promotion_trigger'), retention_after_promotion=values.get('retention_after_promotion'), routes_from=values.get('routes_from'), slug=values.get('slug'), stale_when=values.get('stale_when'), summary=values.get('summary'), target=values.get('target'), title=values.get('title'), use_when=values.get('use_when'))
+
+
+def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import route_memory
+
+    return route_memory(files=values.get('files'), surfaces=values.get('surface'), target=values.get('target'))
+
+
+def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import sync_memory
+
+    return sync_memory(files=values.get('files'), notes=values.get('notes'), target=values.get('target'))
+
+
+def _handle_memory_route_review_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import review_routes
+
+    return review_routes(target=values.get('target'))
+
+
+def _handle_memory_search_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.runtime_search import search_memory
+
+    return search_memory(query=values.get('query'), target=values.get('target'))

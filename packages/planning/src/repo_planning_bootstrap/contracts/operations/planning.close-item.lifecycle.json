@@ -83,7 +83,7 @@
   "steps": [
     {
       "id": "apply_lifecycle_operation",
-      "uses": "python.function.call",
+      "uses": "planning.close-item.apply",
       "description": "Close completed planning residue by id through generated operation IR."
     },
     {
@@ -107,30 +107,26 @@
     "steps": [
       {
         "id": "apply_lifecycle_operation",
-        "uses": "python.function.call",
+        "uses": "planning.close-item.apply",
         "description": "Call the planning module lifecycle primitive with generated parser inputs.",
         "arguments": {
-          "import_module": "repo_planning_bootstrap.installer",
-          "function": "close_planning_item",
-          "kwargs": {
-            "item": {
-              "value": "item"
-            },
-            "target": {
-              "value": "target"
-            },
-            "reason": {
-              "value": "reason"
-            },
-            "issue": {
-              "value": "issue"
-            },
-            "expected_planning_revision": {
-              "value": "expect_planning_revision"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            }
+          "item": {
+            "value": "item"
+          },
+          "target": {
+            "value": "target"
+          },
+          "reason": {
+            "value": "reason"
+          },
+          "issue": {
+            "value": "issue"
+          },
+          "expected_planning_revision": {
+            "value": "expect_planning_revision"
+          },
+          "dry_run": {
+            "value": "dry_run"
           }
         },
         "outputs": [

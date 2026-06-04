@@ -54,24 +54,20 @@
     "steps": [
       {
         "arguments": {
-          "function": "install_bootstrap",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "force": {
-              "value": "force"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            },
-            "local_only": {
-              "value": "local"
-            },
-            "target": {
-              "value": "target"
-            }
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "force": {
+            "value": "force"
+          },
+          "include_optional": {
+            "value": "include_optional"
+          },
+          "local_only": {
+            "value": "local"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Initialise planning bootstrap files in a repository.",
@@ -80,7 +76,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "planning.init.apply"
       },
       {
         "arguments": {},
@@ -123,7 +119,7 @@
     {
       "description": "Initialise planning bootstrap files in a repository.",
       "id": "apply_lifecycle",
-      "uses": "python.function.call"
+      "uses": "planning.init.apply"
     },
     {
       "description": "Emit planning lifecycle result in the requested format.",

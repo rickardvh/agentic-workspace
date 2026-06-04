@@ -45,7 +45,7 @@
   "steps": [
     {
       "id": "load_route_review",
-      "uses": "python.function.call",
+      "uses": "memory.route_review.load",
       "description": "Load Memory route-review results."
     },
     {
@@ -69,15 +69,11 @@
     "steps": [
       {
         "id": "load_route_review",
-        "uses": "python.function.call",
+        "uses": "memory.route_review.load",
         "description": "Load Memory route-review results.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "review_routes",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
+          "target": {
+            "value": "target"
           }
         },
         "outputs": [

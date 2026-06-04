@@ -84,7 +84,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.adopt.apply",
           "output.emit"
         ]
       },
@@ -609,7 +609,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.close-item.apply",
           "output.emit"
         ]
       },
@@ -732,7 +732,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.create-review.apply",
           "output.emit"
         ]
       },
@@ -983,7 +983,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.doctor.load",
           "output.emit"
         ]
       },
@@ -1060,7 +1060,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.handoff.load",
           "output.emit"
         ]
       },
@@ -1170,7 +1170,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.init.apply",
           "output.emit"
         ]
       },
@@ -1280,7 +1280,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.install.apply",
           "output.emit"
         ]
       },
@@ -2114,7 +2114,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.status.load",
           "output.emit"
         ]
       },
@@ -2303,7 +2303,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.uninstall.apply",
           "output.emit"
         ]
       },
@@ -2397,7 +2397,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.upgrade.apply",
           "output.emit"
         ]
       },
@@ -2468,7 +2468,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.verify-payload.load",
           "output.emit"
         ]
       },
@@ -2601,6 +2601,195 @@
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.delegation-decision.apply"
+        },
+        {
+          "function": "adopt_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.adopt.apply"
+        },
+        {
+          "function": "close_planning_item",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "expected_planning_revision": {
+              "value": "expect_planning_revision"
+            },
+            "issue": {
+              "value": "issue"
+            },
+            "item": {
+              "value": "item"
+            },
+            "reason": {
+              "value": "reason"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.close-item.apply"
+        },
+        {
+          "function": "create_review_record",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "classification": {
+              "value": "classification"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "render_markdown": {
+              "value": "render_markdown"
+            },
+            "scope": {
+              "value": "scope"
+            },
+            "slug": {
+              "value": "slug"
+            },
+            "target": {
+              "value": "target"
+            },
+            "title": {
+              "value": "title"
+            }
+          },
+          "primitive": "planning.create-review.apply"
+        },
+        {
+          "function": "doctor_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.bootstrap.doctor.load"
+        },
+        {
+          "function": "planning_handoff",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.handoff.load"
+        },
+        {
+          "function": "install_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "local_only": {
+              "value": "local"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.init.apply"
+        },
+        {
+          "function": "install_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "local_only": {
+              "value": "local"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.install.apply"
+        },
+        {
+          "function": "collect_status",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.bootstrap.status.load"
+        },
+        {
+          "function": "uninstall_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.uninstall.apply"
+        },
+        {
+          "function": "upgrade_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.upgrade.apply"
+        },
+        {
+          "function": "verify_payload",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {},
+          "primitive": "planning.verify-payload.load"
         }
       ],
       "initial_values": [

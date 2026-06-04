@@ -141,6 +141,17 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
                 'planning.delegation-decision.apply': _handle_planning_delegation_decision_apply,
+                'planning.adopt.apply': _handle_planning_adopt_apply,
+                'planning.close-item.apply': _handle_planning_close_item_apply,
+                'planning.create-review.apply': _handle_planning_create_review_apply,
+                'planning.bootstrap.doctor.load': _handle_planning_bootstrap_doctor_load,
+                'planning.handoff.load': _handle_planning_handoff_load,
+                'planning.init.apply': _handle_planning_init_apply,
+                'planning.install.apply': _handle_planning_install_apply,
+                'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
+                'planning.uninstall.apply': _handle_planning_uninstall_apply,
+                'planning.upgrade.apply': _handle_planning_upgrade_apply,
+                'planning.verify-payload.load': _handle_planning_verify_payload_load,
             },
         )
         emitted = values.get('emitted')
@@ -231,3 +242,69 @@ def _handle_planning_delegation_decision_apply(values: dict[str, Any], arguments
     from .planning_runtime import apply_planning_delegation_decision_operation
 
     return apply_planning_delegation_decision_operation(values, arguments, context)
+
+
+def _handle_planning_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import adopt_bootstrap
+
+    return adopt_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
+
+
+def _handle_planning_close_item_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import close_planning_item
+
+    return close_planning_item(dry_run=values.get('dry_run'), expected_planning_revision=values.get('expect_planning_revision'), issue=values.get('issue'), item=values.get('item'), reason=values.get('reason'), target=values.get('target'))
+
+
+def _handle_planning_create_review_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import create_review_record
+
+    return create_review_record(classification=values.get('classification'), dry_run=values.get('dry_run'), render_markdown=values.get('render_markdown'), scope=values.get('scope'), slug=values.get('slug'), target=values.get('target'), title=values.get('title'))
+
+
+def _handle_planning_bootstrap_doctor_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import doctor_bootstrap
+
+    return doctor_bootstrap(target=values.get('target'))
+
+
+def _handle_planning_handoff_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import planning_handoff
+
+    return planning_handoff(target=values.get('target'))
+
+
+def _handle_planning_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
+
+
+def _handle_planning_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
+
+
+def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import collect_status
+
+    return collect_status(target=values.get('target'))
+
+
+def _handle_planning_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import uninstall_bootstrap
+
+    return uninstall_bootstrap(dry_run=values.get('dry_run'), target=values.get('target'))
+
+
+def _handle_planning_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import upgrade_bootstrap
+
+    return upgrade_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
+
+
+def _handle_planning_verify_payload_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import verify_payload
+
+    return verify_payload()

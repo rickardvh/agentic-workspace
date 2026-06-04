@@ -44,18 +44,14 @@
     "steps": [
       {
         "arguments": {
-          "function": "route_memory",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "files": {
-              "value": "files"
-            },
-            "surfaces": {
-              "value": "surface"
-            },
-            "target": {
-              "value": "target"
-            }
+          "files": {
+            "value": "files"
+          },
+          "surfaces": {
+            "value": "surface"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the Memory routing recommendation.",
@@ -64,7 +60,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.route.load"
       },
       {
         "arguments": {},
@@ -103,7 +99,7 @@
     {
       "description": "Load the Memory routing recommendation.",
       "id": "load_route",
-      "uses": "python.function.call"
+      "uses": "memory.route.load"
     },
     {
       "description": "Emit Memory routing output in the requested format.",

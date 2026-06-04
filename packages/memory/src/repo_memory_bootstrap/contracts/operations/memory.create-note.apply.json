@@ -125,7 +125,7 @@
   "steps": [
     {
       "id": "create_memory_note",
-      "uses": "python.function.call",
+      "uses": "memory.note.create",
       "description": "Create or dry-run a Memory note and matching manifest entry."
     },
     {
@@ -149,60 +149,56 @@
     "steps": [
       {
         "id": "create_memory_note",
-        "uses": "python.function.call",
+        "uses": "memory.note.create",
         "description": "Create or dry-run a Memory note and matching manifest entry.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "create_memory_note",
-          "kwargs": {
-            "slug": {
-              "value": "slug"
-            },
-            "title": {
-              "value": "title"
-            },
-            "target": {
-              "value": "target"
-            },
-            "folder": {
-              "value": "folder"
-            },
-            "note_type": {
-              "value": "note_type"
-            },
-            "summary": {
-              "value": "summary"
-            },
-            "applies_to": {
-              "value": "applies_to"
-            },
-            "use_when": {
-              "value": "use_when"
-            },
-            "routes_from": {
-              "value": "routes_from"
-            },
-            "stale_when": {
-              "value": "stale_when"
-            },
-            "evidence": {
-              "value": "evidence"
-            },
-            "memory_role": {
-              "value": "memory_role"
-            },
-            "promotion_target": {
-              "value": "promotion_target"
-            },
-            "promotion_trigger": {
-              "value": "promotion_trigger"
-            },
-            "retention_after_promotion": {
-              "value": "retention_after_promotion"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            }
+          "slug": {
+            "value": "slug"
+          },
+          "title": {
+            "value": "title"
+          },
+          "target": {
+            "value": "target"
+          },
+          "folder": {
+            "value": "folder"
+          },
+          "note_type": {
+            "value": "note_type"
+          },
+          "summary": {
+            "value": "summary"
+          },
+          "applies_to": {
+            "value": "applies_to"
+          },
+          "use_when": {
+            "value": "use_when"
+          },
+          "routes_from": {
+            "value": "routes_from"
+          },
+          "stale_when": {
+            "value": "stale_when"
+          },
+          "evidence": {
+            "value": "evidence"
+          },
+          "memory_role": {
+            "value": "memory_role"
+          },
+          "promotion_target": {
+            "value": "promotion_target"
+          },
+          "promotion_trigger": {
+            "value": "promotion_trigger"
+          },
+          "retention_after_promotion": {
+            "value": "retention_after_promotion"
+          },
+          "dry_run": {
+            "value": "dry_run"
           }
         },
         "outputs": [

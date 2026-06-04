@@ -44,18 +44,14 @@
     "steps": [
       {
         "arguments": {
-          "function": "sync_memory",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "files": {
-              "value": "files"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "target": {
-              "value": "target"
-            }
+          "files": {
+            "value": "files"
+          },
+          "notes": {
+            "value": "notes"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the Memory synchronization suggestion.",
@@ -64,7 +60,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.sync_memory.load"
       },
       {
         "arguments": {},
@@ -103,7 +99,7 @@
     {
       "description": "Load the Memory synchronization suggestion.",
       "id": "load_sync_suggestion",
-      "uses": "python.function.call"
+      "uses": "memory.sync_memory.load"
     },
     {
       "description": "Emit Memory synchronization output in the requested format.",

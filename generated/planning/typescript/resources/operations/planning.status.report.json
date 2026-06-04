@@ -38,12 +38,8 @@
     "steps": [
       {
         "arguments": {
-          "function": "collect_status",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the planning bootstrap status payload for the requested target.",
@@ -52,7 +48,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "planning.bootstrap.status.load"
       },
       {
         "arguments": {},
@@ -95,7 +91,7 @@
     {
       "description": "Inspect package-local planning bootstrap state for the target repository.",
       "id": "load_status",
-      "uses": "python.function.call"
+      "uses": "planning.bootstrap.status.load"
     },
     {
       "description": "Emit planning status in the requested format.",

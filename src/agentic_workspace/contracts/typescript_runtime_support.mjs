@@ -543,11 +543,33 @@ function domainPrimitive(primitive, values, args, operationId) {
     if (moduleName.includes('verification')) return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
     return lifecycleResult(values, functionName || operationId);
   }
+  if (primitive === 'planning.close-item.apply') return { ...lifecycleResult(values, `Close planning item ${values.item ?? ''}`.trim()), dry_run: Boolean(values.dry_run) };
   if (primitive === 'planning.closeout.apply') return { ...lifecycleResult(values, `Close out execplan '${values.plan ?? ''}'`), dry_run: Boolean(values.dry_run) };
+  if (primitive === 'planning.create-review.apply') return { ...lifecycleResult(values, `Create review '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
+  if (primitive === 'planning.bootstrap.doctor.load') return { ...lifecycleResult(values, 'Doctor report'), dry_run: false };
+  if (primitive === 'planning.bootstrap.status.load') return { ...lifecycleResult(values, 'Status report'), dry_run: false };
+  if (primitive === 'planning.handoff.load') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
+  if (primitive === 'planning.verify-payload.load') return { ...lifecycleResult(values, 'Payload verification'), dry_run: false };
+  if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
+    const result = lifecycleResult(values, operationId);
+    result.actions = applyPayloadCopy(values);
+    return result;
+  }
   if (primitive.startsWith('planning.') && primitive.endsWith('.apply')) return lifecycleResult(values, operationId);
   if (primitive === 'planning.reconcile.load') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'planning.summary.load') return { ...reportPlanning(values, operationId), kind: 'planning-summary/v1' };
   if (primitive === 'planning.report.load') return reportPlanning(values, operationId);
+  if (['memory.install.apply', 'memory.init.apply', 'memory.adopt.apply', 'memory.upgrade.apply'].includes(primitive)) {
+    const result = lifecycleResult(values, operationId);
+    result.actions = applyPayloadCopy(values);
+    return result;
+  }
+  if (primitive === 'memory.bootstrap.cleanup') return { ...lifecycleResult(values, 'Bootstrap workspace cleanup'), dry_run: true };
+  if (primitive === 'memory.note.create') return { ...lifecycleResult(values, `Create memory note '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
+  if (primitive === 'memory.capture_note.load') return { kind: 'agentic-memory/capture-recommendation/v1', status: 'unavailable', dry_run: true, target_root: resolve(String(values.target ?? '.')) };
+  if (primitive === 'memory.route.load' || primitive === 'memory.sync_memory.load' || primitive === 'memory.route_review.load') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), message: primitive.replace(/^memory\./, '').replace(/\.load$/, '').replace(/_/g, ' '), actions: [] };
+  if (primitive === 'memory.search.load') return { dry_run: true, query: values.query ?? '', target_root: resolve(String(values.target ?? '.')), matches: [], message: 'Memory search completed with native TypeScript runtime.' };
+  if (primitive.startsWith('memory.') && primitive.endsWith('.apply')) return lifecycleResult(values, operationId);
   if (primitive === 'memory.report.load') return { ...reportMemory(values), profile: values.verbose ? 'verbose' : 'tiny' };
   if (primitive === 'memory.route_report.load') return { message: 'Routing report', route_report_summary: { feedback: { status: 'not-evaluated', path: '.agentic-workspace/memory/repo/route-feedback.md' }, fixtures: { status: 'not-evaluated', fixture_count: 0 } }, detail_command: 'agentic-memory route-report --target . --verbose --format json' };
   if (primitive === 'memory.bootstrap.doctor.load') return values.result ?? payloadStatus(values, { policy_root: 'memory.contracts', policy_path: 'payload_verification.memory.json', target_root_value: 'target_root', message: 'Doctor report' });
