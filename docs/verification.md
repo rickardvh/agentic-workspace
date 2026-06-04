@@ -137,7 +137,11 @@ Closeout may cite this evidence as characterization/current-behavior proof. If
 only ordinary tests ran, closeout should say that explicitly and caveat any
 `no behavior changed`, `business logic preserved`, compatibility, migration, or
 dependency-upgrade claim unless domain acceptance or a stronger evidence class is
-recorded.
+recorded. The same pattern can represent golden-master comparisons,
+compatibility checks, migration dry-runs, or manual-scenario evidence by naming
+the protocol, scenario, evidence bundle, claim boundary, and known gap. Keep raw
+outputs out of Verification unless they are intentionally retained artifacts;
+prefer compact summaries and stable evidence labels.
 
 ## Non-Goals
 
