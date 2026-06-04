@@ -18606,8 +18606,6 @@ def _read_only_response_posture_payload(*, task_text: str | None, changed_paths:
         " how ",
         " have you ",
         " did you ",
-        " is ",
-        " are ",
         " can you tell ",
     )
     mutation_markers = (

@@ -871,6 +871,58 @@ def test_start_read_only_reporting_task_suppresses_default_acceptance_boilerplat
     assert selected["values"]["read_only_response"]["status"] == "read-only-reporting"
 
 
+def test_start_read_only_response_does_not_match_stopwords_as_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Are those actionable at this stage?",
+                "--select",
+                "read_only_response",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["values"] == {}
+    assert "read_only_response" in selected["missing"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Give me a brief status report",
+                "--select",
+                "read_only_response",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    selected = json.loads(capsys.readouterr().out)
+    report_response = selected["values"]["read_only_response"]
+    assert report_response["status"] == "read-only-reporting"
+    assert "report" in report_response["matched_read_only_signals"]
+    assert "status" in report_response["matched_read_only_signals"]
+
+
 def test_next_safe_action_schema_rejects_missing_typed_fields() -> None:
     from agentic_workspace.contract_tooling import contract_schema
 
