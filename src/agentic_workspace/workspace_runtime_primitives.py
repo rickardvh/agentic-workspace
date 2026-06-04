@@ -8394,6 +8394,32 @@ def _closeout_report_adoption_payload(
     }
 
 
+def _authority_language_guidance_payload() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/authority-language-guidance/v1",
+        "status": "present",
+        "preferred_phrasing": {
+            "observed_facts": "AW reports/observes <fact>; I used that as evidence.",
+            "recommendations": "AW recommends/suggests <route>; I chose <action> because <reason>.",
+            "enforced_gates": "AW enforces/blocks <gate>; completion waits until it is satisfied.",
+            "agent_judgment": "I judged/classified/decided <semantic outcome>, using AW evidence/guidance.",
+        },
+        "avoid_when_aw_is_advisory": [
+            "AW classified the task",
+            "AW routed the work",
+            "AW decided this is complete",
+        ],
+        "allowed_for_hard_gates": [
+            "AW enforced the gate",
+            "AW blocked completion until proof/acceptance is satisfied",
+        ],
+        "rule": (
+            "Use AW as the subject only for observed facts, recommendations, proof hints, and enforced gates. "
+            "Use the agent as the subject for semantic classification, routing choices, completion judgment, and final wording."
+        ),
+    }
+
+
 def _closeout_report_final_response_rendering_payload(
     *,
     status: str,
@@ -8577,6 +8603,7 @@ def _closeout_report_final_response_rendering_payload(
             "section_order": [section["id"] for section in sections],
             "sections": sections,
             "missing_required_sections": missing_required_sections,
+            "authority_language_guidance": _authority_language_guidance_payload(),
             "rendered_markdown": "\n".join(rendered_markdown_lines),
             "customization_points": [
                 "section titles",
