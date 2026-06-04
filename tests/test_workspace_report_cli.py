@@ -1419,12 +1419,102 @@ def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_
     assert rendering["kind"] == "agentic-workspace/final-closeout-rendering/v1"
     assert rendering["status"] == "guidance-only"
     assert rendering["rendering_mode"] == "terse"
+    assert report["review_compression"]["selected_mode"] == "small-direct-edit"
+    assert rendering["selected_review_mode"] == "small-direct-edit"
+    assert rendering["first_inspection_contract"]["id"] == "small-direct-edit"
     assert rendering["summary_lines"] == []
     assert rendering["rendered_summary"]["kind"] == "agentic-workspace/final-closeout-summary/v1"
     assert rendering["rendered_summary"]["template_id"] == "builtin/terse"
     assert rendering["rendered_summary"]["rendered_text"] == "Done."
     assert rendering["rendered_summary"]["required_fact_coverage"]["status"] == "complete"
     assert rendering["plain_done_allowed"] is True
+
+
+def test_report_closeout_report_renders_planned_slice_first_inspection_contract(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "planned-slice.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Planned Slice",
+            "active_milestone": {"id": "planned-slice", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Make closeout rendering show planned slice facts first.",
+                "hard constraints": "Do not add another report surface.",
+            },
+            "completion_criteria": ["Planned slice facts render before detail inspection."],
+            "validation_commands": ["uv run pytest tests/test_workspace_report_cli.py -q"],
+            "intent_continuity": {
+                "larger intended outcome": "Make closeout reports easier to inspect.",
+                "this slice completes the larger intended outcome": "yes",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Implemented planned-slice first-inspection rendering.",
+                "scope touched": "closeout report runtime and tests",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+                "result for continuation": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["planned slice rendered facts"],
+                    "proof_dimensions": ["closeout report fixture"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The planned-slice first-inspection facts are visible.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'planned-slice', title = 'Planned slice', surface = '.agentic-workspace/planning/execplans/planned-slice.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["profile"] == "balanced"
+    assert report["review_compression"]["selected_mode"] == "planned-slice"
+    contract = report["review_compression"]["first_inspection_contract"]
+    assert contract["id"] == "planned-slice"
+    assert "changed surfaces" in contract["rendered_must_include"]
+    rendering = report["final_response_rendering"]
+    assert rendering["selected_review_mode"] == "planned-slice"
+    assert rendering["first_inspection_contract"]["id"] == "planned-slice"
+    assert "changed surfaces" in rendering["must_include"]
+    assert "closure boundary" in rendering["must_include"]
+    assert "residue or follow-up status" in rendering["must_include"]
+    rendered = rendering["rendered_summary"]
+    assert "Changed: workspace_runtime_primitives.py; tests/test_workspace_report_cli.py" in rendered["rendered_text"]
+    assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
+    assert "Closure boundary:" in rendered["rendered_text"]
+    assert "Residue:" in rendered["rendered_text"]
+    assert rendered["required_fact_coverage"]["status"] == "complete"
 
 
 def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_active_plan(tmp_path: Path, capsys) -> None:
@@ -3158,7 +3248,10 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     rendering = report["final_response_rendering"]
     assert rendering["status"] == "required"
     assert rendering["rendering_mode"] == "evidence-backed"
+    assert rendering["selected_review_mode"] == "broad-pr"
+    assert rendering["first_inspection_contract"]["id"] == "broad-pr"
     assert "profile reason" in rendering["must_include"]
+    assert "changed surfaces" in rendering["must_include"]
     assert "proof or validation" in rendering["must_include"]
     assert "closure boundary" in rendering["must_include"]
     assert "authority boundary" in rendering["must_include"]
@@ -3170,6 +3263,7 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert rendered["template_id"] == "builtin/evidence-backed"
     assert "Closeout profile: audit because assurance.strict_closeout enabled" in rendered["rendered_text"]
     assert "agent owns completion judgment" in rendered["rendered_text"]
+    assert "Changed: workspace_runtime_primitives.py; reporting_support.py; reporting-contract.md" in rendered["rendered_text"]
     assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
     assert "Closure boundary:" in rendered["rendered_text"]
     assert "Residue:" in rendered["rendered_text"]
@@ -3180,6 +3274,7 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert {"intent-boundary", "work-completed", "changed-surfaces", "validation", "closure-boundary"} <= row_ids
     assert report["decision_review"]["status"] == "not-applicable"
     assert report["review_compression"]["selected_mode"] == "broad-pr"
+    assert report["review_compression"]["first_inspection_contract"]["id"] == "broad-pr"
     assert report["closeout_adoption"]["status"] == "ready"
     assert "what proof supports it?" in report["closeout_adoption"]["human_control_questions"]
     assert "derived operator-facing presentation" in report["boundary"]
@@ -3272,6 +3367,8 @@ def test_report_closeout_report_renders_system_decision_facts(tmp_path: Path, ca
     assert decision_review["decision_facts"]["durable_owner"] == "Planning architecture_decision_promotion"
     assert decision_review["completeness"]["missing_facts"] == []
     assert report["review_compression"]["selected_mode"] == "system-shaping-change"
+    assert report["final_response_rendering"]["selected_review_mode"] == "system-shaping-change"
+    assert report["final_response_rendering"]["first_inspection_contract"]["id"] == "system-shaping-change"
     assert "decision facts" in report["review_compression"]["first_inspection"]["first_inspection_facts"]
     rendered = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
     assert "Decision: Use a derived decision-review packet instead of a durable decision store." in rendered
@@ -3402,6 +3499,8 @@ def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp
     assert "strict" in report["completeness"]["strict_or_high_risk_rule"].lower()
     rendering = report["final_response_rendering"]
     assert rendering["status"] == "required"
+    assert rendering["selected_review_mode"] == "partial-or-lower-trust-closeout"
+    assert rendering["first_inspection_contract"]["id"] == "partial-or-lower-trust-closeout"
     assert rendering["plain_done_allowed"] is False
     assert "missing or partial evidence caveat" in rendering["must_include"]
     assert any("plain done summary" in item for item in rendering["must_not_claim"])
