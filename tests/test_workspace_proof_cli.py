@@ -778,6 +778,16 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert hints["confirmed"][0]["confirmation"] == "live-confirmed"
     assert hints["stale"][0]["candidate_command"] == "npm run stale"
     assert hints["stale"][0]["confirmation"] == "stale-or-unavailable"
+    assert hints["lifecycle"]["state_counts"] == {
+        "candidate": 2,
+        "confirmed": 0,
+        "invalid-authority": 0,
+        "negative": 0,
+        "stale": 0,
+        "superseded": 0,
+    }
+    assert hints["lifecycle"]["bucket_counts"]["confirmed"] == 1
+    assert "invalid-authority" in {state["state"] for state in hints["lifecycle"]["state_model"]}
     decision = answer["proof_route_selection"]
     assert decision["critical_warnings"] == ["1 learned route hint(s) are stale or unavailable."]
     assert decision["selected_command"]["command"] == "npm test"
@@ -791,6 +801,10 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
         "hint_count": 2,
         "confirmed_count": 1,
         "stale_count": 1,
+        "negative_count": 0,
+        "superseded_count": 0,
+        "invalid_authority_count": 0,
+        "lifecycle_field": "learned_route_hints.lifecycle",
         "route_map_decision": "use-advisory-hints-only",
         "reason": (
             "Setup/adopt-discovered route hints are persisted as advisory memory and must be live-confirmed before command selection."
@@ -827,6 +841,13 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert hints["confirmed"][0]["confirmation"] == "learned-confirmed"
     assert answer["proof_route_selection"]["selected_command"]["command"] == "python -m compileall src"
     assert answer["proof_route_selection"]["selected_command"]["route_source"] == "live-adapted-target-capability"
+    reliance = answer["proof_route_selection"]["learned_route_reliance"]
+    assert reliance["status"] == "present"
+    assert reliance["material_to_required_proof"] is True
+    assert reliance["items"][0]["command"] == "python -m compileall src"
+    assert reliance["items"][0]["provenance"] == "manual verification passed on 2026-06-02"
+    assert answer["proof_route_selection"]["closeout_disclosure"]["status"] == "required"
+    assert answer["proof_route_explanation"]["learned_route_reliance"] == reliance
     learning = answer["host_repo_learning"]
     assert learning["confirmed_evidence"]["status"] == "present"
     assert "memory capture-note" in learning["confirmed_evidence"]["items"][0]["capture"]["command_to_run"]
@@ -859,6 +880,54 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     assert learning["actionable_next_steps"]["status"] == "present"
 
 
+def test_proof_changed_reports_proof_route_lifecycle_states(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Proof route lifecycle
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"static-check","candidate_command":"npm run lint","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"repo","owner":"Memory","provenance":"lint route confirmed in prior closeout","learned_at":"2026-06-02"}
+agentic-workspace-proof-route: {"state":"stale","intent_type":"behavior-test","candidate_command":"npm run old-test","source":"memory","confidence":"medium","requires_live_confirmation":true,"scope":"repo","owner":"Memory","provenance":"old route was not found during setup","learned_at":"2026-06-02"}
+agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":true,"scope":"repo","owner":"Memory","provenance":"npm test invokes the wrong runner","learned_at":"2026-06-02"}
+agentic-workspace-proof-route: {"state":"superseded","intent_type":"behavior-test","candidate_command":"npm run legacy-test","source":"memory","confidence":"medium","requires_live_confirmation":true,"scope":"repo","owner":"Memory","provenance":"legacy route replaced by package lint route","learned_at":"2026-06-02","superseded_by":"npm run lint"}
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"npm run missing-owner","source":"memory","confidence":"high","requires_live_confirmation":false}
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.ts", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    hints = answer["learned_route_hints"]
+    lifecycle = hints["lifecycle"]
+    assert lifecycle["state_counts"] == {
+        "candidate": 0,
+        "confirmed": 1,
+        "invalid-authority": 1,
+        "negative": 1,
+        "stale": 1,
+        "superseded": 1,
+    }
+    assert lifecycle["bucket_counts"] == {
+        "confirmed": 1,
+        "stale": 1,
+        "negative": 1,
+        "superseded": 1,
+        "invalid": 1,
+    }
+    assert hints["confirmed"][0]["candidate_command"] == "npm run lint"
+    assert hints["negative"][0]["candidate_command"] == "npm test"
+    assert hints["superseded"][0]["superseded_by"] == "npm run lint"
+    assert hints["invalid"][0]["state"] == "invalid-authority"
+    assert hints["invalid"][0]["original_state"] == "confirmed"
+    assert "npm test" not in answer["target_proof_capabilities"]["candidate_commands"]
+    warnings = answer["proof_next_decision"]["warnings"]
+    assert "1 learned route lesson(s) are missing authoritative provenance metadata." in warnings
+    assert "1 learned route hint(s) are stale or unavailable." in warnings
+    assert "1 learned negative route(s) suppressed candidate proof commands." in warnings
+
+
 def test_proof_changed_incomplete_confirmed_memory_route_is_not_authoritative(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "app.py", "print('ok')\n")
@@ -877,6 +946,8 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     hints = answer["learned_route_hints"]
     assert hints["confirmed"] == []
     assert hints["invalid"][0]["original_state"] == "confirmed"
+    assert hints["invalid"][0]["state"] == "invalid-authority"
+    assert hints["lifecycle"]["state_counts"]["invalid-authority"] == 1
     assert set(hints["invalid"][0]["missing_fields"]) == {"owner", "scope", "provenance", "learned_at"}
     assert answer["required_commands"] == []
     assert answer["proof_route_selection"]["selected_command"] is None
@@ -906,6 +977,7 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     hints = answer["learned_route_hints"]
     assert hints["negative"] == []
     assert hints["invalid"][0]["original_state"] == "negative"
+    assert hints["invalid"][0]["state"] == "invalid-authority"
     assert "npm test" in answer["target_proof_capabilities"]["candidate_commands"]
     assert answer["proof_route_selection"]["selected_command"]["command"] == "npm test"
     learning = answer["host_repo_learning"]
