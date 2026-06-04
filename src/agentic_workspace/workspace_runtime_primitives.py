@@ -20482,6 +20482,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
             if isinstance(payload.get("proof"), dict)
             else {},
+            "proof_obligations": _tiny_proof_obligations_payload(
+                payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
             ),
@@ -29537,6 +29542,76 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
     }
 
 
+def _proof_obligations_payload(
+    *,
+    required_commands: list[str],
+    optional_commands: list[str],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    manual_required = manual_verification is not None
+    return {
+        "kind": "agentic-workspace/proof-obligations/v1",
+        "status": "required-proof-selected" if required_commands else "manual-proof-required" if manual_required else "no-required-proof",
+        "required_proof": {
+            "kind": "agentic-workspace/required-proof/v1",
+            "status": "required" if required_commands or manual_required else "not-selected",
+            "commands": required_commands,
+            "manual_verification_required": manual_required,
+            "manual_verification_status": manual_verification.get("status") if manual_required else "not-needed",
+            "source_field": "required_commands",
+            "rule": (
+                "These commands, or required manual verification when commands are unavailable, are the proof gate for completion claims."
+            ),
+        },
+        "recommended_confidence_checks": {
+            "kind": "agentic-workspace/recommended-confidence-checks/v1",
+            "status": "available" if optional_commands else "not-selected",
+            "commands": optional_commands,
+            "source_field": "optional_commands",
+            "rule": "Recommended checks may refresh state or raise confidence, but they do not replace or relax required proof.",
+        },
+        "agent_selected_extra_validation": {
+            "kind": "agentic-workspace/agent-selected-extra-validation/v1",
+            "status": "agent-owned",
+            "commands": [],
+            "examples": [
+                "rerun a focused failing test after the fix",
+                "inspect the final diff against requested acceptance",
+                "add task-specific validation when failures or risk expose an unproven behavior",
+            ],
+            "rule": "The agent may add validation when task intent, failures, or risk warrant it; AW does not pre-claim that extra work is mandatory.",
+        },
+        "completion_claim_rule": (
+            "Completion claims remain blocked until required proof passes or required manual verification is recorded, "
+            "then acceptance and residue are reconciled."
+        ),
+        "compatibility": {
+            "required_commands": "unchanged hard-gate field for existing callers",
+            "optional_commands": "unchanged advisory confidence-check field for existing callers",
+        },
+    }
+
+
+def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands: list[str] | None = None) -> dict[str, Any]:
+    required = value.get("required_proof", {}) if isinstance(value.get("required_proof"), dict) else {}
+    recommended = value.get("recommended_confidence_checks", {}) if isinstance(value.get("recommended_confidence_checks"), dict) else {}
+    visible_required_commands = list(required_commands) if required_commands is not None else required.get("commands", [])
+    return {
+        "kind": value.get("kind", "agentic-workspace/proof-obligations/v1"),
+        "required_proof": {
+            "status": required.get("status", "unknown"),
+            "commands": visible_required_commands,
+            "manual_verification_required": bool(required.get("manual_verification_required", False)),
+        },
+        "recommended_confidence_checks": {
+            "status": recommended.get("status", "unknown"),
+            "commands": recommended.get("commands", []),
+            "rule": recommended.get("rule", ""),
+        },
+        "completion_claim_rule": value.get("completion_claim_rule", ""),
+    }
+
+
 def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
     sensitive = [
         command
@@ -30072,6 +30147,11 @@ def _proof_selection_for_changed_paths(
         )
         for command in optional_commands
     ]
+    proof_obligations = _proof_obligations_payload(
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        manual_verification=manual_verification,
+    )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_selection = {
         "kind": "proof-selection/v1",
@@ -30133,6 +30213,7 @@ def _proof_selection_for_changed_paths(
         "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
         "proof_next_decision": proof_next_decision,
         "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
+        "proof_obligations": proof_obligations,
         "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),
         "tiny_surface_compatibility_review": _tiny_surface_compatibility_review(changed_paths),
         "selected_lanes": [

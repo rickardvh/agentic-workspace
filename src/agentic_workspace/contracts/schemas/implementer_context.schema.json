@@ -643,6 +643,41 @@
           },
           "description": "Optional validation or orientation commands."
         },
+        "proof_obligations": {
+          "type": "object",
+          "description": "Structured proof contract separating required proof gates, recommended confidence checks, and agent-selected extra validation.",
+          "properties": {
+            "kind": {
+              "const": "agentic-workspace/proof-obligations/v1",
+              "description": "Discriminator for the proof-obligations packet."
+            },
+            "required_proof": {
+              "type": "object",
+              "description": "Required proof gate for completion claims.",
+              "additionalProperties": true
+            },
+            "recommended_confidence_checks": {
+              "type": "object",
+              "description": "Optional checks that may raise confidence but do not replace required proof.",
+              "additionalProperties": true
+            },
+            "agent_selected_extra_validation": {
+              "type": "object",
+              "description": "Validation the agent chooses when task risk or failures warrant more evidence.",
+              "additionalProperties": true
+            },
+            "completion_claim_rule": {
+              "type": "string",
+              "description": "Rule that blocks completion claims until required proof is satisfied."
+            },
+            "compatibility": {
+              "type": "object",
+              "description": "Compatibility notes for existing proof command list consumers.",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
         "validation_plan": {
           "$ref": "#/$defs/validation_plan",
           "description": "Executable validation plan derived from selected lanes."

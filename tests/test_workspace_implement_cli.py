@@ -593,6 +593,50 @@ force = "required-before-closeout"
     assert routine["activation"]["small_work_rule"].startswith("If no category is attention")
 
 
+def test_implement_separates_required_proof_from_recommended_confidence_checks(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        (
+            "test-planning:\n\tpytest packages/planning/tests\n\n"
+            "lint-planning:\n\truff check packages/planning\n\n"
+            "typecheck-planning:\n\tpyright packages/planning\n\n"
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--task",
+                "Update planning package installer",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    proof = payload["proof"]
+    obligations = proof["proof_obligations"]
+    assert "make test-planning" in proof["required_commands"]
+    assert "make lint-planning" in proof["required_commands"]
+    assert "make typecheck-planning" in proof["required_commands"]
+    assert obligations["required_proof"]["commands"] == proof["required_commands"]
+    assert obligations["recommended_confidence_checks"]["commands"] == proof["optional_commands"]
+    assert obligations["recommended_confidence_checks"]["commands"] != proof["required_commands"]
+    assert obligations["agent_selected_extra_validation"]["status"] == "agent-owned"
+    assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
+    assert payload["required_validation_commands"] == proof["required_commands"]
+
+
 def test_implement_routine_context_surfaces_memory_freshness_and_promotion_pressure(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -865,6 +909,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    obligations = payload["proof"]["proof_obligations"]
+    assert obligations["required_proof"]["commands"] == payload["proof"]["required_commands"]
+    assert obligations["recommended_confidence_checks"]["status"] == "available"
+    assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
+    assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
     trust = payload["generated_surface_trust"]
     assert trust["status"] == "present"
     assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"
