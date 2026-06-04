@@ -598,6 +598,9 @@ candidates = []
         "proof": "uv run pytest tests/test_check_planning_surfaces.py",
     }
     assert archived["machine_readable_contract"]["scope"]["touched"] == ["closeout scope recorded in closure_check and generated_closeout."]
+    assert archived["machine_readable_contract"]["execution"]["status"] == "completed"
+    assert archived["machine_readable_contract"]["execution"]["next_step"] == ("No required continuation remains for this archived slice.")
+    assert archived["machine_readable_contract"]["execution"]["proof"] == "uv run pytest tests/test_check_planning_surfaces.py"
     assert archived["task_intent_promotion"]["needs review"] is True
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
     assert archived["iterative_follow_through"]["validation still needed"] == (
@@ -608,6 +611,7 @@ candidates = []
     assert archived["execution_summary"]["knowledge promoted (Memory/Docs/Config)"] == "none"
     assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
     assert archived["delegation_outcome_feedback"]["proof result"] != "pending"
+    assert archived["post_decomposition_delegation"]["status"] == "skipped-local-bounded-slice"
     assert archived["improvement_signal_review"]["status"] == "not_checked"
     assert archived["improvement_signal_review"]["next owner"] == "agent closeout reflection"
     assert "Intent satisfied: yes" in archived["generated_closeout"]["text"]
@@ -840,6 +844,15 @@ candidates = []
         "Keep scope bounded to the promoted TODO item and its stated touched paths."
     )
     assert archived["machine_readable_contract"]["intent"]["proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["machine_readable_contract"]["execution"]["status"] == "completed"
+    assert archived["machine_readable_contract"]["execution"]["next_step"] == ("No required continuation remains for this archived slice.")
+    assert archived["machine_readable_contract"]["execution"]["proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["post_decomposition_delegation"]["status"] == "skipped-local-bounded-slice"
+    archived_text = json.dumps(archived, sort_keys=True).lower()
+    assert '"status": "active"' not in archived_text
+    assert "current milestone validation remains pending" not in archived_text
+    assert "continue the current milestone until the completion criteria are met" not in archived_text
+    assert "fill in execution bounds" not in archived_text
     assert archived["task_intent_promotion"]["needs review"] is True
     options = {option["id"]: option for option in payload["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
