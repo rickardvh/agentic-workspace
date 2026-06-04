@@ -648,7 +648,8 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
     ]
-    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
+    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "projection"
+    assert payload["proof"]["cli_authority_review"]["classifications"][0]["direct_edit_allowed"] is False
     assert payload["path_boundaries"] == [
         {
             "path": "generated/workspace/python/cli.py",

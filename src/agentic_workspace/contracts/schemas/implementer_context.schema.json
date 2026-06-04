@@ -23,6 +23,7 @@
     "acceptance_reconciliation",
     "intent_acknowledgement",
     "objective_drift",
+    "generated_surface_trust",
     "reuse_pressure",
     "assurance_requirements",
     "verification",
@@ -108,6 +109,11 @@
     "change_impact": {
       "type": "object",
       "description": "Changed-path ownership, generatedness, authority, related contract, and proof-impact projection.",
+      "additionalProperties": true
+    },
+    "generated_surface_trust": {
+      "type": "object",
+      "description": "Compact generated-source trust packet naming canonical source, freshness status, refresh command, direct-edit policy, and validation command for generated changed paths.",
       "additionalProperties": true
     },
     "task_contract": {
