@@ -13,6 +13,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | (root) | object | yes |  | Startup routing payload returned when an agent needs the minimum safe context for entering or resuming work in a repository. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"startup-context/v1"` | yes |  | Discriminator for the startup context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
+| `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
 | `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | no |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
 | `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |

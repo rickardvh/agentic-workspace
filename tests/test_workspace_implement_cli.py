@@ -304,6 +304,8 @@ def test_implement_compact_reuse_pressure_collapses_large_generated_file_sets(tm
                 str(tmp_path),
                 "--changed",
                 *changed_paths,
+                "--select",
+                "reuse_pressure",
                 "--format",
                 "json",
             ]
@@ -312,7 +314,7 @@ def test_implement_compact_reuse_pressure_collapses_large_generated_file_sets(tm
     )
 
     payload = json.loads(capsys.readouterr().out)
-    reuse_pressure = payload["reuse_pressure"]
+    reuse_pressure = payload["values"]["reuse_pressure"]
     route_command = reuse_pressure["memory_signals"]["route_command"]
     assert "--target ." in route_command
     assert "<collapsed-changed-paths>" in route_command
@@ -825,7 +827,32 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     context = _implement_context(payload)
     encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) <= {"kind", "target", "next", "proof", "generated_surface_trust", "reuse_pressure", "context", "drill_down"}
+    assert set(payload) <= {
+        "kind",
+        "target",
+        "action_signals",
+        "next",
+        "proof",
+        "generated_surface_trust",
+        "reuse_pressure",
+        "context",
+        "drill_down",
+    }
+    signals = payload["action_signals"]
+    assert signals["kind"] == "agentic-workspace/action-signals/v1"
+    assert signals["order"] == [
+        "hard_blockers",
+        "allowed_next_action",
+        "proof_required",
+        "changed_signals",
+        "advisory_detail",
+        "agent_judgment",
+    ]
+    assert signals["allowed_next_action"] == payload["next"]["action"]
+    assert signals["proof_required"] is True
+    assert signals["proof_commands"] == payload["proof"]["required_commands"]
+    assert "generated_surface_trust=present" in signals["changed_signals"]
+    assert "context.reuse_pressure" in signals["advisory_detail"]["selectors"]
     adaptive = context["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
     assert adaptive["read_budget"]["profile"] == "tiny"

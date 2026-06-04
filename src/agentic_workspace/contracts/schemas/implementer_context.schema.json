@@ -47,6 +47,11 @@
       "type": "string",
       "description": "Resolved target repository for the implementation context."
     },
+    "action_signals": {
+      "type": "object",
+      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
+      "additionalProperties": true
+    },
     "planning_revision": {
       "type": "object",
       "description": "Optimistic Planning state revision observed by this implementer read surface.",
