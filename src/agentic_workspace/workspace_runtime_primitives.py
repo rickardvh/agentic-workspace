@@ -8707,6 +8707,12 @@ def _closeout_report_payload(
     requested_outcome = str(
         delegated.get("requested outcome") or delegated.get("requested_outcome") or completion_contract.get("must_be_true") or ""
     ).strip()
+    intent_evidence = _closeout_intent_evidence_payload(
+        active_planning_record=active_planning_record,
+        evidence_state=evidence_state,
+        requested_outcome=requested_outcome,
+        intent_check=intent_check,
+    )
     changed_surfaces = str(execution.get("changed surfaces") or "").strip()
     validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
     completion_decision = str(completion_contract.get("completion_decision", "unknown"))
@@ -8812,6 +8818,7 @@ def _closeout_report_payload(
         "work_completed": work_completed,
         "interpreted_intent": {
             "requested_outcome": requested_outcome,
+            "intent_evidence": intent_evidence,
             "intent_satisfaction": {
                 key: intent_check.get(key)
                 for key in ("status", "trust", "required_follow_on", "continuation_surface")
@@ -8819,6 +8826,7 @@ def _closeout_report_payload(
             },
             "closure_decision": str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip(),
         },
+        "intent_evidence": intent_evidence,
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
@@ -15479,6 +15487,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
     if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
         projected["durable_intent"] = _tiny_durable_intent(durable_intent)
+    if "intent_evidence" in payload:
+        projected["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
         projected["task_intent"] = {
@@ -16243,6 +16253,23 @@ def _start_payload(
         and (not _is_prep_only_handoff_task(task_text))
     ):
         payload["intent_acknowledgement"] = intent_acknowledgement
+    intent_evidence = _task_intent_evidence_payload(
+        task_text=task_text,
+        task_intent=task_intent,
+        intent_discovery=intent_discovery,
+        intent_acknowledgement=intent_acknowledgement,
+    )
+    if (
+        intent_evidence["status"] == "present"
+        and (
+            intent_evidence["assumption_state"] != "low-risk-direct"
+            or intent_evidence.get("issue_refs")
+            or intent_discovery.get("applies_to_current_task")
+        )
+        and task_intent.get("task_argument_mode") != "task-file"
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["intent_evidence"] = intent_evidence
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -16512,6 +16539,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "delegation_decision",
         "intent_discovery_dialogue",
         "intent_acknowledgement",
+        "intent_evidence",
         "workflow_sufficiency",
         "next_safe_action",
         "health",
@@ -16541,6 +16569,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.delegation_decision",
         "context.intent_discovery_dialogue",
         "context.intent_acknowledgement",
+        "context.intent_evidence",
         "context.workflow_sufficiency",
         "context.guidance",
         "context.acceptance_reconciliation",
@@ -16860,6 +16889,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
     if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
         context["durable_intent"] = _tiny_durable_intent(durable_intent)
+    if "intent_evidence" in payload:
+        context["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
     for optional_key in (
         "proof",
         "path_boundaries",
@@ -17063,6 +17094,23 @@ def _start_tiny_payload_fast(
         and (not _is_prep_only_handoff_task(task_text))
     ):
         payload["intent_acknowledgement"] = intent_acknowledgement
+    intent_evidence = _task_intent_evidence_payload(
+        task_text=task_text,
+        task_intent=task_intent,
+        intent_discovery=intent_discovery,
+        intent_acknowledgement=intent_acknowledgement,
+    )
+    if (
+        intent_evidence["status"] == "present"
+        and (
+            intent_evidence["assumption_state"] != "low-risk-direct"
+            or intent_evidence.get("issue_refs")
+            or intent_discovery.get("applies_to_current_task")
+        )
+        and task_intent.get("task_argument_mode") != "task-file"
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["intent_evidence"] = intent_evidence
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -18101,6 +18149,230 @@ def _intent_acknowledgement_payload(
         "silent_inference_ok_when": "The change is direct, local, low-risk, and validation is obvious.",
         "ask_human_when": "Stop for clarification only when the intent, authority boundary, safety risk, or required input blocks choosing a bounded first slice.",
         "template": "Inferred intent: <outcome>. First slice: <bounded work>. Non-goals/deferred: <scope>. I will proceed on that interpretation unless corrected.",
+    }
+
+
+def _task_intent_evidence_payload(
+    *,
+    task_text: str | None,
+    task_intent: dict[str, Any] | None = None,
+    intent_discovery: dict[str, Any] | None = None,
+    intent_acknowledgement: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    task = str(task_text or "").strip()
+    task_intent = task_intent if isinstance(task_intent, dict) else {}
+    intent_discovery = intent_discovery if isinstance(intent_discovery, dict) else {}
+    intent_acknowledgement = intent_acknowledgement if isinstance(intent_acknowledgement, dict) else {}
+    if not task:
+        return {
+            "kind": "agentic-workspace/intent-evidence/v1",
+            "status": "absent",
+            "reason": "No task text was provided.",
+            "rule": "Intent evidence is required only when a task intent exists or a closeout claim is being evaluated.",
+        }
+
+    issue_refs = re.findall(r"#\d+\b", task)
+    discovery_status = str(intent_discovery.get("status", "available"))
+    acknowledgement_decision = str(intent_acknowledgement.get("decision", "silent-ok"))
+    chain: list[dict[str, Any]] = [
+        {
+            "source": "current-user-task",
+            "trust": "explicit-text",
+            "summary": "The current task text is the first intent source.",
+        }
+    ]
+    if task_intent.get("task_argument_mode") == "task-file":
+        chain.append(
+            {
+                "source": "task-file",
+                "trust": "explicit-text",
+                "path": task_intent.get("task_file", ""),
+                "summary": "Task text was carried through a local task file.",
+            }
+        )
+    if issue_refs:
+        chain.append(
+            {
+                "source": "external-issue-reference",
+                "trust": "needs-refresh-or-human-context",
+                "refs": issue_refs,
+                "summary": "Issue references may carry product intent; refresh or cite issue evidence before treating them as confirmed.",
+            }
+        )
+    if discovery_status != "available":
+        chain.append(
+            {
+                "source": "workspace-intent-discovery",
+                "trust": "advisory-support",
+                "status": discovery_status,
+                "summary": "Intent-discovery guidance explains whether to ask or proceed with visible assumptions.",
+            }
+        )
+    if acknowledgement_decision == "proceed-with-stated-assumption":
+        chain.append(
+            {
+                "source": "agent-stated-assumption-required",
+                "trust": "agent-inference",
+                "summary": "The agent may proceed only after stating inferred intent, first slice, non-goals, and correction point.",
+            }
+        )
+
+    if discovery_status == "ask-human":
+        assumption_state = "clarification-required"
+        source_class = "human-clarification-needed"
+        confidence = str(intent_discovery.get("inferred_intent_confidence", "low"))
+        required_next_action = "ask-intent-discovery-question"
+        proceed_without_question = False
+    elif acknowledgement_decision == "proceed-with-stated-assumption":
+        assumption_state = "visible-assumption-required"
+        source_class = "agent-inference-with-evidence"
+        confidence = str(intent_discovery.get("inferred_intent_confidence") or ("medium" if issue_refs else "medium-high"))
+        required_next_action = "state-assumptions-before-editing"
+        proceed_without_question = True
+    else:
+        assumption_state = "low-risk-direct"
+        source_class = "direct-user-text"
+        confidence = "high"
+        required_next_action = "continue-direct"
+        proceed_without_question = True
+
+    return {
+        "kind": "agentic-workspace/intent-evidence/v1",
+        "status": "present",
+        "source_class": source_class,
+        "assumption_state": assumption_state,
+        "confidence": confidence,
+        "issue_refs": issue_refs,
+        "source_chain": chain,
+        "required_next_action": required_next_action,
+        "proceed_without_question": proceed_without_question,
+        "correction_point": intent_acknowledgement.get("correction_point")
+        or "Proceed only when the bounded interpretation is visible and can be corrected.",
+        "ask_human_when": intent_acknowledgement.get("ask_human_when")
+        or "Ask when intent, authority, safety, or required input blocks choosing a bounded first slice.",
+        "closeout_carry_forward": [
+            "source_class",
+            "assumption_state",
+            "source_chain",
+            "correction_point",
+            "issue_refs",
+        ],
+        "scenario_expectations": [
+            {
+                "scenario": "vague-broad-prompt",
+                "expected_evidence": "ask or visible assumptions before implementation",
+            },
+            {
+                "scenario": "issue-backed-prompt",
+                "expected_evidence": "issue reference plus stated interpretation and correction point",
+            },
+            {
+                "scenario": "high-stakes-system-shaping",
+                "expected_evidence": "clarification or Planning/issue owner before broad work proceeds",
+            },
+            {
+                "scenario": "direct-small-fix",
+                "expected_evidence": "direct-user-text is enough; no clarification interruption",
+            },
+        ],
+        "rule": "AW exposes intent-source and assumption evidence; the agent owns semantic interpretation and whether clarification is genuinely blocking.",
+    }
+
+
+def _compact_intent_evidence(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    compact = {
+        key: value[key]
+        for key in (
+            "kind",
+            "status",
+            "source_class",
+            "assumption_state",
+            "confidence",
+            "issue_refs",
+            "required_next_action",
+            "proceed_without_question",
+        )
+        if key in value
+    }
+    compact["source_count"] = len(_list_payload(value.get("source_chain")))
+    return compact
+
+
+def _closeout_intent_evidence_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    evidence_state: str,
+    requested_outcome: str,
+    intent_check: dict[str, Any],
+) -> dict[str, Any]:
+    if not active_planning_record:
+        return {
+            "kind": "agentic-workspace/intent-evidence/v1",
+            "status": "guidance-only",
+            "source_class": "no-closeout-evidence",
+            "assumption_state": "not-evaluated",
+            "rule": "Closeout intent provenance is available once active, retained, or archived planning evidence exists.",
+        }
+    execution = _as_dict(active_planning_record.get("execution_run"))
+    intent_satisfaction = _as_dict(active_planning_record.get("intent_satisfaction"))
+    references = _list_payload(active_planning_record.get("references"))
+    source_chain: list[dict[str, Any]] = []
+    if requested_outcome:
+        source_chain.append(
+            {
+                "source": "planning.delegated_judgment.requested_outcome",
+                "trust": "planning-record",
+                "summary": requested_outcome,
+            }
+        )
+    original_intent = str(intent_satisfaction.get("original intent", "")).strip()
+    if original_intent:
+        source_chain.append(
+            {
+                "source": "planning.intent_satisfaction.original_intent",
+                "trust": "closeout-evidence",
+                "summary": original_intent,
+            }
+        )
+    handoff_source = str(execution.get("handoff source") or execution.get("handoff_source") or "").strip()
+    if handoff_source:
+        source_chain.append(
+            {
+                "source": "planning.execution_run.handoff_source",
+                "trust": "handoff-evidence",
+                "summary": handoff_source,
+            }
+        )
+    reference_refs = [
+        {
+            "source": "planning.references",
+            "trust": "external-or-planning-reference",
+            "target": item.get("target") or item.get("url") or item.get("path") or "",
+            "role": item.get("role", ""),
+        }
+        for item in references[:5]
+        if isinstance(item, dict)
+    ]
+    source_chain.extend(reference_refs)
+    source_class = "planning-evidence"
+    if reference_refs:
+        source_class = "planning-plus-external-reference"
+    elif not source_chain:
+        source_class = "planning-record-with-implicit-intent"
+    trust = str(intent_check.get("trust") or "unknown")
+    return {
+        "kind": "agentic-workspace/intent-evidence/v1",
+        "status": "present",
+        "source_class": source_class,
+        "assumption_state": "closeout-derived-from-planning",
+        "confidence": "high" if requested_outcome and trust not in {"needs-review", "follow-up-required"} else "medium",
+        "planning_evidence_state": evidence_state,
+        "source_chain": source_chain,
+        "closeout_trust": trust,
+        "correction_point": "If this source chain does not match the user's intended outcome, do not claim completion; route the mismatch to Planning, an issue, or Memory.",
+        "rule": "Closeout must distinguish user-confirmed, issue-derived, planning-derived, and agent-inferred intent before claiming satisfaction.",
     }
 
 
@@ -19447,6 +19719,24 @@ def _implement_payload(
             "closeout_required": acceptance.get("closeout_required", False),
         }
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    intent_acknowledgement = _intent_acknowledgement_payload(
+        task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
+    )
+    intent_discovery = (
+        {}
+        if normalized_paths
+        else _intent_discovery_dialogue_payload(
+            task_text=task_text,
+            vague_orientation=vague_orientation,
+            cli_invoke=config.cli_invoke,
+        )
+    )
+    intent_evidence = _task_intent_evidence_payload(
+        task_text=task_text,
+        task_intent=task_intent,
+        intent_discovery=intent_discovery,
+        intent_acknowledgement=intent_acknowledgement,
+    )
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -19531,9 +19821,8 @@ def _implement_payload(
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text, acceptance=acceptance),
-        "intent_acknowledgement": _intent_acknowledgement_payload(
-            task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
-        ),
+        "intent_acknowledgement": intent_acknowledgement,
+        "intent_evidence": intent_evidence,
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
         "generated_surface_trust": _generated_surface_trust_payload(
             target_root=target_root,
@@ -19759,6 +20048,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 if isinstance(payload.get("task_intent"), dict)
                 else [],
             },
+            "intent_evidence": _compact_intent_evidence(payload.get("intent_evidence", {})),
             "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
@@ -19794,6 +20084,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.scope",
                 "context.workflow_sufficiency",
                 "context.acceptance",
+                "context.intent_evidence",
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",

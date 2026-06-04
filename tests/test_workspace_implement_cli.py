@@ -866,6 +866,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "correction_point",
     ]
     assert acknowledgement["proceed_unless_corrected"] is True
+    intent_evidence = context["intent_evidence"]
+    assert intent_evidence["source_class"] == "agent-inference-with-evidence"
+    assert intent_evidence["assumption_state"] == "visible-assumption-required"
+    assert intent_evidence["required_next_action"] == "state-assumptions-before-editing"
+    assert intent_evidence["proceed_without_question"] is True
     assert context["delegation_decision"]["status"] == "evaluated"
     assert context["delegation_decision"]["mode"] in {"suggest", "auto"}
     delegation_boundary = context["delegation_decision"]["authority_boundary"]

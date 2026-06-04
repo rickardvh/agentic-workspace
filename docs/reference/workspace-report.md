@@ -100,6 +100,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
 | `closeout_report.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
 | `closeout_report.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
+| `closeout_report.intent_evidence` | object | no |  | Closeout intent provenance showing whether interpreted intent came from planning evidence, user text, issue/reference evidence, handoff evidence, or agent inference. |  |  |
+| `closeout_report.interpreted_intent` | object | no |  | Requested outcome, intent-source evidence, satisfaction status, and closure decision rendered for the closeout report. |  |  |
 | `closeout_report.decision_review` | object | no |  | Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance. |  |  |
 | `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, detail routes, and human-owned decisions. |  |  |
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |

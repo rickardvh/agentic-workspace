@@ -137,6 +137,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `acceptance` | object | no |  | Definition-of-done expectations inferred from task intent for selector-first startup drill-down. |  |  |
 | `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
+| `intent_evidence` | object | no |  | Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |

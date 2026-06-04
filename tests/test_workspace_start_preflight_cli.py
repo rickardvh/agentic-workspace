@@ -2522,6 +2522,7 @@ def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     discovery = _start_context_value(payload, "intent_discovery_dialogue")
+    intent_evidence = _start_context_value(payload, "intent_evidence")
     assert discovery["status"] == "ask-human"
     assert discovery["inferred_intent_confidence"] == "low"
     assert discovery["stakes_if_wrong"] == "high"
@@ -2531,6 +2532,10 @@ def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_pa
     assert discovery["loop_control"]["max_questions_before_progress"] == 1
     assert "captured_intent_after_reply" in discovery["output_shape"]["fields"]
     assert "Planning" in discovery["output_shape"]["promotion_targets"]
+    assert intent_evidence["source_class"] == "human-clarification-needed"
+    assert intent_evidence["assumption_state"] == "clarification-required"
+    assert intent_evidence["required_next_action"] == "ask-intent-discovery-question"
+    assert intent_evidence["proceed_without_question"] is False
 
     next_action = payload["next_safe_action"]
     assert next_action["next_safe_action"] == "ask-intent-discovery-question"
@@ -2553,7 +2558,7 @@ def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_pat
                 "--task",
                 "Implement #1197",
                 "--select",
-                "intent_discovery_dialogue,intent_acknowledgement,immediate_next_allowed_action",
+                "intent_discovery_dialogue,intent_acknowledgement,intent_evidence,immediate_next_allowed_action",
                 "--format",
                 "json",
             ]
@@ -2567,6 +2572,11 @@ def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_pat
     assert discovery["required_next_action"] == "state-assumptions-before-editing"
     assert payload["immediate_next_allowed_action"]["action"] != "ask-intent-discovery-question"
     assert payload["intent_acknowledgement"]["decision"] == "proceed-with-stated-assumption"
+    intent_evidence = payload["intent_evidence"]
+    assert intent_evidence["source_class"] == "agent-inference-with-evidence"
+    assert intent_evidence["assumption_state"] == "visible-assumption-required"
+    assert intent_evidence["issue_refs"] == ["#1197"]
+    assert any(item["source"] == "external-issue-reference" for item in intent_evidence["source_chain"])
 
 
 def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsys) -> None:
@@ -2625,6 +2635,7 @@ def test_start_direct_task_keeps_stated_assumption_out_of_default(tmp_path: Path
     payload = json.loads(capsys.readouterr().out)
     assert "intent_acknowledgement" not in payload
     assert "intent_discovery_dialogue" not in payload
+    assert "intent_evidence" not in payload.get("context", {})
 
 
 def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tmp_path: Path, capsys) -> None:
