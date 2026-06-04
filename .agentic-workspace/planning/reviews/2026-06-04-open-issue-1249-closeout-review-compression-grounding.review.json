@@ -1,0 +1,158 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1249 closeout/report first-inspection compression",
+  "date": "2026-06-04",
+  "classification": "review-compression",
+  "goal": [
+    "Ground #1249 in current closeout_report, final_response_rendering, decision_review, and review_compression behavior before implementation.",
+    "Identify the first bounded slice that reduces human review cost without adding another broad surface."
+  ],
+  "scope": [
+    "Issue #1249 and the existing closeout/report contract.",
+    "Current report --section closeout_report output on this repo.",
+    "Regression tests and reference docs that already define closeout rendering, decision review, and review compression behavior."
+  ],
+  "non_goals": [
+    "Do not implement a new review dashboard in this review.",
+    "Do not remove high-risk code review or human acceptance judgment.",
+    "Do not claim #1249 is complete until the work-shape inspection contract is implemented or explicitly rejected."
+  ],
+  "review_mode": {
+    "mode": "grounding-review",
+    "review question": "Which closeout/report facts should be first-inspection material by work shape, and what should stay secondary detail?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1249",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "docs/reference/workspace-report.md",
+      "tests/test_workspace_report_cli.py"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "gh issue list --state open --limit 100 --json number,title,labels,url,body",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "rg -n \"closeout_report|final_response_rendering|review_compression|decision_review|authority_boundary\" .agentic-workspace docs src tests"
+    ],
+    "evidence sources": [
+      "#1249 issue body",
+      "current closeout_report JSON",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "docs/reference/workspace-report.md",
+      "tests/test_workspace_report_cli.py closeout_report tests"
+    ],
+    "limitation": "This review grounds implementation shape from product and test surfaces; it did not run a human usability study."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1249",
+      "label": "Closeout/report first-inspection compression by work shape",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1249"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "label": "Current closeout_report",
+      "role": "primary behavior evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": ".agentic-workspace/docs/reporting-contract.md",
+      "label": "Reporting contract",
+      "role": "contract owner"
+    },
+    {
+      "kind": "local-test",
+      "target": "tests/test_workspace_report_cli.py",
+      "label": "Closeout/report tests",
+      "role": "regression surface"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1249",
+      "kind": "review/trust gap",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "closeout_report/final_response_rendering plus issue follow-up"
+    }
+  ],
+  "summary": {
+    "current_state": "The current closeout_report already emits profile_policy, traceability, completeness, decision_review, review_compression, closeout_adoption, authority_boundary, and final_response_rendering.",
+    "implementation_posture": "Do not add a new top-level report surface first. Make the existing review_compression and final_response_rendering packets more directly actionable for first inspection by work shape.",
+    "first_slice": "Codify a small work-shape mode contract and tests for small direct, planned slice, broad PR, system-shaping, partial/lower-trust, and residue-heavy closeouts."
+  },
+  "findings": [
+    {
+      "title": "The compression data already exists but needs a first-inspection contract",
+      "summary": "Current closeout_report includes a review_compression packet with modes and first_inspection_facts, but #1249 is still valid because the issue asks for a review contract that tells humans and agents what to inspect first and what can be secondary.",
+      "evidence": "Current closeout_report selected mode partial-or-lower-trust-closeout and listed first inspection facts such as blocking caveat, missing proof or intent evidence, residual risk, owner, and allowed closure claim. The same output also includes many adjacent packets, confirming the overload risk named in #1249.",
+      "risk if unchanged": "Agents may keep dumping or paraphrasing many report fields instead of giving a predictable review path by work shape.",
+      "suggested action": "Promote the existing review_compression packet from descriptive guidance into a tested contract for first-inspection facts, detail routes, and human-owned decisions by work shape.",
+      "confidence": "high",
+      "source": "current closeout_report output and #1249 issue body",
+      "promotion target": "#1249 implementation slice",
+      "promotion trigger": "When implementing the first-inspection mode map."
+    },
+    {
+      "title": "final_response_rendering is the right user-facing front door",
+      "summary": "The final response packet already carries rendered text, must_include, must_not_claim, plain_done_allowed, and raw_json_allowed. This is where the user-facing compression should land before adding another output surface.",
+      "evidence": "Current final_response_rendering rendered an audit summary and explicitly prohibited raw JSON and plain done output while lower-trust caveats were present.",
+      "risk if unchanged": "Implementation could add another review artifact while the actual in-chat report remains unchanged, repeating the closeout UX gap the user flagged earlier.",
+      "suggested action": "Make work-shape selection visibly affect rendered_summary and constraints. Tests should assert final response guidance, not only raw report fields.",
+      "confidence": "high",
+      "source": "current closeout_report.final_response_rendering and tests/test_workspace_report_cli.py",
+      "promotion target": "#1249 tests and rendering contract",
+      "promotion trigger": "When choosing the first implementation surface."
+    },
+    {
+      "title": "System-shaping mode must depend on decision facts rather than raw diff scale",
+      "summary": "The current decision_review packet correctly separates decision facts from closeout traceability. Review compression should select system-shaping mode from explicit signals or authored decision facts, not merely file count or broad change shape.",
+      "evidence": "Current closeout_report.decision_review is not-applicable for the recent bug-fix closeout while review_compression selects partial/lower-trust because of trust and residue signals. Tests already cover present and missing decision facts.",
+      "risk if unchanged": "AW could reintroduce heuristic-style classification by treating broad changes as system decisions without agent-authored rationale.",
+      "suggested action": "Require system-shaping review mode to show decision facts when present, or an explicit routed absence when a system-shaping signal exists and facts are missing.",
+      "confidence": "medium-high",
+      "source": "closeout_report.decision_review, review_compression output, #1250 dependency",
+      "promotion target": "#1249 plus #1250",
+      "promotion trigger": "When adding system-shaping mode fixtures."
+    },
+    {
+      "title": "The implementation should subtract or prioritize before adding fields",
+      "summary": "#1249 is a compression issue. The first slice should specify precedence and detail routing over adding new visible facts.",
+      "evidence": "The current report already includes profile_policy, authority_boundary, traceability, completeness, decision_review, review_compression, closeout_adoption, final_response_rendering, and detail_commands.",
+      "risk if unchanged": "The fix could worsen review cost by increasing the amount of first-screen material.",
+      "suggested action": "For each mode, define the smallest must-include set and the secondary detail commands. Make tests fail when a mode requires raw JSON or too many unrelated packets for first inspection.",
+      "confidence": "high",
+      "source": "current report field inventory",
+      "promotion target": "#1249 acceptance criteria",
+      "promotion trigger": "Before implementation expands any report schema."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a bounded implementation slice for review_compression/final_response_rendering mode contracts.",
+    "defer": "Defer any new dashboard or top-level report surface.",
+    "dismiss": "Do not dismiss; the current report is powerful but still costly to inspect without a prioritized mode contract.",
+    "first_slice": "Add or tighten tests for selected_mode, first_inspection_facts, detail_routes, human_owned_decisions, and rendered_summary constraints across representative work shapes.",
+    "validation": "Focused tests in tests/test_workspace_report_cli.py plus AW summary and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1249 implementation or superseding issue comment captures the mode contract",
+    "trigger": "Findings promoted into tests, reporting contract, or issue refinement",
+    "proof surface": "This review, #1249, and resulting closeout_report tests",
+    "source retention rule": "Keep the judgment and exact source references; avoid copying full report JSON into future artifacts."
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1249-closeout-review-compression-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1249, current closeout_report output, reporting contract, reference docs, and closeout tests."
+  ]
+}

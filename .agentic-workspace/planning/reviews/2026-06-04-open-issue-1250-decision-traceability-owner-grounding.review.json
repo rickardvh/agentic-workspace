@@ -1,0 +1,163 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1250 decision traceability owner model",
+  "date": "2026-06-04",
+  "classification": "decision-traceability",
+  "goal": [
+    "Ground #1250 in current decision_pressure and closeout_report decision_review behavior.",
+    "Define the owner split needed before implementing durable decision traceability."
+  ],
+  "scope": [
+    "Issue #1250 and the current decision-related report surfaces.",
+    "closeout_report.decision_review, decision_pressure, Planning closeout evidence, reporting contract text, and representative tests.",
+    "Durable owner options: Planning, ADR/docs, Memory, config/checks, and issue follow-up."
+  ],
+  "non_goals": [
+    "Do not build a new ADR engine in this review.",
+    "Do not require formal decision records for small direct work.",
+    "Do not make AW infer semantic decisions from diffs or file names."
+  ],
+  "review_mode": {
+    "mode": "contract-integrity",
+    "review question": "What should the agent author, what may AW derive, and where should durable system decisions live?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1250",
+      "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      ".agentic-workspace/docs/reporting-contract.md",
+      "tests/test_workspace_report_cli.py"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "gh issue list --state open --limit 100 --json number,title,labels,url,body",
+      "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "rg -n \"decision_pressure|decision_review|architecture_decision|decision facts|durable owner\" .agentic-workspace docs src tests packages"
+    ],
+    "evidence sources": [
+      "#1250 issue body",
+      "current decision_pressure output",
+      "current closeout_report decision_review output",
+      "reporting contract",
+      "tests covering present and missing decision facts"
+    ],
+    "limitation": "This review defines implementation boundaries. It does not evaluate every historical system-shaping PR."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1250",
+      "label": "Decision traceability owner model",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1250"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section decision_pressure --format json",
+      "label": "Current decision_pressure",
+      "role": "routing evidence"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py report --section closeout_report --format json",
+      "label": "Current closeout_report decision_review",
+      "role": "derived display evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": ".agentic-workspace/docs/reporting-contract.md",
+      "label": "Reporting contract",
+      "role": "authority and decision boundary contract"
+    },
+    {
+      "kind": "local-test",
+      "target": "tests/test_workspace_report_cli.py",
+      "label": "Decision-review tests",
+      "role": "expected behavior evidence"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1250",
+      "kind": "review/trust gap",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "Planning-authored facts rendered by closeout_report and routed by decision_pressure"
+    }
+  ],
+  "summary": {
+    "current_state": "decision_pressure is not configured in this repo, but it already exposes the intended role: preserve and route decision records without forcing every task to create one. closeout_report.decision_review renders agent-authored decision facts when present and treats the current bug-fix closeout as not-applicable.",
+    "owner_model": "The agent authors semantic decision facts; AW checks presence, derives display packets, and routes promotion; durable accepted decisions live in host-owned docs/ADR/Memory/config/checks/issues depending on scope.",
+    "first_slice": "Add an explicit owner-model contract and fixtures for no decision, decision facts present, missing facts under system-shaping signals, and configured durable target."
+  },
+  "findings": [
+    {
+      "title": "AW already has the authority boundary; it still needs a durable-owner decision model",
+      "summary": "The current surfaces correctly avoid saying AW makes semantic decisions, but #1250 remains necessary because they do not yet define when active Planning facts must be promoted into durable host-owned records.",
+      "evidence": "decision_pressure output states: 'Agent owns architecture judgment; AW preserves and routes decision records without forcing every task to create one.' closeout_report.decision_review says the agent authors semantic system decisions while AW preserves, renders, checks completeness, and routes promotion.",
+      "risk if unchanged": "System-shaping work may have correct authority wording but still leave decision rationale trapped in transient planning residue or PR prose.",
+      "suggested action": "Implement a proportional owner model that distinguishes active decision facts, derived review display, promotion pressure, and durable host-owned records.",
+      "confidence": "high",
+      "source": "current decision_pressure and closeout_report output",
+      "promotion target": "#1250 implementation",
+      "promotion trigger": "When a system-shaping change has material decision facts or missing decision facts."
+    },
+    {
+      "title": "decision_pressure should remain routing, not semantic classification",
+      "summary": "The safest implementation keeps decision_pressure focused on configuration, existing durable records, active planning decision candidates, memory pressure, and commands. It should not infer the architecture decision from changed files.",
+      "evidence": "Current decision_pressure reports configuration not-configured, candidate_count 0, and no available scaffold/promote actions because no durable target is configured.",
+      "risk if unchanged": "A deeper implementation could reintroduce the earlier 'AW classified/routed/decided' UX bug by presenting inferred decisions as AW-owned facts.",
+      "suggested action": "Require agent-authored decision fields for semantic decision content. AW may only report absence, completeness, and routes.",
+      "confidence": "high",
+      "source": "decision_pressure output and authority-boundary direction",
+      "promotion target": "#1250 acceptance criteria",
+      "promotion trigger": "When defining decision_pressure behavior under system-shaping work."
+    },
+    {
+      "title": "Small work must remain decision-light",
+      "summary": "The current bug-fix closeout is correctly marked decision_review not-applicable even though it touched multiple files and planning archives. This is a useful guardrail for proportionality.",
+      "evidence": "closeout_report.decision_review status is not-applicable for the generated CLI cache and closeout evidence bug-fix closeout. Missing decision facts are not treated as blockers when there are no system_shaping_signals.",
+      "risk if unchanged": "A formal decision model could create too much ceremony and weaken ordinary agent ergonomics.",
+      "suggested action": "Tests should assert that small direct or bug-fix work does not require decision records unless explicit system-shaping signals or agent-authored architecture_decision_promotion facts exist.",
+      "confidence": "high",
+      "source": "current closeout_report output",
+      "promotion target": "#1250 tests",
+      "promotion trigger": "When adding durable-owner or missing-decision checks."
+    },
+    {
+      "title": "Durable target configuration is the first practical implementation seam",
+      "summary": "The report already names configuration fields for a decision record target, format, template, and statuses. Implementation can start by making this route clearer before designing new storage.",
+      "evidence": "decision_pressure.configuration lists assurance.decision_record_target, assurance.decision_record_format, assurance.decision_record_template, and assurance.decision_record_statuses; actions are unavailable because no target is configured.",
+      "risk if unchanged": "Agents will know decision facts are missing but not where to promote them, leaving system-shaping decisions in issue comments or chat.",
+      "suggested action": "First slice should define behavior for configured and unconfigured durable targets: scaffold, promote, or explicitly route to issue follow-up when no configured target exists.",
+      "confidence": "medium-high",
+      "source": "decision_pressure configuration output",
+      "promotion target": "#1250 first bounded slice",
+      "promotion trigger": "When turning the owner model into command/report behavior."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote implementation after accepting the owner split: agent-authored facts, AW-derived display/completeness, decision_pressure promotion, host-owned durable targets.",
+    "defer": "Defer a full ADR subsystem and broad historical migration.",
+    "dismiss": "Do not dismiss; decision routing exists but durable ownership remains unresolved.",
+    "first_slice": "Add a contract/test slice around configured versus unconfigured durable target behavior and proportional missing-decision routing.",
+    "validation": "Focused tests in tests/test_workspace_report_cli.py plus any decision-scaffold/promote tests if command behavior changes."
+  },
+  "retention": {
+    "closeout shape": "keep until #1250 implementation or issue refinement captures the owner model",
+    "trigger": "Findings promoted into reporting contract, tests, or a narrower implementation issue",
+    "proof surface": "This review, #1250, decision_pressure output, and closeout_report decision_review tests"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1250-decision-traceability-owner-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1250, decision_pressure, closeout_report.decision_review, reporting contract, and tests."
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1252 proof-route learning lifecycle",
+  "date": "2026-06-04",
+  "classification": "proof-route-lifecycle",
+  "goal": [
+    "Ground #1252 in current proof selection, proof-route hint, Memory, and closeout proof surfaces.",
+    "Define lifecycle boundaries that let agents reuse learned proof routes without turning stale hints into hidden heuristics."
+  ],
+  "scope": [
+    "Issue #1252 and proof-route behavior across workspace, Memory, Verification, and closeout/report surfaces.",
+    "Current proof command behavior on an unscoped repo and changed-path implement output.",
+    "Host-repo learning guidance that warns against assuming pytest or other proof commands from weak markers."
+  ],
+  "non_goals": [
+    "Do not select a universal proof command for all host repos.",
+    "Do not implement full proof-route promotion in this review.",
+    "Do not treat Memory or route hints as authoritative without provenance and freshness."
+  ],
+  "review_mode": {
+    "mode": "proof-governance",
+    "review question": "How should proof routes move between candidate, confirmed, stale, negative, and superseded without becoming hidden assumptions?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1252",
+      "uv run python scripts/run_agentic_workspace.py proof --format json",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --format json",
+      "docs/host-repo-learning.md",
+      "src/agentic_workspace/workspace_runtime_primitives.py proof-route functions",
+      "packages/verification runtime proof-route and stale evidence handling"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py proof --format json",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <review paths> --task \"create and link in-depth grounding reviews for each open GitHub issue\" --format json",
+      "rg -n \"proof_route|proof-route|canonical_proof_route|PROOF_ROUTE_HINTS_PATH|stale-evidence|negative|superseded\" src packages tests docs .agentic-workspace"
+    ],
+    "evidence sources": [
+      "#1252 issue body",
+      "proof command output",
+      "implement proof-selection output",
+      "docs/host-repo-learning.md",
+      "workspace proof-route hint loading and Verification stale-evidence code",
+      "closeout_report proof confidence fields"
+    ],
+    "limitation": "This review did not trace every proof-route state transition in code; it identifies the states and proof obligations implementation must preserve."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1252",
+      "label": "Proof-route learning lifecycle and stale-evidence handling",
+      "role": "implementation owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1252"
+    },
+    {
+      "kind": "command-output",
+      "target": "uv run python scripts/run_agentic_workspace.py proof --format json",
+      "label": "Unscoped proof output",
+      "role": "current selection behavior"
+    },
+    {
+      "kind": "local-doc",
+      "target": "docs/host-repo-learning.md",
+      "label": "Host-repo learning guidance",
+      "role": "anti-heuristic proof selection contract"
+    },
+    {
+      "kind": "local-code",
+      "target": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "label": "Proof-route hint loading",
+      "role": "runtime behavior surface"
+    },
+    {
+      "kind": "local-code",
+      "target": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+      "label": "Verification stale evidence",
+      "role": "staleness model precedent"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1252",
+      "kind": "review/trust gap",
+      "implementation_allowed_after_review": true,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "proof selection, Memory proof-route notes, Verification stale evidence, and closeout proof reporting"
+    }
+  ],
+  "summary": {
+    "current_state": "Unscoped proof output correctly has no required commands. Changed-path implement output can select focused proof. Runtime code has proof-route hint concepts, and Verification already models stale evidence.",
+    "implementation_posture": "Define lifecycle state transitions and reporting before expanding proof-route automation.",
+    "first_slice": "Add fixtures for candidate, confirmed, stale, negative, superseded, and invalid-authority routes, with explicit closeout/report visibility."
+  },
+  "findings": [
+    {
+      "title": "Unscoped proof selection is appropriately conservative",
+      "summary": "The current proof command does not require proof without changed paths or task-specific evidence. This is the correct baseline for a repo-agnostic product.",
+      "evidence": "uv run python scripts/run_agentic_workspace.py proof --format json returned action select-proof-scope, required false, and required_commands empty.",
+      "risk if unchanged": "If learned routes bypass this conservatism, AW could force stale or host-specific proof commands on unrelated work.",
+      "suggested action": "Lifecycle rules should require scope evidence before a learned route becomes required proof, even when a route is confirmed.",
+      "confidence": "high",
+      "source": "current proof command output",
+      "promotion target": "#1252 proof lifecycle contract",
+      "promotion trigger": "When confirmed proof routes are reused across changed-path scopes."
+    },
+    {
+      "title": "Proof-route hints need explicit authority and freshness",
+      "summary": "A route can reduce repeated discovery cost only when its source, state, and revalidation trigger are visible. Otherwise it becomes the kind of hidden heuristic #1211/#1222 were meant to retire.",
+      "evidence": "#1252 names candidate, confirmed, stale, negative, and superseded route states. Runtime surfaces include proof-route hints, canonical_proof_route concepts, and closeout proof evidence; Verification already tracks stale evidence when changed paths invalidate expected evidence.",
+      "risk if unchanged": "Agents may rely on old Memory notes or route hints without knowing whether the command is still valid for the current host repo.",
+      "suggested action": "Require state, authoritative evidence, last-confirmed or stale trigger, and correction path for every promoted proof route.",
+      "confidence": "high",
+      "source": "#1252 body, runtime proof-route hints, Verification stale-evidence precedent",
+      "promotion target": "#1252 first implementation slice",
+      "promotion trigger": "When loading proof-route hints into proof selection output."
+    },
+    {
+      "title": "Negative evidence is as important as confirmed routes",
+      "summary": "Repo-agnostic proof selection should remember when a plausible route is wrong, such as a pyproject.toml-only or tests-directory-only host where pytest is not confirmed.",
+      "evidence": "Codex evaluation and docs/host-repo-learning.md both identify proof selection as a risk area where weak Python markers can over-promote pytest-like commands.",
+      "risk if unchanged": "AW can keep rediscovering and retrying bad proof assumptions, wasting time and weakening user trust.",
+      "suggested action": "Treat negative routes as first-class lifecycle entries with authority requirements and expiry/revalidation conditions.",
+      "confidence": "medium-high",
+      "source": "long-horizon evaluation plus host-repo learning guidance",
+      "promotion target": "#1252 fixtures",
+      "promotion trigger": "When adding candidate/confirmed route tests."
+    },
+    {
+      "title": "Closeout must disclose learned-route reliance",
+      "summary": "If a validation claim depended on a learned route, the closeout/report surface should expose that route's state and confidence so reviewers can assess proof quality.",
+      "evidence": "Current closeout_report includes proof_confidence and residual risk, but the recent bug-fix closeout reports low confidence because intent_proof_status was not recorded. #1252 asks for visibility when proof relied on learned routes.",
+      "risk if unchanged": "A final report can say proof passed while hiding that the selected route was stale, candidate-only, or recently superseded.",
+      "suggested action": "Add a learned_route_reliance or proof_route_state detail to proof selection and closeout proof confidence when applicable.",
+      "confidence": "medium",
+      "source": "current closeout_report proof_confidence and #1252 desired signal",
+      "promotion target": "#1252 reporting follow-up",
+      "promotion trigger": "When learned proof routes affect required_commands."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote a bounded lifecycle/test slice before expanding route automation.",
+    "defer": "Defer full host-repo proof learning until candidate/confirmed/stale/negative/superseded behavior is testable.",
+    "dismiss": "Do not dismiss; proof selection is central to repo-agnostic trust.",
+    "first_slice": "Define route state schema and add fixtures for positive, negative, stale, superseded, and invalid-authority cases.",
+    "validation": "Focused proof-selection tests, Memory route fixtures if touched, plus AW summary and planning doctor."
+  },
+  "retention": {
+    "closeout shape": "keep until #1252 lifecycle states and reporting expectations are promoted",
+    "trigger": "Findings promoted into proof-route tests, Memory note format, or verification/reporting follow-up",
+    "proof surface": "This review, #1252, proof output, and route-state fixtures"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1252-proof-route-lifecycle-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1252, proof output, implement proof selection, proof-route hints, host-repo learning guidance, and Verification stale-evidence precedent."
+  ]
+}

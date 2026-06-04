@@ -1,0 +1,163 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1253 command-generation extraction seams",
+  "date": "2026-06-04",
+  "classification": "package-boundary-review",
+  "goal": [
+    "Ground #1253 in the current external command-generation dependency, generated targets, and AW host integration contracts.",
+    "Identify the first bounded seam review before implementing further extraction work."
+  ],
+  "scope": [
+    "Issue #1253 and the command-generation extraction lane.",
+    "pyproject dependency boundary, command_package_ir, generated Python/TypeScript outputs, and projection inventory.",
+    "AW-specific host integration and compatibility rendering that may still remain in generic-looking contracts."
+  ],
+  "non_goals": [
+    "Do not move more runtime code in this review.",
+    "Do not change the external command-generation dependency.",
+    "Do not claim the seam is clean without non-AW fixture evidence."
+  ],
+  "review_mode": {
+    "mode": "extraction-seam-review",
+    "review question": "Which responsibilities are generic command-generation, AW host integration, generated target-local resources, or accepted temporary coupling?",
+    "default finding cap": "4 findings",
+    "inputs inspected first": [
+      "gh issue view 1253",
+      "pyproject.toml",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "generated/workspace/python/cli.py",
+      "generated/workspace/typescript"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "gh issue list --state open --limit 100 --json number,title,labels,url,body",
+      "rg -n \"command-generation|command_package_ir|generated TypeScript|generated Python|compatibility|accepted coupling|primitive registry\" pyproject.toml src generated packages docs tests",
+      "uv run python scripts/check/check_generated_command_packages.py"
+    ],
+    "evidence sources": [
+      "#1253 issue body",
+      "pyproject.toml command-generation dependency",
+      "command_package_ir and operation/projection inventories",
+      "generated workspace Python and TypeScript packages",
+      "check_generated_command_packages proof surface"
+    ],
+    "limitation": "The review identifies seam risks in AW. It does not inspect the external command-generation repository beyond the dependency declaration."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1253",
+      "label": "Command-generation extraction seams after dependency split",
+      "role": "review owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1253"
+    },
+    {
+      "kind": "local-file",
+      "target": "pyproject.toml",
+      "label": "External command-generation dependency",
+      "role": "package boundary evidence"
+    },
+    {
+      "kind": "local-contract",
+      "target": "src/agentic_workspace/contracts/command_package_ir.json",
+      "label": "Command package IR",
+      "role": "coupling inventory"
+    },
+    {
+      "kind": "local-generated",
+      "target": "generated/workspace/python/cli.py",
+      "label": "Generated Python CLI",
+      "role": "generated target evidence"
+    },
+    {
+      "kind": "local-generated",
+      "target": "generated/workspace/typescript",
+      "label": "Generated TypeScript target",
+      "role": "native target evidence"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1253",
+      "kind": "product-vs-repo ambiguity",
+      "implementation_allowed_after_review": false,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "review artifact, then narrower AW or command-generation follow-up issues"
+    }
+  ],
+  "summary": {
+    "current_state": "AW now consumes command-generation externally, but AW still owns host integration, command package IR, generated target resources, compatibility renderers, and runtime projection inventories.",
+    "implementation_posture": "Review and classify couplings before moving code or editing generated contracts.",
+    "first_slice": "Inspect command_package_ir plus one generated target and classify top couplings as acceptable, temporary, or misplaced."
+  },
+  "findings": [
+    {
+      "title": "The dependency split is real but not sufficient proof of a clean seam",
+      "summary": "The package boundary moved, but AW still carries substantial generated-command contracts and host-specific projections. The seam is only clean if those remaining couplings are intentional and classified.",
+      "evidence": "#1253 says command-generation is now external while AW still carries host integration, command package IR, accepted couplings, generated package resources, and compatibility-rendering assumptions.",
+      "risk if unchanged": "Future work can accidentally put AW-specific assumptions into generic command-generation behavior or duplicate responsibilities across the repos.",
+      "suggested action": "Create a coupling inventory from command_package_ir and generated targets, then classify each as generic, AW-host, target-local, accepted temporary, or misplaced.",
+      "confidence": "high",
+      "source": "#1253 issue body and current contract layout",
+      "promotion target": "#1253 review completion",
+      "promotion trigger": "Before any further extraction or abstraction work."
+    },
+    {
+      "title": "Generated target behavior needs non-AW fixture pressure",
+      "summary": "A seam can look clean inside AW while still encoding AW-shaped assumptions. The review should include at least one non-AW or minimal host fixture before declaring portability.",
+      "evidence": "The issue explicitly asks whether AW-specific assumptions remain embedded in generic command-generation contracts. Current generated Python and TypeScript targets are AW-owned package outputs.",
+      "risk if unchanged": "The external dependency may become generic in name but still require AW-specific operation shapes or resource conventions.",
+      "suggested action": "Use a fixture or audit that exercises the generator with non-AW package metadata or a minimal operation set.",
+      "confidence": "medium-high",
+      "source": "#1253 acceptance and generated target ownership",
+      "promotion target": "#1253 first review slice or child issue",
+      "promotion trigger": "When classifying generic command-generation responsibilities."
+    },
+    {
+      "title": "Runtime compatibility renderers are likely AW-host integration, not generator core",
+      "summary": "Compatibility renderers and host front-door projections are necessary, but they should be named as AW integration surfaces unless proven generic.",
+      "evidence": "The issue names output compatibility renderers, primitive registry concerns, generated target resources, and AW operation projections as remaining concerns.",
+      "risk if unchanged": "Generic generator code may accumulate product-specific rendering and front-door assumptions.",
+      "suggested action": "Classify compatibility rendering as AW-host-owned by default, then move only deterministic target-local rendering into generic command-generation.",
+      "confidence": "medium",
+      "source": "#1253 evidence list and projection inventory terms",
+      "promotion target": "#1253 recommendations",
+      "promotion trigger": "When deciding whether a coupling belongs in AW or command-generation."
+    },
+    {
+      "title": "The proof surface should include generated package checks, not only diff inspection",
+      "summary": "The seam review should be tied to generated command package validation so ownership recommendations remain mechanically grounded.",
+      "evidence": "Recent bug work and generated CLI freshness work already rely on scripts/check/check_generated_command_packages.py as a proof command.",
+      "risk if unchanged": "A review can recommend boundary changes that break generated package consistency or leave stale generated artifacts.",
+      "suggested action": "Treat check_generated_command_packages as required proof for any follow-up that changes command IR, adapters, generated outputs, or external dependency assumptions.",
+      "confidence": "high",
+      "source": "repo proof practice and generated command package check",
+      "promotion target": "#1253 validation expectations",
+      "promotion trigger": "When opening implementation follow-ups."
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote review-only work first, not implementation.",
+    "defer": "Defer deeper extraction until coupling classification and non-AW fixture pressure exist.",
+    "dismiss": "Do not dismiss; the external dependency boundary still needs ownership review.",
+    "first_slice": "Review command_package_ir and one generated target, classify the top couplings, and file narrower implementation follow-ups only for misplaced or temporary couplings.",
+    "validation": "check_generated_command_packages plus structured inventory after any artifact changes."
+  },
+  "retention": {
+    "closeout shape": "keep until #1253 coupling classifications are promoted or superseded",
+    "trigger": "Review findings promoted into #1253 comment, child issues, or command-generation repo issues",
+    "proof surface": "This review, #1253, command_package_ir, generated outputs, and generated package check"
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-open-issue-1253-command-generation-seam-grounding.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Review record created by create-review.",
+    "2026-06-04: Populated grounding review after inspecting #1253, generated command package surfaces, dependency boundary, and generated package proof expectations."
+  ]
+}
