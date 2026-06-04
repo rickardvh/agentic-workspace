@@ -1,0 +1,180 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Implementation review for #1253 command-generation extraction seams",
+  "date": "2026-06-04",
+  "classification": "extraction-seam-implementation-review",
+  "goal": [
+    "Classify the current command-generation extraction seam after AW switched to the external command-generation dependency.",
+    "Separate generic command-generation responsibilities from AW host integration, generated target-local resources, accepted temporary couplings, and follow-up ownership."
+  ],
+  "scope": [
+    "pyproject.toml dependency boundary",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "scripts/generate/workspace_command_generation.py",
+    "generated/workspace/python/command_package.json",
+    "generated/workspace/typescript/package.json",
+    "generated/workspace/typescript/resources/command_package.json",
+    "generated/workspace/typescript/src/runtime.mjs",
+    "generated/workspace/typescript/test/command-package.test.mjs"
+  ],
+  "non_goals": [
+    "Do not move more runtime code in this review.",
+    "Do not change the external command-generation repository from this AW branch.",
+    "Do not claim all generated-command coupling is generic or fully portable."
+  ],
+  "review_method": {
+    "commands_or_inspections": [
+      "gh issue view 1253 --json number,title,body,comments,labels,state,url",
+      "uv run python scripts/run_agentic_workspace.py start --task \"Implement #1253 command-generation extraction seam review\" --format json",
+      "rg -n \"command-generation|command_generation|command-package|command_package\" pyproject.toml uv.lock src generated packages tests scripts docs .agentic-workspace",
+      "structured JSON inspection of command_package_ir, generated Python command_package.json, generated TypeScript command_package.json, and operation_primitives.json",
+      "read scripts/generate/workspace_command_generation.py",
+      "read generated/workspace/typescript/package.json, generated/workspace/typescript/src/runtime.mjs, and generated/workspace/typescript/test/command-package.test.mjs"
+    ],
+    "external_dependency_observed": {
+      "package": "command-generation",
+      "source": "https://github.com/rickardvh/command-generation.git",
+      "rev": "5fdfcf6f84ae398f4cebfdb7899f762bb2550f1b",
+      "declared_in": "pyproject.toml",
+      "dependency_group": "dev",
+      "installed_import": ".venv/Lib/site-packages/command_generation/__init__.py",
+      "exported_generic_api_sample": [
+        "CommandGenerationHostManifest",
+        "PrimitiveRegistry",
+        "generate_command_packages",
+        "load_command_package_ir",
+        "render_outputs",
+        "command_package_schema_path"
+      ]
+    }
+  },
+  "lane_impacts": [
+    {
+      "surface": "pyproject.toml command-generation dependency",
+      "classification": "acceptable-long-term",
+      "owner": "AW consumer boundary plus external command-generation package",
+      "evidence": "command-generation is a dev dependency sourced from rickardvh/command-generation at a fixed rev. agentic-workspace runtime dependencies remain agentic-memory, agentic-planning, and agentic-verification.",
+      "reasoning": "Generation is maintainer tooling. Keeping command-generation out of normal runtime dependencies is the correct seam for AW installed behavior."
+    },
+    {
+      "surface": "scripts/generate/workspace_command_generation.py",
+      "classification": "acceptable-long-term-host-integration",
+      "owner": "AW",
+      "evidence": "The script imports generic command_generation APIs, then supplies AW-specific SOURCE_PATH, operation contracts, primitive definitions, resource roots, and TypeScript runtime support through CommandGenerationHostManifest.",
+      "reasoning": "The external package should not know AW paths, operation ids, or package resources. This wrapper is the right place for host integration."
+    },
+    {
+      "surface": "src/agentic_workspace/contracts/command_package_ir.json",
+      "classification": "mixed-acceptable-with-temporary-debt",
+      "owner": "AW for package facts and operation contracts; command-generation for schema and renderer behavior",
+      "evidence": "The IR has four AW packages, AW programs and package roles, Python runtime bindings, generated targets, runtime primitive references, operation refs, effect hints, conformance refs, and projection boundaries. Remaining python.function.call references appear in planning, memory, and verification module CLIs.",
+      "reasoning": "AW-specific command facts belong in AW. The temporary part is not the existence of AW facts, but the remaining broad Python-domain bridge and whether generated target resources should ship target-irrelevant runtime metadata."
+    },
+    {
+      "surface": "src/agentic_workspace/contracts/operation_primitives.json",
+      "classification": "acceptable-with-expiry-pressure",
+      "owner": "AW primitive registry, with external command-generation consuming the registry mechanically",
+      "evidence": "The primitive extension boundary says target executors must implement shared target-executor primitives or visibly report unsupported extensions. python.function.call is classified as external-runtime, tier-2-package-domain, not portable codegen completion.",
+      "reasoning": "A host-defined primitive registry is the right abstraction. The registry already names python.function.call as non-portable, but remaining uses should keep shrinking into named domain primitives or Tier 1 primitives where behavior is deterministic."
+    },
+    {
+      "surface": "generated/workspace/typescript/package.json and tests",
+      "classification": "acceptable-target-local-evidence",
+      "owner": "command-generation renderer plus AW target metadata",
+      "evidence": "package.json declares @agentic-workspace/workspace-cli, Node-only runtime binding, generated parser/validation/native TypeScript execution, and tests proving Python-free config execution, argument preservation, help rendering, choice validation, and unsupported-command recovery.",
+      "reasoning": "This is good target-specific pressure. It proves the TypeScript target is not merely a Python process handoff."
+    },
+    {
+      "surface": "generated/workspace/typescript/resources/command_package.json",
+      "classification": "temporary-or-misplaced",
+      "owner": "likely command-generation renderer",
+      "evidence": "The TypeScript target resource contains the full package record including python_runtime_binding, runtime_module_handlers, local_runtime_bindings, and all targets. package.json simultaneously says the effective TypeScript runtime model is Node-only.",
+      "reasoning": "A full package record is useful for introspection, but target packages should have an explicitly target-scoped projection or clearly documented reason for carrying target-irrelevant Python runtime metadata. Without that, non-AW consumers may inherit confusing cross-target coupling."
+    },
+    {
+      "surface": "generated/workspace/typescript/src/runtime.mjs",
+      "classification": "accepted-aw-host-compatibility-with-follow-up",
+      "owner": "AW TypeScript host support",
+      "evidence": "The generated runtime loads AW resources, implements shared filesystem/payload/output primitives, and has a domainPrimitive branch that handles python.function.call by mapping selected AW function names to native stub or lifecycle outputs rather than spawning Python.",
+      "reasoning": "This keeps the TypeScript target Python-free for tested commands, but it is an AW-specific compatibility renderer. It belongs in AW host support, not generic command-generation core, and should remain visibly classified until replaced by named primitives or stronger conformance."
+    },
+    {
+      "surface": "non-AW fixture coverage",
+      "classification": "missing",
+      "owner": "external command-generation package",
+      "evidence": "All inspected generated packages are AW, Planning, Memory, or Verification package projections. The current repository has target tests, but no non-AW command package proving the external generator is generic outside AW-shaped operation metadata.",
+      "reasoning": "The dependency split is real, but portability still lacks independent fixture pressure."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "medium",
+      "title": "The extraction seam is real, but portability is not proven without a non-AW fixture",
+      "classification": "follow-up-required",
+      "owner": "command-generation",
+      "evidence": "pyproject.toml consumes command-generation externally, and scripts/generate/workspace_command_generation.py uses generic APIs. The generated packages inspected are still AW-family packages.",
+      "recommendation": "Add a non-AW/minimal command package fixture in command-generation that exercises parser/help generation, primitive registry extension, and at least one target renderer without AW operation ids or resource roots."
+    },
+    {
+      "severity": "medium",
+      "title": "Generated TypeScript resources still carry full Python runtime binding metadata",
+      "classification": "follow-up-required",
+      "owner": "command-generation",
+      "evidence": "generated/workspace/typescript/resources/command_package.json includes python_runtime_binding while generated/workspace/typescript/package.json declares a Node-only runtime model.",
+      "recommendation": "Add a target-scoped command package resource projection or document why full cross-target metadata is intentionally shipped in every generated target."
+    },
+    {
+      "severity": "medium-low",
+      "title": "python.function.call remains visible as accepted host/runtime debt",
+      "classification": "accepted-temporary",
+      "owner": "AW",
+      "evidence": "operation_primitives.json classifies python.function.call as external-runtime tier-2 package-domain behavior, and command_package_ir still references it in Planning, Memory, and Verification module commands.",
+      "recommendation": "Keep this accepted only with expiry pressure: migrate deterministic behavior into named domain primitives or Tier 1 primitives as those operations stabilize."
+    },
+    {
+      "severity": "low",
+      "title": "AW host wrapper is the correct boundary for package resources and primitive definitions",
+      "classification": "acceptable-long-term",
+      "owner": "AW",
+      "evidence": "workspace_command_generation.py constructs CommandGenerationHostManifest from AW operation contracts, primitive registry definitions, TypeScript runtime support, resource roots, and package ids.",
+      "recommendation": "Retain this split. Avoid moving AW paths, payload rules, or operation semantics into generic command-generation code."
+    }
+  ],
+  "issue_classifications": [
+    {
+      "status": "created",
+      "repo": "rickardvh/command-generation",
+      "url": "https://github.com/rickardvh/command-generation/issues/3",
+      "title": "Add a non-AW command package fixture to prove generator portability",
+      "owner": "command-generation",
+      "reason": "Missing non-AW fixture pressure is the strongest remaining proof gap for #1253."
+    },
+    {
+      "status": "created",
+      "repo": "rickardvh/command-generation",
+      "url": "https://github.com/rickardvh/command-generation/issues/4",
+      "title": "Support target-scoped generated command package resource projection",
+      "owner": "command-generation",
+      "reason": "Generated TypeScript package resources currently carry Python runtime binding metadata despite declaring Node-only execution."
+    }
+  ],
+  "recommendation": {
+    "status": "can-close-after-follow-ups-exist",
+    "reason": "The seam map classifies current couplings and separates acceptable AW host integration from generator-side follow-up gaps. #1253 should not stay open as the owner once the two narrower command-generation issues are created and linked.",
+    "not_closed_by": [
+      "claiming every AW primitive is portable",
+      "moving runtime code",
+      "proving external command-generation with a non-AW fixture"
+    ]
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-issue-1253-command-generation-seam-implementation.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Created implementation review after inspecting #1253, dependency boundary, AW host wrapper, operation primitive registry, command_package_ir, and generated Python/TypeScript workspace targets."
+  ]
+}
