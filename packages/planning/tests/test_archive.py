@@ -547,6 +547,14 @@ candidates = []
     record = json.loads(record_path.read_text(encoding="utf-8"))
     record["execution_summary"]["validation confirmed"] = "pytest"
     record["execution_summary"]["outcome delivered"] = "Implemented the bounded slice."
+    record["iterative_follow_through"] = {
+        "what this slice enabled": "none yet",
+        "intentionally deferred": "none",
+        "discovered implications": "none yet",
+        "proof achieved now": "validation remains pending until the current milestone closes.",
+        "validation still needed": "current milestone validation remains pending",
+        "next likely slice": "continue the current milestone until the completion criteria are met",
+    }
     record.pop("intent_satisfaction")
     record.pop("closure_check")
     record.pop("closeout_distillation", None)
@@ -590,7 +598,10 @@ candidates = []
     assert archived["machine_readable_contract"]["scope"]["touched"] == ["closeout scope recorded in closure_check and generated_closeout."]
     assert archived["task_intent_promotion"]["needs review"] is True
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
-    assert archived["iterative_follow_through"]["validation still needed"].lower() != "pending"
+    assert archived["iterative_follow_through"]["validation still needed"] == (
+        "None for this archived slice; reopen only if new evidence invalidates the proof."
+    )
+    assert archived["iterative_follow_through"]["next likely slice"] == "No required continuation remains for this archived slice."
     assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
     assert archived["delegation_outcome_feedback"]["proof result"] != "pending"
     assert archived["improvement_signal_review"]["status"] == "not_checked"

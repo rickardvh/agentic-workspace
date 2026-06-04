@@ -1216,9 +1216,15 @@ def test_report_workspace_schema_documents_closeout_authority_boundary() -> None
 
     assert authority_boundary["$ref"] == "#/$defs/authority_boundary"
     assert "AW-enforced" in authority_boundary["description"]
+    assert "agent-authored system decision facts" in closeout_report["properties"]["decision_review"]["description"]
+    assert "first-inspection facts" in closeout_report["properties"]["review_compression"]["description"]
+    assert "quality rubric" in closeout_report["properties"]["closeout_adoption"]["description"]
     rendered = Path("docs/reference/workspace-report.md").read_text(encoding="utf-8")
     assert "closeout_report.authority_boundary" in rendered
     assert "Authority boundary showing which closeout/report signals" in rendered
+    assert "closeout_report.decision_review" in rendered
+    assert "closeout_report.review_compression" in rendered
+    assert "closeout_report.closeout_adoption" in rendered
 
 
 def test_report_router_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:
@@ -3172,8 +3178,171 @@ def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path:
     assert rendering["raw_json_allowed"] is False
     row_ids = {row["id"] for row in report["traceability"]["rows"]}
     assert {"intent-boundary", "work-completed", "changed-surfaces", "validation", "closure-boundary"} <= row_ids
+    assert report["decision_review"]["status"] == "not-applicable"
+    assert report["review_compression"]["selected_mode"] == "broad-pr"
+    assert report["closeout_adoption"]["status"] == "ready"
+    assert "what proof supports it?" in report["closeout_adoption"]["human_control_questions"]
     assert "derived operator-facing presentation" in report["boundary"]
     assert report["next_action"]["command"].endswith("--section closeout_report --format json")
+
+
+def test_report_closeout_report_renders_system_decision_facts(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "decision-closeout.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Decision Closeout",
+            "active_milestone": {"id": "decision-closeout", "status": "complete"},
+            "adaptive_assurance": {"level": "high", "reason": "system-shaping report behavior"},
+            "traceability_refs": {
+                "domain_model_refs": ["closeout_report"],
+                "decision_refs": ["Render agent-authored system decision facts in closeout."],
+            },
+            "architecture_decision_promotion": {
+                "status": "candidate",
+                "decision": "Use a derived decision-review packet instead of a durable decision store.",
+                "rationale": "The agent owns the semantic decision while AW preserves and renders the facts.",
+                "tradeoffs": ["Avoids a new ADR engine", "Keeps closeout_report derived"],
+                "affected_surfaces": ["closeout_report", "decision_pressure"],
+                "proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "durable_owner": "Planning architecture_decision_promotion",
+            },
+            "delegated_judgment": {
+                "requested outcome": "Expose system-decision facts for human review.",
+                "hard constraints": "Do not let AW infer architecture decisions.",
+                "agent may decide locally": "Packet wording.",
+            },
+            "completion_criteria": ["Decision facts render in closeout_report."],
+            "validation_commands": ["uv run pytest tests/test_workspace_report_cli.py -q"],
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Implemented derived decision review for closeout.",
+                "scope touched": "reporting runtime and tests",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+                "result for continuation": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["decision facts render"],
+                    "proof_dimensions": ["closeout report fixture"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "Decision facts, proof, and owner are visible.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'decision-closeout', title = 'Decision closeout', surface = '.agentic-workspace/planning/execplans/decision-closeout.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    decision_review = report["decision_review"]
+    assert decision_review["status"] == "present"
+    assert decision_review["decision_facts"]["decision"] == "Use a derived decision-review packet instead of a durable decision store."
+    assert decision_review["decision_facts"]["rationale"].startswith("The agent owns")
+    assert decision_review["decision_facts"]["tradeoffs"] == ["Avoids a new ADR engine", "Keeps closeout_report derived"]
+    assert decision_review["decision_facts"]["durable_owner"] == "Planning architecture_decision_promotion"
+    assert decision_review["completeness"]["missing_facts"] == []
+    assert report["review_compression"]["selected_mode"] == "system-shaping-change"
+    assert "decision facts" in report["review_compression"]["first_inspection"]["first_inspection_facts"]
+    rendered = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
+    assert "Decision: Use a derived decision-review packet instead of a durable decision store." in rendered
+    assert "decision facts" in report["final_response_rendering"]["must_include"]
+    assert report["closeout_adoption"]["status"] == "ready"
+    assert report["detail_commands"]["decision_pressure"].endswith("--section decision_pressure --format json")
+
+
+def test_report_closeout_report_routes_missing_system_decision_facts(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "missing-decision.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Missing Decision Facts",
+            "active_milestone": {"id": "missing-decision", "status": "complete"},
+            "adaptive_assurance": {"level": "high", "reason": "system-shaping reporting contract"},
+            "traceability_refs": {"domain_model_refs": ["workspace report schema"]},
+            "delegated_judgment": {
+                "requested outcome": "Change a system-shaping report contract.",
+                "hard constraints": "Do not hide missing decision rationale.",
+            },
+            "completion_criteria": ["Decision absence is visible."],
+            "validation_commands": ["uv run pytest tests/test_workspace_report_cli.py -q"],
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Changed report contract behavior.",
+                "scope touched": "reporting contract",
+                "changed surfaces": "workspace_runtime_primitives.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+            },
+            "proof_report": {"validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed"},
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'missing-decision', title = 'Missing decision', surface = '.agentic-workspace/planning/execplans/missing-decision.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    decision_review = report["decision_review"]
+    assert decision_review["status"] == "absent-required"
+    assert "no agent-authored decision facts" in decision_review["decision_absent_because"]
+    assert decision_review["routing"]["promotion_pressure_surface"] == "report --section decision_pressure"
+    assert report["review_compression"]["selected_mode"] == "system-shaping-change"
+    assert report["closeout_adoption"]["status"] == "needs-attention"
+    assert any("system-shaping decision facts" in item for item in report["review_compression"]["human_owned_decisions"])
+    rendered = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
+    assert "Decision gap:" in rendered
+    assert "decision facts" in report["final_response_rendering"]["must_include"]
 
 
 def test_report_closeout_report_flags_incomplete_evidence_and_degrades_trust(tmp_path: Path, capsys) -> None:

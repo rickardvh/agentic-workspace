@@ -9900,7 +9900,18 @@ def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
 def _closeout_value_needs_normalization(value: Any) -> bool:
     if not isinstance(value, str):
         return value is None
-    return value.strip().lower() in {"", "pending", "not_checked", "not-run-yet", "not run yet", "todo", "tbd"}
+    text = value.strip().lower()
+    if text in {"", "pending", "not_checked", "not-run-yet", "not run yet", "todo", "tbd"}:
+        return True
+    return any(
+        stale_closeout_fragment in text
+        for stale_closeout_fragment in (
+            "current milestone validation remains pending",
+            "validation remains pending until the current milestone closes",
+            "continue the current milestone until the completion criteria are met",
+            "finish the current milestone and archive",
+        )
+    )
 
 
 def _closeout_sequence_needs_normalization(value: Any) -> bool:
