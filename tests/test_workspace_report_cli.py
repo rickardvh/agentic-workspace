@@ -1223,12 +1223,14 @@ def test_report_workspace_schema_documents_closeout_authority_boundary() -> None
 
     assert authority_boundary["$ref"] == "#/$defs/authority_boundary"
     assert "AW-enforced" in authority_boundary["description"]
+    assert "intent provenance" in closeout_report["properties"]["intent_evidence"]["description"]
     assert "agent-authored system decision facts" in closeout_report["properties"]["decision_review"]["description"]
     assert "first-inspection facts" in closeout_report["properties"]["review_compression"]["description"]
     assert "quality rubric" in closeout_report["properties"]["closeout_adoption"]["description"]
     rendered = Path("docs/reference/workspace-report.md").read_text(encoding="utf-8")
     assert "closeout_report.authority_boundary" in rendered
     assert "Authority boundary showing which closeout/report signals" in rendered
+    assert "closeout_report.intent_evidence" in rendered
     assert "closeout_report.decision_review" in rendered
     assert "closeout_report.review_compression" in rendered
     assert "closeout_report.closeout_adoption" in rendered
@@ -1454,6 +1456,7 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
                 "requested outcome": "Make closeout rendering show planned slice facts first.",
                 "hard constraints": "Do not add another report surface.",
             },
+            "references": [{"kind": "issue", "target": "#1251", "role": "source_intent"}],
             "completion_criteria": ["Planned slice facts render before detail inspection."],
             "validation_commands": ["uv run pytest tests/test_workspace_report_cli.py -q"],
             "intent_continuity": {
@@ -1506,6 +1509,12 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
 
     report = json.loads(capsys.readouterr().out)["answer"]
     assert report["profile"] == "balanced"
+    intent_evidence = report["intent_evidence"]
+    assert intent_evidence["source_class"] == "planning-plus-external-reference"
+    assert intent_evidence["assumption_state"] == "closeout-derived-from-planning"
+    assert intent_evidence["planning_evidence_state"] == "active"
+    assert any(item.get("source") == "planning.references" and item.get("target") == "#1251" for item in intent_evidence["source_chain"])
+    assert report["interpreted_intent"]["intent_evidence"] == intent_evidence
     assert report["review_compression"]["selected_mode"] == "planned-slice"
     contract = report["review_compression"]["first_inspection_contract"]
     assert contract["id"] == "planned-slice"

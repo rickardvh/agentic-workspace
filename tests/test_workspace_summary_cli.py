@@ -71,6 +71,7 @@ candidates = [
         "execution_readiness",
         "current_execution_pressure",
         "decomposition",
+        "residue_governance",
         "roadmap",
         "detail_commands",
         "available_selectors",

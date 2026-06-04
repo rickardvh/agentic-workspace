@@ -295,6 +295,14 @@
           "$ref": "#/$defs/authority_boundary",
           "description": "Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned."
         },
+        "intent_evidence": {
+          "type": "object",
+          "description": "Closeout intent provenance showing whether interpreted intent came from planning evidence, user text, issue/reference evidence, handoff evidence, or agent inference."
+        },
+        "interpreted_intent": {
+          "type": "object",
+          "description": "Requested outcome, intent-source evidence, satisfaction status, and closure decision rendered for the closeout report."
+        },
         "decision_review": {
           "type": "object",
           "description": "Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance."

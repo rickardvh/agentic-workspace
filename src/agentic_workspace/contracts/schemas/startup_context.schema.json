@@ -346,6 +346,11 @@
       "description": "Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work.",
       "additionalProperties": true
     },
+    "intent_evidence": {
+      "type": "object",
+      "description": "Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture.",
+      "additionalProperties": true
+    },
     "durable_intent": {
       "type": "object",
       "description": "Compact durable task, subsystem, and system intent pressure to consider before implementation."

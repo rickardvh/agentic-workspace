@@ -71,6 +71,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
+| `intent_evidence` | object | yes |  | Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture. |  |  |
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts. |  |  |
 | `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths. |  |  |

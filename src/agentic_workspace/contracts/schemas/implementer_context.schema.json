@@ -22,6 +22,7 @@
     "required_validation_commands",
     "acceptance_reconciliation",
     "intent_acknowledgement",
+    "intent_evidence",
     "objective_drift",
     "generated_surface_trust",
     "reuse_pressure",
@@ -149,6 +150,11 @@
     "intent_acknowledgement": {
       "type": "object",
       "description": "Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation.",
+      "additionalProperties": true
+    },
+    "intent_evidence": {
+      "type": "object",
+      "description": "Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture.",
       "additionalProperties": true
     },
     "reuse_pressure": {
