@@ -842,6 +842,34 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_read_only_reporting_task_suppresses_default_acceptance_boilerplate(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Have you discovered any points of friction lately?"
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _start_context(payload)
+    assert "acceptance" not in context
+    assert context["read_only_response"]["status"] == "read-only-reporting"
+    assert context["read_only_response"]["compact_default"] is True
+    assert context["task"]["response_posture"]["default_projection"] == "suppress-acceptance-boilerplate"
+    assert "implement_changed_command" not in context["task"]
+    assert "acceptance" in payload["drill_down"]["available_selectors"]
+
+    assert (
+        cli.main(["start", "--target", str(target), "--task", task, "--select", "acceptance,read_only_response", "--format", "json"]) == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["values"]["acceptance"]["status"] == "inferred"
+    assert selected["values"]["acceptance"]["closeout_required"] is True
+    assert selected["values"]["read_only_response"]["status"] == "read-only-reporting"
+
+
 def test_next_safe_action_schema_rejects_missing_typed_fields() -> None:
     from agentic_workspace.contract_tooling import contract_schema
 
