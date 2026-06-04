@@ -17,6 +17,11 @@
       "type": "string",
       "description": "Resolved target repository for the startup decision."
     },
+    "action_signals": {
+      "type": "object",
+      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
+      "additionalProperties": true
+    },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
       "description": "Observed identity of the Agentic Workspace CLI that produced this payload."

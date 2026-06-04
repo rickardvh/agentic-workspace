@@ -753,7 +753,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     encoded = json.dumps(payload, sort_keys=True)
     assert len(encoded) < 9000
     assert payload["kind"] == "startup-context/v1"
-    assert set(payload) == {"kind", "target", "next_safe_action", "skills", "context", "drill_down"}
+    assert set(payload) == {"kind", "target", "action_signals", "next_safe_action", "skills", "context", "drill_down"}
     competing_top_level_decision_fields = {
         "immediate_next_allowed_action",
         "skill_routing",
@@ -773,6 +773,20 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     }
     packet = payload["next_safe_action"]
     _assert_next_safe_action_valid(packet)
+    signals = payload["action_signals"]
+    assert signals["kind"] == "agentic-workspace/action-signals/v1"
+    assert signals["order"] == [
+        "hard_blockers",
+        "allowed_next_action",
+        "proof_required",
+        "changed_signals",
+        "advisory_detail",
+        "agent_judgment",
+    ]
+    assert signals["allowed_next_action"] == packet["next_safe_action"]
+    assert signals["hard_blockers"] == packet["closure_blockers"]
+    assert signals["proof_required"] == packet["proof_required"]
+    assert "skill_routing" in signals["advisory_detail"]["selectors"]
     assert packet["kind"] == "agentic-workspace/next-safe-action/v1"
     assert packet["next_safe_action"] == _start_primary_action(payload)["action"]
     assert packet["module_slot"] in {"workspace", "planning"}

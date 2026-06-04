@@ -15279,6 +15279,49 @@ def _next_safe_action_packet(
     }
 
 
+def _compact_action_signals_payload(
+    *,
+    surface: str,
+    allowed_next_action: str,
+    hard_blockers: Sequence[str] | None = None,
+    implementation_allowed: bool | None = None,
+    read_only_allowed: bool | None = None,
+    proof_required: bool = False,
+    proof_commands: Sequence[str] | None = None,
+    changed_signals: Sequence[str] | None = None,
+    advisory_selectors: Sequence[str] | None = None,
+    agent_judgment: str = "Agent owns semantic fit and final completion judgment.",
+) -> dict[str, Any]:
+    blockers = [str(item) for item in (hard_blockers or []) if str(item).strip()]
+    commands = [str(item) for item in (proof_commands or []) if str(item).strip()]
+    signals = [str(item) for item in (changed_signals or []) if str(item).strip()]
+    selectors = [str(item) for item in (advisory_selectors or []) if str(item).strip()]
+    return {
+        "kind": "agentic-workspace/action-signals/v1",
+        "surface": surface,
+        "hard_blockers": blockers,
+        "allowed_next_action": allowed_next_action,
+        "implementation_allowed": implementation_allowed,
+        "read_only_allowed": read_only_allowed,
+        "proof_required": proof_required,
+        "proof_commands": commands,
+        "changed_signals": signals,
+        "advisory_detail": {
+            "selectors": selectors,
+            "rule": "Use selectors for advisory detail.",
+        },
+        "agent_judgment": agent_judgment,
+        "order": [
+            "hard_blockers",
+            "allowed_next_action",
+            "proof_required",
+            "changed_signals",
+            "advisory_detail",
+            "agent_judgment",
+        ],
+    }
+
+
 def _startup_closeout_report_route(closeout_inspection: dict[str, Any]) -> dict[str, Any]:
     trust = str(closeout_inspection.get("trust", "")).strip().lower()
     detail_command = str(closeout_inspection.get("required_next_inspection") or closeout_inspection.get("detail_command") or "")
@@ -16836,9 +16879,37 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 context["task"][optional_key] = task_intent[optional_key]
     if "repair_plan_profile" in payload:
         context["repair_plan_profile"] = payload["repair_plan_profile"]
+    startup_changed_signals: list[str] = []
+    planning_gate = payload.get("planning_safety_gate", {})
+    if isinstance(planning_gate, dict) and planning_gate.get("status") not in {None, "", "clear"}:
+        startup_changed_signals.append(
+            f"planning_safety={planning_gate.get('status')}:{planning_gate.get('gate_result') or planning_gate.get('decision')}"
+        )
+    if isinstance(payload.get("cli_compatibility"), dict) and payload["cli_compatibility"].get("status") in {
+        "blocking-drift",
+        "warning-drift",
+    }:
+        startup_changed_signals.append(f"cli_compatibility={payload['cli_compatibility'].get('status')}")
+    startup_proof = payload.get("proof", {})
+    startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
+        "action_signals": _compact_action_signals_payload(
+            surface="start",
+            allowed_next_action=str(next_safe_action.get("next_safe_action", "")),
+            hard_blockers=next_safe_action.get("closure_blockers", []),
+            implementation_allowed=bool(next_safe_action.get("implementation_allowed")),
+            read_only_allowed=bool(next_safe_action.get("read_only_allowed")),
+            proof_required=bool(next_safe_action.get("proof_required")),
+            proof_commands=startup_proof_commands,
+            changed_signals=startup_changed_signals,
+            advisory_selectors=[
+                "skill_routing",
+                "workflow_sufficiency",
+            ],
+            agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+        ),
         "next_safe_action": next_safe_action,
         "skills": _startup_skills_projection(
             payload=payload,
@@ -19991,6 +20062,57 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
+        "action_signals": _compact_action_signals_payload(
+            surface="implement",
+            allowed_next_action=str(next_action),
+            hard_blockers=[
+                *[f"path_authority:{item.get('path')}" for item in path_warnings if isinstance(item, dict) and item.get("path")],
+                *(
+                    [str(planning_safety_gate.get("gate_result") or planning_safety_gate.get("decision"))]
+                    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False
+                    else []
+                ),
+            ],
+            implementation_allowed=(
+                bool(planning_safety_gate.get("implementation_allowed"))
+                if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
+                else None
+            ),
+            read_only_allowed=(
+                bool(planning_safety_gate.get("read_only_allowed"))
+                if isinstance(planning_safety_gate, dict) and "read_only_allowed" in planning_safety_gate
+                else True
+            ),
+            proof_required=bool(proof_commands),
+            proof_commands=proof_commands,
+            changed_signals=[
+                *(
+                    [
+                        f"planning_safety={planning_safety_gate.get('status')}:{planning_safety_gate.get('gate_result') or planning_safety_gate.get('decision')}"
+                    ]
+                    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("status") not in {None, "", "clear"}
+                    else []
+                ),
+                *(
+                    [f"generated_surface_trust={payload.get('generated_surface_trust', {}).get('status')}"]
+                    if isinstance(payload.get("generated_surface_trust"), dict)
+                    and payload.get("generated_surface_trust", {}).get("status") == "present"
+                    else []
+                ),
+                *(
+                    [f"reuse_pressure={reuse_pressure.get('state')}"]
+                    if isinstance(reuse_pressure, dict) and reuse_pressure.get("state") not in {None, "", "none_found"}
+                    else []
+                ),
+            ],
+            advisory_selectors=[
+                "context.reuse_pressure",
+                "context.guidance",
+                "context.delegation_decision",
+                "routine_work_context",
+            ],
+            agent_judgment="Agent owns semantic work shape and completion judgment after proof and acceptance reconciliation.",
+        ),
         "next": {
             "action": next_action,
             "summary": next_action,
@@ -20015,7 +20137,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
             ),
         },
-        "reuse_pressure": reuse_pressure,
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
             "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -20088,6 +20209,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",
+                "reuse_pressure",
                 "task_contract",
                 "change_impact",
                 "generated_surface_trust",
@@ -26082,6 +26204,10 @@ def _selector_requests_routine_work_context(select: str | None) -> bool:
     return any(token == "routine_work_context" or token.startswith("routine_work_context.") for token in _selector_tokens(select))
 
 
+def _selector_requests_reuse_pressure(select: str | None) -> bool:
+    return any(token == "reuse_pressure" or token.startswith("reuse_pressure.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -26098,6 +26224,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
     verification_selected = _selector_requests_verification(selected_fields)
     routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
+    reuse_pressure_selected = _selector_requests_reuse_pressure(selected_fields)
     full_payload = _implement_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
@@ -26123,6 +26250,13 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["verification"] = full_payload["verification"]
         if routine_work_context_selected:
             payload["routine_work_context"] = full_payload["routine_work_context"]
+        if reuse_pressure_selected:
+            payload["reuse_pressure"] = _reuse_pressure_payload(
+                target_root=target_root,
+                changed_paths=list(getattr(args, "changed", []) or []),
+                compact=True,
+                cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
+            )
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
