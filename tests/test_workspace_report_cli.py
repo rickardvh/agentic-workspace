@@ -1541,6 +1541,14 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
     assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in sections["proof"]["lines"]
     assert any(line.startswith("Closure boundary:") for line in sections["caveats"]["lines"])
     assert any("agent owns final wording" in line for line in sections["authority"]["lines"])
+    language_guidance = chat_template["authority_language_guidance"]
+    assert language_guidance["preferred_phrasing"]["observed_facts"].startswith("AW reports/observes")
+    assert language_guidance["preferred_phrasing"]["agent_judgment"].startswith("I judged/classified/decided")
+    assert "AW enforced the gate" in language_guidance["allowed_for_hard_gates"]
+    forbidden_fragments = ("AW classified", "AW routed", "AW decided")
+    rendered_markdown = chat_template["rendered_markdown"]
+    assert not any(fragment in rendered_markdown for fragment in forbidden_fragments)
+    assert "AW reports closeout evidence" in rendered_markdown
     assert "**Changed**" in chat_template["rendered_markdown"]
     assert "**Proof**" in chat_template["rendered_markdown"]
     assert "**Caveats**" in chat_template["rendered_markdown"]
