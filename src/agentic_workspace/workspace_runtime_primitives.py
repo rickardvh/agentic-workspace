@@ -820,7 +820,26 @@ def _assurance_requirements_report_payload(
             }
         )
         if matched:
-            active.append({**requirement, "applies_because": applies_because})
+            active.append(
+                {
+                    **requirement,
+                    "applies_because": applies_because,
+                    "authority_boundary": _authority_boundary_payload(
+                        surface="assurance_requirements.requirement",
+                        observed_by_aw=[
+                            f"configured assurance requirement {requirement['id']}",
+                            *applies_because,
+                        ],
+                        recommended_by_aw=["honor configured evidence/review/claim-boundary obligations before closeout"],
+                        agent_owned_decisions=[
+                            "whether the current task intent is satisfied",
+                            "whether evidence is sufficient to claim completion",
+                        ],
+                        human_owned_decisions=["waiver, dismissal, or acceptance when required evidence is unavailable"],
+                        rule="Assurance task-marker matches are explicit config evidence; AW reports configured pressure and does not decide user intent.",
+                    ),
+                }
+            )
             evidence_status.append(status)
     required_missing = [
         item
@@ -832,6 +851,17 @@ def _assurance_requirements_report_payload(
         "kind": "agentic-workspace/assurance-requirements/v1",
         "status": "attention" if required_missing else "matched" if active else "configured" if configured else "absent",
         "rule": "Repo-declared assurance requirements are domain-generic routing and claim-boundary facts; AW does not certify compliance.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="assurance_requirements",
+            observed_by_aw=["repo-declared assurance configuration", "changed-path/task-marker/planning match facts"],
+            recommended_by_aw=["carry configured evidence, review-owner, and blocking-claim obligations into proof and closeout"],
+            agent_owned_decisions=[
+                "semantic user-intent acceptance",
+                "whether proof and evidence justify a completion claim",
+            ],
+            human_owned_decisions=["waiver, dismissal, or final acceptance for configured assurance exceptions"],
+            rule="Assurance requirements are configured claim-boundary evidence; AW does not classify the task's semantic intent.",
+        ),
         "configured_count": len(configured),
         "active_count": len(active),
         "missing_required_evidence_count": len(required_missing),
@@ -11546,6 +11576,20 @@ def _knowledge_authority_review_payload(
                     if item
                 ],
             },
+            "authority_boundary": _authority_boundary_payload(
+                surface="knowledge_authority_review.memory_source",
+                observed_by_aw=[
+                    "Memory manifest metadata",
+                    "Memory route/use_when/task-relevance match evidence",
+                ],
+                recommended_by_aw=["read or review the matched Memory owner surface when agent judgment finds it relevant"],
+                agent_owned_decisions=[
+                    "whether the matched Memory fact is semantically relevant to the task",
+                    "whether to rely on, refresh, promote, or ignore the matched note",
+                ],
+                human_owned_decisions=["semantic acceptance of repo knowledge when Memory evidence conflicts with current intent"],
+                rule="Memory matches are Memory-owned configured or learned evidence; AW reports the match and does not classify user intent.",
+            ),
         }
         matched_sources.append(source)
         if len(matched_sources) >= 5:
@@ -11569,6 +11613,13 @@ def _knowledge_authority_review_payload(
                 },
                 "supersession": {"status": "none", "why": ""},
                 "claim_effect": {"blocks": [], "advises": ["route promotion or dismissal during closeout"]},
+                "authority_boundary": _authority_boundary_payload(
+                    surface="knowledge_authority_review.memory_source",
+                    observed_by_aw=["Memory promotion pressure sample"],
+                    recommended_by_aw=["route or dismiss the Memory promotion pressure"],
+                    agent_owned_decisions=["whether the promotion pressure is semantically relevant to the current task"],
+                    rule="Memory promotion pressure is Memory-owned evidence; AW does not classify user intent from it.",
+                ),
             }
         )
         if len(matched_sources) >= 5:
@@ -11587,6 +11638,17 @@ def _knowledge_authority_review_payload(
         "promotion_candidate_count": promotion_count,
         "supersession_attention_count": supersession_count,
         "rule": "Compose existing Memory metadata, workflow obligations, proof, and closeout effects; do not create a new knowledge owner.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="knowledge_authority_review",
+            observed_by_aw=["Memory manifest metadata", "workflow obligation match facts", "promotion pressure samples"],
+            recommended_by_aw=["inspect matched owner surfaces before relying on durable repo knowledge"],
+            agent_owned_decisions=[
+                "semantic relevance of matched Memory/config evidence",
+                "whether matched evidence changes the implementation or closeout decision",
+            ],
+            human_owned_decisions=["final semantic acceptance when matched durable knowledge conflicts with user intent"],
+            rule="AW assembles Memory/config evidence and owner surfaces; it does not make semantic task classifications.",
+        ),
         "next_actions": [],
     }
     if promotion_count:
@@ -16074,137 +16136,34 @@ def _compact_start_prep_only_handoff(value: Any) -> dict[str, Any]:
 
 
 def _is_prep_only_handoff_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    future_or_handoff = any(
-        (
-            marker in normalized
-            for marker in (
-                "future agent",
-                "later agent",
-                "later coding pass",
-                "future coding pass",
-                "durable state",
-                "durable implementation",
-                "plan/state",
-                "repository state",
-                "repo-visible state",
-                "handoff",
-                "continue later",
-                "continuation",
-                "prepare enough",
-                "groundwork",
-                "later pass",
-                "next pass",
-                "first slice",
-                "safe start",
-                "prepare the repo",
-                "prepare repository",
-                "future",
-                "ready for",
-            )
-        )
-    )
-    prep_or_plan = any((marker in normalized for marker in ("prepare", "plan", "decompose", "shape", "scaffold planning")))
-    implementation_blocked = any(
-        (
-            marker in normalized
-            for marker in (
-                "do not implement",
-                "don't implement",
-                "without implementing",
-                "not implement",
-                "no implementation",
-                "no code changes",
-                "no feature implementation",
-                "do not build",
-                "don't build",
-                "do not scaffold",
-                "don't scaffold",
-                "not build",
-            )
-        )
-    )
-    return future_or_handoff and (prep_or_plan or implementation_blocked)
+    _ = task_text
+    return False
 
 
 def _is_config_posture_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    posture_markers = (
-        "configured operating",
-        "operating posture",
-        "reporting posture",
-        "closeout setting",
-        "closeout settings",
-        "reporting setting",
-        "reporting settings",
-        "repository-specific closeout",
-        "repo-specific closeout",
-        "configured operating settings",
-        "configured settings",
-        "config settings",
-        "local runtime settings",
-        "delegation posture",
-        "safe_to_auto_run_commands",
-        "improvement_latitude",
-        "optimization_bias",
-        "workflow_obligations",
-    )
-    return any((marker in normalized for marker in posture_markers))
+    _ = task_text
+    return False
 
 
 def _is_completion_status_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    completion_markers = (
-        "is the work complete",
-        "is this work complete",
-        "is it complete",
-        "how much remains",
-        "what remains",
-        "what is left",
-        "can this lane be considered done",
-        "can the lane be considered done",
-        "is the lane done",
-        "is this lane done",
-        "is the epic satisfied",
-        "is this epic satisfied",
-        "is the epic done",
-        "completion status",
-        "status of completion",
-        "ready to close",
-        "can we close",
-        "can i close",
-        "can this be closed",
-        "can this issue be closed",
-        "can this lane close",
-        "can this lane be closed",
-        "considered done",
-    )
-    if any((marker in normalized for marker in completion_markers)):
-        return True
-    question_terms = ("complete", "completed", "done", "closed", "satisfied", "finished", "remaining", "remains")
-    scope_terms = ("work", "lane", "epic", "issue", "task", "milestone", "closeout", "closure")
-    question_starters = ("is ", "are ", "can ", "should ", "how ", "what ")
-    return (
-        normalized.endswith("?")
-        and normalized.startswith(question_starters)
-        and any((term in normalized for term in question_terms))
-        and any((term in normalized for term in scope_terms))
-    )
+    _ = task_text
+    return False
 
 
-def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
+def _completion_closeout_inspection_payload(
+    *, target_root: Path, config: WorkspaceConfig, task_text: str | None, explicit_request: bool = False
+) -> dict[str, Any]:
     target_arg = _command_target_arg(target_root)
     command = _command_with_cli_invoke(
         command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json", cli_invoke=config.cli_invoke
     )
-    if not _is_completion_status_task(task_text):
-        return {"status": "not-applicable", "reason": "current task is not completion/status oriented", "detail_command": command}
+    if not explicit_request and not _is_completion_status_task(task_text):
+        return {
+            "status": "not-applicable",
+            "reason": "task-text semantics are agent-owned; AW does not infer completion/status posture from prompt keywords",
+            "detail_command": command,
+            "agent_owned_decision": "whether the user is asking for completion, status, or closeout judgment",
+        }
     try:
         from repo_planning_bootstrap.installer import planning_report
     except ImportError:
@@ -16227,9 +16186,9 @@ def _completion_closeout_inspection_payload(*, target_root: Path, config: Worksp
     needs_surface = trust != "normal" or lower_trust_count > 0 or gate_blocking
     return {
         "status": "required" if needs_surface else "clear",
-        "reason": "completion/status question must inspect closeout_trust before claiming broad work is done"
+        "reason": "explicit closeout_trust inspection found residue to reconcile before claiming broad work is done"
         if needs_surface
-        else "completion/status question inspected closeout_trust and found no lower-trust blocker",
+        else "explicit closeout_trust inspection found no lower-trust blocker",
         "trust": trust,
         "lower_trust_closeout_count": lower_trust_count,
         "strict_closeout_gate": {key: strict_gate.get(key) for key in ("status", "blocking", "summary", "reason") if key in strict_gate},
@@ -16241,7 +16200,14 @@ def _completion_closeout_inspection_payload(*, target_root: Path, config: Worksp
         "sample_signals": closeout.get("sample_signals", [])[:2] if isinstance(closeout.get("sample_signals"), list) else [],
         "required_next_inspection": command,
         "detail_command": command,
-        "rule": "Do not answer done/complete/closeable for lane, epic, or broad work without reconciling this surface.",
+        "rule": "Do not answer done/complete/closeable for lane, epic, or broad work without reconciling this surface when agent judgment says the user is asking for closeout status.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="closeout_trust_inspection",
+            observed_by_aw=["closeout_trust report facts", "strict closeout gate state"],
+            recommended_by_aw=["inspect closeout_trust before broad completion/status claims"],
+            agent_owned_decisions=["whether the user is asking for a completion/status judgment"],
+            rule="AW reports closeout residue when asked; it does not infer completion/status intent from prompt keywords.",
+        ),
     }
 
 
@@ -16846,6 +16812,57 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
         selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
         selected["available_selectors"] = _available_selectors_for_payload(payload)
     return selected
+
+
+def _selector_requests(select: str | None, key: str) -> bool:
+    return any(token == key or token.startswith(f"{key}.") for token in _selector_tokens(select))
+
+
+def _hydrate_selected_start_advisory_payloads(
+    *,
+    payload: dict[str, Any],
+    select: str | None,
+    target_root: Path,
+    task_text: str | None,
+    config: WorkspaceConfig,
+) -> None:
+    vague_orientation: dict[str, Any] | None = None
+    if _selector_requests(select, "vague_outcome_orientation"):
+        vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+        payload.setdefault("vague_outcome_orientation", vague_orientation)
+    if _selector_requests(select, "intent_discovery_dialogue"):
+        if vague_orientation is None:
+            vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+        payload.setdefault(
+            "intent_discovery_dialogue",
+            _intent_discovery_dialogue_payload(
+                task_text=task_text,
+                vague_orientation=vague_orientation,
+                cli_invoke=config.cli_invoke,
+            ),
+        )
+    if _selector_requests(select, "intent_acknowledgement"):
+        if vague_orientation is None:
+            vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        payload.setdefault(
+            "intent_acknowledgement",
+            _intent_acknowledgement_payload(
+                task_text=task_text,
+                execution_posture=execution_posture,
+                vague_orientation=vague_orientation,
+            ),
+        )
+    if _selector_requests(select, "closeout_trust_inspection"):
+        payload.setdefault(
+            "closeout_trust_inspection",
+            _completion_closeout_inspection_payload(
+                target_root=target_root,
+                config=config,
+                task_text=task_text,
+                explicit_request=True,
+            ),
+        )
 
 
 def _select_summary_payload(
@@ -18323,41 +18340,16 @@ def _task_acceptance_payload(*, task_text: str | None, requested_outcomes: list[
     }
 
 
-_ARCHITECTURE_DECISION_MARKERS = (
-    "adr",
-    "architecture decision",
-    "architectural decision",
-    "decision record",
-    "database system",
-    "database migration",
-    "storage migration",
-    "storage engine",
-    "schema strategy",
-    "security posture",
-    "compliance boundary",
-    "api contract",
-    "api boundary",
-    "domain boundary",
-)
-
-
 def _architecture_decision_signal(*, task_text: str | None, changed_paths: Sequence[str] = ()) -> dict[str, Any]:
-    normalized = " ".join(str(task_text or "").lower().split())
-    matched = [marker for marker in _ARCHITECTURE_DECISION_MARKERS if marker in normalized]
-    if any(marker in normalized for marker in ("migration", "migrate", "migrated", "migrating")) and any(
-        token in normalized for token in ("database", "storage", "schema")
-    ):
-        matched.append("migration + database/storage/schema")
-    if "change" in normalized and any(token in normalized for token in ("database", "storage engine", "schema", "api contract")):
-        matched.append("change + architecture surface")
+    _ = task_text
     decision_path_matches = [
         path
         for path in _normalize_changed_paths(list(changed_paths))
         if any(part in path.lower().split("/") for part in ("adr", "adrs", "decisions"))
     ]
     return {
-        "status": "candidate" if matched or decision_path_matches else "not-detected",
-        "matched_markers": sorted(dict.fromkeys(matched))[:8],
+        "status": "candidate" if decision_path_matches else "not-detected",
+        "matched_markers": [],
         "decision_path_matches": decision_path_matches[:6],
     }
 
@@ -18405,11 +18397,11 @@ def _architecture_decision_candidate_payload(
             "target": str(config_info.get("target", "")) if has_decision_target else ".agentic-workspace/memory/repo/decisions/",
             "command": scaffold_command if has_decision_target else memory_command,
             "command_target": _decision_command_placeholder_payload(),
-            "why": "Route architecture decisions directly to the host decision-record target when one is configured or discoverable."
+            "why": "Changed decision/ADR paths indicate a structural decision-record surface; route through the host decision target when one is configured or discoverable."
             if has_decision_target
-            else "No decision-record target is configured or discoverable; preserve a typed promotion-ready memory candidate instead of a generic note.",
+            else "Changed decision/ADR paths indicate durable decision residue, but no decision-record target is configured or discoverable; preserve a typed promotion-ready memory candidate instead of a generic note.",
         },
-        "rule": "This is an attention signal, not an instruction to force an ADR for every task.",
+        "rule": "This structural path signal is advisory; the agent owns whether the changed surface represents a durable architecture decision.",
     }
 
 
@@ -18430,25 +18422,6 @@ def _task_intent_promotion_guidance_payload(
             "reason": "no task text was provided",
             "route_options": [],
         }
-    normalized = task.lower()
-    durable_markers = (
-        "should",
-        "must",
-        "always",
-        "never",
-        "prefer",
-        "optimi",
-        "easy to",
-        "auditable",
-        "invariant",
-        "system intent",
-        "subsystem",
-        "durable",
-        "over time",
-        "going forward",
-        "from now on",
-    )
-    matched = [marker for marker in durable_markers if marker in normalized]
     architecture_candidate = _architecture_decision_candidate_payload(
         task_text=task,
         target_root=target_root,
@@ -18456,7 +18429,7 @@ def _task_intent_promotion_guidance_payload(
         changed_paths=changed_paths,
         cli_invoke=cli_invoke,
     )
-    status = "candidate" if matched or architecture_candidate.get("status") == "candidate" else "no-durable-signal"
+    status = "candidate" if architecture_candidate.get("status") == "candidate" else "available"
     items = acceptance.get("items", []) if isinstance(acceptance, dict) else []
     route_options = [
         {
@@ -18483,11 +18456,22 @@ def _task_intent_promotion_guidance_payload(
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/task-intent-promotion-guidance/v1",
         "status": status,
-        "matched_markers": matched[:6],
-        "rule": "If task intent expresses a lasting direction rather than a finishable task, route the reusable part to Memory, docs, subsystem intent, or system intent before closeout.",
+        "matched_markers": [],
+        "rule": "AW does not infer durable intent from prompt keywords. The agent owns whether the task revealed reusable knowledge or lasting direction.",
         "route_options": route_options,
         "acceptance_item_count": len(items) if isinstance(items, list) else 0,
         "closeout_question": "Does any acceptance item encode durable intent that should survive beyond this task?",
+        "authority_boundary": _authority_boundary_payload(
+            surface="durable_intent_promotion",
+            observed_by_aw=[f"changed_path_count={len(_normalize_changed_paths(list(changed_paths)))}"],
+            recommended_by_aw=["consider Memory, Planning, docs, or decision-record promotion when the agent has explicit evidence"],
+            proof_hints=["cite changed durable surfaces, Memory/Planning/configured evidence, or agent-stated rationale before promotion"],
+            agent_owned_decisions=[
+                "whether the task revealed durable knowledge",
+                "which owner surface should retain reusable guidance",
+            ],
+            rule="AW provides route options and structural hints; the agent owns durable intent judgment.",
+        ),
     }
     if architecture_candidate.get("status") == "candidate":
         payload["architecture_decision_candidate"] = architecture_candidate
@@ -18623,7 +18607,7 @@ def _intent_acknowledgement_payload(
     *, task_text: str | None, execution_posture: dict[str, Any], vague_orientation: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     task = str(task_text or "").strip()
-    task_lower = " ".join(task.lower().split())
+    _ = (execution_posture, vague_orientation)
     if not task:
         return {
             "kind": "agentic-workspace/intent-acknowledgement/v1",
@@ -18631,54 +18615,41 @@ def _intent_acknowledgement_payload(
             "decision": "silent-ok",
             "reason": "No task text was provided, so there is no inferred user intent to restate.",
         }
-    direct_markers = ("typo", "spelling", "one-line", "one line", "formatting", "format only", "rename", "fix lint", "fix the lint")
-    non_direct_markers = (
-        "implement",
-        "improve",
-        "optimise",
-        "optimize",
-        "evaluate",
-        "review",
-        "design",
-        "refactor",
-        "decompose",
-        "plan",
-        "lane",
-        "epic",
-        "workflow",
-        "delegation",
-        "intent",
-        "satisfaction",
-        "handoff",
-        "schema",
-        "contract",
-        "configuration",
-        "config",
-    )
-    vague_applies = bool(isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task"))
     has_issue_ref = bool(re.search("#\\d+", task))
-    direct_only = any((marker in task_lower for marker in direct_markers)) and (
-        not any((marker in task_lower for marker in non_direct_markers))
-    )
-    should_state = vague_applies or has_issue_ref or any((marker in task_lower for marker in non_direct_markers))
-    if direct_only or not should_state:
+    if not has_issue_ref:
         return {
             "kind": "agentic-workspace/intent-acknowledgement/v1",
             "status": "available",
             "decision": "silent-ok",
-            "reason": "Task appears direct enough that a separate stated-assumption preface is optional.",
-            "use_stated_assumption_when": "Use the middle path if the edit stops being obvious, proof becomes non-obvious, or scope starts to widen.",
+            "reason": "Task-text semantics are agent-owned; AW does not infer whether a stated-assumption preface is required from prompt keywords.",
+            "agent_owned_decision": "whether to state inferred intent, first slice, non-goals, and correction point before editing",
+            "authority_boundary": _authority_boundary_payload(
+                surface="intent_acknowledgement",
+                observed_by_aw=["task_text_available=True"],
+                recommended_by_aw=["state assumptions when agent judgment finds intent risk"],
+                agent_owned_decisions=["whether a stated-assumption preface is needed before editing"],
+                human_owned_decisions=["corrected intent or non-goals when the stated assumption is wrong"],
+                rule="AW exposes an acknowledgement contract; it does not infer preface requirements from prompt keywords.",
+            ),
         }
     return {
         "kind": "agentic-workspace/intent-acknowledgement/v1",
         "status": "recommended",
         "decision": "proceed-with-stated-assumption",
-        "rule": "Before editing non-direct or vague-outcome work, briefly state the inferred intent and first slice, then proceed unless corrected.",
+        "rule": "Issue references are structural external-intent handles; briefly state the inferred issue-backed intent and first slice before editing.",
         "before_editing": ["inferred_intent", "concrete_first_slice", "non_goals_or_deferred_scope", "correction_point"],
         "correction_point": "Say that you will proceed on the stated interpretation unless the user corrects it.",
-        "silent_inference_ok_when": "The change is direct, local, low-risk, and validation is obvious.",
-        "ask_human_when": "Stop for clarification only when the intent, authority boundary, safety risk, or required input blocks choosing a bounded first slice.",
+        "silent_inference_ok_when": "The agent judges the task direct, local, low-risk, and validation is obvious.",
+        "ask_human_when": "Stop for clarification only when the agent judges intent, authority boundary, safety risk, or required input blocks choosing a bounded first slice.",
         "template": "Inferred intent: <outcome>. First slice: <bounded work>. Non-goals/deferred: <scope>. I will proceed on that interpretation unless corrected.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="intent_acknowledgement",
+            observed_by_aw=["external issue reference present in task text"],
+            recommended_by_aw=["state the issue-backed interpretation before editing"],
+            agent_owned_decisions=["the concrete first slice and non-goals inferred from refreshed issue evidence"],
+            human_owned_decisions=["corrections to the issue-backed interpretation"],
+            rule="Issue references are structural handles; AW recommends acknowledgement but the agent owns the interpretation.",
+        ),
     }
 
 
@@ -18943,46 +18914,6 @@ def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], m
     return "\n".join(chunks)
 
 
-def _task_has_removal_intent(task_text: str | None) -> bool:
-    normalized = " ".join(str(task_text or "").lower().split())
-    return any(
-        (
-            marker in normalized
-            for marker in (
-                "delete",
-                "deleted",
-                "deleting",
-                "remove",
-                "removed",
-                "removing",
-                "retire",
-                "retired",
-                "retiring",
-                "drop",
-                "dropped",
-                "dropping",
-                "get rid of",
-            )
-        )
-    )
-
-
-def _outcome_matches_changed_path(outcome: str, changed_paths: list[str]) -> bool:
-    needle = outcome.lower().strip().strip("`'\".,:;()[]{}")
-    if not needle:
-        return False
-    for raw_path in changed_paths:
-        normalized = str(raw_path).replace("\\", "/").lower().strip("/")
-        if not normalized:
-            continue
-        parts = [part for part in normalized.split("/") if part]
-        if needle == normalized or needle in parts:
-            return True
-        if "/" not in needle and parts and (needle == parts[-1]):
-            return True
-    return False
-
-
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
     requested_outcomes = _extract_requested_outcomes(task_text)
     acceptance = _task_acceptance_payload(task_text=task_text, requested_outcomes=requested_outcomes)
@@ -19007,9 +18938,8 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         }
     surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
     searchable = surface_text.lower()
-    removal_intent = _task_has_removal_intent(task_text)
-    removed_or_retired = [item for item in requested_outcomes if removal_intent and _outcome_matches_changed_path(item, changed_paths)]
-    missing = [item for item in requested_outcomes if item.lower() not in searchable and item not in removed_or_retired]
+    removed_or_retired: list[str] = []
+    missing = [item for item in requested_outcomes if item.lower() not in searchable]
     status = "warning" if missing and changed_paths else "clear"
     return {
         "kind": "agentic-workspace/objective-drift/v1",
@@ -19023,7 +18953,11 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         "recommended_next_action": "Inspect changed files, exports, docs, and tests for the missing requested outcomes before closeout."
         if status == "warning"
         else "Use acceptance reconciliation before closeout.",
-        "heuristic": "identifier and backtick-term overlap between task text and changed file contents; explicit removal or retirement intent may satisfy an outcome through a matching changed path",
+        "heuristic": "identifier and backtick-term overlap between task text and changed file contents; AW does not infer removal or retirement intent from prompt keywords",
+        "agent_owned_decisions": [
+            "whether a missing requested outcome was intentionally removed, retired, replaced, or out of scope",
+            "whether proof and acceptance reconciliation justify marking the missing outcome satisfied",
+        ],
     }
 
 
@@ -20868,6 +20802,8 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
         "removed_or_retired_outcomes": value.get("removed_or_retired_outcomes", []),
         "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
+        "heuristic": value.get("heuristic", ""),
+        "agent_owned_decisions": value.get("agent_owned_decisions", [])[:2] if isinstance(value.get("agent_owned_decisions"), list) else [],
     }
 
 
@@ -25675,28 +25611,12 @@ def _task_skill_recommendations_payload(
 
 
 def _vague_outcome_orientation_payload(*, task_text: str | None, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
-    task_lower = (task_text or "").lower()
-    markers = (
-        "feel more trustworthy",
-        "trustworthy",
-        "trust",
-        "repeat what i meant",
-        "what i meant",
-        "less rework",
-        "rework",
-        "handoff",
-        "hand work back",
-        "intended outcome",
-        "intent",
-        "vague outcome",
-        "satisfaction",
-        "satisfied",
-    )
-    applies = bool(task_lower and any((marker in task_lower for marker in markers)))
+    applies = False
+    task_present = bool(str(task_text or "").strip())
     return {
-        "status": "applicable" if applies else "available",
+        "status": "available",
         "applies_to_current_task": applies,
-        "rule": "For vague outcome prompts, resolve intent and satisfaction evidence from compact CLI output before raw workspace reads.",
+        "rule": "AW does not infer vague-outcome status from prompt keywords; the agent owns whether this guidance applies.",
         "first_surface": "startup_guidance.primary_next_action from preflight or immediate_next_allowed_action from start",
         "compact_commands": [
             _command_with_cli_invoke(command='agentic-workspace preflight --target . --task "<task>" --format json', cli_invoke=cli_invoke),
@@ -25712,6 +25632,7 @@ def _vague_outcome_orientation_payload(*, task_text: str | None, cli_invoke: str
             "separate one possible solution from the intended outcome",
         ],
         "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable.",
+        "task_text_available": task_present,
     }
 
 
@@ -25719,7 +25640,7 @@ def _intent_discovery_dialogue_payload(
     *, task_text: str | None, vague_orientation: dict[str, Any] | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
     task = str(task_text or "").strip()
-    task_lower = " ".join(task.lower().split())
+    _ = vague_orientation
     skill_command = _command_with_cli_invoke(
         command=f"agentic-workspace skills --target . --task {_shell_quote(task or '<task>')} --format json",
         cli_invoke=cli_invoke,
@@ -25771,101 +25692,16 @@ def _intent_discovery_dialogue_payload(
             "examples": examples,
         }
 
-    direct_markers = ("typo", "spelling", "formatting", "rename", "fix lint", "readme.md")
-    broad_markers = (
-        "improve",
-        "better",
-        "build",
-        "design",
-        "implement",
-        "create",
-        "make",
-        "workflow",
-        "protocol",
-        "onboarding",
-        "experience",
-        "system",
-        "architecture",
-        "planning",
-        "intent",
-        "clarify",
-        "discover",
-        "trust",
-        "safe",
-    )
-    high_stakes_markers = (
-        "workflow",
-        "protocol",
-        "planning",
-        "architecture",
-        "migration",
-        "auth",
-        "security",
-        "delete",
-        "remove",
-        "production",
-        "system",
-        "all",
-    )
-    question_words = ("why", "outcome", "non-goal", "scope", "first slice", "acceptable")
-    has_issue_ref = bool(re.search(r"#\d+\b", task))
-    has_named_path = bool(re.search(r"\b[\w./-]+\.(md|py|json|toml|ts|tsx|js|mjs|yaml|yml)\b", task_lower))
-    token_count = len(task_lower.split())
-    broad_signal = any(marker in task_lower for marker in broad_markers)
-    direct_signal = any(marker in task_lower for marker in direct_markers) or has_named_path
-    explicit_workflow_instruction = any(
-        marker in task_lower for marker in ("decompose", "epic", "lane", "execplan", "active planning", "implement #")
-    )
-    task_already_answers_intent = sum(1 for marker in question_words if marker in task_lower) >= 2
-    vague_applies = bool(isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task"))
-    confidence = "high" if direct_signal or task_already_answers_intent or has_issue_ref else "medium"
-    if (broad_signal and token_count <= 8) or (vague_applies and token_count <= 18):
-        confidence = "low"
-    if has_issue_ref and token_count <= 4:
-        confidence = "medium"
-    stakes = "high" if any(marker in task_lower for marker in high_stakes_markers) or (broad_signal and not direct_signal) else "medium"
-    if direct_signal and not broad_signal:
-        stakes = "low"
-    should_ask = confidence == "low" and stakes == "high" and not explicit_workflow_instruction
-    should_acknowledge = (
-        (confidence in {"low", "medium"} or broad_signal or has_issue_ref) and not should_ask and not (direct_signal and not broad_signal)
-    )
-    status = "ask-human" if should_ask else "acknowledge-and-proceed" if should_acknowledge else "available"
-    candidates = [
-        {
-            "id": "workflow-behavior",
-            "interpretation": "Change agent workflow behavior so vague requests get bounded intent discovery before implementation.",
-            "proposed_first_slice": "Add startup/skill routing and focused examples before broader Planning changes.",
-            "promotion_target": "task_intent",
-        },
-        {
-            "id": "planning-surface",
-            "interpretation": "Capture the clarified outcome as Planning state before decomposing work.",
-            "proposed_first_slice": "Create or tighten a planning item after the human confirms the intended outcome.",
-            "promotion_target": "Planning",
-        },
-        {
-            "id": "documentation-only",
-            "interpretation": "Document the intended behavior without changing runtime routing.",
-            "proposed_first_slice": "Update reference docs and leave runtime behavior unchanged.",
-            "promotion_target": "issue",
-        },
-    ]
-    question = (
-        "Which outcome should I optimize for, what is explicitly out of scope, and what first slice would be acceptable?"
-        if should_ask
-        else ""
-    )
     return {
         "kind": "agentic-workspace/intent-discovery-dialogue/v1",
-        "status": status,
-        "applies_to_current_task": status != "available",
+        "status": "available",
+        "applies_to_current_task": False,
         "skill": "workspace-intent-discovery",
         "skill_command": skill_command,
-        "inferred_intent_confidence": confidence,
-        "stakes_if_wrong": stakes,
-        "required_next_action": "ask-intent-discovery-question" if should_ask else "state-assumptions-before-editing",
-        "candidate_interpretations": candidates if status != "available" else [],
+        "inferred_intent_confidence": "agent-owned",
+        "stakes_if_wrong": "agent-owned",
+        "required_next_action": "agent-decides-whether-intent-discovery-is-needed",
+        "candidate_interpretations": [],
         "likely_non_goals": [
             "Do not silently choose a convenient implementation slice.",
             "Do not create Planning state until the intended outcome is clear enough.",
@@ -25876,8 +25712,8 @@ def _intent_discovery_dialogue_payload(
             "desired_outcome": "<capture after reply>",
             "non_goals": "<capture after reply>",
             "acceptable_first_slice": "<capture after reply>",
-            "uncertainty": confidence,
-            "question_to_user": question,
+            "uncertainty": "agent-owned",
+            "question_to_user": "",
             "proceed_without_answer_when": "After one bounded question, proceed only if the first slice is low-risk, reversible, and the stated assumptions are visible.",
         },
         "output_shape": output_shape,
@@ -25895,6 +25731,17 @@ def _intent_discovery_dialogue_payload(
             "promotion_target",
         ],
         "examples": examples,
+        "authority_boundary": _authority_boundary_payload(
+            surface="intent_discovery_dialogue",
+            observed_by_aw=["task_text_available=True"],
+            recommended_by_aw=["use workspace-intent-discovery skill when agent judgment finds intent ambiguity"],
+            agent_owned_decisions=[
+                "whether intent is ambiguous enough to ask",
+                "whether visible assumptions are sufficient to proceed",
+            ],
+            human_owned_decisions=["clarified intent when the agent cannot choose a bounded first slice"],
+            rule="AW exposes an intent-discovery contract; it does not classify prompt ambiguity from keywords.",
+        ),
     }
 
 
@@ -26641,14 +26488,24 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
+    task_text = getattr(args, "task", None)
+    selected_fields = getattr(args, "select", None)
     payload = _start_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
-        task_text=getattr(args, "task", None),
-        profile=_start_profile_for_select(requested_profile=start_profile, select=getattr(args, "select", None)),
+        task_text=task_text,
+        profile=_start_profile_for_select(requested_profile=start_profile, select=selected_fields),
     )
-    if getattr(args, "select", None):
-        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="start")
+    if selected_fields:
+        config = _load_workspace_config(target_root=target_root)
+        _hydrate_selected_start_advisory_payloads(
+            payload=payload,
+            select=selected_fields,
+            target_root=target_root,
+            task_text=task_text,
+            config=config,
+        )
+        payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -26663,7 +26520,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
-            target_root=target_root, config=config, task_text=getattr(args, "task", None)
+            target_root=target_root,
+            config=config,
+            task_text=getattr(args, "task", None),
+            explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
         )
         payload = _select_summary_payload(
             target_root=target_root,

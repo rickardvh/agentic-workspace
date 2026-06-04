@@ -185,6 +185,124 @@ force = "required-before-closeout"
     assert "assurance_requirements" not in payload
 
 
+def test_implement_routine_work_context_reports_memory_use_when_as_learned_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md", "# Memory index\n")
+    _write(tmp_path / ".agentic-workspace" / "memory" / "repo" / "domains" / "parser.md", "# Parser\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/parser.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/parser.md"
+authority = "learned"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+use_when = ["parser refactor"]
+evidence = ["Memory fixture"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/parser.py",
+                "--task",
+                "Plan parser refactor safely",
+                "--select",
+                "routine_work_context",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    routine = json.loads(capsys.readouterr().out)["values"]["routine_work_context"]
+    review = routine["knowledge_authority_review"]
+    source = review["matched_sources"][0]
+    assert source["owner_surface"] == ".agentic-workspace/memory/repo/domains/parser.md"
+    assert source["authority"] == "learned"
+    assert source["applies_because"] == ["task text matched parser refactor"]
+    assert "Memory manifest metadata" in source["authority_boundary"]["observed_by_aw"]
+    assert "semantically relevant" in source["authority_boundary"]["agent_owned_decisions"][0]
+    assert "does not classify user intent" in source["authority_boundary"]["reporting_rule"]
+    assert "does not make semantic task classifications" in review["authority_boundary"]["reporting_rule"]
+
+
+def test_implement_verification_task_marker_reports_configured_protocol_authority(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.privacy_walkthrough]
+protocol_id = "privacy_review"
+title = "Privacy walkthrough"
+steps = ["Inspect privacy handling"]
+expected_observations = ["Authority and evidence labels are visible"]
+pass_evidence_labels = ["privacy_reviewed"]
+fail_evidence_labels = ["privacy_gap"]
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Configured privacy verification protocol."
+applies_to_task_markers = ["privacy"]
+scenario_refs = ["privacy_walkthrough"]
+expected_evidence = ["privacy_reviewed"]
+review_owner = "privacy-review"
+authority_refs = ["docs/compliance/privacy.md"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update privacy handling",
+                "--select",
+                "verification",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    verification = json.loads(capsys.readouterr().out)["values"]["verification"]
+    protocol = verification["active_protocols"][0]
+    assert protocol["id"] == "privacy_review"
+    assert protocol["applies_because"] == ["task marker matched privacy"]
+    assert "configured verification protocol privacy_review" in protocol["authority_boundary"]["observed_by_aw"]
+    assert "semantically relevant" in protocol["authority_boundary"]["agent_owned_decisions"][0]
+    assert "does not classify user intent" in protocol["authority_boundary"]["reporting_rule"]
+    assert "does not decide the user's semantic intent" in verification["authority_boundary"]["reporting_rule"]
+
+
 def test_implement_matches_non_code_assurance_requirement(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -971,19 +1089,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert guidance_boundary["surface"] == "work_shape_guidance"
     assert "semantic work shape" in guidance_boundary["agent_owned_decisions"]
     assert any(item.startswith("dirty_shape=") for item in guidance_boundary["observed_by_aw"])
-    acknowledgement = context["intent_acknowledgement"]
-    assert acknowledgement["decision"] == "proceed-with-stated-assumption"
-    assert acknowledgement["fields"] == [
-        "inferred_intent",
-        "concrete_first_slice",
-        "non_goals_or_deferred_scope",
-        "correction_point",
-    ]
-    assert acknowledgement["proceed_unless_corrected"] is True
+    assert "intent_acknowledgement" not in context
     intent_evidence = context["intent_evidence"]
-    assert intent_evidence["source_class"] == "agent-inference-with-evidence"
-    assert intent_evidence["assumption_state"] == "visible-assumption-required"
-    assert intent_evidence["required_next_action"] == "state-assumptions-before-editing"
+    assert intent_evidence["source_class"] == "direct-user-text"
+    assert intent_evidence["assumption_state"] == "low-risk-direct"
+    assert intent_evidence["required_next_action"] == "continue-direct"
     assert intent_evidence["proceed_without_question"] is True
     assert context["delegation_decision"]["status"] == "evaluated"
     assert context["delegation_decision"]["mode"] in {"suggest", "auto"}
@@ -1725,7 +1835,7 @@ def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: P
     assert "self-authored tests alone" in acceptance["compact_closeout_prompt"]
 
 
-def test_implement_objective_drift_accepts_explicit_deleted_outcome(tmp_path: Path, capsys) -> None:
+def test_implement_objective_drift_does_not_accept_deleted_outcome_from_prompt_keywords(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
     assert (
@@ -1747,10 +1857,12 @@ def test_implement_objective_drift_accepts_explicit_deleted_outcome(tmp_path: Pa
 
     payload = json.loads(capsys.readouterr().out)
     drift = _implement_context(payload)["objective_drift"]
-    assert drift["status"] == "clear"
+    assert drift["status"] == "warning"
     assert drift["requested_outcomes"] == ["llms.txt"]
-    assert drift["removed_or_retired_outcomes"] == ["llms.txt"]
-    assert drift["missing_from_changed_surface"] == []
+    assert drift["removed_or_retired_outcomes"] == []
+    assert drift["missing_from_changed_surface"] == ["llms.txt"]
+    assert "does not infer removal or retirement intent from prompt keywords" in drift["heuristic"]
+    assert "whether a missing requested outcome was intentionally removed" in drift["agent_owned_decisions"][0]
 
 
 def test_implement_objective_drift_keeps_missing_path_without_removal_intent(tmp_path: Path, capsys) -> None:

@@ -913,7 +913,7 @@ def test_report_decision_pressure_surfaces_memory_decision_candidate_when_adr_ta
     assert answer["memory_pressure"]["sample"][0]["promotion_target"] == "decision-record"
 
 
-def test_report_closeout_trust_routes_architecture_decision_candidate_to_discovered_adr_target(tmp_path: Path, capsys) -> None:
+def test_report_closeout_trust_does_not_infer_architecture_decision_candidate_from_planning_text(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -966,13 +966,8 @@ def test_report_closeout_trust_routes_architecture_decision_candidate_to_discove
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
 
     closeout = json.loads(capsys.readouterr().out)["answer"]
-    candidate = closeout["architecture_decision_candidate"]
-    assert candidate["status"] == "candidate"
-    assert candidate["primary_route"] == "decision-record"
-    assert candidate["decision_target"]["target"] == "docs/adr/"
-    assert "planning decision-scaffold" in candidate["route"]["command"]
-    assert "--target ./repo" not in candidate["route"]["command"]
-    assert candidate["route"]["command_target"]["target"] == "<repo>"
+    assert "architecture_decision" not in closeout
+    assert "architecture_decision_candidate" not in closeout
 
 
 def test_report_closeout_trust_surfaces_memory_promotion_pressure_in_knowledge_review(

@@ -62,7 +62,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
 | `local_memory` | object | yes |  | Machine-local memory configuration and advisory state. |  |  |
 | `memory_consult` | object | yes |  | Recommended checked-in Memory lookup route for the current report. |  |  |
-| `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue. |  |  |
+| `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification. |  |  |
 | `reuse_pressure` | object | yes |  | Entry point for changed-path reuse and abstraction-pressure facts. |  |  |
 | `agent_aids` | object | yes |  | Reusable agent aid availability, manifest coverage, and startup role information. |  |  |
 | `agent_configuration_system` | object | yes |  | How repo-owned agent configuration classes are represented in this workspace. |  |  |
@@ -70,8 +70,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
 | `durable_intent` | object | yes |  | Compact decision projection for durable task, subsystem, and system intent pressure. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
-| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection. |  |  |
-| `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection. |  |  |
+| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
+| `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |

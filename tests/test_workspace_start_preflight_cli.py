@@ -210,7 +210,7 @@ def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
     assert target.as_posix() in payload["target"]
 
 
-def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
+def test_preflight_task_keeps_vague_outcome_orientation_out_of_default(capsys) -> None:
     assert (
         cli.main(
             [
@@ -226,12 +226,7 @@ def test_preflight_task_surfaces_vague_outcome_orientation(capsys) -> None:
     )
 
     payload = json.loads(capsys.readouterr().out)
-    orientation = payload["startup_guidance"]["vague_outcome_orientation"]
-    assert orientation["status"] == "applicable"
-    assert orientation["applies_to_current_task"] is True
-    assert orientation["first_surface"].startswith("startup_guidance.primary_next_action")
-    assert f"{REPO_LOCAL_CLI_INVOKE} start" in orientation["compact_commands"][1]
-    assert "intended outcome" in orientation["answer_contract"][0]
+    assert "vague_outcome_orientation" not in payload["startup_guidance"]
 
 
 def test_preflight_command_emits_gate_token(capsys) -> None:
@@ -413,6 +408,12 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert requirements["status"] == "attention"
     assert requirements["active"][0]["id"] == "privacy_data"
     assert requirements["active"][0]["applies_because"] == ["task marker matched privacy"]
+    assert "does not classify the task's semantic intent" in requirements["authority_boundary"]["reporting_rule"]
+    active_boundary = requirements["active"][0]["authority_boundary"]
+    assert "configured assurance requirement privacy_data" in active_boundary["observed_by_aw"]
+    assert "task marker matched privacy" in active_boundary["observed_by_aw"]
+    assert "whether the current task intent is satisfied" in active_boundary["agent_owned_decisions"]
+    assert "does not decide user intent" in active_boundary["reporting_rule"]
 
 
 def test_start_surfaces_compact_routine_work_context(tmp_path: Path, capsys) -> None:
@@ -1007,26 +1008,36 @@ candidates = [
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
-    assert action["action"] == "inspect-closeout-trust-before-completion-answer"
+    assert action["action"] != "inspect-closeout-trust-before-completion-answer"
     relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
-    assert action["command"] == f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"
     packet = payload["next_safe_action"]
     _assert_next_safe_action_valid(packet)
-    assert packet["preferred_cli_effect"] == "reporting"
-    assert packet["continuation_owner_required"] is True
-    assert "claim completion before closeout trust is reconciled" in packet["closure_blockers"]
-    closeout = _start_context_value(payload, "closeout_trust_inspection")
+    assert "closeout_trust_inspection" not in payload
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Can I mark this work complete?",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)["values"]
+    closeout = selected["closeout_trust_inspection"]
     assert closeout["status"] == "required"
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
-    closeout_route = _start_context_value(payload, "closeout_report_route")
-    assert closeout_route["profile"] == "audit"
-    assert closeout_route["next_command"] == f"agentic-workspace report --target {relative_target} --section closeout_report --format json"
-    assert closeout_route["selector"] == "closeout_report"
-    assert "completion_options" not in payload
-    assert "completion_options" not in closeout
-    assert "closeout_trust_inspection" in payload["drill_down"]["available_selectors"]
+    assert closeout["detail_command"] == f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"
+    assert "prompt keywords" in closeout["authority_boundary"]["reporting_rule"]
 
 
 def test_start_select_returns_requested_startup_fields(capsys) -> None:
@@ -1051,9 +1062,9 @@ def test_start_select_returns_acceptance_and_durable_promotion(capsys) -> None:
     assert acceptance["closeout_required"] is True
     assert acceptance["items"][0]["id"] == "A1"
     promotion = payload["values"]["durable_intent_promotion"]
-    assert promotion["status"] == "candidate"
-    assert "should" in promotion["matched_markers"]
-    assert "going forward" in promotion["matched_markers"]
+    assert promotion["status"] == "available"
+    assert promotion["matched_markers"] == []
+    assert "whether the task revealed durable knowledge" in promotion["authority_boundary"]["agent_owned_decisions"]
 
 
 def test_start_surfaces_architecture_decision_candidate_for_database_migration_with_adr_target(tmp_path: Path, capsys) -> None:
@@ -1072,6 +1083,8 @@ def test_start_surfaces_architecture_decision_candidate_for_database_migration_w
                 str(target),
                 "--task",
                 "Migrate database system from SQLite to MariaDB",
+                "--changed",
+                "docs/adr/new-decision.md",
                 "--select",
                 "durable_intent_promotion",
                 "--format",
@@ -1086,6 +1099,8 @@ def test_start_surfaces_architecture_decision_candidate_for_database_migration_w
     assert promotion["status"] == "candidate"
     assert candidate["primary_route"] == "decision-record"
     assert candidate["decision_target"]["target"] == "docs/adr/"
+    assert candidate["matched_markers"] == []
+    assert candidate["decision_path_matches"] == ["docs/adr/new-decision.md"]
     assert "planning decision-scaffold" in candidate["route"]["command"]
     assert "--target ./repo" not in candidate["route"]["command"]
     assert candidate["route"]["command_target"]["target"] == "<repo>"
@@ -1106,6 +1121,8 @@ def test_start_surfaces_typed_memory_fallback_for_database_migration_without_adr
                 str(target),
                 "--task",
                 "Migrate database storage from SQLite to MariaDB",
+                "--changed",
+                "docs/decisions/storage.md",
                 "--select",
                 "durable_intent_promotion",
                 "--format",
@@ -1118,6 +1135,8 @@ def test_start_surfaces_typed_memory_fallback_for_database_migration_without_adr
     promotion = json.loads(capsys.readouterr().out)["values"]["durable_intent_promotion"]
     candidate = promotion["architecture_decision_candidate"]
     assert candidate["primary_route"] == "typed-memory-fallback"
+    assert candidate["matched_markers"] == []
+    assert candidate["decision_path_matches"] == ["docs/decisions/storage.md"]
     assert candidate["decision_target"]["configured"] is False
     assert candidate["route"]["target"] == ".agentic-workspace/memory/repo/decisions/"
     assert "memory capture-note" in candidate["route"]["command"]
@@ -1152,7 +1171,8 @@ def test_start_keeps_adr_directory_quiet_for_tiny_typo_task(tmp_path: Path, caps
     )
 
     promotion = json.loads(capsys.readouterr().out)["values"]["durable_intent_promotion"]
-    assert promotion["status"] == "no-durable-signal"
+    assert promotion["status"] == "available"
+    assert promotion["matched_markers"] == []
     assert "architecture_decision_candidate" not in promotion
 
 
@@ -1214,7 +1234,7 @@ def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Pa
     assert action["read_first"] == [action["command"]]
 
 
-def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> None:
+def test_start_tiny_does_not_route_config_posture_questions_from_prompt_keywords(capsys) -> None:
     task = (
         "Inspect this repo enough to answer how a small follow-up should be reported. "
         "Keep the answer aligned with the repo's configured operating and reporting posture."
@@ -1224,10 +1244,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
-    assert action["action"] == "inspect-effective-config"
-    assert action["command"] == f"{REPO_LOCAL_CLI_INVOKE} config --format json"
-    assert action["read_first"] == [action["command"]]
-    assert "tiny config surface" in action["summary"]
+    assert action["action"] != "inspect-effective-config"
     assert len(json.dumps(payload, sort_keys=True)) < 14500
 
 
@@ -1264,7 +1281,7 @@ def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, cap
     assert len(json.dumps(payload, sort_keys=True)) < 8800
 
 
-def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
+def test_start_tiny_does_not_route_prep_only_handoff_from_prompt_keywords(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1279,35 +1296,14 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
-    assert action["action"] == "create-prep-only-planning-state"
-    assert action["command"].startswith("agentic-workspace planning new-plan")
-    assert "--prep-only" in action["command"]
-    assert action["next_proof"] == "agentic-workspace summary --verbose --format json"
-    assert action["read_first"] == []
+    assert action["action"] == "choose-smallest-workflow-shape"
+    assert "prep_only_handoff" not in _start_context(payload)
     packet = payload["next_safe_action"]
-    assert packet["next_safe_action"] == "create-prep-only-planning-state"
-    assert packet["module_slot"] == "planning"
-    assert packet["preferred_cli"] == action["command"]
-    assert packet["completion_claim_allowed"] is False
-    assert {"edit product source", "claim implementation complete"} <= set(packet["forbidden_actions"])
-    assert packet["proof_required"] is True
-    assert "do not create product source" in action["summary"]
-    prep_only = _start_context_value(payload, "prep_only_handoff")
-    assert prep_only["first_command"].startswith("agentic-workspace planning new-plan")
-    assert prep_only["reference_command"] == "agentic-workspace planning --format json"
-    assert "--prep-only" in prep_only["preferred_mutation_command_template"]
-    assert prep_only["after_write"] == "agentic-workspace summary --verbose --format json"
-    assert prep_only["stop_after_summary"] is True
-    assert "no" in prep_only["open_execplan_after_creation"]
-    assert "defer unless summary reports" in prep_only["manual_execplan_tightening"]
-    assert any("smallest schema-preserving" in item for item in prep_only["allowed_after_new_plan"])
-    assert ".agentic-workspace/planning/execplans/" in prep_only["allowed_write_scope"]
-    assert "tests or fixtures" in prep_only["forbidden_until_implementation_requested"]
-    assert "manual JSON polishing or ad hoc validation loops" in prep_only["forbidden_until_implementation_requested"]
+    assert packet["next_safe_action"] == "choose-smallest-workflow-shape"
     assert len(json.dumps(payload, sort_keys=True)) < 9500
 
 
-def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
+def test_start_tiny_keeps_paraphrased_prep_only_prompt_agent_owned(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1318,11 +1314,11 @@ def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert _start_primary_action(payload)["action"] == "create-prep-only-planning-state"
-    assert _start_context_value(payload, "prep_only_handoff")["status"] == "required"
+    assert _start_primary_action(payload)["action"] == "choose-smallest-workflow-shape"
+    assert "prep_only_handoff" not in _start_context(payload)
 
 
-def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_path: Path, capsys) -> None:
+def test_start_tiny_keeps_groundwork_without_implementation_prompt_agent_owned(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1334,12 +1330,11 @@ def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
-    assert action["action"] == "create-prep-only-planning-state"
-    assert action["command"].startswith("agentic-workspace planning new-plan")
-    assert action["read_first"] == []
+    assert action["action"] == "choose-smallest-workflow-shape"
+    assert "prep_only_handoff" not in _start_context(payload)
 
 
-def test_start_tiny_routes_durable_plan_state_without_code_to_prep_only(tmp_path: Path, capsys) -> None:
+def test_start_tiny_keeps_durable_plan_state_without_code_prompt_agent_owned(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1351,8 +1346,8 @@ def test_start_tiny_routes_durable_plan_state_without_code_to_prep_only(tmp_path
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
-    assert action["action"] == "create-prep-only-planning-state"
-    assert "--prep-only" in action["command"]
+    assert action["action"] == "choose-smallest-workflow-shape"
+    assert "prep_only_handoff" not in _start_context(payload)
 
 
 def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys) -> None:
@@ -2580,7 +2575,7 @@ def test_planning_close_item_front_door_forwards_item_positionally() -> None:
     assert argv[argv.index("--issue") + 1] == "#953"
 
 
-def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
+def test_start_select_surfaces_vague_outcome_orientation_as_agent_owned_guidance(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -2593,6 +2588,8 @@ def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -
                 str(target),
                 "--task",
                 "Agents keep making me repeat what I meant after they finish",
+                "--select",
+                "vague_outcome_orientation",
                 "--format",
                 "json",
             ]
@@ -2600,15 +2597,16 @@ def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    orientation = _start_context_value(payload, "vague_outcome_orientation")
-    assert orientation["status"] == "applicable"
+    payload = json.loads(capsys.readouterr().out)["values"]
+    orientation = payload["vague_outcome_orientation"]
+    assert orientation["status"] == "available"
+    assert orientation["applies_to_current_task"] is False
+    assert "does not infer vague-outcome status from prompt keywords" in orientation["rule"]
     assert "say you will proceed on that interpretation unless corrected" in orientation["answer_contract"]
     assert orientation["raw_read_rule"].startswith("Open raw .agentic-workspace files only after compact output")
-    assert "skills" in payload
 
 
-def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_path: Path, capsys) -> None:
+def test_start_select_surfaces_intent_discovery_dialogue_without_prompt_classification(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -2621,6 +2619,8 @@ def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_pa
                 str(target),
                 "--task",
                 "Improve onboarding",
+                "--select",
+                "intent_discovery_dialogue,immediate_next_allowed_action",
                 "--format",
                 "json",
             ]
@@ -2628,28 +2628,22 @@ def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_pa
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    discovery = _start_context_value(payload, "intent_discovery_dialogue")
-    intent_evidence = _start_context_value(payload, "intent_evidence")
-    assert discovery["status"] == "ask-human"
-    assert discovery["inferred_intent_confidence"] == "low"
-    assert discovery["stakes_if_wrong"] == "high"
-    assert discovery["required_next_action"] == "ask-intent-discovery-question"
-    assert len(discovery["candidate_interpretations"]) >= 2
-    assert "question_to_user" in discovery["dialogue_packet"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    discovery = payload["intent_discovery_dialogue"]
+    assert discovery["status"] == "available"
+    assert discovery["applies_to_current_task"] is False
+    assert discovery["inferred_intent_confidence"] == "agent-owned"
+    assert discovery["stakes_if_wrong"] == "agent-owned"
+    assert discovery["required_next_action"] == "agent-decides-whether-intent-discovery-is-needed"
+    assert discovery["candidate_interpretations"] == []
+    assert discovery["dialogue_packet"]["question_to_user"] == ""
     assert discovery["loop_control"]["max_questions_before_progress"] == 1
     assert "captured_intent_after_reply" in discovery["output_shape"]["fields"]
     assert "Planning" in discovery["output_shape"]["promotion_targets"]
-    assert intent_evidence["source_class"] == "human-clarification-needed"
-    assert intent_evidence["assumption_state"] == "clarification-required"
-    assert intent_evidence["required_next_action"] == "ask-intent-discovery-question"
-    assert intent_evidence["proceed_without_question"] is False
+    assert "does not classify prompt ambiguity from keywords" in discovery["authority_boundary"]["reporting_rule"]
 
-    next_action = payload["next_safe_action"]
-    assert next_action["next_safe_action"] == "ask-intent-discovery-question"
-    assert next_action["required_skill"] == "workspace-intent-discovery"
-    assert next_action["implementation_allowed"] is False
-    assert "begin implementation" in next_action["forbidden_actions"]
+    next_action = payload["immediate_next_allowed_action"]
+    assert next_action["action"] != "ask-intent-discovery-question"
 
 
 def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_path: Path, capsys) -> None:
@@ -2676,10 +2670,11 @@ def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_pat
 
     payload = json.loads(capsys.readouterr().out)["values"]
     discovery = payload["intent_discovery_dialogue"]
-    assert discovery["status"] == "acknowledge-and-proceed"
-    assert discovery["required_next_action"] == "state-assumptions-before-editing"
+    assert discovery["status"] == "available"
+    assert discovery["required_next_action"] == "agent-decides-whether-intent-discovery-is-needed"
     assert payload["immediate_next_allowed_action"]["action"] != "ask-intent-discovery-question"
     assert payload["intent_acknowledgement"]["decision"] == "proceed-with-stated-assumption"
+    assert "agent owns the interpretation" in payload["intent_acknowledgement"]["authority_boundary"]["reporting_rule"]
     intent_evidence = payload["intent_evidence"]
     assert intent_evidence["source_class"] == "agent-inference-with-evidence"
     assert intent_evidence["assumption_state"] == "visible-assumption-required"
@@ -2687,7 +2682,7 @@ def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_pat
     assert any(item["source"] == "external-issue-reference" for item in intent_evidence["source_chain"])
 
 
-def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsys) -> None:
+def test_start_select_surfaces_stated_assumption_guidance_as_agent_owned(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -2700,6 +2695,8 @@ def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsy
                 str(target),
                 "--task",
                 "Improve onboarding so agents stop drifting from user intent",
+                "--select",
+                "intent_acknowledgement",
                 "--format",
                 "json",
             ]
@@ -2707,17 +2704,12 @@ def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsy
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    acknowledgement = _start_context_value(payload, "intent_acknowledgement")
-    assert acknowledgement["decision"] == "proceed-with-stated-assumption"
-    assert acknowledgement["fields"] == [
-        "inferred_intent",
-        "concrete_first_slice",
-        "non_goals_or_deferred_scope",
-        "correction_point",
-    ]
-    assert acknowledgement["proceed_unless_corrected"] is True
-    assert acknowledgement["clarify_only_if_blocked"] is True
+    payload = json.loads(capsys.readouterr().out)["values"]
+    acknowledgement = payload["intent_acknowledgement"]
+    assert acknowledgement["status"] == "available"
+    assert acknowledgement["decision"] == "silent-ok"
+    assert "does not infer whether a stated-assumption preface is required from prompt keywords" in acknowledgement["reason"]
+    assert "does not infer preface requirements from prompt keywords" in acknowledgement["authority_boundary"]["reporting_rule"]
 
 
 def test_start_direct_task_keeps_stated_assumption_out_of_default(tmp_path: Path, capsys) -> None:

@@ -605,7 +605,32 @@ def verification_report_payload(
         missing_evidence = [item for item in expected_evidence if item not in evidence_present]
         stale_expected_evidence = [item for item in missing_evidence if item in stale_evidence]
         if matched:
-            active_protocols.append({**protocol, "applies_because": applies_because, "evidence_bundle_ids": [b["id"] for b in bundles]})
+            active_protocols.append(
+                {
+                    **protocol,
+                    "applies_because": applies_because,
+                    "evidence_bundle_ids": [b["id"] for b in bundles],
+                    "authority_boundary": {
+                        "kind": "agentic-workspace/authority-boundary/v1",
+                        "surface": "verification.protocol",
+                        "authority_class": "advisory-support",
+                        "observed_by_aw": [
+                            f"configured verification protocol {protocol['id']}",
+                            *applies_because,
+                        ],
+                        "recommended_by_aw": ["run or record the configured verification evidence when agent judgment finds it relevant"],
+                        "agent_owned_decisions": [
+                            "whether the configured protocol is semantically relevant to the current work",
+                            "whether evidence is sufficient for the intended claim boundary",
+                        ],
+                        "human_owned_decisions": ["acceptance or waiver of manual verification gaps"],
+                        "reporting_rule": (
+                            "Verification task-marker matches are configured protocol evidence; AW reports them and does not "
+                            "classify user intent."
+                        ),
+                    },
+                }
+            )
             state = (
                 "satisfied"
                 if expected_evidence and not missing_evidence
@@ -664,6 +689,19 @@ def verification_report_payload(
         "configured": bool(manifest["configured"]),
         "path": manifest["path"],
         "rule": "Verification owns reusable protocols and bounded evidence records; Assurance requires evidence and Closeout decides claim honesty.",
+        "authority_boundary": {
+            "kind": "agentic-workspace/authority-boundary/v1",
+            "surface": "verification",
+            "authority_class": "advisory-support" if active_protocols else "observed-facts",
+            "observed_by_aw": ["verification manifest protocols/scenarios/evidence", "configured activation match facts"],
+            "recommended_by_aw": ["use active protocols as proof guidance when agent judgment finds they fit the task"],
+            "agent_owned_decisions": [
+                "semantic fit of configured verification protocols",
+                "proof sufficiency and claim-boundary judgment",
+            ],
+            "human_owned_decisions": ["acceptance or waiver of manual verification gaps"],
+            "reporting_rule": ("Verification is configured evidence and proof guidance; AW does not decide the user's semantic intent."),
+        },
         "protocol_count": len(configured_protocols),
         "scenario_count": len(configured_scenarios),
         "evidence_bundle_count": len(evidence_bundles),
