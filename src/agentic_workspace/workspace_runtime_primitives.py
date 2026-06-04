@@ -8394,6 +8394,32 @@ def _closeout_report_adoption_payload(
     }
 
 
+def _authority_language_guidance_payload() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/authority-language-guidance/v1",
+        "status": "present",
+        "preferred_phrasing": {
+            "observed_facts": "AW reports/observes <fact>; I used that as evidence.",
+            "recommendations": "AW recommends/suggests <route>; I chose <action> because <reason>.",
+            "enforced_gates": "AW enforces/blocks <gate>; completion waits until it is satisfied.",
+            "agent_judgment": "I judged/classified/decided <semantic outcome>, using AW evidence/guidance.",
+        },
+        "avoid_when_aw_is_advisory": [
+            "AW classified the task",
+            "AW routed the work",
+            "AW decided this is complete",
+        ],
+        "allowed_for_hard_gates": [
+            "AW enforced the gate",
+            "AW blocked completion until proof/acceptance is satisfied",
+        ],
+        "rule": (
+            "Use AW as the subject only for observed facts, recommendations, proof hints, and enforced gates. "
+            "Use the agent as the subject for semantic classification, routing choices, completion judgment, and final wording."
+        ),
+    }
+
+
 def _closeout_report_final_response_rendering_payload(
     *,
     status: str,
@@ -8577,6 +8603,7 @@ def _closeout_report_final_response_rendering_payload(
             "section_order": [section["id"] for section in sections],
             "sections": sections,
             "missing_required_sections": missing_required_sections,
+            "authority_language_guidance": _authority_language_guidance_payload(),
             "rendered_markdown": "\n".join(rendered_markdown_lines),
             "customization_points": [
                 "section titles",
@@ -15647,6 +15674,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["durable_intent"] = _tiny_durable_intent(durable_intent)
     if "intent_evidence" in payload:
         projected["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
+    if "issue_reference_intent" in payload:
+        projected["issue_reference_intent"] = payload["issue_reference_intent"]
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
         read_only_response = payload.get("read_only_response", {})
@@ -16178,6 +16207,7 @@ _START_TINY_ONLY_SELECTORS = {
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
+    "issue_reference_intent",
     "planning_safety_gate",
     "planning_revision",
     "routine_work_context",
@@ -16411,6 +16441,33 @@ def _start_payload(
             "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
+    issue_reference_intent = _issue_reference_intent_payload(
+        issue_scope_evidence=planning_safety_gate.get("issue_scope_evidence", {}), cli_invoke=config.cli_invoke
+    )
+    if (
+        issue_reference_intent.get("status") == "details-needed"
+        and not active_planning_present
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["issue_reference_intent"] = issue_reference_intent
+        command = str(issue_reference_intent.get("next_command") or "")
+        if payload["immediate_next_allowed_action"].get("action") == "choose-smallest-workflow-shape":
+            payload["immediate_next_allowed_action"] = {
+                "action": "refresh-external-issue-intent",
+                "summary": (
+                    "The task names external issue ref(s). Fetch issue details before treating the issue body as confirmed "
+                    "scope; this is missing issue evidence, not user-intent ambiguity."
+                ),
+                "command": command,
+                "run": command,
+                "risk": "read-only issue intent grounding",
+                "required_inputs": ["target repo", "issue ref(s)"],
+                "next_proof": "rerun start or implement after refresh and use the fetched issue evidence for scope.",
+                "read_first": [command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
     )
@@ -16708,6 +16765,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "intent_discovery_dialogue",
         "intent_acknowledgement",
         "intent_evidence",
+        "issue_reference_intent",
         "workflow_sufficiency",
         "next_safe_action",
         "health",
@@ -16739,6 +16797,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.intent_discovery_dialogue",
         "context.intent_acknowledgement",
         "context.intent_evidence",
+        "context.issue_reference_intent",
         "context.workflow_sufficiency",
         "context.guidance",
         "context.acceptance_reconciliation",
@@ -17109,6 +17168,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         context["durable_intent"] = _tiny_durable_intent(durable_intent)
     if "intent_evidence" in payload:
         context["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
+    if "issue_reference_intent" in payload:
+        context["issue_reference_intent"] = payload["issue_reference_intent"]
     for optional_key in (
         "proof",
         "path_boundaries",
@@ -17443,6 +17504,33 @@ def _start_tiny_payload_fast(
             "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
+    issue_reference_intent = _issue_reference_intent_payload(
+        issue_scope_evidence=planning_safety_gate.get("issue_scope_evidence", {}), cli_invoke=config.cli_invoke
+    )
+    if (
+        issue_reference_intent.get("status") == "details-needed"
+        and not active_planning_present
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["issue_reference_intent"] = issue_reference_intent
+        command = str(issue_reference_intent.get("next_command") or "")
+        if payload["immediate_next_allowed_action"].get("action") == "choose-smallest-workflow-shape":
+            payload["immediate_next_allowed_action"] = {
+                "action": "refresh-external-issue-intent",
+                "summary": (
+                    "The task names external issue ref(s). Fetch issue details before treating the issue body as confirmed "
+                    "scope; this is missing issue evidence, not user-intent ambiguity."
+                ),
+                "command": command,
+                "run": command,
+                "risk": "read-only issue intent grounding",
+                "required_inputs": ["target repo", "issue ref(s)"],
+                "next_proof": "rerun start or implement after refresh and use the fetched issue evidence for scope.",
+                "read_first": [command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
         proof_command = str(
@@ -17827,6 +17915,58 @@ def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig,
             cli_invoke=config.cli_invoke,
         ),
         "rule": "Issue refs are external-intent handles until cached provider-agnostic evidence or active Planning owns the scope.",
+    }
+
+
+def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    if not isinstance(issue_scope_evidence, dict):
+        return {"kind": "agentic-workspace/issue-reference-intent/v1", "status": "not-applicable", "issue_refs": []}
+    issue_refs = [str(item) for item in _list_payload(issue_scope_evidence.get("issue_refs")) if str(item).strip()]
+    if not issue_refs:
+        return {"kind": "agentic-workspace/issue-reference-intent/v1", "status": "not-applicable", "issue_refs": []}
+    evidence_status = str(issue_scope_evidence.get("status") or "unknown").strip()
+    refresh_command = str(issue_scope_evidence.get("refresh_command") or "").strip()
+    if not refresh_command:
+        refresh_command = _command_with_cli_invoke(
+            command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+            cli_invoke=cli_invoke,
+        )
+    details_needed = evidence_status in {"unknown", "partial"}
+    provider_hint = "github" if "refresh-github" in refresh_command else "external-intent"
+    return {
+        "kind": "agentic-workspace/issue-reference-intent/v1",
+        "status": "details-needed" if details_needed else "evidence-available",
+        "issue_refs": issue_refs,
+        "evidence_status": evidence_status,
+        "missing_issue_refs": issue_scope_evidence.get("missing_issue_refs", []),
+        "source_path": issue_scope_evidence.get("source_path", ""),
+        "storage": issue_scope_evidence.get("storage", "none"),
+        "provider_hint": provider_hint,
+        "next_command": refresh_command if details_needed else "",
+        "required_next_action": "refresh-external-issue-intent" if details_needed else "use-cached-issue-intent",
+        "intent_state": "issue-details-need-fetching" if details_needed else "issue-details-available",
+        "not_intent_ambiguity": details_needed,
+        "reason": (
+            "The task names external issue ref(s); fetch issue details before treating the issue body as confirmed scope."
+            if details_needed
+            else "Cached external issue evidence is available for the named issue ref(s)."
+        ),
+        "repo_agnostic_rule": (
+            "This packet appears only when task text contains issue refs. The provider route comes from existing "
+            "external-intent evidence guidance; without issue refs, startup should not assume GitHub or any other provider."
+        ),
+        "authority_boundary": _authority_boundary_payload(
+            surface="issue_reference_intent",
+            observed_by_aw=[f"issue_ref={issue_ref}" for issue_ref in issue_refs[:3]] + [f"evidence_status={evidence_status}"],
+            recommended_by_aw=["refresh-external-issue-intent"] if details_needed else ["use-cached-issue-intent"],
+            proof_hints=["rerun start or implement after refresh so issue evidence can guide scope"] if details_needed else [],
+            agent_owned_decisions=[
+                "whether fetched issue details make the work bounded",
+                "whether to proceed with a stated bounded slice before refresh",
+            ],
+            human_owned_decisions=["issue intent if external issue evidence remains unavailable"] if details_needed else [],
+            rule="AW identifies issue-reference grounding state; the agent owns semantic scope and implementation judgment.",
+        ),
     }
 
 
@@ -20374,8 +20514,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
             if isinstance(payload.get("proof"), dict)
             else {},
-            "generated_cli_freshness": payload.get("proof", {}).get("generated_cli_freshness", {})
-            if isinstance(payload.get("proof"), dict)
+            "generated_cli_freshness": _tiny_generated_cli_freshness_payload(payload.get("proof", {}).get("generated_cli_freshness", {}))
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("generated_cli_freshness"), dict)
+            else {},
+            "proof_obligations": _tiny_proof_obligations_payload(
+                payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
             else {},
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
@@ -29435,6 +29580,87 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
     }
 
 
+def _proof_obligations_payload(
+    *,
+    required_commands: list[str],
+    optional_commands: list[str],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    manual_required = manual_verification is not None
+    return {
+        "kind": "agentic-workspace/proof-obligations/v1",
+        "status": "required-proof-selected" if required_commands else "manual-proof-required" if manual_required else "no-required-proof",
+        "required_proof": {
+            "kind": "agentic-workspace/required-proof/v1",
+            "status": "required" if required_commands or manual_required else "not-selected",
+            "commands": required_commands,
+            "manual_verification_required": manual_required,
+            "manual_verification_status": manual_verification.get("status") if manual_required else "not-needed",
+            "source_field": "required_commands",
+            "rule": (
+                "These commands, or required manual verification when commands are unavailable, are the proof gate for completion claims."
+            ),
+        },
+        "recommended_confidence_checks": {
+            "kind": "agentic-workspace/recommended-confidence-checks/v1",
+            "status": "available" if optional_commands else "not-selected",
+            "commands": optional_commands,
+            "source_field": "optional_commands",
+            "rule": "Recommended checks may refresh state or raise confidence, but they do not replace or relax required proof.",
+        },
+        "agent_selected_extra_validation": {
+            "kind": "agentic-workspace/agent-selected-extra-validation/v1",
+            "status": "agent-owned",
+            "commands": [],
+            "examples": [
+                "rerun a focused failing test after the fix",
+                "inspect the final diff against requested acceptance",
+                "add task-specific validation when failures or risk expose an unproven behavior",
+            ],
+            "rule": "The agent may add validation when task intent, failures, or risk warrant it; AW does not pre-claim that extra work is mandatory.",
+        },
+        "completion_claim_rule": (
+            "Completion claims remain blocked until required proof passes or required manual verification is recorded, "
+            "then acceptance and residue are reconciled."
+        ),
+        "compatibility": {
+            "required_commands": "unchanged hard-gate field for existing callers",
+            "optional_commands": "unchanged advisory confidence-check field for existing callers",
+        },
+    }
+
+
+def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands: list[str] | None = None) -> dict[str, Any]:
+    required = value.get("required_proof", {}) if isinstance(value.get("required_proof"), dict) else {}
+    recommended = value.get("recommended_confidence_checks", {}) if isinstance(value.get("recommended_confidence_checks"), dict) else {}
+    visible_required_commands = list(required_commands) if required_commands is not None else required.get("commands", [])
+    return {
+        "kind": value.get("kind", "agentic-workspace/proof-obligations/v1"),
+        "required_proof": {
+            "status": required.get("status", "unknown"),
+            "commands": visible_required_commands,
+            "manual_verification_required": bool(required.get("manual_verification_required", False)),
+        },
+        "recommended_confidence_checks": {
+            "status": recommended.get("status", "unknown"),
+            "commands": recommended.get("commands", []),
+            "rule": recommended.get("rule", ""),
+        },
+        "completion_claim_rule": value.get("completion_claim_rule", ""),
+    }
+
+
+def _tiny_generated_cli_freshness_payload(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": value.get("kind", "agentic-workspace/generated-cli-freshness/v1"),
+        "status": value.get("status", "unknown"),
+        "obligation": value.get("obligation", value.get("status", "unknown")),
+        "freshness_check_command": value.get("freshness_check_command", ""),
+        "refresh_command": value.get("refresh_command", ""),
+        "validation_command": value.get("validation_command", ""),
+    }
+
+
 def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
     sensitive = [
         command
@@ -30018,6 +30244,11 @@ def _proof_selection_for_changed_paths(
         )
         for command in optional_commands
     ]
+    proof_obligations = _proof_obligations_payload(
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        manual_verification=manual_verification,
+    )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_selection = {
         "kind": "proof-selection/v1",
@@ -30079,6 +30310,7 @@ def _proof_selection_for_changed_paths(
         "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
         "proof_next_decision": proof_next_decision,
         "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
+        "proof_obligations": proof_obligations,
         "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),
         "tiny_surface_compatibility_review": _tiny_surface_compatibility_review(changed_paths),
         "selected_lanes": [

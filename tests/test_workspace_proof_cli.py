@@ -1748,6 +1748,14 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(cap
     assert "planning_package" in lane_ids
     assert "planning_source_typecheck_ci_parity" in lane_ids
     assert "make typecheck-planning" in answer["required_commands"]
+    obligations = answer["proof_obligations"]
+    assert obligations["required_proof"]["commands"] == answer["required_commands"]
+    assert obligations["required_proof"]["status"] == "required"
+    assert obligations["recommended_confidence_checks"]["commands"] == answer["optional_commands"]
+    assert obligations["recommended_confidence_checks"]["commands"] != answer["required_commands"]
+    assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
+    assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
+    assert obligations["compatibility"]["required_commands"] == "unchanged hard-gate field for existing callers"
     typecheck_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "planning_source_typecheck_ci_parity")
     assert typecheck_lane["matched_paths"] == ["packages/planning/src/repo_planning_bootstrap/installer.py"]
     typecheck_step = next(step for step in answer["validation_plan"]["required"] if step["command"] == "make typecheck-planning")

@@ -55,6 +55,13 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.generated_cli_freshness.refresh_command` | string | no |  | Command to refresh generated CLI outputs when the freshness check reports staleness. |  |  |
 | `proof.generated_cli_freshness.validation_command` | string | no |  | Selected validation command that proves generated command package freshness. |  |  |
 | `proof.generated_cli_freshness.obligation` | string | no |  | Whether the named check is required or advisory. |  |  |
+| `proof.proof_obligations` | object | no |  | Structured proof contract separating required proof gates, recommended confidence checks, and agent-selected extra validation. |  |  |
+| `proof.proof_obligations.kind` | const `"agentic-workspace/proof-obligations/v1"` | no |  | Discriminator for the proof-obligations packet. |  |  |
+| `proof.proof_obligations.required_proof` | object | no |  | Required proof gate for completion claims. |  |  |
+| `proof.proof_obligations.recommended_confidence_checks` | object | no |  | Optional checks that may raise confidence but do not replace required proof. |  |  |
+| `proof.proof_obligations.agent_selected_extra_validation` | object | no |  | Validation the agent chooses when task risk or failures warrant more evidence. |  |  |
+| `proof.proof_obligations.completion_claim_rule` | string | no |  | Rule that blocks completion claims until required proof is satisfied. |  |  |
+| `proof.proof_obligations.compatibility` | object | no |  | Compatibility notes for existing proof command list consumers. |  |  |
 | `proof.validation_plan` | ref `#/$defs/validation_plan` | yes |  | Executable validation plan derived from selected lanes. |  |  |
 | `proof.validation_plan.kind` | const `"validation-plan/v1"` | yes |  | Discriminator for validation plan details. |  |  |
 | `proof.validation_plan.status` | string | yes |  | Whether validation is ready to inspect or run. |  |  |
