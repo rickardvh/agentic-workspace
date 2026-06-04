@@ -47,6 +47,40 @@ changed_paths = ["web/app.py"]
     assert payload["evidence_status"][0]["state"] == "satisfied"
 
 
+def test_verification_report_task_marker_match_reports_configured_protocol_authority(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Check privacy-sensitive behavior."
+applies_to_task_markers = ["privacy"]
+expected_evidence = ["privacy_reviewed"]
+review_owner = "privacy-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["README.md"],
+        task_text="Update privacy wording",
+    )
+
+    assert payload["status"] == "attention"
+    assert payload["active_protocols"][0]["id"] == "privacy_review"
+    assert payload["active_protocols"][0]["applies_because"] == ["task marker matched privacy"]
+    protocol_boundary = payload["active_protocols"][0]["authority_boundary"]
+    assert "configured verification protocol privacy_review" in protocol_boundary["observed_by_aw"]
+    assert "task marker matched privacy" in protocol_boundary["observed_by_aw"]
+    assert "whether the configured protocol is semantically relevant to the current work" in protocol_boundary["agent_owned_decisions"]
+    assert "does not classify user intent" in protocol_boundary["reporting_rule"]
+    assert "does not decide the user's semantic intent" in payload["authority_boundary"]["reporting_rule"]
+
+
 def test_verification_report_rejects_protocol_without_activation(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)

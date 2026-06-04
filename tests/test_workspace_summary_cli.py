@@ -166,9 +166,24 @@ candidates = [
         ),
     )
 
-    assert cli.main(["summary", "--target", str(tmp_path), "--task", "Can this lane be considered done?", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Can this lane be considered done?",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     closeout = payload["closeout_trust_inspection"]
     assert closeout["status"] == "required"
     assert closeout["trust"] == "lower-trust"

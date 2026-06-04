@@ -88,9 +88,9 @@ Cheap implementer context for a bounded changed-path scope.
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `intent_evidence` | object | yes |  | Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture. |  |  |
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
-| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts. |  |  |
-| `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths. |  |  |
-| `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue. |  |  |
+| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
+| `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |
+| `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification. |  |  |
 | `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
 | `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |
 | `objective_drift.status` | string | yes |  | Whether requested task terms appear missing from changed surfaces. |  |  |
@@ -99,9 +99,11 @@ Cheap implementer context for a bounded changed-path scope.
 | `objective_drift.acceptance_item_count` | integer | no |  | Number of inferred acceptance items that should be reconciled before closeout. |  |  |
 | `objective_drift.acceptance_closeout_rule` | string | no |  | Acceptance-specific closeout rule carried into objective-drift guidance. |  |  |
 | `objective_drift.missing_from_changed_surface` | array of string | yes |  | Requested terms that were not observed in changed files. |  |  |
+| `objective_drift.removed_or_retired_outcomes` | array of string | no |  | Reserved for explicit reconciliation evidence; AW does not infer removal or retirement from prompt keyword markers. |  |  |
 | `objective_drift.rule` | string | no |  | Closeout rule agents should apply when drift is suspected. |  |  |
 | `objective_drift.recommended_next_action` | string | no |  | Small next step for resolving or dismissing the drift signal. |  |  |
 | `objective_drift.heuristic` | string | no |  | Brief explanation of the comparison method. |  |  |
+| `objective_drift.agent_owned_decisions` | array of string | no |  | Semantic acceptance decisions AW must not infer from prompt keyword markers. |  |  |
 | `orientation` | object | yes |  | Minimum workspace orientation guidance for the implementer. |  |  |
 | `orientation.status` | string | yes |  | Whether the implementer context is based on changed paths or an unknown scope. |  |  |
 | `orientation.minimum_before_editing` | string | yes |  | Minimum orientation step an agent should complete before implementation. |  |  |
@@ -166,7 +168,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `durable_intent_promotion.kind` | const `"agentic-workspace/task-intent-promotion-guidance/v1"` | yes |  | Discriminator for durable task-intent promotion guidance. |  |  |
 | `durable_intent_promotion.status` | string | yes |  | Whether the task intent contains durable promotion signals. |  |  |
 | `durable_intent_promotion.reason` | string | no |  | Reason promotion guidance is not applicable, when absent. |  |  |
-| `durable_intent_promotion.matched_markers` | array of string | no |  | Heuristic durable-intent markers found in task text. |  |  |
+| `durable_intent_promotion.matched_markers` | array of string | no |  | Reserved for structural or configured evidence; AW does not infer durable intent from prompt keyword markers. |  |  |
 | `durable_intent_promotion.rule` | string | no |  | Promotion rule to apply before closeout. |  |  |
 | `durable_intent_promotion.route_options` | array of object | yes |  | Candidate durable surfaces for non-finishable task intent. |  |  |
 | `durable_intent_promotion.acceptance_item_count` | integer | no |  | Number of acceptance items considered for durable promotion. |  |  |

@@ -190,7 +190,7 @@
     },
     "routine_work_context": {
       "type": "object",
-      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue."
+      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification."
     },
     "reuse_pressure": {
       "type": "object",
@@ -222,11 +222,11 @@
     },
     "assurance_requirements": {
       "type": "object",
-      "description": "Repo-declared assurance requirements, active matches, and evidence status projection."
+      "description": "Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned."
     },
     "verification": {
       "type": "object",
-      "description": "Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection."
+      "description": "Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification."
     },
     "authority_hierarchy": {
       "type": "object",

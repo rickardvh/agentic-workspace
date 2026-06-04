@@ -169,17 +169,17 @@
     },
     "assurance_requirements": {
       "type": "object",
-      "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts.",
+      "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned.",
       "additionalProperties": true
     },
     "verification": {
       "type": "object",
-      "description": "Matched repo-native verification protocols and bounded evidence status for the task or changed paths.",
+      "description": "Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification.",
       "additionalProperties": true
     },
     "routine_work_context": {
       "type": "object",
-      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue.",
+      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification.",
       "additionalProperties": true
     },
     "objective_drift": {
@@ -511,6 +511,14 @@
           },
           "description": "Requested terms that were not observed in changed files."
         },
+        "removed_or_retired_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Requested outcome the agent explicitly reconciled as removed or retired."
+          },
+          "description": "Reserved for explicit reconciliation evidence; AW does not infer removal or retirement from prompt keyword markers."
+        },
         "rule": {
           "type": "string",
           "description": "Closeout rule agents should apply when drift is suspected."
@@ -522,6 +530,14 @@
         "heuristic": {
           "type": "string",
           "description": "Brief explanation of the comparison method."
+        },
+        "agent_owned_decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Objective-drift judgment the agent owns."
+          },
+          "description": "Semantic acceptance decisions AW must not infer from prompt keyword markers."
         }
       },
       "additionalProperties": false,
@@ -862,7 +878,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Heuristic durable-intent markers found in task text."
+          "description": "Reserved for structural or configured evidence; AW does not infer durable intent from prompt keyword markers."
         },
         "rule": {
           "type": "string",

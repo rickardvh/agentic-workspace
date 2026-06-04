@@ -1,0 +1,329 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Replace prompt keyword semantic routing with agent judgment",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Remove host-repo prompt keyword semantic routing from startup, durable-intent promotion, architecture-decision prompting, completion-status routing, vague-outcome/intent-discovery routing, and related tests; keep AW support as advisory contracts, structural facts, and selectable guidance owned by agent judgment.",
+    "hard_constraints": "Do not replace keyword tables with another automatic business/task classifier; keep Memory, Planning, Verification, proof/report, and closeout behavior repo-agnostic and quiet by default.",
+    "agent_may_decide": "How to preserve useful guidance through explicit selectors, structural path evidence, authority-boundary wording, schema docs, and tests.",
+    "escalate_when": "A required fix would add a new semantic classifier, broaden beyond the open issue lane, or leave a closure keyword unsupported.",
+    "next_action": "Create the PR after proof passes and the closure matrix maps #1309-#1313 to concrete evidence.",
+    "proof_expectations": [
+      "Focused startup, implement, report, summary, and guardrail tests pass.",
+      "make test-workspace, make lint-workspace, make maintainer-surfaces, and make schema-reference-docs pass.",
+      "Contract/tooling checks and structured file inventory pass."
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/github-1309-workspace-replace-prompt-keyword-semantic-routin.plan.json",
+      "Makefile",
+      "docs/reference/implementer-context.md",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "scripts/check/check_prompt_semantic_markers.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_report_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_summary_cli.py",
+      "tests/test_prompt_semantic_markers.py"
+    ],
+    "completion_criteria": [
+      "#1310: startup no longer routes config posture, prep-only handoff, completion/status, vague-outcome, intent-discovery, or stated-assumption behavior from prompt keyword tables.",
+      "#1311: durable-intent promotion no longer derives candidates from task-text markers; structural architecture path evidence remains advisory and agent-owned.",
+      "#1312: configured/learned route matching remains structural/configured and documents authority boundaries instead of AW-owned semantic classification.",
+      "#1313: lint guardrail fails on new hardcoded prompt semantic marker tables in guarded startup/routing functions."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "ready-for-pr"
+  },
+  "goal": [
+    "Replace prompt keyword semantic routing with agent-owned judgment supported by repo-agnostic AW facts, selectors, guidance, and guardrails."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Remove prompt keyword semantic routing and preserve useful AW support as advisory/selectable/structural evidence.",
+      "constraints": "No replacement semantic classifier; keep AW repo- and agent-agnostic.",
+      "latitude": "Use authority boundaries, explicit selectors, tests, docs, and lint guardrails.",
+      "escalation": "Escalate if closure requires automatic prompt semantics or broad new runtime concepts."
+    },
+    "execution": {
+      "milestone": "github-1309-workspace-replace-prompt-keyword-semantic-routin",
+      "status": "in-progress",
+      "next_step": "Create PR with closure matrix and passing proof.",
+      "proof": "Required proof set passed on 2026-06-04."
+    },
+    "scope": {
+      "touched": [
+        "workspace runtime startup/report/implement primitives",
+        "schema/reference docs",
+        "startup/implement/report/summary tests",
+        "prompt semantic marker lint guardrail"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "AW should support agent judgment and learned repo knowledge instead of making host-repo assumptions from prompt text.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Startup, closeout, durable-intent, and architecture-decision guidance can remain useful without AW owning prompt semantic classification.",
+    "intentionally deferred": "none",
+    "discovered implications": "Useful advisory packets must be explicitly selectable after automatic applicability is removed; objective-drift removal/retirement also needs to stay agent-owned.",
+    "proof achieved now": "passed",
+    "validation still needed": "none for this lane before PR",
+    "next likely slice": "review PR feedback"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the lane and create a PR.",
+    "inferred intended outcome": "Close #1309 and child issues #1310-#1313 by removing prompt keyword semantic routing and adding guardrails/proof.",
+    "chosen concrete what": "Remove keyword tables from guarded startup/routing surfaces, hydrate explicit advisory selectors, update tests/docs/schema, and add a lint guardrail.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace runtime primitives, schema/reference docs, relevant tests, Makefile lint target, prompt-marker guardrail script, and this execplan.",
+    "max changed files": "about 12 files",
+    "required validation commands": "AW summary/doctor, focused tests, make test-workspace, make lint-workspace, make maintainer-surfaces, make schema-reference-docs, contract/tooling checks, structured inventory, and scoped ruff.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Scope is tightly coupled across startup routing, selected advisory packets, tests, generated-schema wording, and the lint guardrail; local implementation preserves context and proof ownership.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "7242779c3a6bca76",
+    "recorded at": "2026-06-04T20:15:58+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1309-workspace-replace-prompt-keyword-semantic-routin",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Create the pull request with closure matrix and proof summary."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-1309-workspace-replace-prompt-keyword-semantic-routin.plan.json",
+    "Makefile",
+    "docs/reference/implementer-context.md",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "scripts/check/check_prompt_semantic_markers.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_report_cli.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    "tests/test_prompt_semantic_markers.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics tests/test_workspace_report_cli.py::test_report_closeout_trust_does_not_infer_architecture_decision_candidate_from_planning_text tests/test_workspace_summary_cli.py::test_workspace_summary_completion_task_surfaces_closeout_trust tests/test_workspace_start_preflight_cli.py tests/test_prompt_semantic_markers.py -q",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "make test-workspace",
+    "make lint-workspace",
+    "make maintainer-surfaces",
+    "make schema-reference-docs"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Default startup/preflight/summary/report behavior no longer infers semantic routes from prompt keywords.",
+    "Explicit selectors still expose advisory intent/vague-outcome/closeout guidance with authority boundaries.",
+    "Durable-intent promotion and architecture-decision candidates no longer use task-text marker tables.",
+    "Generated schema docs describe matched_markers as reserved for structural/configured evidence.",
+    "Lint catches new hardcoded prompt semantic marker tables in guarded functions."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Removed prompt keyword semantic routing from startup/closeout/durable-intent/architecture-decision guidance, added explicit selector hydration and authority boundaries, updated schema docs/tests, and added a lint guardrail.",
+    "scope touched": "workspace runtime, schema/reference docs, startup/implement/report/summary tests, guardrail script, Makefile, and planning state.",
+    "changed surfaces": "start/preflight/summary/report/implement payload behavior and lint validation.",
+    "validations run": "focused tests; make test-workspace; make lint-workspace; make maintainer-surfaces; make schema-reference-docs; AW summary/doctor; contract tooling; structured inventory; scoped ruff.",
+    "result for continuation": "ready for PR review.",
+    "next step": "Open PR and link closure matrix."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; explicit selectors preserve guidance without AW-owned prompt semantics",
+    "follow-on decision": "no follow-on required for the prompt-keyword-routing lane."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Scope is tightly coupled across startup routing, selected advisory packets, tests, generated-schema wording, and the lint guardrail; local implementation preserves context and proof ownership.",
+    "expected savings": "unknown",
+    "actual friction": "Useful guidance surfaces had to be made explicitly selectable after prompt applicability was removed.",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Focused tests, make test-workspace, make lint-workspace, make maintainer-surfaces, make schema-reference-docs, AW summary/doctor, contract tooling, structured inventory, and scoped ruff all passed on 2026-06-04."
+  },
+  "intent_satisfaction": {
+    "original intent": "Replace assumptions and clever hard-coded host-repo prompt rules with agent judgment supported by AW facts, guidance, and learning surfaces.",
+    "was original intent fully satisfied?": "yes for #1309 and children #1310-#1313",
+    "evidence of intent satisfaction": "Runtime prompt marker tables were removed from guarded startup/routing and objective-drift surfaces; advisory guidance is explicitly selectable; durable-intent and architecture-decision routing use structural/configured evidence; tests cover quiet defaults and selected guidance; lint blocks reintroduction of prompt semantic marker tables, including removal-intent classifiers.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "prompt keyword semantic routing removed from the scoped lane and replaced with agent-owned advisory/selectable guidance",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "closure evidence recorded in this execplan and PR body",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "PR review"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The PR demonstrates the scoped replacement across runtime behavior, selectable advisory packets, schema/reference wording, tests, and lint guardrails for #1309-#1313.",
+    "evidence carried forward": "PR closure matrix plus passing proof commands listed in validation_commands and proof_report.",
+    "reopen trigger": "Review finds a remaining prompt keyword semantic router in the scoped guarded surfaces, or the guardrail misses an equivalent marker table."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-04: Promoted from TODO direct-task shape into an execplan.",
+    "2026-06-04: Recorded delegation decision route=keep-local."
+  ]
+}

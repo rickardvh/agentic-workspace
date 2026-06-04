@@ -87,6 +87,7 @@ test: sync-all test-workspace test-memory test-planning test-verification
 
 lint-workspace:
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
+	@$(COMPACT_RUN) --label "prompt semantic markers" -- uv run python scripts/check/check_prompt_semantic_markers.py
 
 lint-memory:
 	@$(COMPACT_RUN) --label "memory lint" --cwd packages/memory -- uv run ruff check .
