@@ -1624,6 +1624,170 @@ def verify_payload() -> InstallResult:
     return result
 
 
+def _planning_residue_class_matrix() -> list[dict[str, str]]:
+    return [
+        {
+            "class": "active_planning_state",
+            "owner": "Planning state and active execplan",
+            "default_action": "keep-current",
+            "promotion_rule": "Promote only when a candidate becomes the next bounded execution slice.",
+            "deemphasis_rule": "Do not read archives or reviews before the active summary points there.",
+            "prune_rule": "Never prune active state as residue.",
+        },
+        {
+            "class": "archived_execplans",
+            "owner": "Planning archive",
+            "default_action": "keep-as-evidence",
+            "promotion_rule": "Promote durable lessons into Memory, docs, contracts, checks, or issues during closeout distillation.",
+            "deemphasis_rule": "Use archive records as proof/history only after current owners are checked.",
+            "prune_rule": "Shrink or discard only through command-owned archive/closeout cleanup after promotion evidence exists.",
+        },
+        {
+            "class": "planning_reviews",
+            "owner": "Planning reviews",
+            "default_action": "route-recent-or-relevant",
+            "promotion_rule": "Promote actionable findings to issues, Memory, docs, checks, contracts, or active planning.",
+            "deemphasis_rule": "Prefer the review routing index over filename-scanning the whole review corpus.",
+            "prune_rule": "Do not delete review records by hand; stale reviews should be superseded, linked, or explicitly dismissed.",
+        },
+        {
+            "class": "memory_notes",
+            "owner": "Memory",
+            "default_action": "promote-durable-learning",
+            "promotion_rule": "Use Memory for reusable non-canonical repo learning, not active task state.",
+            "deemphasis_rule": "Consult routed Memory notes only when task or changed paths justify them.",
+            "prune_rule": "Memory pruning belongs to Memory freshness/promotion workflows.",
+        },
+        {
+            "class": "issue_residue",
+            "owner": "GitHub or external issue tracker",
+            "default_action": "link-current-intent",
+            "promotion_rule": "Issue comments should own external product intent and cross-repo follow-ups.",
+            "deemphasis_rule": "Closed issue residue should not create current planning pressure unless reopened or linked by active state.",
+            "prune_rule": "Use external-intent reconciliation before removing closed issue residue from planning state.",
+        },
+        {
+            "class": "external_intent_evidence",
+            "owner": "Planning external-intent evidence",
+            "default_action": "keep-provider-agnostic-cache",
+            "promotion_rule": "Promote open external work into active or candidate planning only when it is selected for execution.",
+            "deemphasis_rule": "Use compact reconciliation counts before opening raw evidence.",
+            "prune_rule": "Use planning reconcile safe-prune for closed or resolved external work residue.",
+        },
+    ]
+
+
+def _archived_execplan_count(*, target_root: Path) -> int:
+    archive_dir = target_root / PLANNING_MANAGED_ROOT / "execplans" / "archive"
+    if not archive_dir.exists():
+        return 0
+    archived_md = sum(1 for path in archive_dir.glob("*.md") if path.is_file() and path.name not in {"README.md", "TEMPLATE.md"})
+    archived_json = sum(1 for path in archive_dir.glob("*.plan.json") if path.is_file())
+    return max(archived_md, archived_json)
+
+
+def _review_record_summary(*, target_root: Path, path: Path, tokens: list[str]) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-review/v1":
+        return None
+    text = json.dumps(payload, sort_keys=True).lower()
+    matched_tokens = [token for token in tokens if token in text][:8]
+    findings = payload.get("findings", [])
+    return {
+        "path": path.relative_to(target_root).as_posix(),
+        "title": str(payload.get("title", "")).strip(),
+        "date": str(payload.get("date", "")).strip(),
+        "classification": str(payload.get("classification", "")).strip(),
+        "finding_count": len(findings) if isinstance(findings, list) else 0,
+        "matched_tokens": matched_tokens,
+        "mtime": path.stat().st_mtime,
+    }
+
+
+def _planning_review_routing_index(
+    *,
+    target_root: Path,
+    task_text: str | None,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    reviews_dir = target_root / PLANNING_MANAGED_ROOT / "reviews"
+    tokens = _planning_summary_scope_tokens(task_text=task_text, changed_paths=changed_paths)
+    records: list[dict[str, Any]] = []
+    if reviews_dir.exists():
+        for path in sorted(reviews_dir.glob("*.review.json")):
+            record = _review_record_summary(target_root=target_root, path=path, tokens=tokens)
+            if record is not None:
+                records.append(record)
+    records.sort(key=lambda item: (str(item.get("date", "")), float(item.get("mtime", 0.0))), reverse=True)
+    relevant = [item for item in records if item.get("matched_tokens")]
+    recent = records[:5]
+
+    def public_item(item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: item[key]
+            for key in ("path", "title", "date", "classification", "finding_count", "matched_tokens")
+            if item.get(key) not in ("", [], {}, None)
+        }
+
+    read_first = [str(item["path"]) for item in (relevant[:5] if relevant else recent[:3])]
+    return {
+        "kind": "planning-review-routing-index/v1",
+        "status": "matches" if relevant else "recent-only" if recent else "none",
+        "review_count": len(records),
+        "match_token_count": len(tokens),
+        "read_first": read_first,
+        "do_not_bulk_read": True,
+        "selection_rule": (
+            "Read relevant review matches first; if none match, read only recent review summaries and use full review files only when needed."
+        ),
+        "recent_reviews": [public_item(item) for item in recent],
+        "relevant_reviews": [public_item(item) for item in relevant[:5]],
+        "detail_command": "agentic-planning summary --target . --verbose --format json",
+    }
+
+
+def _compact_residue_governance(payload: dict[str, Any]) -> dict[str, Any]:
+    review_routing = payload.get("review_routing", {}) if isinstance(payload.get("review_routing"), dict) else {}
+    return {
+        "kind": payload.get("kind", "planning-residue-governance/v1"),
+        "status": payload.get("status", "unknown"),
+        "review_count": payload.get("review_count", 0),
+        "archived_execplan_count": payload.get("archived_execplan_count", 0),
+        "matrix_class_count": len(payload.get("residue_class_matrix", [])) if isinstance(payload.get("residue_class_matrix"), list) else 0,
+        "review_routing": {
+            key: review_routing[key]
+            for key in ("status", "review_count", "read_first", "do_not_bulk_read", "selection_rule", "relevant_reviews", "recent_reviews")
+            if key in review_routing
+        },
+        "rule": payload.get("rule", ""),
+        "detail_command": payload.get("detail_command", "agentic-planning summary --target . --verbose --format json"),
+    }
+
+
+def _planning_residue_governance(
+    *,
+    target_root: Path,
+    archived_execplan_count: int,
+    task_text: str | None,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    review_routing = _planning_review_routing_index(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+    matrix = _planning_residue_class_matrix()
+    return {
+        "kind": "planning-residue-governance/v1",
+        "status": "present",
+        "residue_class_matrix": matrix,
+        "review_count": review_routing.get("review_count", 0),
+        "archived_execplan_count": archived_execplan_count,
+        "review_routing": review_routing,
+        "rule": "Residue is routed by current owner and future value; agents should not bulk-read historical reviews or archives unless compact routing points there.",
+        "detail_command": "agentic-planning summary --target . --verbose --format json",
+    }
+
+
 def planning_summary(
     *,
     target: str | Path | None = None,
@@ -1716,11 +1880,7 @@ def planning_summary(
                         "closure_check": _execplan_closure_check(path),
                     }
                 )
-        archive_dir = execplan_dir / "archive"
-        if archive_dir.exists():
-            archived_md = sum(1 for path in archive_dir.glob("*.md") if path.is_file() and path.name not in {"README.md", "TEMPLATE.md"})
-            archived_json = sum(1 for path in archive_dir.glob("*.plan.json") if path.is_file())
-            archived_execplans = max(archived_md, archived_json)
+        archived_execplans = _archived_execplan_count(target_root=target_root)
 
     state = _read_state_from_toml(target_root)
     warnings = _run_planning_checker(target_root)
@@ -1806,6 +1966,12 @@ def planning_summary(
         roadmap_lanes=roadmap_lanes,
     )
     finished_work_inspection_contract = _finished_work_inspection_contract(target_root=target_root)
+    residue_governance = _planning_residue_governance(
+        target_root=target_root,
+        archived_execplan_count=archived_execplans,
+        task_text=task_text,
+        changed_paths=changed_paths or [],
+    )
     work_maturity = _planning_work_maturity_projection(state=state, active_execplans=active_execplans)
     execution_readiness = _execution_readiness_payload(
         active_items=active_items,
@@ -1891,6 +2057,7 @@ def planning_summary(
             finished_work_inspection_contract,
             view_name="finished_work_inspection_contract",
         ),
+        "residue_governance": residue_governance,
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
         "system_intent": _system_intent_contract_payload(),
@@ -1935,6 +2102,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     closeout_distillation_contract = summary.get("closeout_distillation_contract", {})
     intent_validation_contract = summary.get("intent_validation_contract", {})
     finished_work_inspection_contract = summary.get("finished_work_inspection_contract", {})
+    residue_governance = summary.get("residue_governance", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     work_maturity = summary.get("work_maturity", {})
@@ -2053,6 +2221,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "closeout_distillation",
                 "intent_validation",
                 "finished_work_inspection",
+                "residue_governance",
                 "findings",
                 "next_action",
             ],
@@ -2121,6 +2290,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "closeout_distillation": closeout_distillation_contract,
         "intent_validation": intent_validation_contract,
         "finished_work_inspection": finished_work_inspection_contract,
+        "residue_governance": residue_governance,
         "findings": findings,
         "next_action": {
             "summary": next_action,
@@ -2134,6 +2304,7 @@ def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
     todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
     execplans = summary.get("execplans", {}) if isinstance(summary.get("execplans"), dict) else {}
     health_payload = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
+    residue_governance = summary.get("residue_governance", {}) if isinstance(summary.get("residue_governance"), dict) else {}
     warning_count = int(summary.get("warning_count", 0) or 0)
     health = "attention-needed" if warning_count else ("active" if todo.get("active_count") or execplans.get("active_count") else "healthy")
     next_summary = str(health_payload.get("recommended_next_action") or "No active planning work right now.")
@@ -2157,6 +2328,7 @@ def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_items": todo.get("active_items", []),
             "active_execplans": execplans.get("active_execplans", []),
         },
+        "residue_governance": residue_governance,
         "finding_count": warning_count,
         "findings": [],
         "next_action": {"summary": next_summary, "commands": []},
@@ -3306,6 +3478,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "closeout_distillation_contract",
             "intent_validation_contract",
             "finished_work_inspection_contract",
+            "residue_governance",
             "current_execution_pressure",
             "historical_audit_pressure",
             "system_intent",
@@ -3337,6 +3510,7 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
             "planning_surface_health",
             "execution_readiness",
             "current_execution_pressure",
+            "residue_governance",
             "decomposition",
             "detail_commands",
             "warnings",
@@ -3419,6 +3593,14 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
     else:
         readiness_status = "narrow-direct-ready"
         broad_work_allowed = False
+    residue_governance = _compact_residue_governance(
+        _planning_residue_governance(
+            target_root=target_root,
+            archived_execplan_count=_archived_execplan_count(target_root=target_root),
+            task_text=None,
+            changed_paths=[],
+        )
+    )
     return _drop_empty_compact_fields(
         {
             "kind": "planning-summary/v1",
@@ -3454,6 +3636,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "active_plan_required": bool(active_items or active_execplans),
             },
             "decomposition": {"status": "not-evaluated", "detail": "Use compact or full summary for decomposition detail."},
+            "residue_governance": residue_governance,
             "roadmap": {
                 "lane_count": len(roadmap_lanes),
                 "candidate_count": len(roadmap_candidates),
@@ -3471,6 +3654,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "planning_surface_health",
                 "execution_readiness",
                 "current_execution_pressure",
+                "residue_governance",
                 "roadmap",
             ],
             "warning_count": warning_count,
@@ -3729,6 +3913,7 @@ def _planning_summary_task_scoped_projection(
             if key in compact_summary.get("execution_readiness", {})
         },
         "planning_surface_health": compact_summary.get("planning_surface_health", {}),
+        "residue_governance": compact_summary.get("residue_governance", {}),
         "planning_record": compact_summary.get("planning_record", {}),
         "handoff_contract": compact_summary.get("handoff_contract", {}),
         "current_execution_pressure": compact_summary.get("current_execution_pressure", {}),
@@ -3764,6 +3949,9 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
     )
     decomposition = compact_summary.get("decomposition", {}) if isinstance(compact_summary.get("decomposition"), dict) else {}
     roadmap = compact_summary.get("roadmap", {}) if isinstance(compact_summary.get("roadmap"), dict) else {}
+    residue_governance = (
+        compact_summary.get("residue_governance", {}) if isinstance(compact_summary.get("residue_governance"), dict) else {}
+    )
     tiny: dict[str, Any] = {
         "kind": compact_summary.get("kind", "planning-summary/v1"),
         "profile": "tiny",
@@ -3805,6 +3993,11 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
             if key in decomposition
         },
         "roadmap": {key: roadmap[key] for key in ("lane_count", "candidate_count", "omitted_candidate_count") if key in roadmap},
+        "residue_governance": {
+            key: residue_governance[key]
+            for key in ("status", "review_count", "archived_execplan_count", "matrix_class_count", "review_routing", "rule")
+            if key in residue_governance
+        },
         "detail_commands": {
             "compact": "agentic-workspace summary --verbose --format json",
             "full": "agentic-workspace summary --verbose --format json",
@@ -3832,6 +4025,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     execution_readiness = dict(summary.get("execution_readiness", {}))
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
+    residue_governance = dict(summary.get("residue_governance", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
     intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
     if "historical_audit_references" in intent_validation_contract:
@@ -4021,6 +4215,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "collaboration_pressure": planning_surface_health.get("collaboration_pressure", {}),
             "warnings": planning_surface_health.get("warnings", []),
         },
+        "residue_governance": _compact_residue_governance(residue_governance),
         "projection_state": {
             "status": "idle" if idle_unavailable_reason else "active-or-needs-review",
             "reason": idle_unavailable_reason or "active planning projections may carry contract-specific reasons",

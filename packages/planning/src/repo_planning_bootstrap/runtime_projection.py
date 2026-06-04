@@ -255,6 +255,20 @@ def _print_summary(summary: dict) -> None:
         print(f"- Package-owned roots: {', '.join(ownership_review.get('package_owned_roots', []))}")
         print(f"- Repo-owned surfaces: {', '.join(ownership_review.get('repo_owned_surfaces', []))}")
         print(f"- Minimal repo hook: {ownership_review.get('minimal_repo_hook', '')}")
+    residue_governance = summary.get("residue_governance", {})
+    if isinstance(residue_governance, dict) and residue_governance.get("status"):
+        review_routing = residue_governance.get("review_routing", {})
+        review_routing = review_routing if isinstance(review_routing, dict) else {}
+        read_first = review_routing.get("read_first", [])
+        read_first_text = ", ".join(str(path) for path in read_first[:3]) if isinstance(read_first, list) else ""
+        print(
+            "Residue governance: "
+            f"{residue_governance.get('review_count', 0)} reviews / "
+            f"{residue_governance.get('archived_execplan_count', 0)} archived execplans / "
+            f"review routing {review_routing.get('status', 'unknown')}"
+        )
+        if read_first_text:
+            print(f"- Review read-first: {read_first_text}")
     hierarchy_contract = summary.get("hierarchy_contract", {})
     if hierarchy_contract.get("status") == "present":
         parent_lane = hierarchy_contract.get("parent_lane", {})
@@ -495,6 +509,16 @@ def _print_report(report: dict) -> None:
             "Ownership review: "
             f"{len(ownership_review.get('repo_owned_surfaces', []))} repo-owned / "
             f"{len(ownership_review.get('package_owned_roots', []))} package-owned roots"
+        )
+    residue_governance = report.get("residue_governance", {})
+    if isinstance(residue_governance, dict) and residue_governance.get("status"):
+        review_routing = residue_governance.get("review_routing", {})
+        review_routing = review_routing if isinstance(review_routing, dict) else {}
+        print(
+            "Residue governance: "
+            f"{residue_governance.get('review_count', 0)} reviews / "
+            f"{residue_governance.get('archived_execplan_count', 0)} archived execplans / "
+            f"review routing {review_routing.get('status', 'unknown')}"
         )
     active = report.get("active", {})
     if isinstance(active, dict):
