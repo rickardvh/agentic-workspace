@@ -643,6 +643,37 @@
           },
           "description": "Optional validation or orientation commands."
         },
+        "generated_cli_freshness": {
+          "type": "object",
+          "description": "Generated CLI freshness signal for changed paths that affect generated command packages.",
+          "properties": {
+            "kind": {
+              "const": "agentic-workspace/generated-cli-freshness/v1",
+              "description": "Discriminator for generated CLI freshness guidance."
+            },
+            "status": {
+              "type": "string",
+              "description": "Whether the freshness check is required or advisory for the current changed paths."
+            },
+            "freshness_check_command": {
+              "type": "string",
+              "description": "Check command that detects stale generated CLI outputs without regenerating them."
+            },
+            "refresh_command": {
+              "type": "string",
+              "description": "Command to refresh generated CLI outputs when the freshness check reports staleness."
+            },
+            "validation_command": {
+              "type": "string",
+              "description": "Selected validation command that proves generated command package freshness."
+            },
+            "obligation": {
+              "type": "string",
+              "description": "Whether the named check is required or advisory."
+            }
+          },
+          "additionalProperties": true
+        },
         "validation_plan": {
           "$ref": "#/$defs/validation_plan",
           "description": "Executable validation plan derived from selected lanes."
