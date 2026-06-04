@@ -50,7 +50,7 @@
   "steps": [
     {
       "id": "load_search",
-      "uses": "python.function.call",
+      "uses": "memory.search.load",
       "description": "Load Memory search results."
     },
     {
@@ -74,18 +74,14 @@
     "steps": [
       {
         "id": "load_search",
-        "uses": "python.function.call",
+        "uses": "memory.search.load",
         "description": "Load Memory search results.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.runtime_search",
-          "function": "search_memory",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "query": {
-              "value": "query"
-            }
+          "target": {
+            "value": "target"
+          },
+          "query": {
+            "value": "query"
           }
         },
         "outputs": [

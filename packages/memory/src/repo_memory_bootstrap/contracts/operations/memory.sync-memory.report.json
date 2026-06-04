@@ -55,7 +55,7 @@
   "steps": [
     {
       "id": "load_sync_suggestion",
-      "uses": "python.function.call",
+      "uses": "memory.sync_memory.load",
       "description": "Load the Memory synchronization suggestion."
     },
     {
@@ -79,21 +79,17 @@
     "steps": [
       {
         "id": "load_sync_suggestion",
-        "uses": "python.function.call",
+        "uses": "memory.sync_memory.load",
         "description": "Load the Memory synchronization suggestion.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "sync_memory",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "files": {
-              "value": "files"
-            },
-            "notes": {
-              "value": "notes"
-            }
+          "target": {
+            "value": "target"
+          },
+          "files": {
+            "value": "files"
+          },
+          "notes": {
+            "value": "notes"
           }
         },
         "outputs": [

@@ -60,7 +60,7 @@
   "steps": [
     {
       "id": "apply_lifecycle",
-      "uses": "python.function.call",
+      "uses": "planning.uninstall.apply",
       "description": "Remove managed planning bootstrap files when they still match package content."
     },
     {
@@ -84,18 +84,14 @@
     "steps": [
       {
         "id": "apply_lifecycle",
-        "uses": "python.function.call",
+        "uses": "planning.uninstall.apply",
         "description": "Remove managed planning bootstrap files when they still match package content.",
         "arguments": {
-          "import_module": "repo_planning_bootstrap.installer",
-          "function": "uninstall_bootstrap",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            }
+          "target": {
+            "value": "target"
+          },
+          "dry_run": {
+            "value": "dry_run"
           }
         },
         "outputs": [

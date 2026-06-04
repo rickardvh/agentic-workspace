@@ -253,9 +253,109 @@ COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS = (
     "verification.",
 )
 DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
+    "memory.adopt.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "adopt_bootstrap",
+    },
+    "memory.bootstrap.cleanup": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "cleanup_bootstrap_workspace",
+    },
+    "memory.capture_note.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "suggest_memory_note_capture",
+    },
+    "memory.init.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "install_bootstrap",
+    },
+    "memory.install.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "install_bootstrap",
+    },
+    "memory.migrate_layout.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "migrate_layout",
+    },
+    "memory.note.create": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "create_memory_note",
+    },
     "memory.promotion_report.load": {
         "import_module": "repo_memory_bootstrap.installer",
         "function": "promotion_report",
+    },
+    "memory.route.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "route_memory",
+    },
+    "memory.route_review.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "review_routes",
+    },
+    "memory.search.load": {
+        "import_module": "repo_memory_bootstrap.runtime_search",
+        "function": "search_memory",
+    },
+    "memory.sync_memory.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "sync_memory",
+    },
+    "memory.uninstall.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "uninstall_bootstrap",
+    },
+    "memory.upgrade.apply": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "upgrade_bootstrap",
+    },
+    "planning.adopt.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "adopt_bootstrap",
+    },
+    "planning.bootstrap.doctor.load": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "doctor_bootstrap",
+    },
+    "planning.bootstrap.status.load": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "collect_status",
+    },
+    "planning.close-item.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "close_planning_item",
+    },
+    "planning.create-review.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "create_review_record",
+    },
+    "planning.handoff.load": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "planning_handoff",
+    },
+    "planning.init.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "install_bootstrap",
+    },
+    "planning.install.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "install_bootstrap",
+    },
+    "planning.uninstall.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "uninstall_bootstrap",
+    },
+    "planning.upgrade.apply": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "upgrade_bootstrap",
+    },
+    "planning.verify-payload.load": {
+        "import_module": "repo_planning_bootstrap.installer",
+        "function": "verify_payload",
+    },
+    "verification.report.load": {
+        "import_module": "repo_verification_bootstrap.runtime_primitives",
+        "function": "verification_report_payload",
     }
 }
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
@@ -1116,15 +1216,40 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "output.fields.select",
     "workspace.config.emit",
     "python.function.call",
+    "planning.adopt.apply",
+    "planning.bootstrap.doctor.load",
+    "planning.bootstrap.status.load",
+    "planning.close-item.apply",
     "planning.closeout.apply",
+    "planning.create-review.apply",
+    "planning.handoff.load",
+    "planning.init.apply",
+    "planning.install.apply",
     "planning.reconcile.load",
     "planning.summary.load",
     "planning.report.load",
+    "planning.uninstall.apply",
+    "planning.upgrade.apply",
+    "planning.verify-payload.load",
+    "memory.adopt.apply",
+    "memory.bootstrap.cleanup",
+    "memory.capture_note.load",
+    "memory.init.apply",
+    "memory.install.apply",
+    "memory.migrate_layout.apply",
+    "memory.note.create",
     "memory.report.load",
+    "memory.route.load",
     "memory.route_report.load",
+    "memory.route_review.load",
+    "memory.search.load",
     "memory.bootstrap.doctor.load",
+    "memory.sync_memory.load",
+    "memory.uninstall.apply",
+    "memory.upgrade.apply",
     "memory.current.load",
     "memory.promotion_report.load",
+    "verification.report.load",
     "memory.prompt.render",
     "planning.prompt.render",
     "prompt.render",
@@ -2621,6 +2746,22 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("generated memory promotion-report operation is missing")
     if "_handle_memory_promotion_report_load" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must render the declared memory.promotion_report.load host-domain handler")
+    verification_operation = REPO_ROOT / "generated" / "verification" / "python" / "operations" / "verification.report.report.json"
+    verification_operation_executor = REPO_ROOT / "generated" / "verification" / "python" / "primitives" / "operation_executor.py"
+    if verification_operation.is_file():
+        verification_text = verification_operation.read_text(encoding="utf-8")
+        if '"uses": "verification.report.load"' not in verification_text:
+            errors.append("generated verification report operation must execute through declared verification.report.load")
+        if '"uses": "python.function.call"' in verification_text:
+            errors.append("generated verification report operation must not expose python.function.call in operation IR")
+    else:
+        errors.append("generated verification report operation is missing")
+    if verification_operation_executor.is_file():
+        verification_executor_text = verification_operation_executor.read_text(encoding="utf-8")
+        if "_handle_verification_report_load" not in verification_executor_text:
+            errors.append("verification operation IR executor must render the declared verification.report.load host-domain handler")
+    else:
+        errors.append("generated verification operation IR executor is missing")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (
@@ -2839,6 +2980,37 @@ def _validate_generated_python_commands_absent_from_handwritten_parsers() -> lis
                         f"{runtime_module_name} handwritten parser still accepts generated command {command_name!r}; "
                         "generated command package metadata must own parser shape"
                     )
+    return errors
+
+
+def _validate_no_shared_python_function_call_operation_ir() -> list[str]:
+    errors: list[str] = []
+    operation_roots = (
+        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
+        REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts" / "operations",
+        REPO_ROOT / "generated" / "planning" / "python" / "operations",
+        REPO_ROOT / "generated" / "planning" / "typescript" / "resources" / "operations",
+        REPO_ROOT / "generated" / "memory" / "python" / "operations",
+        REPO_ROOT / "generated" / "memory" / "typescript" / "resources" / "operations",
+        REPO_ROOT / "generated" / "verification" / "python" / "operations",
+        REPO_ROOT / "generated" / "verification" / "typescript" / "resources" / "operations",
+        REPO_ROOT / "generated" / "planning" / "typescript" / "resources" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "memory" / "python" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "memory" / "typescript" / "resources" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "verification" / "python" / "_contracts" / "operations",
+        REPO_ROOT / "generated" / "verification" / "typescript" / "resources" / "_contracts" / "operations",
+    )
+    for operation_root in operation_roots:
+        if not operation_root.is_dir():
+            continue
+        for path in sorted(operation_root.glob("*.json")):
+            text = path.read_text(encoding="utf-8")
+            if '"uses": "python.function.call"' in text:
+                errors.append(
+                    f"{path.relative_to(REPO_ROOT).as_posix()} exposes python.function.call in shared operation IR; "
+                    "use a named package-domain primitive plus target runtime binding instead"
+                )
     return errors
 
 
@@ -3690,6 +3862,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_portable_resource_python_command_projection())
         errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
+        errors.extend(_validate_no_shared_python_function_call_operation_ir())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [
             "src/agentic_workspace/generated_cli_package.py",

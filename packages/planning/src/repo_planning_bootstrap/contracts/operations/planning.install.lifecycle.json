@@ -75,7 +75,7 @@
   "steps": [
     {
       "id": "apply_lifecycle",
-      "uses": "python.function.call",
+      "uses": "planning.install.apply",
       "description": "Install planning bootstrap files into a repository."
     },
     {
@@ -99,27 +99,23 @@
     "steps": [
       {
         "id": "apply_lifecycle",
-        "uses": "python.function.call",
+        "uses": "planning.install.apply",
         "description": "Install planning bootstrap files into a repository.",
         "arguments": {
-          "import_module": "repo_planning_bootstrap.installer",
-          "function": "install_bootstrap",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "force": {
-              "value": "force"
-            },
-            "local_only": {
-              "value": "local"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            }
+          "target": {
+            "value": "target"
+          },
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "force": {
+            "value": "force"
+          },
+          "local_only": {
+            "value": "local"
+          },
+          "include_optional": {
+            "value": "include_optional"
           }
         },
         "outputs": [

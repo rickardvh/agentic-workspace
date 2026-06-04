@@ -882,7 +882,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.install.apply",
           "output.emit.install-result"
         ]
       },
@@ -959,7 +959,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.init.apply",
           "output.emit.install-result"
         ]
       },
@@ -1036,7 +1036,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.adopt.apply",
           "output.emit.install-result"
         ]
       },
@@ -1111,7 +1111,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.upgrade.apply",
           "output.emit"
         ]
       },
@@ -1186,7 +1186,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.migrate_layout.apply",
           "output.emit"
         ]
       },
@@ -1261,7 +1261,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.uninstall.apply",
           "output.emit"
         ]
       },
@@ -1336,7 +1336,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.bootstrap.cleanup",
           "output.emit"
         ]
       },
@@ -1411,7 +1411,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.capture_note.load",
           "output.emit"
         ]
       },
@@ -1484,7 +1484,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.note.create",
           "output.emit"
         ]
       },
@@ -2182,7 +2182,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.route.load",
           "output.emit"
         ]
       },
@@ -2255,7 +2255,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.route_review.load",
           "output.emit"
         ]
       },
@@ -2328,7 +2328,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.search.load",
           "output.emit"
         ]
       },
@@ -2474,7 +2474,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.sync_memory.load",
           "output.emit"
         ]
       },
@@ -2780,7 +2780,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.adopt.apply",
           "output.emit"
         ]
       },
@@ -3013,7 +3013,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.close-item.apply",
           "output.emit"
         ]
       },
@@ -3086,7 +3086,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.create-review.apply",
           "output.emit"
         ]
       },
@@ -3237,7 +3237,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.doctor.load",
           "output.emit"
         ]
       },
@@ -3395,7 +3395,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.handoff.load",
           "output.emit"
         ]
       },
@@ -3467,7 +3467,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.init.apply",
           "output.emit"
         ]
       },
@@ -3544,7 +3544,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.install.apply",
           "output.emit"
         ]
       },
@@ -4161,7 +4161,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.status.load",
           "output.emit"
         ]
       },
@@ -4309,7 +4309,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.uninstall.apply",
           "output.emit"
         ]
       },
@@ -4386,7 +4386,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.upgrade.apply",
           "output.emit"
         ]
       },
@@ -4463,7 +4463,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.verify-payload.load",
           "output.emit"
         ]
       },
@@ -5609,7 +5609,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "python.function.call",
+          "verification.report.load",
           "output.emit"
         ]
       },

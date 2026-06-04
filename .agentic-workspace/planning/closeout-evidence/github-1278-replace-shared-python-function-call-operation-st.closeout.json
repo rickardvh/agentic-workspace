@@ -1,0 +1,105 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 1278 first primitive migration slice",
+  "plan_id": "github-1278-replace-shared-python-function-call-operation-st",
+  "created_at": "2026-06-04T13:10:18.211919+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1278-replace-shared-python-function-call-operation-st.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1278-replace-shared-python-function-call-operation-st.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1278-replace-shared-python-function-call-operation-st",
+    "status": "completed",
+    "scope": "Migrate verification.report.report to verification.report.load and fix archived closeout residue detection.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Replace verification.report.report shared operation IR usage of python.function.call with verification.report.load, and fix the archived closeout residue gate regression discovered during validation.",
+    "hard constraints": "Keep scope bounded to the verification report command, generated freshness, and the planning gate regression.",
+    "agent may decide locally": "Exact contract wording, generated refresh mechanics, guardrail checks, and proof commands.",
+    "escalate when": "A correct fix requires broader command-family migration, external generator changes, or closing #1278 entirely."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Migrated verification.report.report from shared python.function.call operation IR to verification.report.load, refreshed generated command packages, and fixed archived closeout residue gating for command-owned completed records and routed continuations.",
+    "scope touched": "verification report operation contract, primitive registry/schema, command package IR, adapter snapshot, TypeScript runtime support, generated package outputs, runtime inventories, generated package check, planning gate runtime, and focused tests.",
+    "changed surfaces": "packages/verification, src/agentic_workspace/contracts, src/agentic_workspace/workspace_runtime_primitives.py, scripts/check/check_generated_command_packages.py, generated command package outputs, tests, and Planning closeout records.",
+    "validations run": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check",
+    "result for continuation": "continue from GitHub #1278 remains open for Planning and Memory command-family migrations",
+    "next step": "promote the next bounded slice from GitHub #1278 remains open for Planning and Memory command-family migrations"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected: verification.report.report was migrated; Planning and Memory python.function.call operation migrations remain deferred to GitHub #1278. Dogfooding found and fixed archive residue gate gaps needed for honest partial closeout.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "GitHub #1278 remains open for Planning and Memory command-family migrations"
+  },
+  "proof_report": {
+    "validation proof": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check"
+  },
+  "intent_satisfaction": {
+    "original intent": "Open upstream issue from refreshed external intent evidence; priority P2 inferred from inferred-planning.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check",
+    "unsolved intent passed to": "GitHub #1278 remains open for Planning and Memory command-family migrations"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check",
+    "reopen trigger": "Reopen when GitHub #1278 remains open for Planning and Memory command-family migrations activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1278 remains open for Planning and Memory command-family migrations.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1278 remains open for Planning and Memory command-family migrations rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1278 remains open for Planning and Memory command-family migrations",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "verification.report.report now uses verification.report.load in shared/generated operation IR; generated Python binds it through a verification runtime facade; TypeScript handles the named primitive directly; completed partial archives with routed continuation no longer reopen planning ownership.",
+    "validation confirmed": "generate_command_packages; check_generated_command_packages; focused pytest for generated proof runner and archive residue gates; check_contract_tooling_surfaces; check_structured_file_inventory; ruff; make test-workspace; make lint-workspace; make planning-surfaces; make schema-reference-docs; summary; doctor; defaults root_cli_authority; git diff --check",
+    "follow-on routed to": "GitHub #1278 remains open for Planning and Memory command-family migrations",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "GitHub #1278 remains open for Planning and Memory command-family migrations",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub #1278 remains open for Planning and Memory command-family migrations",
+          "owner": "GitHub #1278 remains open for Planning and Memory command-family migrations",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

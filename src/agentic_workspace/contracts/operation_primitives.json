@@ -994,6 +994,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; retained as a named Memory domain boundary for host runtimes. Python generated operation IR now declares memory.promotion_report.load directly, and the host primitive registry records the checked-in package binding metadata instead of exposing python.function.call in the operation contract."
     },
     {
+      "id": "verification.report.load",
+      "summary": "Load the Verification package report projection from package-owned protocol and evidence policy.",
+      "kind": "verification-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "verification package runtime boundary",
+      "tier_reason": "Verification report semantics classify repo-specific protocol activation, bounded evidence, stale conditions, and known gaps rather than portable target-executor behavior.",
+      "conformance_ref": "verification.report.process",
+      "migration_path": "Extract deterministic manifest parsing, activation matching, evidence freshness classification, and output projection into schema-backed Tier 1 primitives only after Verification policy is modeled as stable data.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; retained as a named Verification domain boundary for host runtimes. Generated operation IR declares verification.report.load directly, and target bindings provide Python or TypeScript behavior without exposing python.function.call in the shared operation contract."
+    },
+    {
       "id": "python.function.call",
       "summary": "Call a checked-in Python runtime function declared by operation IR.",
       "kind": "external-runtime",

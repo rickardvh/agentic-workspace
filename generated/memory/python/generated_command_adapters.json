@@ -24,7 +24,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.adopt.apply",
           "output.emit.install-result"
         ]
       },
@@ -56,7 +56,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.bootstrap.cleanup",
           "output.emit"
         ]
       },
@@ -88,7 +88,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.capture_note.load",
           "output.emit"
         ]
       },
@@ -120,7 +120,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.note.create",
           "output.emit"
         ]
       },
@@ -224,7 +224,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.init.apply",
           "output.emit.install-result"
         ]
       },
@@ -258,7 +258,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.lifecycle-plan",
-          "python.function.call",
+          "memory.install.apply",
           "output.emit.install-result"
         ]
       },
@@ -358,7 +358,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.migrate_layout.apply",
           "output.emit"
         ]
       },
@@ -489,7 +489,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.route.load",
           "output.emit"
         ]
       },
@@ -557,7 +557,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.route_review.load",
           "output.emit"
         ]
       },
@@ -589,7 +589,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.search.load",
           "output.emit"
         ]
       },
@@ -654,7 +654,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.sync_memory.load",
           "output.emit"
         ]
       },
@@ -686,7 +686,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.uninstall.apply",
           "output.emit"
         ]
       },
@@ -718,7 +718,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.upgrade.apply",
           "output.emit"
         ]
       },

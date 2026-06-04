@@ -20596,21 +20596,52 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     closure_check = _as_dict(record.get("closure_check"))
     intent_satisfaction = _as_dict(record.get("intent_satisfaction"))
     canonical_core = _as_dict(record.get("canonical_core"))
-    status = str(record.get("status") or canonical_core.get("status") or "").strip().lower()
+    required_continuation = _as_dict(record.get("required_continuation"))
+    durable_residue = _as_dict(record.get("durable_residue"))
+    execution_summary = _as_dict(record.get("execution_summary"))
+    machine_contract = _as_dict(record.get("machine_readable_contract"))
+    machine_execution = _as_dict(machine_contract.get("execution"))
+    active_milestone = _as_dict(record.get("active_milestone"))
+    execution_run = _as_dict(record.get("execution_run"))
+    status = (
+        str(
+            record.get("status")
+            or canonical_core.get("status")
+            or machine_execution.get("status")
+            or active_milestone.get("status")
+            or execution_run.get("run status")
+            or execution_run.get("run_status")
+            or closure_check.get("slice status")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     closure_decision = str(closure_check.get("closure decision") or canonical_core.get("closeout_decision") or "").strip().lower()
     larger_intent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
     intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower()
     completed = status in {"completed", "complete", "closed", "done"}
     closed = closure_decision == "archive-and-close"
+    continuation_routed = closure_decision == "archive-but-keep-lane-open" and any(
+        value not in {"", "none", "no", "false", "n/a", "na"}
+        for value in [
+            str(canonical_core.get("continuation_owner") or "").strip().lower(),
+            str(required_continuation.get("owner surface") or "").strip().lower(),
+            str(durable_residue.get("canonical owner now") or "").strip().lower(),
+            str(execution_summary.get("follow-on routed to") or "").strip().lower(),
+            str(execution_summary.get("resume from") or "").strip().lower(),
+        ]
+    )
     no_open_larger_intent = larger_intent_status in {"", "satisfied", "complete", "completed", "closed", "done"}
-    intent_done = intent_satisfied in {"", "yes", "true", "satisfied", "complete", "completed"}
-    eligible = completed and closed and no_open_larger_intent and intent_done
+    slice_scope = str(closure_check.get("closeout scope") or "").strip().lower() == "slice"
+    intent_done = intent_satisfied in {"", "yes", "true", "satisfied", "complete", "completed"} or (slice_scope and continuation_routed)
+    eligible = completed and intent_done and ((closed and no_open_larger_intent) or continuation_routed)
     blockers = [
         label
         for label, applies in [
             ("record status is not completed", not completed),
-            ("closure decision is not archive-and-close", not closed),
-            ("larger intent remains open", not no_open_larger_intent),
+            ("closure decision is not archive-and-close or routed continuation", not (closed or continuation_routed)),
+            ("larger intent remains open without routed continuation", not no_open_larger_intent and not continuation_routed),
             ("intent satisfaction is incomplete", not intent_done),
         ]
         if applies
@@ -20631,18 +20662,24 @@ def _allow_completed_archive_publication_residue(path_classification: dict[str, 
     if not planning_paths:
         return path_classification
     archive_prefix = ".agentic-workspace/planning/execplans/archive/"
+    closeout_prefix = ".agentic-workspace/planning/closeout-evidence/"
+    planning_state_path = ".agentic-workspace/planning/state.toml"
     archive_paths = [path for path in planning_paths if path.startswith(archive_prefix) and path.endswith(".plan.json")]
-    if archive_paths != planning_paths:
+    closeout_paths = [path for path in planning_paths if path.startswith(closeout_prefix) and path.endswith(".closeout.json")]
+    planning_state_paths = [path for path in planning_paths if path == planning_state_path]
+    publication_paths = [*archive_paths, *closeout_paths]
+    allowed_paths = [*publication_paths, *planning_state_paths]
+    if sorted(allowed_paths) != sorted(planning_paths) or not publication_paths:
         return path_classification
-    archive_states = [_archive_record_closeout_state(target_root=target_root, relative_path=path) for path in archive_paths]
+    archive_states = [_archive_record_closeout_state(target_root=target_root, relative_path=path) for path in publication_paths]
     if not archive_states or not all(bool(item.get("eligible")) for item in archive_states):
         return {
             **path_classification,
             "archived_planning_residue": {
                 "status": "incomplete-or-stale",
-                "paths": archive_paths,
+                "paths": publication_paths,
                 "records": archive_states,
-                "rule": "Archived planning paths only become publication residue when every changed archive record is completed and closed.",
+                "rule": "Planning closeout paths only become publication residue when every changed closeout record is completed and closed or has routed continuation.",
             },
         }
     implementation_paths = [str(path) for path in path_classification.get("implementation_paths", []) if isinstance(path, str) and path]
@@ -20650,15 +20687,15 @@ def _allow_completed_archive_publication_residue(path_classification: dict[str, 
         **path_classification,
         "dirty_shape": "implementation-with-archived-planning-residue" if implementation_paths else "archived-planning-residue-only",
         "planning_paths": [],
-        "archived_planning_residue_paths": archive_paths,
-        "ancillary_paths": [*path_classification.get("ancillary_paths", []), *archive_paths],
+        "archived_planning_residue_paths": publication_paths,
+        "ancillary_paths": [*path_classification.get("ancillary_paths", []), *allowed_paths],
         "ancillary_rule": (
-            "Completed archived execplan records may accompany publication or final changed-path checks without reopening "
-            "active Planning ownership."
+            "Completed archived execplan records, closeout evidence, and their state cleanup may accompany publication or "
+            "final changed-path checks without reopening active Planning ownership."
         ),
         "archived_planning_residue": {
             "status": "completed-closeout-residue",
-            "paths": archive_paths,
+            "paths": publication_paths,
             "records": archive_states,
             "rule": (
                 "Archived closeout evidence can explain completed work or publication residue, but it does not restore active "
@@ -21281,6 +21318,10 @@ def _planning_safety_gate_payload(
         planning_revision=planning_revision,
         cli_invoke=config.cli_invoke,
     )
+    closeout_publication_residue = (
+        path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
+        and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
+    )
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
         decision = "delegation-decision-required"
@@ -21317,7 +21358,7 @@ def _planning_safety_gate_payload(
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
-    elif (not active_planning_present) and candidate_pressure.get("status") == "promotion-required":
+    elif (not active_planning_present) and candidate_pressure.get("status") == "promotion-required" and not closeout_publication_residue:
         status = "blocked"
         decision = "candidate-lane-promotion-required"
         reason = "Checked-in Planning candidates indicate broad or lane-shaped work; promote or decompose a bounded lane first."

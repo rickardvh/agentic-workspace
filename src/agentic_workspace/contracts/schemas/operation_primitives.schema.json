@@ -274,6 +274,7 @@
               "workspace-runtime",
               "planning-runtime",
               "memory-runtime",
+              "verification-runtime",
               "external-runtime",
               "usage-control"
             ],

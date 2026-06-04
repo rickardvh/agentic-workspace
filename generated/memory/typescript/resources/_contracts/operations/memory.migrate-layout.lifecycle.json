@@ -56,7 +56,7 @@
   "steps": [
     {
       "id": "apply_memory_lifecycle",
-      "uses": "python.function.call",
+      "uses": "memory.migrate_layout.apply",
       "description": "Move legacy Memory bootstrap layout files into the current layout."
     },
     {
@@ -80,18 +80,14 @@
     "steps": [
       {
         "id": "apply_memory_lifecycle",
-        "uses": "python.function.call",
+        "uses": "memory.migrate_layout.apply",
         "description": "Move legacy Memory bootstrap layout files into the current layout.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "migrate_layout",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            }
+          "target": {
+            "value": "target"
+          },
+          "dry_run": {
+            "value": "dry_run"
           }
         },
         "outputs": [

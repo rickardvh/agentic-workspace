@@ -64,30 +64,26 @@
     "steps": [
       {
         "arguments": {
-          "function": "suggest_memory_note_capture",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "existing_note": {
-              "value": "existing_note"
-            },
-            "files": {
-              "value": "files"
-            },
-            "force_new_reason": {
-              "value": "force_new_reason"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "summary": {
-              "value": "summary"
-            },
-            "surfaces": {
-              "value": "surface"
-            },
-            "target": {
-              "value": "target"
-            }
+          "existing_note": {
+            "value": "existing_note"
+          },
+          "files": {
+            "value": "files"
+          },
+          "force_new_reason": {
+            "value": "force_new_reason"
+          },
+          "slug": {
+            "value": "slug"
+          },
+          "summary": {
+            "value": "summary"
+          },
+          "surfaces": {
+            "value": "surface"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the Memory capture recommendation.",
@@ -96,7 +92,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.capture_note.load"
       },
       {
         "arguments": {},
@@ -135,7 +131,7 @@
     {
       "description": "Load the Memory capture recommendation.",
       "id": "load_capture_recommendation",
-      "uses": "python.function.call"
+      "uses": "memory.capture_note.load"
     },
     {
       "description": "Emit Memory capture recommendation output in the requested format.",

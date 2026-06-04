@@ -5,7 +5,8 @@
   "classification": "command-generation-boundary-audit",
   "goal": [
     "Re-audit remaining python.function.call usage after AW switched to the external command-generation dependency.",
-    "Classify whether remaining uses are AW host/runtime compatibility, named-domain-primitive candidates, or generator-side concerns."
+    "Classify whether remaining uses are AW host/runtime compatibility, named-domain-primitive candidates, or generator-side concerns.",
+    "Make explicit that TypeScript targets do not execute Python here; the concern is shared operation IR naming Python callable metadata that non-Python targets must shim."
   ],
   "scope": [
     "src/agentic_workspace/contracts/command_package_ir.json",
@@ -33,11 +34,11 @@
       "python_runtime_projection_inventory_python_function_call_count": 1,
       "python_operation_execution_inventory_python_function_call_count": 2
     },
-    "generated_projection_note": "Generated Python and TypeScript outputs repeat the canonical package operation contracts; they are evidence of projection spread, not additional source-of-truth owners."
+    "generated_projection_note": "Generated Python and TypeScript outputs repeat the canonical package operation contracts; they are evidence of projection spread, not additional source-of-truth owners. TypeScript runtime support handles python.function.call as compatibility metadata; it does not literally call Python."
   },
   "summary": {
-    "current_state": "Remaining python.function.call usage is concentrated in Planning, Memory, and Verification package-domain runtime bridges plus target compatibility support.",
-    "implementation_posture": "Do not move these into command-generation without a smaller deterministic primitive or view-spec design.",
+    "current_state": "Remaining python.function.call usage is concentrated in Planning, Memory, and Verification package-domain runtime bridges plus target compatibility support. The naming leaks Python callable identity into shared operation IR, forcing non-Python targets to inspect import_module/function metadata even when they provide native behavior.",
+    "implementation_posture": "Do not move these into command-generation. Replace shared python.function.call steps with named domain primitives one bounded command family at a time, while keeping Python callable resolution as target binding metadata where needed.",
     "inventory": {
       "planning_bootstrap": {
         "count": 11,
@@ -87,7 +88,7 @@
       },
       "runtime_support": {
         "classification": "target-compatibility-shim",
-        "reason": "Generated Python primitive executors and TypeScript runtime support know how to handle or reject python.function.call because canonical operation contracts still reference it. This belongs to AW target support while those package-domain contracts remain."
+        "reason": "Generated Python primitive executors resolve checked-in Python callables. TypeScript runtime support does not call Python; it maps known Python callable metadata to native compatibility behavior or unsupported behavior because canonical operation contracts still reference python.function.call. This belongs to AW target support while those package-domain contracts remain."
       },
       "static_checks": {
         "classification": "correct-guardrail",
@@ -110,7 +111,7 @@
       "classification": "no-new-follow-up-filed",
       "owner": "AW future runtime-reduction lanes",
       "evidence": "The apparent candidates are all lifecycle, mutation, routing, report, or verification semantics that need package-owned judgment and safety boundaries.",
-      "recommendation": "Do not file a new migration issue from this audit alone. Reopen migration only when a specific command has a deterministic view spec or named domain primitive design with proof."
+      "recommendation": "Use #1278 as the migration owner. Migrate only when a specific command has a deterministic view spec or named domain primitive design with proof."
     },
     {
       "severity": "medium-low",
@@ -132,9 +133,11 @@
   "recommendation": {
     "status": "can-close-after-review-lands",
     "reason": "#1274 asked for a current post-split audit and active ownership. This review provides the inventory, classifications, and follow-up policy without claiming the bridge debt is gone.",
-    "new_issues_filed": [],
-    "why_no_new_issue": "This audit did not identify a small deterministic migration candidate. Creating broad follow-up issues would recreate closed #1079/#1083 ownership without a sharper proof boundary.",
-    "future_trigger": "File a new migration issue only when one command can be rewritten as a named domain primitive or declarative view spec with isolated proof and without weakening package safety.",
+    "new_issues_filed": [
+      "#1278"
+    ],
+    "why_new_issue": "The follow-up is now bounded to replacing shared python.function.call operation steps with named domain primitives, starting with read-only/report operations and avoiding a broad all-at-once migration.",
+    "future_trigger": "Promote a migration slice only when one command can be rewritten as a named domain primitive or declarative view spec with isolated proof and without weakening package safety.",
     "not_closed_by": [
       "removing python.function.call",
       "proving non-Python target completion",

@@ -96,7 +96,7 @@
   "steps": [
     {
       "id": "apply_memory_lifecycle",
-      "uses": "python.function.call",
+      "uses": "memory.uninstall.apply",
       "description": "Remove Memory bootstrap-managed files conservatively."
     },
     {
@@ -120,39 +120,35 @@
     "steps": [
       {
         "id": "apply_memory_lifecycle",
-        "uses": "python.function.call",
+        "uses": "memory.uninstall.apply",
         "description": "Remove Memory bootstrap-managed files conservatively.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "uninstall_bootstrap",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "project_name": {
-              "value": "project_name"
-            },
-            "project_purpose": {
-              "value": "project_purpose"
-            },
-            "key_repo_docs": {
-              "value": "key_repo_docs"
-            },
-            "key_subsystems": {
-              "value": "key_subsystems"
-            },
-            "primary_build_command": {
-              "value": "primary_build_command"
-            },
-            "primary_test_command": {
-              "value": "primary_test_command"
-            },
-            "other_key_commands": {
-              "value": "other_key_commands"
-            }
+          "target": {
+            "value": "target"
+          },
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "project_name": {
+            "value": "project_name"
+          },
+          "project_purpose": {
+            "value": "project_purpose"
+          },
+          "key_repo_docs": {
+            "value": "key_repo_docs"
+          },
+          "key_subsystems": {
+            "value": "key_subsystems"
+          },
+          "primary_build_command": {
+            "value": "primary_build_command"
+          },
+          "primary_test_command": {
+            "value": "primary_test_command"
+          },
+          "other_key_commands": {
+            "value": "other_key_commands"
           }
         },
         "outputs": [

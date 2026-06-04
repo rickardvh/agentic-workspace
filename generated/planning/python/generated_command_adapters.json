@@ -22,7 +22,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.adopt.apply",
           "output.emit"
         ]
       },
@@ -86,7 +86,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.close-item.apply",
           "output.emit"
         ]
       },
@@ -150,7 +150,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.create-review.apply",
           "output.emit"
         ]
       },
@@ -214,7 +214,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.doctor.load",
           "output.emit"
         ]
       },
@@ -246,7 +246,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.handoff.load",
           "output.emit"
         ]
       },
@@ -278,7 +278,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.init.apply",
           "output.emit"
         ]
       },
@@ -310,7 +310,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.install.apply",
           "output.emit"
         ]
       },
@@ -569,7 +569,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.bootstrap.status.load",
           "output.emit"
         ]
       },
@@ -633,7 +633,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.uninstall.apply",
           "output.emit"
         ]
       },
@@ -665,7 +665,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.upgrade.apply",
           "output.emit"
         ]
       },
@@ -697,7 +697,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "planning.verify-payload.load",
           "output.emit"
         ]
       },

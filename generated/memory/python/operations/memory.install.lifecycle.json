@@ -202,42 +202,38 @@
       },
       {
         "arguments": {
-          "function": "install_bootstrap",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "force": {
-              "value": "force"
-            },
-            "key_repo_docs": {
-              "value": "key_repo_docs"
-            },
-            "key_subsystems": {
-              "value": "key_subsystems"
-            },
-            "other_key_commands": {
-              "value": "other_key_commands"
-            },
-            "policy_profile": {
-              "value": "policy_profile"
-            },
-            "primary_build_command": {
-              "value": "primary_build_command"
-            },
-            "primary_test_command": {
-              "value": "primary_test_command"
-            },
-            "project_name": {
-              "value": "project_name"
-            },
-            "project_purpose": {
-              "value": "project_purpose"
-            },
-            "target": {
-              "value": "target"
-            }
+          "dry_run": {
+            "value": "dry_run"
+          },
+          "force": {
+            "value": "force"
+          },
+          "key_repo_docs": {
+            "value": "key_repo_docs"
+          },
+          "key_subsystems": {
+            "value": "key_subsystems"
+          },
+          "other_key_commands": {
+            "value": "other_key_commands"
+          },
+          "policy_profile": {
+            "value": "policy_profile"
+          },
+          "primary_build_command": {
+            "value": "primary_build_command"
+          },
+          "primary_test_command": {
+            "value": "primary_test_command"
+          },
+          "project_name": {
+            "value": "project_name"
+          },
+          "project_purpose": {
+            "value": "project_purpose"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
@@ -246,7 +242,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call",
+        "uses": "memory.install.apply",
         "when": {
           "not": {
             "all": [
@@ -341,7 +337,7 @@
     {
       "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
       "id": "apply_memory_lifecycle",
-      "uses": "python.function.call"
+      "uses": "memory.install.apply"
     },
     {
       "description": "Emit the install result in the requested format.",
