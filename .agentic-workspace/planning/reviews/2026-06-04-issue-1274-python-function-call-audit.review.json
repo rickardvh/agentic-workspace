@@ -1,0 +1,154 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Post-split audit for python.function.call usage",
+  "date": "2026-06-04",
+  "classification": "command-generation-boundary-audit",
+  "goal": [
+    "Re-audit remaining python.function.call usage after AW switched to the external command-generation dependency.",
+    "Classify whether remaining uses are AW host/runtime compatibility, named-domain-primitive candidates, or generator-side concerns."
+  ],
+  "scope": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "generated package projections for Python and TypeScript",
+    "package-owned operation contracts for Planning, Memory, and Verification"
+  ],
+  "non_goals": [
+    "Do not remove python.function.call usage in this review-only slice.",
+    "Do not change the external command-generation package.",
+    "Do not claim TypeScript or other targets are complete because the remaining bridge uses are classified."
+  ],
+  "review_method": {
+    "commands_or_inspections": [
+      "gh issue view 1274 --json number,title,body,url,labels",
+      "rg -n \"python\\.function\\.call\" src generated packages tests docs .agentic-workspace -S",
+      "structured inspection of src/agentic_workspace/contracts/command_package_ir.json",
+      "structured inspection of operation_primitives.json, python_runtime_projection_inventory.json, and python_operation_execution_inventory.json"
+    ],
+    "canonical_counts": {
+      "command_package_ir_python_function_call_count": 25,
+      "operation_primitives_python_function_call_count": 2,
+      "python_runtime_projection_inventory_python_function_call_count": 1,
+      "python_operation_execution_inventory_python_function_call_count": 2
+    },
+    "generated_projection_note": "Generated Python and TypeScript outputs repeat the canonical package operation contracts; they are evidence of projection spread, not additional source-of-truth owners."
+  },
+  "summary": {
+    "current_state": "Remaining python.function.call usage is concentrated in Planning, Memory, and Verification package-domain runtime bridges plus target compatibility support.",
+    "implementation_posture": "Do not move these into command-generation without a smaller deterministic primitive or view-spec design.",
+    "inventory": {
+      "planning_bootstrap": {
+        "count": 11,
+        "commands": [
+          "adopt",
+          "close-item",
+          "create-review",
+          "doctor",
+          "handoff",
+          "init",
+          "install",
+          "status",
+          "uninstall",
+          "upgrade",
+          "verify-payload"
+        ],
+        "classification": "accepted-aw-host-runtime-compatibility",
+        "reason": "Planning lifecycle and report commands still execute Planning-owned mutation, closeout, review, handoff, status, and payload-verification semantics. These are package-domain behaviors, not generic command-generation rules."
+      },
+      "memory_bootstrap": {
+        "count": 13,
+        "commands": [
+          "adopt",
+          "bootstrap-cleanup",
+          "capture-note",
+          "create-note",
+          "init",
+          "install",
+          "migrate-layout",
+          "route",
+          "route-review",
+          "search",
+          "sync-memory",
+          "uninstall",
+          "upgrade"
+        ],
+        "classification": "accepted-aw-host-runtime-compatibility",
+        "reason": "Memory lifecycle, route/search, note creation, and sync behavior remain Memory-owned package semantics with mutation and durable-state safety concerns."
+      },
+      "verification_cli": {
+        "count": 1,
+        "commands": [
+          "report"
+        ],
+        "classification": "accepted-aw-host-runtime-compatibility-with-review-pressure",
+        "reason": "Verification report behavior is package-domain runtime delegation. It is a plausible future view-spec candidate, but the current audit found no safe isolated migration that would not reopen verification semantics."
+      },
+      "runtime_support": {
+        "classification": "target-compatibility-shim",
+        "reason": "Generated Python primitive executors and TypeScript runtime support know how to handle or reject python.function.call because canonical operation contracts still reference it. This belongs to AW target support while those package-domain contracts remain."
+      },
+      "static_checks": {
+        "classification": "correct-guardrail",
+        "reason": "Tests and inventories explicitly prevent python.function.call from being counted as portable Tier 1 primitive coverage."
+      }
+    }
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "title": "Remaining bridge usage is package-domain AW debt, not generic command-generation ownership",
+      "classification": "accepted-temporary",
+      "owner": "AW package runtimes",
+      "evidence": "The canonical IR has 25 command entries using python.function.call across Planning, Memory, and Verification package commands; generated targets repeat those package contracts.",
+      "recommendation": "Keep command-generation generic. Do not move package lifecycle, planning closeout, memory routing, or verification semantics into the external generator."
+    },
+    {
+      "severity": "medium",
+      "title": "No safe near-term migration candidate was isolated by this audit",
+      "classification": "no-new-follow-up-filed",
+      "owner": "AW future runtime-reduction lanes",
+      "evidence": "The apparent candidates are all lifecycle, mutation, routing, report, or verification semantics that need package-owned judgment and safety boundaries.",
+      "recommendation": "Do not file a new migration issue from this audit alone. Reopen migration only when a specific command has a deterministic view spec or named domain primitive design with proof."
+    },
+    {
+      "severity": "medium-low",
+      "title": "Verification report is the most plausible future review target",
+      "classification": "watchlist",
+      "owner": "Verification package",
+      "evidence": "verification.report.report is the only verification-cli bridge use and appears report-shaped rather than lifecycle-shaped.",
+      "recommendation": "If a future Verification view-spec lane emerges, start by reviewing verification.report.report. Do not treat this audit as sufficient to migrate it now."
+    },
+    {
+      "severity": "low",
+      "title": "Static proof already protects the portability boundary",
+      "classification": "acceptable-long-term-guardrail",
+      "owner": "contract tooling",
+      "evidence": "operation_primitives.json classifies python.function.call as external-adapter tier-2 package-domain behavior, and tests assert it must not be portable Tier 1 coverage.",
+      "recommendation": "Retain the guardrail while bridge usage exists."
+    }
+  ],
+  "recommendation": {
+    "status": "can-close-after-review-lands",
+    "reason": "#1274 asked for a current post-split audit and active ownership. This review provides the inventory, classifications, and follow-up policy without claiming the bridge debt is gone.",
+    "new_issues_filed": [],
+    "why_no_new_issue": "This audit did not identify a small deterministic migration candidate. Creating broad follow-up issues would recreate closed #1079/#1083 ownership without a sharper proof boundary.",
+    "future_trigger": "File a new migration issue only when one command can be rewritten as a named domain primitive or declarative view spec with isolated proof and without weakening package safety.",
+    "not_closed_by": [
+      "removing python.function.call",
+      "proving non-Python target completion",
+      "claiming package-domain behavior is generic command-generation"
+    ]
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-issue-1274-python-function-call-audit.review.json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-06-04: Created post-split audit after #1269 review identified python.function.call as remaining accepted temporary debt."
+  ]
+}
