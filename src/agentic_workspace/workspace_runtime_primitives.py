@@ -26812,7 +26812,7 @@ def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
 
 
 _PROOF_ROUTE_MEMORY_PREFIX = "agentic-workspace-proof-route:"
-_PROOF_ROUTE_STATES = {"candidate", "confirmed", "stale", "negative", "superseded"}
+_PROOF_ROUTE_STATES = {"candidate", "confirmed", "stale", "negative", "superseded", "invalid-authority"}
 _PROOF_ROUTE_INTENT_TYPES = {"behavior-test", "static-check", "type-check", "general-check"}
 _AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS = (
     "candidate_command",
@@ -26872,7 +26872,7 @@ def _normalize_proof_route_hint(
             field_name for field_name in _AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS if not explicit_values[field_name]
         ]
         if missing_authoritative_fields:
-            state = "stale"
+            state = "invalid-authority"
             requires_live_confirmation = True
     record: dict[str, Any] = {
         "id": str(hint.get("id") or f"{source}:{_decision_slug(command)}"),
@@ -26888,6 +26888,9 @@ def _normalize_proof_route_hint(
         "provenance": str(hint.get("provenance") or hint.get("observed") or source_path or source).strip(),
         "learned_at": str(hint.get("learned_at") or hint.get("last_confirmed") or "").strip(),
     }
+    superseded_by = str(hint.get("superseded_by") or hint.get("replacement_command") or "").strip()
+    if superseded_by:
+        record["superseded_by"] = superseded_by
     if missing_authoritative_fields:
         record.update(
             {
@@ -27024,7 +27027,12 @@ def _apply_learned_route_hints_to_capabilities(
     capabilities["learned_routes"] = {
         "confirmed_count": len(learned_route_hints.get("confirmed", [])),
         "negative_count": len(learned_route_hints.get("negative", [])),
-        "rule": "Confirmed learned routes may add proof candidates; negative learned routes suppress matching candidates before selection.",
+        "superseded_count": len(learned_route_hints.get("superseded", [])),
+        "invalid_authority_count": len(learned_route_hints.get("invalid", [])),
+        "rule": (
+            "Confirmed learned routes may add proof candidates; negative learned routes suppress matching candidates before "
+            "selection; superseded and invalid-authority routes remain explanatory only."
+        ),
     }
     return {
         **capabilities,
@@ -27054,6 +27062,7 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
     confirmed: list[dict[str, Any]] = []
     stale: list[dict[str, Any]] = []
     negative: list[dict[str, Any]] = []
+    superseded: list[dict[str, Any]] = []
     invalid: list[dict[str, Any]] = []
     for hint in learned_hints.get("hints", []):
         command = str(hint.get("candidate_command", "")).strip()
@@ -27070,19 +27079,22 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
             "owner": str(hint.get("owner", "")),
             "provenance": str(hint.get("provenance", "")),
             "learned_at": str(hint.get("learned_at", "")),
+            "superseded_by": str(hint.get("superseded_by", "")),
             "invalid_authority": bool(hint.get("invalid_authority", False)),
             "original_state": str(hint.get("original_state", "")),
             "missing_fields": list(hint.get("missing_fields", [])) if isinstance(hint.get("missing_fields"), list) else [],
             "recovery": str(hint.get("recovery", "")),
         }
         record = {key: value for key, value in record.items() if value != "" and value != []}
-        if record.get("invalid_authority"):
+        state = str(record.get("state", "candidate"))
+        if record.get("invalid_authority") or state == "invalid-authority":
             invalid_record = {**record, "confirmation": "invalid-authoritative-learning-evidence"}
             invalid.append(invalid_record)
-            stale.append(invalid_record)
-        elif record.get("state") == "negative":
+        elif state == "superseded":
+            superseded.append({**record, "confirmation": "superseded-learned-route"})
+        elif state == "negative":
             negative.append({**record, "confirmation": "negative-learned-route"})
-        elif command and not record.get("requires_live_confirmation", True) and record.get("state") == "confirmed":
+        elif command and not record.get("requires_live_confirmation", True) and state == "confirmed":
             confirmed.append({**record, "confirmation": "learned-confirmed"})
         elif command and command in live_commands:
             confirmed.append({**record, "confirmation": "live-confirmed"})
@@ -27093,8 +27105,91 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
         "confirmed": confirmed,
         "stale": stale,
         "negative": negative,
+        "superseded": superseded,
         "invalid": invalid,
-        "rule": "Learned route hints can explain or suggest proof routes, but only live-confirmed hints may support command selection.",
+        "lifecycle": _proof_route_lifecycle_payload(
+            learned_hints=learned_hints,
+            confirmed=confirmed,
+            stale=stale,
+            negative=negative,
+            superseded=superseded,
+            invalid=invalid,
+        ),
+        "rule": (
+            "Learned route hints can explain or suggest proof routes, but only live-confirmed or explicitly "
+            "learned-confirmed hints may support command selection."
+        ),
+    }
+
+
+def _proof_route_lifecycle_payload(
+    *,
+    learned_hints: dict[str, Any],
+    confirmed: list[dict[str, Any]],
+    stale: list[dict[str, Any]],
+    negative: list[dict[str, Any]],
+    superseded: list[dict[str, Any]],
+    invalid: list[dict[str, Any]],
+) -> dict[str, Any]:
+    raw_hints = [hint for hint in learned_hints.get("hints", []) if isinstance(hint, dict)]
+    state_counts = {state: 0 for state in sorted(_PROOF_ROUTE_STATES)}
+    for hint in raw_hints:
+        state = str(hint.get("state") or "candidate")
+        if state not in _PROOF_ROUTE_STATES:
+            state = "candidate"
+        state_counts[state] = state_counts.get(state, 0) + 1
+    return {
+        "kind": "proof-route-lifecycle/v1",
+        "state_model": [
+            {
+                "state": "candidate",
+                "selection_effect": "advisory only until live repo capabilities confirm the command",
+                "proof_effect": "cannot satisfy required proof by itself",
+                "correction_path": "confirm live, promote to Memory/config, or leave advisory",
+            },
+            {
+                "state": "confirmed",
+                "selection_effect": "may support command selection when live-confirmed or explicitly learned-confirmed",
+                "proof_effect": "can affect required proof; closeout must disclose learned-route reliance when material",
+                "correction_path": "refresh provenance if command, scope, or owner changes",
+            },
+            {
+                "state": "stale",
+                "selection_effect": "not selectable until revalidated",
+                "proof_effect": "signals residual risk and possible negative evidence capture",
+                "correction_path": "reconfirm live or recapture as negative/superseded/confirmed evidence",
+            },
+            {
+                "state": "negative",
+                "selection_effect": "suppresses matching discovered candidates",
+                "proof_effect": "prevents repeated use of known-bad proof routes",
+                "correction_path": "supersede or recapture if the repo later makes the command valid",
+            },
+            {
+                "state": "superseded",
+                "selection_effect": "not selectable; points readers toward the replacement route when known",
+                "proof_effect": "documents lifecycle history without suppressing unrelated commands",
+                "correction_path": "remove after replacement is durable or promote replacement to confirmed evidence",
+            },
+            {
+                "state": "invalid-authority",
+                "selection_effect": "not selectable and not suppressive",
+                "proof_effect": "prevents incomplete confirmed/negative claims from becoming authority",
+                "correction_path": "recapture with candidate_command, state, intent_type, owner, scope, provenance, and learned_at",
+            },
+        ],
+        "state_counts": state_counts,
+        "bucket_counts": {
+            "confirmed": len(confirmed),
+            "stale": len(stale),
+            "negative": len(negative),
+            "superseded": len(superseded),
+            "invalid": len(invalid),
+        },
+        "reporting_rule": (
+            "Report the lifecycle state and authority boundary for any learned route that changes required proof; "
+            "do not describe candidate, stale, superseded, negative, or invalid-authority records as AW-selected proof."
+        ),
     }
 
 
@@ -27103,6 +27198,9 @@ def _setup_adopt_route_learning_projection(learned_route_hints: dict[str, Any]) 
     hints = learned_route_hints.get("hints", []) if isinstance(learned_route_hints.get("hints", []), list) else []
     confirmed = learned_route_hints.get("confirmed", []) if isinstance(learned_route_hints.get("confirmed", []), list) else []
     stale = learned_route_hints.get("stale", []) if isinstance(learned_route_hints.get("stale", []), list) else []
+    negative = learned_route_hints.get("negative", []) if isinstance(learned_route_hints.get("negative", []), list) else []
+    superseded = learned_route_hints.get("superseded", []) if isinstance(learned_route_hints.get("superseded", []), list) else []
+    invalid = learned_route_hints.get("invalid", []) if isinstance(learned_route_hints.get("invalid", []), list) else []
     persisted = status == "loaded"
     return {
         "kind": "setup-adopt-proof-route-learning/v1",
@@ -27111,6 +27209,10 @@ def _setup_adopt_route_learning_projection(learned_route_hints: dict[str, Any]) 
         "hint_count": len(hints),
         "confirmed_count": len(confirmed),
         "stale_count": len(stale),
+        "negative_count": len(negative),
+        "superseded_count": len(superseded),
+        "invalid_authority_count": len(invalid),
+        "lifecycle_field": "learned_route_hints.lifecycle",
         "route_map_decision": "use-advisory-hints-only" if persisted else "no-persisted-route-map-needed",
         "reason": "Setup/adopt-discovered route hints are persisted as advisory memory and must be live-confirmed before command selection."
         if persisted
@@ -27224,6 +27326,7 @@ def _proof_route_decision_payload(
     required_commands: list[str],
     manual_verification: dict[str, Any] | None,
     unavailable_commands: list[dict[str, Any]],
+    learned_route_reliance: dict[str, Any],
 ) -> dict[str, Any]:
     next_action = dict(proof_next_decision.get("next", {}))
     selected_command = selected_commands[0] if selected_commands else None
@@ -27235,7 +27338,7 @@ def _proof_route_decision_payload(
             "summary": manual_verification.get("summary") or manual_verification.get("reason"),
             "unavailable_command_count": len(unavailable_commands),
         }
-    return {
+    payload = {
         "kind": "proof-route-decision/v1",
         "next_action": next_action,
         "selected_command": {
@@ -27254,6 +27357,60 @@ def _proof_route_decision_payload(
         "critical_warnings": list(proof_next_decision.get("warnings", [])),
         "explanation_field": "proof_route_explanation",
         "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
+    }
+    if learned_route_reliance.get("material_to_required_proof"):
+        payload["learned_route_reliance"] = learned_route_reliance
+        payload["closeout_disclosure"] = {
+            "status": "required",
+            "rule": (
+                "When learned_route_reliance.material_to_required_proof is true, final closeout should say which "
+                "required proof command relied on confirmed learned repo evidence and name the provenance."
+            ),
+        }
+    return payload
+
+
+def _learned_route_reliance_payload(*, selected_commands: list[dict[str, Any]], learned_route_hints: dict[str, Any]) -> dict[str, Any]:
+    confirmed_hints = [
+        hint
+        for hint in learned_route_hints.get("confirmed", [])
+        if isinstance(hint, dict) and str(hint.get("confirmation", "")) == "learned-confirmed"
+    ]
+    confirmed_by_command = {
+        str(hint.get("candidate_command", "")).strip(): hint for hint in confirmed_hints if str(hint.get("candidate_command", "")).strip()
+    }
+    items: list[dict[str, Any]] = []
+    for selected in selected_commands:
+        command = str(selected.get("command", "")).strip()
+        hint = confirmed_by_command.get(command)
+        if hint is None:
+            continue
+        items.append(
+            {
+                "kind": "learned-route-reliance-item/v1",
+                "command": command,
+                "state": "confirmed",
+                "confirmation": str(hint.get("confirmation", "")),
+                "source": str(hint.get("source", "")),
+                "source_path": str(hint.get("source_path", "")),
+                "owner": str(hint.get("owner", "")),
+                "scope": str(hint.get("scope", "")),
+                "provenance": str(hint.get("provenance", "")),
+                "learned_at": str(hint.get("learned_at", "")),
+                "selected_lane": str(selected.get("lane", "")),
+                "selected_route_source": str(selected.get("selected_from", "")),
+                "why_material": "This required proof command was added by confirmed learned route evidence.",
+            }
+        )
+    return {
+        "kind": "learned-route-reliance/v1",
+        "status": "present" if items else "none",
+        "material_to_required_proof": bool(items),
+        "items": items,
+        "reporting_rule": (
+            "If present, report this as the agent relying on confirmed repo Memory evidence; do not say AW decided or classified the route."
+        ),
+        "closeout_visibility": "required when material_to_required_proof is true",
     }
 
 
@@ -27408,7 +27565,7 @@ def _host_repo_learning_posture_payload(
         "kind": "host-repo-learning-posture/v1",
         "status": "active",
         "authority_rule": "Host-repo heuristics may propose discovery candidates; authoritative workflow and proof decisions require confirmed repo evidence or host configuration.",
-        "evidence_states": ["candidate", "confirmed", "stale", "negative", "superseded"],
+        "evidence_states": ["candidate", "confirmed", "stale", "negative", "superseded", "invalid-authority"],
         "owner_routes": [
             {
                 "owner": "Memory",
@@ -27441,7 +27598,7 @@ def _host_repo_learning_posture_payload(
             "status": "present" if invalid_hints else "none",
             "items": [
                 {
-                    "state": "invalid",
+                    "state": "invalid-authority",
                     "original_state": str(hint.get("original_state", "")),
                     "command": str(hint.get("candidate_command", "")),
                     "missing_fields": list(hint.get("missing_fields", [])),
@@ -27475,6 +27632,7 @@ def _proof_route_explanation_payload(
     proof_intents: list[dict[str, Any]],
     configured_policy: list[dict[str, Any]],
     learned_route_hints: dict[str, Any],
+    learned_route_reliance: dict[str, Any],
     target_capabilities: dict[str, Any],
     host_repo_learning: dict[str, Any],
     selected_commands: list[dict[str, Any]],
@@ -27497,6 +27655,7 @@ def _proof_route_explanation_payload(
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
         "learned_route_hints": learned_route_hints,
+        "learned_route_reliance": learned_route_reliance,
         "setup_adopt_route_learning": _setup_adopt_route_learning_projection(learned_route_hints),
         "target_capabilities": target_capabilities,
         "host_repo_learning": host_repo_learning,
@@ -28796,6 +28955,10 @@ def _proof_selection_for_changed_paths(
         for lane in [*concern_lanes, *requirement_lanes]
         if lane.get("proof_profile")
     ]
+    learned_route_reliance = _learned_route_reliance_payload(
+        selected_commands=selected_commands,
+        learned_route_hints=learned_route_hints,
+    )
     proof_next_decision = _proof_next_decision_payload(
         required_commands=required_commands,
         selected_commands=selected_commands,
@@ -28810,6 +28973,7 @@ def _proof_selection_for_changed_paths(
         required_commands=required_commands,
         manual_verification=manual_verification,
         unavailable_commands=unavailable_commands,
+        learned_route_reliance=learned_route_reliance,
     )
     host_repo_learning = _host_repo_learning_posture_payload(
         target_capabilities=target_capabilities,
@@ -28822,6 +28986,7 @@ def _proof_selection_for_changed_paths(
         proof_intents=proof_intents,
         configured_policy=configured_policy,
         learned_route_hints=learned_route_hints,
+        learned_route_reliance=learned_route_reliance,
         target_capabilities=target_capabilities,
         host_repo_learning=host_repo_learning,
         selected_commands=selected_commands,
@@ -28885,6 +29050,7 @@ def _proof_selection_for_changed_paths(
         "target_proof_capabilities": target_capabilities,
         "host_repo_learning": host_repo_learning,
         "learned_route_hints": learned_route_hints,
+        "learned_route_reliance": learned_route_reliance,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
         "verification": verification,
