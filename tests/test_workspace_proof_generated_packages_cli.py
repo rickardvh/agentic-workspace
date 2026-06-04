@@ -62,6 +62,13 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "verification:generated_adapter_conformance",
     ]
     assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]
+    freshness = answer["generated_cli_freshness"]
+    assert freshness["status"] == "required"
+    assert freshness["freshness_check_command"] == "uv run python scripts/generate/generate_command_packages.py --check"
+    assert freshness["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
+    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert "uv run python scripts/check/check_generated_command_packages.py" in freshness["required_commands"]
+    assert "refresh only when the check reports stale output" in freshness["rule"]
     focused_proof = "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
@@ -180,4 +187,5 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
         "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
     ]
+    assert "generated_cli_freshness" not in answer
     assert "uv run pytest tests -q" not in answer["required_commands"]

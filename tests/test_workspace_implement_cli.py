@@ -62,6 +62,13 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
     ]
+    freshness = payload["proof"]["generated_cli_freshness"]
+    assert freshness["status"] == "required"
+    assert freshness["obligation"] == "required"
+    assert freshness["freshness_check_command"] == "uv run python scripts/generate/generate_command_packages.py --check"
+    assert freshness["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
+    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert "uv run python scripts/check/check_generated_command_packages.py" in freshness["required_commands"]
     proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
     assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert any(item["command"].endswith("--require-docker") for item in proof_tiers["environmental"])
@@ -468,6 +475,34 @@ def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, cap
     assert item["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert item["direct_edit_allowed"] is False
     assert "Do not hand-edit generated command package outputs" in item["direct_edit_policy"]
+
+
+def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update README wording",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "generated_cli_freshness" not in payload["proof"]
+    assert all("generated_cli_freshness" not in signal for signal in payload["action_signals"]["changed_signals"])
+    assert payload["context"]["generated_surface_trust"]["status"] == "not-applicable"
 
 
 def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
@@ -896,6 +931,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert signals["proof_required"] is True
     assert signals["proof_commands"] == payload["proof"]["required_commands"]
     assert "generated_surface_trust=present" in signals["changed_signals"]
+    assert "generated_cli_freshness=required" in signals["changed_signals"]
     assert "context.reuse_pressure" in signals["advisory_detail"]["selectors"]
     adaptive = context["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
@@ -909,6 +945,8 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    assert payload["proof"]["generated_cli_freshness"]["status"] == "required"
+    assert payload["proof"]["generated_cli_freshness"]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
     obligations = payload["proof"]["proof_obligations"]
     assert obligations["required_proof"]["commands"] == payload["proof"]["required_commands"]
     assert obligations["recommended_confidence_checks"]["status"] == "available"

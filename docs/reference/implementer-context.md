@@ -48,6 +48,13 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.selected_lanes` | array of object | yes |  | Proof lanes selected by changed paths. |  |  |
 | `proof.required_commands` | array of string | yes |  | Flattened required validation commands. |  |  |
 | `proof.optional_commands` | array of string | yes |  | Optional validation or orientation commands. |  |  |
+| `proof.generated_cli_freshness` | object | no |  | Generated CLI freshness signal for changed paths that affect generated command packages. |  |  |
+| `proof.generated_cli_freshness.kind` | const `"agentic-workspace/generated-cli-freshness/v1"` | no |  | Discriminator for generated CLI freshness guidance. |  |  |
+| `proof.generated_cli_freshness.status` | string | no |  | Whether the freshness check is required or advisory for the current changed paths. |  |  |
+| `proof.generated_cli_freshness.freshness_check_command` | string | no |  | Check command that detects stale generated CLI outputs without regenerating them. |  |  |
+| `proof.generated_cli_freshness.refresh_command` | string | no |  | Command to refresh generated CLI outputs when the freshness check reports staleness. |  |  |
+| `proof.generated_cli_freshness.validation_command` | string | no |  | Selected validation command that proves generated command package freshness. |  |  |
+| `proof.generated_cli_freshness.obligation` | string | no |  | Whether the named check is required or advisory. |  |  |
 | `proof.proof_obligations` | object | no |  | Structured proof contract separating required proof gates, recommended confidence checks, and agent-selected extra validation. |  |  |
 | `proof.proof_obligations.kind` | const `"agentic-workspace/proof-obligations/v1"` | no |  | Discriminator for the proof-obligations packet. |  |  |
 | `proof.proof_obligations.required_proof` | object | no |  | Required proof gate for completion claims. |  |  |

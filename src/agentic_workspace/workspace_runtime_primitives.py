@@ -20476,6 +20476,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     else []
                 ),
                 *(
+                    ["generated_cli_freshness=" + str(payload.get("proof", {}).get("generated_cli_freshness", {}).get("status"))]
+                    if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("generated_cli_freshness"), dict)
+                    else []
+                ),
+                *(
                     [f"reuse_pressure={reuse_pressure.get('state')}"]
                     if isinstance(reuse_pressure, dict) and reuse_pressure.get("state") not in {None, "", "none_found"}
                     else []
@@ -20508,6 +20513,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else {},
             "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
             if isinstance(payload.get("proof"), dict)
+            else {},
+            "generated_cli_freshness": _tiny_generated_cli_freshness_payload(payload.get("proof", {}).get("generated_cli_freshness", {}))
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("generated_cli_freshness"), dict)
             else {},
             "proof_obligations": _tiny_proof_obligations_payload(
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
@@ -20611,6 +20619,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     compatibility_review = projected["proof"].get("tiny_surface_compatibility_review", {})
     if not (isinstance(compatibility_review, dict) and compatibility_review.get("status") == "required"):
         projected["proof"].pop("tiny_surface_compatibility_review", None)
+    generated_cli_freshness = projected["proof"].get("generated_cli_freshness", {})
+    if not (isinstance(generated_cli_freshness, dict) and generated_cli_freshness.get("kind")):
+        projected["proof"].pop("generated_cli_freshness", None)
     task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
     intent_proof = payload.get("proof", {}).get("intent_proof") if isinstance(payload.get("proof"), dict) else None
     acceptance_reconciliation = payload.get("acceptance_reconciliation", {})
@@ -29639,6 +29650,17 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
     }
 
 
+def _tiny_generated_cli_freshness_payload(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": value.get("kind", "agentic-workspace/generated-cli-freshness/v1"),
+        "status": value.get("status", "unknown"),
+        "obligation": value.get("obligation", value.get("status", "unknown")),
+        "freshness_check_command": value.get("freshness_check_command", ""),
+        "refresh_command": value.get("refresh_command", ""),
+        "validation_command": value.get("validation_command", ""),
+    }
+
+
 def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
     sensitive = [
         command
@@ -29657,6 +29679,49 @@ def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dic
         ],
         "rule": "Retry at most once for runtime/toolchain-looking failures; deterministic test assertions remain hard failures.",
         "closeout_note": "If the retry passes, report the first failure and successful bounded retry instead of pretending the first run passed.",
+    }
+
+
+def _generated_cli_freshness_payload(
+    *,
+    changed_paths: list[str],
+    selected_lanes: list[dict[str, Any]],
+    required_commands: list[str],
+) -> dict[str, Any] | None:
+    lane_ids = [str(lane.get("id", "")) for lane in selected_lanes if isinstance(lane, dict)]
+    relevant_lane_ids = [
+        lane_id
+        for lane_id in lane_ids
+        if lane_id in {"generated_command_packages", "cli_authority", "verification:generated_adapter_conformance"}
+    ]
+    related_commands = [
+        command
+        for command in required_commands
+        if "check_generated_command_packages.py" in command or "generate_command_packages.py" in command
+    ]
+    if not relevant_lane_ids and not related_commands:
+        return None
+    freshness_check = "uv run python scripts/generate/generate_command_packages.py --check"
+    refresh_command = "uv run python scripts/generate/generate_command_packages.py"
+    validation_command = next(
+        (command for command in related_commands if "check_generated_command_packages.py" in command),
+        "uv run python scripts/check/check_generated_command_packages.py",
+    )
+    obligation = "required" if related_commands else "advisory"
+    return {
+        "kind": "agentic-workspace/generated-cli-freshness/v1",
+        "status": obligation,
+        "triggered_by": changed_paths,
+        "selected_lanes": relevant_lane_ids,
+        "freshness_check_command": freshness_check,
+        "refresh_command": refresh_command,
+        "validation_command": validation_command,
+        "required_commands": related_commands,
+        "obligation": obligation,
+        "rule": (
+            "Generated CLI freshness is relevant only for generated command package surfaces. "
+            "Run the check path before trusting generated CLI output; refresh only when the check reports stale output."
+        ),
     }
 
 
@@ -30161,6 +30226,11 @@ def _proof_selection_for_changed_paths(
         manual_verification=manual_verification,
         proof_execution_evidence=proof_execution_evidence,
     )
+    generated_cli_freshness = _generated_cli_freshness_payload(
+        changed_paths=changed_paths,
+        selected_lanes=selected_lanes,
+        required_commands=required_commands,
+    )
     optional_commands = ["agentic-workspace proof --target ./repo --current --format json", "agentic-workspace summary --format json"]
     for concern_lane in [*concern_lanes, *requirement_lanes, *verification_lanes]:
         for command in concern_lane.get("optional_commands", []):
@@ -30297,6 +30367,8 @@ def _proof_selection_for_changed_paths(
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions
+    if generated_cli_freshness is not None:
+        proof_selection["generated_cli_freshness"] = generated_cli_freshness
     if proof_command_adjustments:
         proof_selection["proof_command_adjustments"] = proof_command_adjustments
     if unavailable_proof_commands:
