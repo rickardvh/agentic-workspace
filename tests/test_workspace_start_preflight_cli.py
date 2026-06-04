@@ -843,7 +843,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
 
 
-def test_start_read_only_reporting_task_suppresses_default_acceptance_boilerplate(tmp_path: Path, capsys) -> None:
+def test_start_read_only_reporting_task_does_not_suppress_acceptance_from_keywords(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -855,12 +855,12 @@ def test_start_read_only_reporting_task_suppresses_default_acceptance_boilerplat
 
     payload = json.loads(capsys.readouterr().out)
     context = _start_context(payload)
-    assert "acceptance" not in context
-    assert context["read_only_response"]["status"] == "read-only-reporting"
-    assert context["read_only_response"]["compact_default"] is True
-    assert context["task"]["response_posture"]["default_projection"] == "suppress-acceptance-boilerplate"
-    assert "implement_changed_command" not in context["task"]
+    assert context["acceptance"]["status"] == "inferred"
+    assert "read_only_response" not in context
+    assert "response_posture" not in context["task"]
+    assert "implement_changed_command" in context["task"]
     assert "acceptance" in payload["drill_down"]["available_selectors"]
+    assert "read_only_response" not in payload["drill_down"]["available_selectors"]
 
     assert (
         cli.main(["start", "--target", str(target), "--task", task, "--select", "acceptance,read_only_response", "--format", "json"]) == 0
@@ -868,10 +868,10 @@ def test_start_read_only_reporting_task_suppresses_default_acceptance_boilerplat
     selected = json.loads(capsys.readouterr().out)
     assert selected["values"]["acceptance"]["status"] == "inferred"
     assert selected["values"]["acceptance"]["closeout_required"] is True
-    assert selected["values"]["read_only_response"]["status"] == "read-only-reporting"
+    assert "read_only_response" in selected["missing"]
 
 
-def test_start_read_only_response_does_not_match_stopwords_as_evidence(tmp_path: Path, capsys) -> None:
+def test_start_read_only_response_does_not_infer_from_task_text_keywords(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -917,10 +917,8 @@ def test_start_read_only_response_does_not_match_stopwords_as_evidence(tmp_path:
     )
 
     selected = json.loads(capsys.readouterr().out)
-    report_response = selected["values"]["read_only_response"]
-    assert report_response["status"] == "read-only-reporting"
-    assert "report" in report_response["matched_read_only_signals"]
-    assert "status" in report_response["matched_read_only_signals"]
+    assert selected["values"] == {}
+    assert "read_only_response" in selected["missing"]
 
 
 def test_next_safe_action_schema_rejects_missing_typed_fields() -> None:

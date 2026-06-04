@@ -18591,65 +18591,25 @@ def _read_only_response_posture_payload(*, task_text: str | None, changed_paths:
             "reason": "changed paths are present, so implementation/proof guidance remains the default",
             "compact_default": False,
         }
-    normalized = f" {task.lower()} "
-    read_only_markers = (
-        " report ",
-        " summarize ",
-        " summarise ",
-        " review ",
-        " inspect ",
-        " check ",
-        " status ",
-        " postmortem ",
-        " what ",
-        " why ",
-        " how ",
-        " have you ",
-        " did you ",
-        " can you tell ",
-    )
-    mutation_markers = (
-        " implement ",
-        " fix ",
-        " change ",
-        " update ",
-        " add ",
-        " remove ",
-        " delete ",
-        " create ",
-        " file ",
-        " commit ",
-        " push ",
-        " merge ",
-        " close ",
-        " address ",
-        " follow ",
-        " switch ",
-        " pull ",
-    )
-    matched_read_only = [marker.strip() for marker in read_only_markers if marker in normalized]
-    matched_mutation = [marker.strip() for marker in mutation_markers if marker in normalized]
-    compact_default = bool(matched_read_only and not matched_mutation)
     return {
         "kind": "agentic-workspace/read-only-response-posture/v1",
-        "status": "read-only-reporting" if compact_default else "implementation-oriented",
-        "compact_default": compact_default,
-        "matched_read_only_signals": matched_read_only[:4],
-        "matched_mutation_signals": matched_mutation[:4],
-        "default_projection": "suppress-acceptance-boilerplate" if compact_default else "keep-implementation-acceptance",
+        "status": "not-applicable",
+        "reason": "task-text semantics are agent-owned; AW does not infer read-only reporting posture from prompt keywords",
+        "compact_default": False,
+        "matched_read_only_signals": [],
+        "matched_mutation_signals": [],
+        "default_projection": "keep-implementation-acceptance",
         "detail_selector": "acceptance",
         "rule": (
-            "For obvious status, review, or reporting questions with no changed paths or mutation signals, keep the default "
-            "startup answer focused on hard gates and relevant signals; acceptance remains selectable when needed."
+            "AW reports structural facts and selectable detail; the agent owns whether the user is asking for a read-only "
+            "answer and should render the final response accordingly."
         ),
         "authority_boundary": _authority_boundary_payload(
             surface="read_only_response",
             observed_by_aw=[
                 f"changed_path_count={len(_normalize_changed_paths(changed_paths))}",
-                *[f"read_only_signal={signal}" for signal in matched_read_only[:2]],
-                *[f"mutation_signal={signal}" for signal in matched_mutation[:2]],
             ],
-            recommended_by_aw=["compact read-only startup projection"] if compact_default else [],
+            recommended_by_aw=[],
             agent_owned_decisions=[
                 "whether the user is asking for analysis/status rather than implementation",
                 "whether to select acceptance detail anyway",
