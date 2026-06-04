@@ -19150,6 +19150,106 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
     }
 
 
+def _generated_surface_validation_command(*, path: str, proof: dict[str, Any]) -> str:
+    commands = [str(command) for command in _list_payload(proof.get("required_commands")) if str(command).strip()]
+    if path.startswith("docs/reference/"):
+        return next((command for command in commands if "schema-reference-docs" in command), "make schema-reference-docs")
+    if path.startswith("generated/") or path.startswith("command_generation/"):
+        return next(
+            (command for command in commands if "check_generated_command_packages.py" in command),
+            "uv run python scripts/check/check_generated_command_packages.py",
+        )
+    return next(iter(commands), "")
+
+
+def _generated_surface_source_status(*, target_root: Path, canonical_source: str) -> str:
+    if not canonical_source:
+        return "unknown"
+    source_paths = [part.strip() for part in canonical_source.split("+") if part.strip()]
+    existing: list[str] = []
+    missing: list[str] = []
+    for source_path in source_paths:
+        if " " in source_path or not any(separator in source_path for separator in ("/", "\\")):
+            continue
+        if (target_root / source_path).exists():
+            existing.append(source_path)
+        else:
+            missing.append(source_path)
+    if missing:
+        return "missing"
+    if existing:
+        return "present"
+    return "not-checked"
+
+
+def _generated_surface_trust_path_payload(*, target_root: Path, path: str, proof: dict[str, Any], cli_invoke: str) -> dict[str, Any] | None:
+    def clean_text(value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    normalized = path.replace("\\", "/").strip("/")
+    classification = _cli_authority_classification_for_path(normalized)
+    authority_marker = _authority_marker_for_path(normalized, agent_instructions_file=DEFAULT_AGENT_INSTRUCTIONS_FILE)
+    is_schema_reference = normalized.startswith("docs/reference/")
+    is_generated = normalized.startswith("generated/") or is_schema_reference
+    if not is_generated and classification is None:
+        return None
+    role = str(classification.get("role", "generated-doc") if classification else "generated-doc" if is_schema_reference else "generated")
+    canonical_source = clean_text(classification.get("source_contract") if classification else authority_marker.get("canonical_source"))
+    refresh_command = clean_text(classification.get("regeneration_path") if classification else authority_marker.get("refresh_command"))
+    direct_edit_allowed = bool(classification.get("direct_edit_allowed", False)) if classification else False
+    direct_edit_policy = clean_text(classification.get("edit_policy") if classification else "")
+    if is_schema_reference:
+        canonical_source = "src/agentic_workspace/contracts/schemas"
+        refresh_command = "make render-schema-reference"
+        direct_edit_policy = "Do not hand-edit generated schema reference docs; edit the source schema and rerender."
+    if not direct_edit_policy:
+        direct_edit_policy = "Do not hand-edit generated surfaces when a canonical source or refresh command exists."
+    validation_command = _generated_surface_validation_command(path=normalized, proof=proof)
+    source_status = _generated_surface_source_status(target_root=target_root, canonical_source=canonical_source)
+    freshness_status = "validation-required"
+    if not refresh_command or source_status == "missing":
+        freshness_status = "missing-source-or-refresh-command"
+    return {
+        "kind": "generated-surface-trust-item/v1",
+        "path": normalized,
+        "classification_id": str(classification.get("id", "")) if classification else "generated-reference-doc",
+        "role": role,
+        "canonical_source": canonical_source,
+        "canonical_source_status": source_status,
+        "freshness_status": freshness_status,
+        "freshness_checked_by_implement": False,
+        "refresh_command": _command_with_cli_invoke(command=refresh_command, cli_invoke=cli_invoke) if refresh_command else "",
+        "validation_command": _command_with_cli_invoke(command=validation_command, cli_invoke=cli_invoke) if validation_command else "",
+        "direct_edit_allowed": direct_edit_allowed,
+        "direct_edit_policy": direct_edit_policy,
+    }
+
+
+def _generated_surface_trust_payload(
+    *, target_root: Path, changed_paths: list[str], proof: dict[str, Any], cli_invoke: str
+) -> dict[str, Any]:
+    items = [
+        item
+        for path in changed_paths
+        for item in [_generated_surface_trust_path_payload(target_root=target_root, path=path, proof=proof, cli_invoke=cli_invoke)]
+        if item is not None
+    ]
+    return {
+        "kind": "agentic-workspace/generated-surface-trust/v1",
+        "status": "present" if items else "not-applicable",
+        "changed_path_count": len(items),
+        "items": items,
+        "direct_edit_blocked_paths": [item["path"] for item in items if not item["direct_edit_allowed"]],
+        "rule": (
+            "Generated surfaces are derived artifacts. Edit the canonical source first, refresh the generated output, "
+            "and run the validation command before trusting freshness."
+        ),
+        "detail_selector": "generated_surface_trust",
+    }
+
+
 def _task_contract_payload(
     *,
     changed_paths: list[str],
@@ -19435,6 +19535,12 @@ def _implement_payload(
             task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
         ),
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
+        "generated_surface_trust": _generated_surface_trust_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            proof=proof,
+            cli_invoke=config.cli_invoke,
+        ),
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
@@ -19657,6 +19763,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
             "reuse_pressure": context_reuse_pressure,
+            "generated_surface_trust": {
+                "status": payload.get("generated_surface_trust", {}).get("status", "not-applicable")
+                if isinstance(payload.get("generated_surface_trust"), dict)
+                else "not-applicable",
+                "changed_path_count": payload.get("generated_surface_trust", {}).get("changed_path_count", 0)
+                if isinstance(payload.get("generated_surface_trust"), dict)
+                else 0,
+                "detail_selector": "generated_surface_trust",
+            },
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "guidance": {
                 "work_shape_guidance": _tiny_work_shape_guidance(planning_safety_gate.get("work_shape_guidance"))
@@ -19684,6 +19799,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.reuse_pressure",
                 "task_contract",
                 "change_impact",
+                "generated_surface_trust",
                 "assurance_requirements",
                 "verification",
                 "routine_work_context",
@@ -19692,6 +19808,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+    generated_surface_trust = payload.get("generated_surface_trust", {})
+    if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
+        projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -19720,6 +19839,30 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "clarify_only_if_blocked": True,
         }
     return projected
+
+
+def _tiny_generated_surface_trust(value: dict[str, Any]) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for item in _list_payload(value.get("items"))[:3]:
+        if not isinstance(item, dict):
+            continue
+        items.append(
+            {
+                "path": item.get("path"),
+                "canonical_source": item.get("canonical_source"),
+                "freshness_status": item.get("freshness_status"),
+                "refresh_command": item.get("refresh_command"),
+                "validation_command": item.get("validation_command"),
+                "direct_edit_allowed": item.get("direct_edit_allowed"),
+                "direct_edit_policy": "Do not hand-edit generated output; edit the canonical source, refresh, then validate.",
+            }
+        )
+    return {
+        "status": value.get("status", "present"),
+        "changed_path_count": value.get("changed_path_count", len(items)),
+        "items": items,
+        "detail_selector": "generated_surface_trust",
+    }
 
 
 def _compact_selector_next_safe_action(packet: dict[str, Any]) -> dict[str, Any]:
@@ -25529,6 +25672,10 @@ def _selector_requests_change_impact(select: str | None) -> bool:
     return any(token == "change_impact" or token.startswith("change_impact.") for token in _selector_tokens(select))
 
 
+def _selector_requests_generated_surface_trust(select: str | None) -> bool:
+    return any(token == "generated_surface_trust" or token.startswith("generated_surface_trust.") for token in _selector_tokens(select))
+
+
 def _selector_requests_task_contract(select: str | None) -> bool:
     return any(token == "task_contract" or token.startswith("task_contract.") for token in _selector_tokens(select))
 
@@ -25556,6 +25703,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     profile = _diagnostic_profile(args, default="tiny")
     selected_fields = getattr(args, "select", None)
     change_impact_selected = _selector_requests_change_impact(selected_fields)
+    generated_surface_trust_selected = _selector_requests_generated_surface_trust(selected_fields)
     task_contract_selected = _selector_requests_task_contract(selected_fields)
     assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
     verification_selected = _selector_requests_verification(selected_fields)
@@ -25577,6 +25725,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["task_contract"] = full_payload["task_contract"]
         if change_impact_selected:
             payload["change_impact"] = full_payload["change_impact"]
+        if generated_surface_trust_selected:
+            payload["generated_surface_trust"] = full_payload["generated_surface_trust"]
         if assurance_requirements_selected:
             payload["assurance_requirements"] = full_payload["assurance_requirements"]
         if verification_selected:

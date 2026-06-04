@@ -242,15 +242,15 @@
     "classifications": [
       {
         "id": "root-workspace-cli-runtime",
-        "role": "hand-owned-executable",
+        "role": "projection",
         "exact": [
           "generated/workspace/python/cli.py"
         ],
-        "direct_edit_allowed": true,
-        "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
-        "generator_contract": null,
-        "regeneration_path": null,
-        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata, and any cli.py edit must select generated command package proof so interface drift cannot bypass the generated package gate."
+        "direct_edit_allowed": false,
+        "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
+        "generator_contract": "scripts/generate/generate_command_packages.py",
+        "regeneration_path": "uv run python scripts/generate/generate_command_packages.py",
+        "edit_policy": "Do not hand-edit generated/workspace/python/cli.py; command/interface changes belong in command_package_ir and runtime behavior belongs in hand-written primitive implementation before regenerating the CLI."
       },
       {
         "id": "package-cli-runtime",

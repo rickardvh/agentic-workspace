@@ -30,6 +30,7 @@ def _implement_context(payload: dict[str, object]) -> dict[str, object]:
 def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}")
 
     assert (
         cli.main(
@@ -69,7 +70,16 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert retry["retry_limit"] == 1
     assert "uv run python scripts/check/check_generated_command_packages.py --python-conformance" in retry["applies_to"]
     assert payload["proof"]["unavailable_commands"] == []
-    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
+    assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "projection"
+    trust = payload["generated_surface_trust"]
+    assert trust["status"] == "present"
+    assert trust["direct_edit_blocked_paths"] == ["generated/workspace/python/cli.py"]
+    assert trust["items"][0]["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert trust["items"][0]["freshness_status"] == "validation-required"
+    assert trust["items"][0]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
+    assert trust["items"][0]["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert trust["items"][0]["direct_edit_allowed"] is False
+    assert "Do not hand-edit generated/workspace/python/cli.py" in trust["items"][0]["direct_edit_policy"]
     assert payload["orientation"]["status"] == "changed-path-context"
     assert "preflight" in payload["orientation"]["preflight_command"]
     assert "lowers continuation and review trust" in payload["orientation"]["trust_note"]
@@ -418,6 +428,46 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert impact["proof_impact"]["required_commands"]
 
 
+def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/command_package.json",
+                "--select",
+                "generated_surface_trust",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    trust = json.loads(capsys.readouterr().out)["values"]["generated_surface_trust"]
+    assert trust["kind"] == "agentic-workspace/generated-surface-trust/v1"
+    assert trust["status"] == "present"
+    assert trust["changed_path_count"] == 1
+    assert trust["rule"].startswith("Generated surfaces are derived artifacts")
+    item = trust["items"][0]
+    assert item["path"] == "generated/workspace/python/command_package.json"
+    assert item["classification_id"] == "generated-command-package-output"
+    assert item["role"] == "projection"
+    assert item["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert item["canonical_source_status"] == "present"
+    assert item["freshness_status"] == "validation-required"
+    assert item["refresh_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert item["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert item["direct_edit_allowed"] is False
+    assert "Do not hand-edit generated command package outputs" in item["direct_edit_policy"]
+
+
 def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -752,6 +802,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}")
 
     assert (
         cli.main(
@@ -774,7 +825,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     context = _implement_context(payload)
     encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) <= {"kind", "target", "next", "proof", "reuse_pressure", "context", "drill_down"}
+    assert set(payload) <= {"kind", "target", "next", "proof", "generated_surface_trust", "reuse_pressure", "context", "drill_down"}
     adaptive = context["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
     assert adaptive["read_budget"]["profile"] == "tiny"
@@ -787,6 +838,16 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    trust = payload["generated_surface_trust"]
+    assert trust["status"] == "present"
+    assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"
+    assert trust["items"][0]["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert trust["items"][0]["direct_edit_allowed"] is False
+    assert context["generated_surface_trust"] == {
+        "status": "present",
+        "changed_path_count": 1,
+        "detail_selector": "generated_surface_trust",
+    }
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     guidance = context["guidance"]
     assert guidance["rule"].startswith("AW exposes facts")
@@ -818,7 +879,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 14500
+    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+    assert len(json.dumps(payload["generated_surface_trust"])) < 700
+    assert len(encoded) < 15500
 
 
 def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:

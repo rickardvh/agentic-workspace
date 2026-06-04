@@ -1817,12 +1817,13 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
         "verification:generated_adapter_conformance",
     ]
     authority_review = answer["cli_authority_review"]
-    assert authority_review["status"] == "review-ready"
+    assert authority_review["status"] == "blocked-direct-edit-route-to-source"
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     root_cli = authority_review["classifications"][0]
-    assert root_cli["role"] == "hand-owned-executable"
-    assert root_cli["direct_edit_allowed"] is True
-    assert root_cli["source_contract"].endswith("src/agentic_workspace/contracts/python_runtime_boundary.json")
+    assert root_cli["role"] == "projection"
+    assert root_cli["direct_edit_allowed"] is False
+    assert root_cli["source_contract"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert root_cli["regeneration_path"] == "uv run python scripts/generate/generate_command_packages.py"
     assert authority_review["authority_query"] == "agentic-workspace defaults --section root_cli_authority --format json"
     review = payload["answer"]["direct_cli_edit_review"]
     assert review["status"] == "review-needed"
