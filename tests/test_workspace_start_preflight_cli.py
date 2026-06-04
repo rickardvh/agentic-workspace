@@ -780,6 +780,13 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert packet["allowed_next_actions"]
     assert isinstance(packet["closure_blockers"], list)
     assert isinstance(packet["continuation_owner_required"], bool)
+    assert packet["read_only_allowed"] is True
+    assert packet["exploration_allowed"] is True
+    assert packet["allowed_read_only_actions"]
+    assert packet["claim_boundary"]["completion_claim"] in {
+        "allowed-after-proof",
+        "blocked-until-proof-and-acceptance",
+    }
     assert packet["memory_consultation_status"] in {"recommended", "unknown"}
     boundary = packet["authority_boundary"]
     assert boundary["kind"] == "agentic-workspace/authority-boundary/v1"
@@ -1644,6 +1651,16 @@ def test_start_blocks_broad_work_when_decomposition_lane_needs_promotion(tmp_pat
     assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "candidate-lane-promotion-required"
     assert _start_primary_action(payload)["action"] == "select-or-promote-candidate-lane"
     assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert payload["next_safe_action"]["read_only_allowed"] is True
+    assert payload["next_safe_action"]["exploration_allowed"] is True
+    assert "review issues, PRs, logs, docs, and command output" in payload["next_safe_action"]["allowed_read_only_actions"]
+    assert payload["next_safe_action"]["completion_claim_allowed"] is False
+    assert payload["next_safe_action"]["claim_boundary"]["implementation"] == "blocked-until-planning-ownership"
+    assert payload["next_safe_action"]["claim_boundary"]["completion_claim"] == "blocked-until-proof-and-acceptance"
+    assert payload["next_safe_action"]["claim_boundary"]["required_before_implementation"] == ["select-or-promote-candidate-lane"]
+    assert gate["read_only_allowed"] is True
+    assert gate["exploration_allowed"] is True
+    assert gate["claim_boundary"]["gate_result"] == "candidate-lane-promotion-required"
     decision = _start_context_value(payload, "delegation_decision")
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
 
@@ -1695,6 +1712,65 @@ candidates = [
     ]
     assert "planning promote-to-plan --item-id github-1201-command-package" in gate["candidate_pressure"]["route_options"][0]["command"]
     assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert payload["next_safe_action"]["read_only_allowed"] is True
+    assert payload["next_safe_action"]["exploration_allowed"] is True
+    assert payload["next_safe_action"]["completion_claim_allowed"] is False
+    assert payload["next_safe_action"]["claim_boundary"]["implementation"] == "blocked-until-planning-ownership"
+
+
+def test_start_allows_read_only_review_under_candidate_lane_gate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1201-command-package", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1201", title = "Command package extraction", outcome = "Extract the command package.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+  { id = "github-1202-runtime-parity", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1202", title = "Runtime parity", outcome = "Prove generated runtime parity.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Review #1201 and #1202 and report implementation risks before editing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["gate_result"] == "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["read_only_allowed"] is True
+    assert gate["exploration_allowed"] is True
+    assert "draft review, triage, evaluation, or implementation recommendations without editing source" in gate["allowed_read_only_actions"]
+
+    next_action = payload["next_safe_action"]
+    _assert_next_safe_action_valid(next_action)
+    assert next_action["implementation_allowed"] is False
+    assert next_action["read_only_allowed"] is True
+    assert next_action["exploration_allowed"] is True
+    assert next_action["completion_claim_allowed"] is False
+    assert next_action["claim_boundary"]["implementation"] == "blocked-until-planning-ownership"
+    assert next_action["claim_boundary"]["completion_claim"] == "blocked-until-proof-and-acceptance"
+    assert next_action["claim_boundary"]["required_before_implementation"] == ["select-or-promote-candidate-lane"]
 
 
 def test_start_marks_bare_issue_ref_scope_unknown_without_external_evidence(tmp_path: Path, capsys) -> None:
