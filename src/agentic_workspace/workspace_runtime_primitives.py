@@ -20453,6 +20453,99 @@ def _allow_issue_scoped_planning_state_reconciliation(path_classification: dict[
     }
 
 
+def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> dict[str, Any]:
+    path = target_root / relative_path
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "path": relative_path,
+            "status": "unreadable",
+            "eligible": False,
+            "reason": str(exc),
+        }
+    if not isinstance(record, dict):
+        return {
+            "path": relative_path,
+            "status": "invalid",
+            "eligible": False,
+            "reason": "archived execplan record is not a JSON object",
+        }
+    closure_check = _as_dict(record.get("closure_check"))
+    intent_satisfaction = _as_dict(record.get("intent_satisfaction"))
+    canonical_core = _as_dict(record.get("canonical_core"))
+    status = str(record.get("status") or canonical_core.get("status") or "").strip().lower()
+    closure_decision = str(closure_check.get("closure decision") or canonical_core.get("closeout_decision") or "").strip().lower()
+    larger_intent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
+    intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower()
+    completed = status in {"completed", "complete", "closed", "done"}
+    closed = closure_decision == "archive-and-close"
+    no_open_larger_intent = larger_intent_status in {"", "satisfied", "complete", "completed", "closed", "done"}
+    intent_done = intent_satisfied in {"", "yes", "true", "satisfied", "complete", "completed"}
+    eligible = completed and closed and no_open_larger_intent and intent_done
+    blockers = [
+        label
+        for label, applies in [
+            ("record status is not completed", not completed),
+            ("closure decision is not archive-and-close", not closed),
+            ("larger intent remains open", not no_open_larger_intent),
+            ("intent satisfaction is incomplete", not intent_done),
+        ]
+        if applies
+    ]
+    return {
+        "path": relative_path,
+        "status": status or "unknown",
+        "closure_decision": closure_decision or "unknown",
+        "larger_intent_status": larger_intent_status or "unknown",
+        "intent_satisfied": intent_satisfied or "unknown",
+        "eligible": eligible,
+        "reason": "completed archived closeout residue" if eligible else "; ".join(blockers),
+    }
+
+
+def _allow_completed_archive_publication_residue(path_classification: dict[str, Any], *, target_root: Path) -> dict[str, Any]:
+    planning_paths = [str(path) for path in path_classification.get("planning_paths", []) if isinstance(path, str) and path]
+    if not planning_paths:
+        return path_classification
+    archive_prefix = ".agentic-workspace/planning/execplans/archive/"
+    archive_paths = [path for path in planning_paths if path.startswith(archive_prefix) and path.endswith(".plan.json")]
+    if archive_paths != planning_paths:
+        return path_classification
+    archive_states = [_archive_record_closeout_state(target_root=target_root, relative_path=path) for path in archive_paths]
+    if not archive_states or not all(bool(item.get("eligible")) for item in archive_states):
+        return {
+            **path_classification,
+            "archived_planning_residue": {
+                "status": "incomplete-or-stale",
+                "paths": archive_paths,
+                "records": archive_states,
+                "rule": "Archived planning paths only become publication residue when every changed archive record is completed and closed.",
+            },
+        }
+    implementation_paths = [str(path) for path in path_classification.get("implementation_paths", []) if isinstance(path, str) and path]
+    return {
+        **path_classification,
+        "dirty_shape": "implementation-with-archived-planning-residue" if implementation_paths else "archived-planning-residue-only",
+        "planning_paths": [],
+        "archived_planning_residue_paths": archive_paths,
+        "ancillary_paths": [*path_classification.get("ancillary_paths", []), *archive_paths],
+        "ancillary_rule": (
+            "Completed archived execplan records may accompany publication or final changed-path checks without reopening "
+            "active Planning ownership."
+        ),
+        "archived_planning_residue": {
+            "status": "completed-closeout-residue",
+            "paths": archive_paths,
+            "records": archive_states,
+            "rule": (
+                "Archived closeout evidence can explain completed work or publication residue, but it does not restore active "
+                "Planning state or block bounded implementation by itself."
+            ),
+        },
+    }
+
+
 def _work_shape_guidance_payload(
     *,
     path_classification: dict[str, Any],
@@ -20476,6 +20569,11 @@ def _work_shape_guidance_payload(
         direct_reasons.append("changed implementation paths are within a narrow top-level surface")
     if path_classification.get("dirty_shape") == "planning-only":
         direct_reasons.append("only Planning surfaces are named; validate Planning state before treating this as implementation")
+    if path_classification.get("dirty_shape") in {
+        "implementation-with-archived-planning-residue",
+        "archived-planning-residue-only",
+    }:
+        direct_reasons.append("changed Planning paths are completed archived closeout residue, not active implementation ownership")
     if path_classification.get("scope_growth_detected"):
         planning_reasons.extend(str(reason) for reason in path_classification.get("scope_growth_reasons", []) if str(reason))
     if active_planning_present:
@@ -21029,6 +21127,7 @@ def _planning_safety_gate_payload(
     issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
     path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
+    path_classification = _allow_completed_archive_publication_residue(path_classification, target_root=target_root)
     planning_revision = _planning_revision_payload(target_root=target_root)
     issue_scope_evidence = _issue_scope_evidence_payload(target_root=target_root, config=config, issue_refs=issue_refs)
     candidate_pressure = _planning_candidate_pressure_payload(
