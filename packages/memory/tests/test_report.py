@@ -697,8 +697,18 @@ def test_memory_report_classifies_trust_states_from_manifest_metadata(tmp_path: 
 
     questionable_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "questionable-note.md"
     questionable_note.write_text("# Questionable\n", encoding="utf-8")
+    fresh_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "fresh-note.md"
+    fresh_note.write_text("# Fresh\n", encoding="utf-8")
     stale_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "stale-note.md"
     stale_note.write_text("# Stale\n", encoding="utf-8")
+    superseded_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "superseded-note.md"
+    superseded_note.write_text("# Superseded\n", encoding="utf-8")
+    replacement_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "replacement-note.md"
+    replacement_note.write_text("# Replacement\n", encoding="utf-8")
+    contradicted_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "contradicted-note.md"
+    contradicted_note.write_text("# Contradicted\n", encoding="utf-8")
+    contradicting_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "contradicting-note.md"
+    contradicting_note.write_text("# Contradicting\n", encoding="utf-8")
     improvement_note = target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "improvement-note.md"
     improvement_note.write_text("# Improvement\n", encoding="utf-8")
 
@@ -718,6 +728,21 @@ subsystems = ["test"]
 surfaces = ["decision"]
 memory_role = "durable_truth"
 
+[notes.".agentic-workspace/memory/repo/decisions/fresh-note.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/fresh-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["decision"]
+routes_from = ["AGENTS.md"]
+stale_when = ["AGENTS.md"]
+last_confirmed = "2999-01-01"
+valid_until = "2999-12-31"
+memory_role = "durable_truth"
+
 [notes.".agentic-workspace/memory/repo/decisions/stale-note.md"]
 note_type = "decision"
 canonical_home = ".agentic-workspace/memory/repo/decisions/stale-note.md"
@@ -727,8 +752,40 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["test"]
 surfaces = ["decision"]
-routes_from = ["missing/**/*.md"]
-stale_when = ["missing/**/*.md"]
+routes_from = ["AGENTS.md"]
+stale_when = ["AGENTS.md"]
+last_confirmed = "1999-01-01"
+valid_until = "2000-01-01"
+memory_role = "durable_truth"
+
+[notes.".agentic-workspace/memory/repo/decisions/superseded-note.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/superseded-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["decision"]
+routes_from = ["AGENTS.md"]
+stale_when = ["AGENTS.md"]
+last_confirmed = "2026-01-01"
+superseded_by = [".agentic-workspace/memory/repo/decisions/replacement-note.md"]
+memory_role = "durable_truth"
+
+[notes.".agentic-workspace/memory/repo/decisions/contradicted-note.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/contradicted-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["decision"]
+routes_from = ["AGENTS.md"]
+stale_when = ["AGENTS.md"]
+last_confirmed = "2026-01-01"
+contradicted_by = [".agentic-workspace/memory/repo/decisions/contradicting-note.md"]
 memory_role = "durable_truth"
 
 [notes.".agentic-workspace/memory/repo/mistakes/improvement-note.md"]
@@ -754,8 +811,24 @@ elimination_target = "promote"
     report = installer.memory_report(target=target)
 
     assert report["trust"]["state_counts"]["questionable"] >= 1
+    assert report["trust"]["state_counts"]["supported"] >= 1
     assert report["trust"]["state_counts"]["stale"] >= 1
+    assert report["trust"]["state_counts"]["superseded"] >= 1
+    assert report["trust"]["state_counts"]["contradicted"] >= 1
     assert report["trust"]["state_counts"]["elimination_candidate"] >= 1
+    assert report["trust"]["status"] == "attention"
+    assert report["trust"]["attention_count"] >= 3
+    assert any(item["freshness"] == "expired" for item in report["trust"]["stale_notes"])
+    assert any(
+        item["path"] == ".agentic-workspace/memory/repo/decisions/superseded-note.md"
+        and item["superseded_by"] == [".agentic-workspace/memory/repo/decisions/replacement-note.md"]
+        for item in report["trust"]["superseded_notes"]
+    )
+    assert any(
+        item["path"] == ".agentic-workspace/memory/repo/decisions/contradicted-note.md"
+        and item["contradicted_by"] == [".agentic-workspace/memory/repo/decisions/contradicting-note.md"]
+        for item in report["trust"]["contradicted_notes"]
+    )
     assert any(
         item["path"] == ".agentic-workspace/memory/repo/decisions/questionable-note.md" for item in report["trust"]["questionable_notes"]
     )

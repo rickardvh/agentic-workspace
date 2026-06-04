@@ -101,6 +101,85 @@ surfaces = ["api"]
     assert result.route_summary["weak_signal_note_count"] == 0
 
 
+def test_route_memory_exposes_selected_note_freshness_trust(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    notes_dir = target / ".agentic-workspace" / "memory" / "repo" / "domains"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (notes_dir / "fresh.md").write_text("# Fresh\n", encoding="utf-8")
+    (notes_dir / "expired.md").write_text("# Expired\n", encoding="utf-8")
+    (notes_dir / "superseded.md").write_text("# Superseded\n", encoding="utf-8")
+    (notes_dir / "replacement.md").write_text("# Replacement\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/fresh.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/fresh.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["src/api.py"]
+stale_when = ["src/api.py"]
+last_confirmed = "2999-01-01"
+valid_until = "2999-12-31"
+memory_role = "durable_truth"
+
+[notes.".agentic-workspace/memory/repo/domains/expired.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/expired.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["src/api.py"]
+stale_when = ["src/api.py"]
+last_confirmed = "1999-01-01"
+valid_until = "2000-01-01"
+memory_role = "durable_truth"
+
+[notes.".agentic-workspace/memory/repo/domains/superseded.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/superseded.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["src/api.py"]
+stale_when = ["src/api.py"]
+last_confirmed = "2026-01-01"
+superseded_by = [".agentic-workspace/memory/repo/domains/replacement.md"]
+memory_role = "durable_truth"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / "src").mkdir(parents=True, exist_ok=True)
+    (target / "src" / "api.py").write_text("pass\n", encoding="utf-8")
+
+    result = installer.route_memory(target=target, files=["src/api.py"])
+
+    selected_trust = result.route_summary["selected_note_trust"]
+    assert selected_trust["status"] == "attention"
+    assert selected_trust["attention_count"] == 2
+    trust_by_path = {item["path"]: item for item in selected_trust["items"]}
+    assert trust_by_path[".agentic-workspace/memory/repo/domains/fresh.md"]["freshness"] == "fresh"
+    assert trust_by_path[".agentic-workspace/memory/repo/domains/expired.md"]["freshness"] == "expired"
+    assert trust_by_path[".agentic-workspace/memory/repo/domains/superseded.md"]["state"] == "superseded"
+
+
 def test_route_memory_falls_back_to_index_when_manifest_is_incomplete(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

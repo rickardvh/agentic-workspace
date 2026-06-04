@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from datetime import date
 from pathlib import Path
 from typing import Any, Iterable, cast
 
@@ -1663,6 +1664,11 @@ def route_memory(
 
     kept_suggestions = [*required, *kept_optionals]
     result.route_summary = _build_route_summary(kept_suggestions)
+    result.route_summary["selected_note_trust"] = _selected_route_note_trust(
+        manifest=manifest,
+        kept_suggestions=kept_suggestions,
+        target_root=target_root,
+    )
     result.missing_note_hint = "If routing missed something, record which note was missing."
 
     if result.route_summary.get("warning"):
@@ -1746,6 +1752,52 @@ def route_memory(
         match_source="missing-note-prompt",
     )
     return result
+
+
+def _selected_route_note_trust(
+    *,
+    manifest: MemoryManifest | None,
+    kept_suggestions: list[tuple[str, str, str, str, int]],
+    target_root: Path,
+) -> dict[str, object]:
+    if manifest is None:
+        return {
+            "status": "unavailable",
+            "selected_note_count": 0,
+            "attention_count": 0,
+            "items": [],
+            "rule": "No manifest was available, so selected Memory notes have no structured freshness signal.",
+        }
+
+    selected_paths = list(dict.fromkeys(note for _recommendation, note, _reason, _match_source, _priority in kept_suggestions))
+    items: list[dict[str, object]] = []
+    for selected_path in selected_paths:
+        note = _lookup_manifest_note(manifest, Path(selected_path))
+        if note is None:
+            continue
+        trust_item = _memory_trust_item(note=note, target_root=target_root)
+        items.append(
+            {
+                "path": trust_item["path"],
+                "state": trust_item["state"],
+                "freshness": trust_item["freshness"],
+                "reason": trust_item["reason"],
+                "last_confirmed": trust_item["last_confirmed"],
+                "valid_until": trust_item["valid_until"],
+                "superseded_by": trust_item["superseded_by"],
+                "contradicted_by": trust_item["contradicted_by"],
+            }
+        )
+
+    attention_states = {"stale", "questionable", "superseded", "contradicted"}
+    attention_count = sum(1 for item in items if item.get("state") in attention_states)
+    return {
+        "status": "attention" if attention_count else "clear",
+        "selected_note_count": len(items),
+        "attention_count": attention_count,
+        "items": items,
+        "rule": "Memory route selection is advisory; agents must confirm stale, superseded, or contradicted notes before relying on them.",
+    }
 
 
 def review_routes(*, target: str | Path | None = None) -> InstallResult:
@@ -2475,20 +2527,49 @@ def _memory_matching_anchor_patterns(*, target_root: Path, anchors: list[str]) -
     return matched_patterns, matched_paths
 
 
+def _parse_memory_date(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
 def _memory_trust_item(*, note: MemoryNoteRecord, target_root: Path) -> dict[str, object]:
     anchors = _memory_evidence_anchors(note)
     matched_patterns, matched_paths = _memory_matching_anchor_patterns(target_root=target_root, anchors=anchors)
     note_path = target_root / note.path
     exists = note_path.exists()
-    scope = "durable" if note.memory_role in {"durable_truth", "improvement_signal"} or note.authority == "canonical" else "advisory"
+    scope = (
+        "advisory"
+        if note.routing_only or note.high_level
+        else "durable"
+        if note.memory_role in {"durable_truth", "improvement_signal"} or note.authority == "canonical"
+        else "advisory"
+    )
+    valid_until = _parse_memory_date(note.valid_until) if note.valid_until else None
 
     state = "supported"
+    freshness = "fresh" if note.last_confirmed or note.valid_until else "needs-confirmation"
     reason = "note is grounded in current repo anchors"
     if not exists:
         state = "stale"
+        freshness = "missing"
         reason = "manifest note path is missing from the repo"
+    elif note.contradicted_by:
+        state = "contradicted"
+        freshness = "contradicted"
+        reason = "manifest note declares contradicted_by; confirm before relying on it"
+    elif note.superseded_by:
+        state = "superseded"
+        freshness = "superseded"
+        reason = "manifest note declares superseded_by; prefer the replacement note"
+    elif valid_until is not None and valid_until < date.today():
+        state = "stale"
+        freshness = "expired"
+        reason = "manifest note valid_until date has passed"
     elif scope != "durable":
         state = "advisory"
+        freshness = "advisory"
         reason = "advisory/current note trust is reported through current-check and freshness surfaces"
     elif not anchors:
         state = "questionable"
@@ -2506,7 +2587,12 @@ def _memory_trust_item(*, note: MemoryNoteRecord, target_root: Path) -> dict[str
         "authority": note.authority,
         "memory_role": note.memory_role or "unclassified",
         "state": state,
+        "freshness": freshness,
         "reason": reason,
+        "last_confirmed": note.last_confirmed,
+        "valid_until": note.valid_until,
+        "superseded_by": list(note.superseded_by),
+        "contradicted_by": list(note.contradicted_by),
         "evidence_anchor_count": len(anchors),
         "matched_anchor_count": len(matched_patterns),
         "evidence_anchors": anchors,
@@ -3141,7 +3227,10 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     remediation_counts = remediation.counts()
     stale_notes = [item for item in trust_items if item["state"] == "stale"]
     questionable_notes = [item for item in trust_items if item["state"] == "questionable"]
+    superseded_notes = [item for item in trust_items if item["state"] == "superseded"]
+    contradicted_notes = [item for item in trust_items if item["state"] == "contradicted"]
     elimination_candidates = [item for item in trust_items if item["state"] == "elimination_candidate"]
+    trust_attention_notes = [*contradicted_notes, *stale_notes, *superseded_notes, *questionable_notes]
     recurring_friction = _recurring_friction_report(target_root=target_root)
     durable_facts = _durable_fact_routing_view(manifest=manifest, route_snapshot=route_snapshot, target_root=target_root)
     usefulness_audit = _memory_usefulness_audit(
@@ -3213,20 +3302,31 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     merge_safety_warning_count = sum(
         1 for finding in merge_safety_findings if isinstance(finding, dict) and cast(dict[str, Any], finding).get("severity") == "warning"
     )
-    if manual_review_total or warning_total or stale_notes or questionable_notes or merge_safety_warning_count:
+    if manual_review_total or warning_total or trust_attention_notes or merge_safety_warning_count:
         health = "attention-needed"
     else:
         health = "healthy"
 
     next_action_summary = "Memory looks healthy right now."
     next_action_commands: list[str] = []
-    if stale_notes:
+    if contradicted_notes:
+        note = contradicted_notes[0]
+        next_action_summary = f"Resolve contradicted memory note {note['path']} before relying on it."
+        next_action_commands = [
+            "agentic-memory report --target ./repo --format json",
+            "agentic-memory promotion-report --target ./repo --mode remediation",
+        ]
+    elif stale_notes:
         note = stale_notes[0]
         next_action_summary = f"Review stale memory note {note['path']} before trusting it again."
         next_action_commands = [
             "agentic-memory report --target ./repo --format json",
             "agentic-memory promotion-report --target ./repo --mode remediation",
         ]
+    elif superseded_notes:
+        note = superseded_notes[0]
+        next_action_summary = f"Prefer the superseding memory note for {note['path']} before relying on it."
+        next_action_commands = ["agentic-memory report --target ./repo --format json"]
     elif manual_review_total or warning_total:
         first_finding = findings[0] if findings else None
         if isinstance(first_finding, dict):
@@ -3337,6 +3437,10 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         "merge_safety": merge_safety,
         "promotion_pressure": promotion_pressure,
         "trust": {
+            "status": "attention" if trust_attention_notes or manual_review_total or warning_total else "clear",
+            "attention_count": len(trust_attention_notes) + manual_review_total + warning_total,
+            "finding_count": len(trust_items),
+            "detail_command": "agentic-memory report --target ./repo --verbose --format json",
             "warning_count": warning_total,
             "manual_review_count": manual_review_total,
             "advisory_count": advisory_total,
@@ -3344,6 +3448,8 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "state_counts": trust_state_counts,
             "questionable_notes": questionable_notes[:5],
             "stale_notes": stale_notes[:5],
+            "superseded_notes": superseded_notes[:5],
+            "contradicted_notes": contradicted_notes[:5],
             "elimination_candidates": elimination_candidates[:5],
         },
         "recurring_friction": recurring_friction,

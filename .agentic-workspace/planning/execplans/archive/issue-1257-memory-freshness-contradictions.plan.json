@@ -1,0 +1,323 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement memory freshness and contradiction signals",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1257 by giving Memory notes explicit freshness, supersession, and contradiction metadata and projecting that status in report and route consult output.",
+    "hard_constraints": "Keep the slice bounded to explicit manifest metadata, advisory trust projection, and focused Memory package tests. Do not implement semantic contradiction clustering or make stale notes block unrelated work.",
+    "agent_may_decide": "Exact field names, projection wording, focused tests, and whether route consult or report output needs compact human-readable rendering.",
+    "escalate_when": "A correct fix requires cross-agent semantic inference, automatic contradiction discovery, changing Memory note ownership, or hard-gating ordinary work on stale advisory memory.",
+    "next_action": "Run focused tests, fix any failures, then run required Memory package validation.",
+    "proof_expectations": [
+      "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q",
+      "make test-memory",
+      "make lint-memory"
+    ],
+    "touched_scope": [
+      "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+      "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+      "packages/memory/src/repo_memory_bootstrap/installer.py",
+      "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+      "packages/memory/tests/test_report.py",
+      "packages/memory/tests/test_routing.py"
+    ],
+    "completion_criteria": [
+      "Manifest note records can carry last_confirmed, valid_until, superseded_by, and contradicted_by metadata.",
+      "Memory report exposes fresh, stale, superseded, and contradicted note trust as advisory findings.",
+      "Memory route consult exposes selected-note freshness/trust before an agent relies on routed notes.",
+      "Focused and package-level Memory validation pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement #1257 by giving Memory notes explicit freshness, supersession, and contradiction metadata and projecting that status in report and route consult output."
+  ],
+  "non_goals": [
+    "Do not implement automatic semantic contradiction clustering.",
+    "Do not make stale or superseded memory a hard blocker for unrelated work.",
+    "Do not broaden into adjacent command-generation or planning issues."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1257 Memory freshness and contradiction signals.",
+      "constraints": "Keep scope bounded to explicit metadata and advisory projection; no semantic contradiction clustering or hard-gating unrelated work.",
+      "latitude": "Choose exact projection shape, compact rendering, and focused tests.",
+      "escalation": "Escalate if the work needs automatic semantic inference, cross-agent trust decisions, or broader Memory ownership changes.",
+      "proof": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory"
+    },
+    "execution": {
+      "milestone": "issue-1257-memory-freshness-contradictions",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory"
+    },
+    "scope": {
+      "touched": [
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+        "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+        "packages/memory/tests/test_report.py",
+        "packages/memory/tests/test_routing.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Memory should help agents judge whether durable lessons are current before relying on them.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement memory freshness and contradiction signals",
+    "inferred intended outcome": "Expose note freshness, supersession, and contradiction status where agents consult Memory.",
+    "chosen concrete what": "Add explicit manifest metadata and advisory report/route trust projection with focused tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Memory package manifest model/parser/validator, Memory report/route/runtime projection, focused Memory tests, and this execplan.",
+    "max changed files": "8 source/test/planning files unless validation reveals a directly related generated or contract surface.",
+    "required validation commands": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory.",
+    "ask-before-refactor threshold": "Ask before extracting new packages, changing command-generation contracts, or introducing automatic semantic contradiction discovery.",
+    "stop before touching": "Unrelated backlog, adjacent planning lanes, command-generation extraction, or broad Memory note migration."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1257 from Memory note metadata and advisory trust projection; next step is focused tests and Memory validation.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1257 Memory freshness and contradiction signals.",
+    "hard constraints": "Keep stale/superseded/contradicted signals advisory and explicit; do not add semantic clustering in this slice.",
+    "agent may decide locally": "Projection shape, wording, and focused test fixtures.",
+    "escalate when": "The fix requires automatic contradiction inference, a hard gate, or a broader ownership rewrite."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1257-memory-freshness-contradictions",
+    "status": "completed",
+    "scope": "Explicit Memory note freshness metadata and advisory report/route trust projection for #1257.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run focused Memory report/routing tests, fix failures, then run make test-memory and make lint-memory."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+    "packages/memory/src/repo_memory_bootstrap/_installer_memory.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "packages/memory/tests/test_report.py",
+    "packages/memory/tests/test_routing.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q",
+    "make test-memory",
+    "make lint-memory"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement memory freshness and contradiction signals is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented explicit Memory note freshness, supersession, and contradiction metadata with advisory report and route-consult trust projection.",
+    "scope touched": "Memory manifest model/parser/validator, Memory report trust output, Memory route consult summary, runtime text rendering, and focused tests.",
+    "changed surfaces": "packages/memory/src/repo_memory_bootstrap/_installer_shared.py; packages/memory/src/repo_memory_bootstrap/_installer_memory.py; packages/memory/src/repo_memory_bootstrap/installer.py; packages/memory/src/repo_memory_bootstrap/runtime_primitives.py; packages/memory/tests/test_report.py; packages/memory/tests/test_routing.py",
+    "validations run": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed bounded to #1257. Stale, superseded, and contradicted Memory notes are advisory visibility signals, not hard blockers; semantic contradiction clustering remains out of scope.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1257 Memory freshness and contradiction signals.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Memory consult/report now surfaces whether selected durable notes are fresh, expired/stale, superseded, or contradicted before an agent relies on them.",
+    "validation confirmed": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-04: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1257 Memory freshness and contradiction signals.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest packages/memory/tests/test_report.py packages/memory/tests/test_routing.py -q; make test-memory; make lint-memory\nChanged surfaces: packages/memory/src/repo_memory_bootstrap/_installer_shared.py; packages/memory/src/repo_memory_bootstrap/_installer_memory.py; packages/memory/src/repo_memory_bootstrap/installer.py; packages/memory/src/repo_memory_bootstrap/runtime_primitives.py; packages/memory/tests/test_report.py; packages/memory/tests/test_routing.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

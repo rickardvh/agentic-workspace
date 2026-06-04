@@ -459,6 +459,10 @@ class MemoryNoteRecord:
     use_when: tuple[str, ...] = ()
     routes_from: tuple[str, ...] = ()
     stale_when: tuple[str, ...] = ()
+    last_confirmed: str = ""
+    valid_until: str = ""
+    superseded_by: tuple[str, ...] = ()
+    contradicted_by: tuple[str, ...] = ()
     evidence: tuple[str, ...] = ()
     related_validations: tuple[str, ...] = ()
     routing_only: bool = False
