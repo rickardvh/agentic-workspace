@@ -7916,6 +7916,100 @@ def _closeout_report_completeness_payload(
     }
 
 
+def _decision_traceability_owner_model_payload(config_info: dict[str, Any] | None = None) -> dict[str, Any]:
+    config_info = _as_dict(config_info)
+    configured_target = str(config_info.get("target") or "").strip()
+    configured = bool(config_info.get("configured"))
+    durable_targets = [
+        {
+            "id": "configured-decision-target",
+            "owner": "host repo",
+            "status": "available" if configured else "not-configured",
+            "target": configured_target,
+            "role": "Durable accepted decision record when the host repo has configured or discoverable decision storage.",
+        },
+        {
+            "id": "docs-or-adr",
+            "owner": "host repo",
+            "status": "optional",
+            "target": "docs, ADR directory, or other repo-owned decision documentation",
+            "role": "Durable rationale for decisions likely to guide future maintainers or agents.",
+        },
+        {
+            "id": "memory",
+            "owner": "host repo memory policy",
+            "status": "optional",
+            "target": "Memory note or promotion pressure",
+            "role": "Reusable agent guidance when the decision is operational knowledge rather than a formal record.",
+        },
+        {
+            "id": "config-checks-tests-contracts",
+            "owner": "host repo",
+            "status": "optional",
+            "target": "config, checks, tests, or contracts",
+            "role": "Enforceable residue when the decision should become a rule instead of prose.",
+        },
+        {
+            "id": "issue-follow-up",
+            "owner": "human or repo maintainer",
+            "status": "fallback",
+            "target": "GitHub issue or equivalent tracker",
+            "role": "Human-owned durable route when no configured decision target exists or promotion needs review.",
+        },
+    ]
+    return {
+        "kind": "agentic-workspace/decision-traceability-owner-model/v1",
+        "status": "present",
+        "semantic_decision_owner": "agent",
+        "owner_split": {
+            "agent_authored_facts": [
+                "decision",
+                "rationale",
+                "meaningful alternatives or tradeoffs",
+                "affected surfaces",
+                "proof",
+                "durable owner",
+                "promotion status",
+            ],
+            "aw_derived_review": [
+                "presence and completeness checks",
+                "derived closeout display",
+                "absence visibility",
+                "promotion and scaffold route commands",
+            ],
+            "decision_pressure": [
+                "configuration discovery",
+                "existing decision index",
+                "active planning or memory promotion pressure",
+                "scaffold/promote command routes",
+            ],
+            "host_durable_targets": durable_targets,
+        },
+        "absence_policy": {
+            "not_applicable": "Small, local, or non-system-shaping work should not require decision records.",
+            "visible_and_routed": (
+                "Material system-shaping signals without agent-authored decision facts should be reported as absent-required "
+                "and routed through decision_pressure."
+            ),
+            "may_block_or_lower_trust": (
+                "Missing facts may block or lower trust only when the agent or workflow claims a material system, product, "
+                "public-contract, proof-policy, module-boundary, or long-lived operating-loop decision."
+            ),
+        },
+        "promotion_triggers": [
+            "public or durable contract change",
+            "long-lived operating-loop change",
+            "proof or closeout policy change",
+            "module-boundary or ownership change",
+            "decision likely to affect future agents or maintainers",
+        ],
+        "routing_only_rule": (
+            "AW must not infer the semantic decision from diffs, filenames, or changed paths; it may only preserve "
+            "agent-authored facts, check completeness, and route promotion."
+        ),
+    }
+
+
 def _closeout_report_decision_review_payload(
     *,
     active_planning_record: dict[str, Any],
@@ -8014,6 +8108,7 @@ def _closeout_report_decision_review_payload(
         "kind": "agentic-workspace/closeout-decision-review/v1",
         "status": status,
         "authority": "agent-authored-facts-derived-for-review",
+        "owner_model": _decision_traceability_owner_model_payload(),
         "system_shaping_signals": system_shaping_signals,
         "decision_facts": facts,
         "completeness": {
@@ -9206,6 +9301,7 @@ def _decision_pressure_payload(
         else "not-configured",
         "configuration": config_info,
         "existing_decisions": index,
+        "owner_model": _decision_traceability_owner_model_payload(config_info),
         "planning_pressure": planning_pressure,
         "memory_pressure": memory_pressure,
         "closeout_decision_state": closeout_state,

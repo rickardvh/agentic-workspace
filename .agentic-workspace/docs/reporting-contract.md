@@ -132,6 +132,16 @@ The active owner for decision facts is Planning, primarily `architecture_decisio
 `closeout_report.decision_review` may render those facts and check completeness, while `report --section decision_pressure` remains the routing and promotion-pressure surface.
 When system-shaping signals are present but no decision facts exist, `decision_review.status` should be `absent-required` and `decision_absent_because` must say that no agent-authored facts were found rather than pretending AW inferred the decision.
 
+`decision_review.owner_model` and `decision_pressure.owner_model` describe the proportional ownership split:
+
+- the agent authors semantic decision facts;
+- AW derives presence/completeness checks, closeout display, absence visibility, and scaffold/promote routes;
+- `decision_pressure` remains routing-only and must not infer decisions from diffs, filenames, or changed paths;
+- durable accepted decisions live in host-owned surfaces such as configured decision records, docs or ADRs, Memory, config/checks/tests/contracts, or issue follow-up.
+
+Small, local, or non-system-shaping work should remain decision-light.
+Material system-shaping changes should make decision absence visible and routed; absence may block or lower trust only when the claimed work affects public or durable contracts, long-lived operating loops, proof policy, module boundaries, or future-agent guidance.
+
 Decision-review facts are:
 
 - decision made;
