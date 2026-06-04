@@ -1505,14 +1505,14 @@
       "conformance_ref": "verification.report.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "python.function.call",
+        "verification.report.load",
         "output.emit"
       ],
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Generated parser, dispatch, and operation dataflow own the command shape; the Verification package owns manifest semantics, activation matching, evidence freshness, and bounded-evidence projection.",
-      "external_adapter_note": "python.function.call is package-domain runtime delegation for Verification semantics, not portable primitive coverage.",
+      "external_adapter_note": "",
       "what_would_make_portable_later": "Move deterministic manifest parsing, activation matching, evidence freshness classification, and output projection into schema-backed codegen-owned primitives once the Verification semantics stabilize enough to be generic dataflow rather than package policy.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while repo_verification_bootstrap.runtime_primitives owns the first-party module's verification protocol and evidence semantics. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while verification.report.load names the Verification package-domain report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "uninstall.lifecycle",

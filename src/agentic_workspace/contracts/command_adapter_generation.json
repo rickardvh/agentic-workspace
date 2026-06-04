@@ -5609,7 +5609,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "python.function.call",
+          "verification.report.load",
           "output.emit"
         ]
       },

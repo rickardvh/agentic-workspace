@@ -49,6 +49,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
             }),
             handlers={
                 'path.target_root.resolve': _handle_path_target_root_resolve,
+                'verification.report.load': _handle_verification_report_load,
             },
         )
         emitted = values.get('emitted')
@@ -69,3 +70,9 @@ def _handle_path_target_root_resolve(values: dict[str, Any], _arguments: dict[st
     from .resources import resolve_repo_target_root
 
     return resolve_repo_target_root(values.get('target'), ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg'))
+
+
+def _handle_verification_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .verification_runtime import verification_report_payload
+
+    return verification_report_payload(changed_paths=values.get('changed_paths'), target_root=values.get('target_root'), task_text=values.get('task_text'))

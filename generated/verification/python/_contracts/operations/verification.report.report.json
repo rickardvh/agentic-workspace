@@ -64,8 +64,8 @@
     },
     {
       "id": "load_verification_report",
-      "uses": "python.function.call",
-      "description": "Load the package-owned Verification report projection.",
+      "uses": "verification.report.load",
+      "description": "Load the package-owned Verification report projection through a named domain primitive.",
       "outputs": [
         "result"
       ]
@@ -90,7 +90,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Verification report uses generated command parsing and operation dispatch, then calls the package-owned runtime projection.",
+    "summary": "Verification report uses generated command parsing and operation dispatch, then loads the package-owned runtime projection through a named domain primitive.",
     "steps": [
       {
         "id": "resolve_target_root",
@@ -107,21 +107,17 @@
       },
       {
         "id": "load_verification_report",
-        "uses": "python.function.call",
+        "uses": "verification.report.load",
         "description": "Load the package-owned Verification report projection.",
         "arguments": {
-          "import_module": "repo_verification_bootstrap.runtime_primitives",
-          "function": "verification_report_payload",
-          "kwargs": {
-            "target_root": {
-              "value": "target_root"
-            },
-            "changed_paths": {
-              "value": "changed_paths"
-            },
-            "task_text": {
-              "value": "task_text"
-            }
+          "target_root": {
+            "value": "target_root"
+          },
+          "changed_paths": {
+            "value": "changed_paths"
+          },
+          "task_text": {
+            "value": "task_text"
           }
         },
         "outputs": [

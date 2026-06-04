@@ -11097,6 +11097,23 @@
                 "Cargo.toml",
                 ".hg"
               ]
+            },
+            {
+              "primitive": "verification.report.load",
+              "handler": "function_call",
+              "import_module": "repo_verification_bootstrap.runtime_primitives",
+              "function": "verification_report_payload",
+              "kwargs": {
+                "target_root": {
+                  "value": "target_root"
+                },
+                "changed_paths": {
+                  "value": "changed_paths"
+                },
+                "task_text": {
+                  "value": "task_text"
+                }
+              }
             }
           ]
         },
@@ -11190,7 +11207,7 @@
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
               "path.target_root.resolve",
-              "python.function.call",
+              "verification.report.load",
               "output.emit"
             ]
           },

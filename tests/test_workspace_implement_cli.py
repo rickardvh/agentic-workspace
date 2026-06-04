@@ -1141,7 +1141,9 @@ def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp
             {
                 "schema_version": "execplan/v1",
                 "id": "completed-slice",
-                "status": "completed",
+                "machine_readable_contract": {"execution": {"status": "completed"}},
+                "active_milestone": {"status": "completed"},
+                "execution_run": {"run status": "completed"},
                 "intent_satisfaction": {"was original intent fully satisfied?": "yes"},
                 "closure_check": {
                     "larger-intent status": "satisfied",
@@ -1181,8 +1183,210 @@ def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp
     assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
     assert facts["archived_planning_residue_paths"] == [archive_path]
     assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
+    assert facts["archived_planning_residue"]["records"][0]["status"] == "completed"
     assert gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"] == [archive_path]
     assert any("archived closeout residue" in reason for reason in gate["work_shape_guidance"]["direct_work_is_reasonable_when"])
+
+
+def test_implement_allows_completed_archived_plan_residue_with_routed_continuation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    archive_path = ".agentic-workspace/planning/execplans/archive/partial-slice.plan.json"
+    _write(
+        tmp_path / archive_path,
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "partial-slice",
+                "machine_readable_contract": {"execution": {"status": "completed"}},
+                "canonical_core": {"continuation_owner": "GitHub #1278"},
+                "required_continuation": {
+                    "required follow-on for the larger intended outcome": "yes",
+                    "owner surface": "GitHub #1278",
+                    "activation trigger": "implement the next bounded slice",
+                },
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                archive_path,
+                "--task",
+                "Publish the completed slice.",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert gate["gate_result"] == "direct-work-allowed"
+    facts = gate["changed_path_facts"]
+    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
+    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
+    assert facts["archived_planning_residue"]["records"][0]["larger_intent_status"] == "open"
+    assert facts["archived_planning_residue"]["records"][0]["closure_decision"] == "archive-but-keep-lane-open"
+
+
+def test_implement_allows_closeout_evidence_and_state_cleanup_publication_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    state_path = ".agentic-workspace/planning/state.toml"
+    closeout_path = ".agentic-workspace/planning/closeout-evidence/partial-slice.closeout.json"
+    _write(
+        tmp_path / closeout_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "active_milestone": {"status": "completed"},
+                "execution_run": {"run status": "completed"},
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "slice status": "completed",
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+                "durable_residue": {"canonical owner now": "GitHub #1278"},
+                "execution_summary": {"follow-on routed to": "GitHub #1278"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                closeout_path,
+                state_path,
+                "--task",
+                "Publish the completed slice.",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert gate["gate_result"] == "direct-work-allowed"
+    facts = gate["changed_path_facts"]
+    assert facts["planning_paths"] == []
+    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
+    assert facts["archived_planning_residue_paths"] == [closeout_path]
+    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
+    assert set(gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"]) == {closeout_path, state_path}
+
+
+def test_implement_closeout_publication_residue_suppresses_unrelated_candidate_pressure(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "deferred.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Deferred lane",
+                "status": "partially-promoted",
+                "lanes": [
+                    {
+                        "lane_id": "future-lane",
+                        "title": "Future lane",
+                        "readiness": "deferred",
+                        "owner_surface": "later",
+                        "proof": "later",
+                        "candidate_route": "delegate-exploration",
+                    }
+                ],
+            }
+        ),
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    closeout_path = ".agentic-workspace/planning/closeout-evidence/partial-slice.closeout.json"
+    _write(
+        tmp_path / closeout_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "active_milestone": {"status": "completed"},
+                "execution_run": {"run status": "completed"},
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "slice status": "completed",
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+                "durable_residue": {"canonical owner now": "GitHub #1278"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                closeout_path,
+                "--task",
+                "Implement issue #1278",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] in {"clear", "attention"}
+    assert gate["gate_result"] != "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is True
+    assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"
 
 
 def test_implement_keeps_planning_gate_for_unfinished_archived_plan_residue(tmp_path: Path, capsys) -> None:

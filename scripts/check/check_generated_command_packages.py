@@ -256,6 +256,10 @@ DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "memory.promotion_report.load": {
         "import_module": "repo_memory_bootstrap.installer",
         "function": "promotion_report",
+    },
+    "verification.report.load": {
+        "import_module": "repo_verification_bootstrap.runtime_primitives",
+        "function": "verification_report_payload",
     }
 }
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
@@ -1125,6 +1129,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "memory.bootstrap.doctor.load",
     "memory.current.load",
     "memory.promotion_report.load",
+    "verification.report.load",
     "memory.prompt.render",
     "planning.prompt.render",
     "prompt.render",
@@ -2621,6 +2626,22 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("generated memory promotion-report operation is missing")
     if "_handle_memory_promotion_report_load" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must render the declared memory.promotion_report.load host-domain handler")
+    verification_operation = REPO_ROOT / "generated" / "verification" / "python" / "operations" / "verification.report.report.json"
+    verification_operation_executor = REPO_ROOT / "generated" / "verification" / "python" / "primitives" / "operation_executor.py"
+    if verification_operation.is_file():
+        verification_text = verification_operation.read_text(encoding="utf-8")
+        if '"uses": "verification.report.load"' not in verification_text:
+            errors.append("generated verification report operation must execute through declared verification.report.load")
+        if '"uses": "python.function.call"' in verification_text:
+            errors.append("generated verification report operation must not expose python.function.call in operation IR")
+    else:
+        errors.append("generated verification report operation is missing")
+    if verification_operation_executor.is_file():
+        verification_executor_text = verification_operation_executor.read_text(encoding="utf-8")
+        if "_handle_verification_report_load" not in verification_executor_text:
+            errors.append("verification operation IR executor must render the declared verification.report.load host-domain handler")
+    else:
+        errors.append("generated verification operation IR executor is missing")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (

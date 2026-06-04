@@ -558,6 +558,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'memory.route_report.load') return { message: 'Routing report', route_report_summary: { feedback: { status: 'not-evaluated', path: '.agentic-workspace/memory/repo/route-feedback.md' }, fixtures: { status: 'not-evaluated', fixture_count: 0 } }, detail_command: 'agentic-memory route-report --target . --verbose --format json' };
   if (primitive === 'memory.bootstrap.doctor.load') return values.result ?? payloadStatus(values, { policy_root: 'memory.contracts', policy_path: 'payload_verification.memory.json', target_root_value: 'target_root', message: 'Doctor report' });
   if (primitive === 'memory.promotion_report.load') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), notes: values.notes ?? [], candidates: [], message: 'Memory promotion report' };
+  if (primitive === 'verification.report.load') return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
   if (primitive === 'memory.current.load') return values.current_command === 'check' ? { dry_run: true, target_root: resolve(String(values.target ?? '.')) } : { detected_version: null, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'memory.prompt.render' || primitive === 'planning.prompt.render') return { message: `Prompt rendered for ${operationId}`, command: operationId, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'prompt.render') {
@@ -677,4 +678,3 @@ export function runGeneratedOperation({ operationId, operationPath, values }) {
   writeSync(1, output);
   return 0;
 }
-

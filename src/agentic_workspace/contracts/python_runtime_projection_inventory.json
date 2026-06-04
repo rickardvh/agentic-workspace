@@ -1471,14 +1471,14 @@
         ],
         "primitive_refs": [
           "path.target_root.resolve",
-          "python.function.call",
+          "verification.report.load",
           "output.emit"
         ],
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "Verification report semantics classify repo-specific protocol activation, bounded evidence, stale conditions, and known gaps behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "verification.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while repo_verification_bootstrap.runtime_primitives owns the first-party module's verification protocol and evidence semantics. This entry is not accepted as portable codegen coverage."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while verification.report.load names the Verification package-domain report boundary. This entry is not accepted as portable codegen coverage."
       }
     ]
   },
