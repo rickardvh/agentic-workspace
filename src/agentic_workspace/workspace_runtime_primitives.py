@@ -16710,7 +16710,11 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
         "workflow_obligations": compact_workflow_obligations,
-        "closeout_obligations": _compact_start_closeout_obligations(preflight.get("closeout_obligations", {})),
+        "closeout_obligations": _compact_start_closeout_obligations(
+            preflight.get("closeout_obligations", {}),
+            cli_invoke=config.cli_invoke,
+            target_root=target_root,
+        ),
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
@@ -18590,18 +18594,24 @@ def _compact_start_workflow_obligations(value: Any) -> dict[str, Any]:
     }
 
 
-def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
+def _compact_start_closeout_obligations(
+    value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_root: Path | None = None
+) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
     required = value.get("required_before_lane_closeout", [])
     if not isinstance(required, list):
         required = []
+    target_arg = _command_target_arg(target_root)
     return {
         "status": value.get("status", "unknown"),
         "required_before_lane_closeout_count": len(required),
         "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
         "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-        "detail_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        "detail_command": _command_with_cli_invoke(
+            command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json",
+            cli_invoke=cli_invoke,
+        ),
     }
 
 

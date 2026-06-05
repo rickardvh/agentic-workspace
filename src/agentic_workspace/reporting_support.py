@@ -245,7 +245,11 @@ def select_report_payload(
             answer=answer,
             refs=[
                 ".agentic-workspace/docs/reporting-contract.md",
-                "agentic-workspace report --target ./repo --verbose --format json",
+                _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --verbose --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
             ],
         )
     if profile == "full":

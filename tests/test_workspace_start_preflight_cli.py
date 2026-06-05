@@ -582,6 +582,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
     assert "cli_compatibility" not in payload
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
@@ -621,6 +622,10 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert "configured" not in payload["workflow_obligations"]
     assert payload["closeout_obligations"]["required_before_lane_closeout_count"] == 0
     assert "required_before_lane_closeout" not in payload["closeout_obligations"]
+    assert payload["closeout_obligations"]["detail_command"] == (
+        f"uv run agentic-workspace report --target {relative_target} --section closeout_trust --format json"
+    )
+    assert "--target ./repo" not in payload["closeout_obligations"]["detail_command"]
     assert payload["memory_consult"]["kind"] == "agentic-workspace/memory-consult/v1"
     assert payload["memory_consult"]["do_not_bulk_read"] is True
     posture = payload["operating_posture"]

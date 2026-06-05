@@ -2908,7 +2908,9 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert options["stop-with-status"]["allowed"] is True
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
-    compact = json.loads(capsys.readouterr().out)["answer"]
+    compact_payload = json.loads(capsys.readouterr().out)
+    compact = compact_payload["answer"]
+    assert "--target ./repo" not in json.dumps(compact_payload)
     compact_boundary = compact["checks"]["intent_satisfaction"]["completion_boundary"]
     assert compact_boundary["partial_pr_may_close"] == "no"
     assert compact_boundary["required_follow_up_owner"] == ".agentic-workspace/planning/state.toml"

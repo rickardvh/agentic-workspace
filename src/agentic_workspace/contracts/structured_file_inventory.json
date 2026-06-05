@@ -349,6 +349,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/planning/lanes/*.lane.json",
+      "format": "json",
+      "owner": "planning",
+      "status": "schema-backed",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "First-class lane owner records validate against the planning lane schema.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
       "format": "json",
       "owner": "planning-evidence",
