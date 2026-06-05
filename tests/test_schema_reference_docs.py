@@ -44,7 +44,7 @@ def test_schema_reference_default_targets_cover_all_contract_schemas() -> None:
     assert sorted(target.schema_path for target in module.DEFAULT_TARGETS) == schemas
 
 
-def test_schema_reference_generator_skips_crlf_only_rewrites(tmp_path: Path) -> None:
+def test_schema_reference_generator_rewrites_crlf_only_output_to_lf(tmp_path: Path) -> None:
     module = _load_generator()
     schema = tmp_path / "schema.schema.json"
     output = tmp_path / "reference.md"
@@ -69,11 +69,12 @@ def test_schema_reference_generator_skips_crlf_only_rewrites(tmp_path: Path) -> 
     target = module.ReferenceTarget(schema.relative_to(tmp_path), output.relative_to(tmp_path))
     rendered = module.render_schema_reference(target.schema_path, repo_root=tmp_path)
     output.write_bytes(rendered.replace("\n", "\r\n").encode("utf-8"))
-    before = output.read_bytes()
 
-    assert module.generate(targets=(target,), repo_root=tmp_path, check=True) == []
+    assert module.generate(targets=(target,), repo_root=tmp_path, check=True) == [target.output_path]
     assert module.generate(targets=(target,), repo_root=tmp_path, check=False) == []
-    assert output.read_bytes() == before
+    rewritten = output.read_bytes()
+    assert b"\r\n" not in rewritten
+    assert rewritten == rendered.encode("utf-8")
 
 
 def test_schema_reference_generator_still_detects_semantic_staleness(tmp_path: Path) -> None:

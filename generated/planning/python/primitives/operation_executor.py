@@ -108,6 +108,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'intent_status': getattr(args, 'intent_status', 'satisfied'),
                 'residue': getattr(args, 'residue', 'none'),
                 'proof_from': getattr(args, 'proof_from', 'last'),
+                'proof_file': getattr(args, 'proof_file', None),
                 'residue_owner': getattr(args, 'residue_owner', None),
                 'what_happened': getattr(args, 'what_happened', None),
                 'scope_touched': getattr(args, 'scope_touched', None),

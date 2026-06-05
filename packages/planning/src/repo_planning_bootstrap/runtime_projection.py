@@ -141,6 +141,7 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
         intent_status=str(values.get("intent_status") or "satisfied"),
         residue=str(values.get("residue") or "none"),
         proof_from=str(values.get("proof_from") or "last"),
+        proof_file=values.get("proof_file"),
         residue_owner=values.get("residue_owner"),
         retain_archive=not bool(values.get("discard_archive")),
         what_happened=values.get("what_happened"),

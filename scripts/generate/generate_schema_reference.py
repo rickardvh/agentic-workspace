@@ -307,15 +307,20 @@ def _normalized_generated_content(content: str) -> str:
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def _needs_generated_write(current: str, next_content: str) -> bool:
-    return _normalized_generated_content(current) != _normalized_generated_content(next_content)
+def _needs_generated_write(current_bytes: bytes, next_content: str) -> bool:
+    try:
+        current = current_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    next_bytes = next_content.encode("utf-8")
+    return current_bytes != next_bytes or _normalized_generated_content(current) != _normalized_generated_content(next_content)
 
 
 def generate(*, targets: tuple[ReferenceTarget, ...] = DEFAULT_TARGETS, repo_root: Path = REPO_ROOT, check: bool = False) -> list[Path]:
     stale: list[Path] = []
     for output_path, content in render_targets(targets, repo_root=repo_root):
         absolute_output_path = repo_root / output_path
-        current = absolute_output_path.read_text(encoding="utf-8") if absolute_output_path.exists() else ""
+        current = absolute_output_path.read_bytes() if absolute_output_path.exists() else b""
         if check:
             if _needs_generated_write(current, content):
                 stale.append(output_path)
@@ -323,7 +328,7 @@ def generate(*, targets: tuple[ReferenceTarget, ...] = DEFAULT_TARGETS, repo_roo
         if absolute_output_path.exists() and not _needs_generated_write(current, content):
             continue
         absolute_output_path.parent.mkdir(parents=True, exist_ok=True)
-        absolute_output_path.write_text(content, encoding="utf-8")
+        absolute_output_path.write_text(content, encoding="utf-8", newline="\n")
     return stale
 
 

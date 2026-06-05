@@ -40,6 +40,11 @@
       "required": false
     },
     {
+      "name": "proof_file",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "residue_owner",
       "source": "cli-option",
       "required": false

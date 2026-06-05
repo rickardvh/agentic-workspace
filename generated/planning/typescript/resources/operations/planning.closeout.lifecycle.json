@@ -50,6 +50,11 @@
       "source": "cli-option"
     },
     {
+      "name": "proof_file",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "residue_owner",
       "required": false,
       "source": "cli-option"
