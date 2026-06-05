@@ -34,6 +34,11 @@ def _preflight_next(payload: dict[str, object]) -> dict[str, object]:
     return legacy if isinstance(legacy, dict) else {}
 
 
+def _write_planning_lane_schema(target: Path) -> None:
+    schema = json.loads(Path(".agentic-workspace/planning/schemas/planning-lane.schema.json").read_text(encoding="utf-8"))
+    _write_json(target / ".agentic-workspace" / "planning" / "schemas" / "planning-lane.schema.json", schema)
+
+
 def _start_primary_action(payload: dict[str, object]) -> dict[str, object]:
     action = payload.get("immediate_next_allowed_action")
     if isinstance(action, dict):
@@ -1925,6 +1930,62 @@ candidates = []
     assert gate["implementation_allowed"] is False
     assert gate["read_only_allowed"] is True
     assert gate["hierarchy_owner_requirement"]["lane_id"] == "parent-lane"
+    assert payload["next_safe_action"]["completion_claim_allowed"] is False
+
+
+def test_start_blocks_active_parent_lane_slice_with_invalid_lane_owner_artifact(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_planning_lane_schema(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "lanes" / "parent-lane.lane.json",
+        {
+            "kind": "planning-lane/v1",
+            "id": "parent-lane",
+            "title": "Malformed parent lane",
+            "status": "active",
+            "parent_close_permission": "not-allowed",
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "slice-one",
+                "status": "active",
+                "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            }
+        ),
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Continue active work", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["gate_result"] == "lane-owner-artifact-required"
+    assert gate["implementation_allowed"] is False
+    owner = gate["hierarchy_owner_requirement"]
+    assert owner["status"] == "missing-or-invalid-lane-owner-artifact"
+    assert owner["lane_id"] == "parent-lane"
+    assert owner["invalid_lane_record"] == ".agentic-workspace/planning/lanes/parent-lane.lane.json"
+    assert owner["validation_errors"]
     assert payload["next_safe_action"]["completion_claim_allowed"] is False
 
 

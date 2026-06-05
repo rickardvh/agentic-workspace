@@ -17378,6 +17378,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "lane_id",
                 "active_execplan",
                 "lane_record",
+                "invalid_lane_record",
+                "validation_errors",
                 "required_before_implementation",
                 "command",
                 "rule",
@@ -18108,7 +18110,29 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     }
 
 
-def _fast_planning_lane_records(*, target_root: Path) -> list[dict[str, Any]]:
+def _fast_planning_lane_schema_findings(*, target_root: Path, payload: object) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["lane record must be a JSON object"]
+    schema_path = target_root / ".agentic-workspace" / "planning" / "schemas" / "planning-lane.schema.json"
+    if not schema_path.is_file():
+        return [".agentic-workspace/planning/schemas/planning-lane.schema.json is missing"]
+    try:
+        from jsonschema import Draft202012Validator
+    except ImportError:
+        return ["jsonschema is not installed"]
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"planning lane schema is missing or invalid JSON: {exc}"]
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    findings: list[str] = []
+    for error in errors:
+        location = ".".join((str(part) for part in error.path)) or "<root>"
+        findings.append(f"{location}: {error.message}")
+    return findings
+
+
+def _fast_planning_lane_records(*, target_root: Path, include_invalid: bool = False) -> list[dict[str, Any]]:
     lanes_dir = target_root / ".agentic-workspace" / "planning" / "lanes"
     if not lanes_dir.is_dir():
         return []
@@ -18125,8 +18149,15 @@ def _fast_planning_lane_records(*, target_root: Path) -> list[dict[str, Any]]:
             continue
         if not isinstance(payload, dict) or payload.get("kind") != "planning-lane/v1":
             continue
+        schema_findings = _fast_planning_lane_schema_findings(target_root=target_root, payload=payload)
         payload = copy.deepcopy(payload)
         payload["_path"] = resolved.relative_to(target_resolved).as_posix()
+        payload["_valid"] = not schema_findings
+        if schema_findings:
+            payload["_validation_errors"] = schema_findings
+            if include_invalid:
+                records.append(payload)
+            continue
         records.append(payload)
     return records
 
@@ -18170,8 +18201,9 @@ def _planning_hierarchy_owner_requirement(
             "status": "no-recorded-parent-lane",
             "rule": "Direct work and standalone slices do not require a lane owner artifact unless the agent/user declares lane-shaped work.",
         }
-    lane_records = _fast_planning_lane_records(target_root=target_root)
-    matching_record = next((record for record in lane_records if str(record.get("id") or "").strip() == lane_id), None)
+    lane_records = _fast_planning_lane_records(target_root=target_root, include_invalid=True)
+    matching_records = [record for record in lane_records if str(record.get("id") or "").strip() == lane_id]
+    matching_record = next((record for record in matching_records if record.get("_valid") is True), None)
     if matching_record:
         return {
             "required": False,
@@ -18182,6 +18214,43 @@ def _planning_hierarchy_owner_requirement(
             "residual_lane_work": str(matching_record.get("residual_lane_work") or "").strip(),
             "parent_close_permission": str(matching_record.get("parent_close_permission") or "").strip(),
             "rule": "The active execplan is a slice; its parent lane owner owns strategy, ordering, aggregate proof, and residual lane work.",
+        }
+    invalid_record = next((record for record in matching_records if record.get("_valid") is False), None)
+    if invalid_record:
+        invalid_path = str(invalid_record.get("_path") or f".agentic-workspace/planning/lanes/{lane_id}.lane.json")
+        return {
+            "required": True,
+            "status": "missing-or-invalid-lane-owner-artifact",
+            "lane_id": lane_id,
+            "active_execplan": str(active_summary.get("active_execplan") or active_record.get("_path") or "").strip(),
+            "recorded_parent_lane": parent_lane,
+            "invalid_lane_record": invalid_path,
+            "validation_errors": [str(item) for item in _list_payload(invalid_record.get("_validation_errors")) if str(item).strip()],
+            "required_before_implementation": [
+                f"repair or replace {invalid_path}",
+                "record a schema-valid lane outcome, slice sequence, proof aggregation strategy, and residual lane work before continuing lane/epic implementation",
+                "or explicitly narrow the active work so it does not claim lane or parent completion",
+            ],
+            "command": _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    f"agentic-workspace planning lane-create --id {lane_id} --target . --format json",
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
+            "authority_boundary": _authority_boundary_payload(
+                surface="planning_hierarchy_owner_requirement",
+                enforced_by_aw=["missing-or-invalid-lane-owner-artifact"],
+                observed_by_aw=[f"active_execplan_parent_lane={lane_id}", "lane_record_match=True", "lane_record_valid=False"],
+                recommended_by_aw=["repair or replace the lane record before lane/epic implementation claims"],
+                agent_owned_decisions=[
+                    "whether the current user request is only the active slice or still the larger lane",
+                    "the concrete lane outcome, slice sequence, and proof strategy",
+                ],
+                human_owned_decisions=["acceptance of the lane decomposition and parent-close permission"],
+                rule="AW validates recorded Planning artifacts and gates invalid owners; it does not infer business scope from prompt keywords.",
+            ),
+            "rule": "A slice with a recorded parent lane requires a schema-valid lane owner artifact before lane/epic implementation or completion claims.",
         }
     return {
         "required": True,
@@ -18196,7 +18265,7 @@ def _planning_hierarchy_owner_requirement(
         ],
         "command": _command_with_cli_invoke(
             command=_command_with_expected_planning_revision(
-                f"agentic-workspace planning lane-create {lane_id} --target . --format json",
+                f"agentic-workspace planning lane-create --id {lane_id} --target . --format json",
                 planning_revision=planning_revision,
             ),
             cli_invoke=config.cli_invoke,
