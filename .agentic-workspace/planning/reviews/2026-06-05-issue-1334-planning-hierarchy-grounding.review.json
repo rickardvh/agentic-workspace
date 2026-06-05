@@ -1,0 +1,596 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Planning hierarchy, gates, and workflows grounding",
+  "date": "2026-06-05",
+  "classification": "planning-hierarchy-investigation",
+  "goal": [
+    "Promote #1334 from proposal/investigation to implementation-ready by grounding the Planning hierarchy in current schemas, commands, gates, reports, tests, and issue refinements.",
+    "Define a coherent abstraction ladder for direct work, slice/execplan, lane artifact, and epic/decomposition without turning AW into a semantic classifier."
+  ],
+  "scope": [
+    "#1334 parent investigation",
+    "#1335 current Planning hierarchy surfaces",
+    "#1336 first-class lane artifact responsibilities",
+    "#1337 transition and gate matrix by work shape",
+    "#1338 command workflow matrix across artifact levels",
+    "#1339 closeout/reporting contract by hierarchy level"
+  ],
+  "non_goals": [
+    "Do not implement lane artifacts, gates, commands, or closeout changes in this review branch.",
+    "Do not require Planning artifacts for small direct work.",
+    "Do not add prompt-keyword semantic classification.",
+    "Do not add a dashboard or broad project-management layer."
+  ],
+  "review_mode": {
+    "mode": "grounding-review",
+    "promotion_decision": "implementation-ready after review artifacts and implementation issues are linked",
+    "authority_boundary": "AW can gate missing declared/recorded Planning ownership; the agent owns semantic work-shape judgment unless an explicit hard gate applies.",
+    "issue_refs": [
+      "#1334",
+      "#1335",
+      "#1336",
+      "#1337",
+      "#1338",
+      "#1339"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"Create a new branch for #1334 and investigate enough to promote it to implementation-ready.\" --format json",
+      "uv run python scripts/run_agentic_workspace.py summary --format json",
+      "gh issue view 1334 --json number,title,state,body,comments,labels,assignees,milestone,url",
+      "gh issue view 1335..1339 --json number,title,state,body,comments,labels,url",
+      "uv run python scripts/run_agentic_workspace.py planning --format json",
+      "uv run python scripts/run_agentic_workspace.py planning create-review --slug issue-1334-planning-hierarchy-grounding --title \"Planning hierarchy, gates, and workflows grounding\" --scope \"#1334 parent investigation and child review issues #1335-#1339\" --classification planning-hierarchy-investigation --target . --format json"
+    ],
+    "evidence sources": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+      ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.new-plan.lifecycle.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.promote-to-plan.lifecycle.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.create-review.lifecycle.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.closeout.lifecycle.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.archive-plan.lifecycle.json",
+      "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.summary.report.json",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+      "tests/test_workspace_planning_help_cli.py",
+      "packages/planning/tests/test_summary.py",
+      "packages/planning/tests/test_promote.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_report_cli.py",
+      "2026-06-05 attached peer investigation notes for #1334"
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1334",
+      "label": "parent investigation",
+      "role": "parent_intent",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1335",
+      "label": "current-state map",
+      "role": "review_slice",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1336",
+      "label": "lane artifact shaping",
+      "role": "review_slice",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1337",
+      "label": "transition and gate matrix",
+      "role": "review_slice",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1338",
+      "label": "command workflow matrix",
+      "role": "review_slice",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1339",
+      "label": "closeout/reporting matrix",
+      "role": "review_slice",
+      "locator": "issue"
+    }
+  ],
+  "findings": [
+    {
+      "title": "F1: Planning already has first-class epic and slice records but no first-class lane record.",
+      "summary": "Decompositions own parent intent and candidate lanes; execplans own concrete slice execution and closeout. Lanes exist as candidate records, state rows, parent_lane fields, and closeout wording, but not as durable lane contracts.",
+      "evidence": "planning-decomposition.schema.json requires candidate_lanes with outcome/proof/residual parent fields; planning-execplan.schema.json has parent_lane and slice closeout fields; state.toml has roadmap.lanes/work_items; archive-plan says it can close a parent lane; no .agentic-workspace/planning/lanes schema or command exists.",
+      "risk if unchanged": "Lane responsibilities continue leaking into state.toml and execplans, so agents can recognize lane/epic shape but still implement a slice without a durable lane owner.",
+      "suggested action": "Add a first-class lane artifact contract and keep state.toml as index/queue/projection.",
+      "confidence": "high",
+      "source": "#1335,#1336",
+      "promotion target": "implementation issue: lane artifact schema/template/projection",
+      "promotion trigger": "before gate/command changes that need lane ownership"
+    },
+    {
+      "title": "F2: The likely lane artifact should be the preferred model, not an optional alternative.",
+      "summary": "The user-refined abstraction ladder maps cleanly to existing surfaces: decomposition = epic intent, lane artifact = technical strategy and sequencing, execplan = concrete implementation slice.",
+      "evidence": "#1334 comment proposes epic/decomposition, lane artifact, and slice/execplan. Decomposition candidate_lanes already name lane outcome/proof but cannot own active sequencing or aggregated closeout. Execplan template already warns that an execplan should not span unrelated lanes. The attached peer investigation independently reached the same ladder and explicitly warned that adding more lane fields to execplans would preserve the ambiguity.",
+      "risk if unchanged": "A neutral investigation could defer the lane artifact and leave the same abstraction gap that motivated #1334; an execplan-heavy fix would turn the concrete slice artifact into the missing lane artifact by accretion.",
+      "suggested action": "Implement lane artifacts unless the implementation slice proves a simpler structure preserves the same responsibilities without overloading state.toml or execplans; do not solve the lane gap by expanding execplans into lane journals.",
+      "confidence": "high",
+      "source": "#1336",
+      "promotion target": "implementation issue: lane artifact contract",
+      "promotion trigger": "first implementation slice"
+    },
+    {
+      "title": "F3: Direct work remains a valid no-artifact path.",
+      "summary": "The hierarchy should be proportional. Small, routine, low-risk work with obvious proof should continue through start/implement/proof/report surfaces without a Planning artifact.",
+      "evidence": "planning help includes narrow_repair_route; start/implement payloads expose workflow_sufficiency and planning_safety_gate; #1334 acceptance explicitly says small direct work should not require Planning artifacts.",
+      "risk if unchanged": "Overcorrecting would make AW noisy and expensive for routine work, encouraging agents to bypass the tool.",
+      "suggested action": "Gate only missing ownership for agent-declared broad/lane/epic/high-risk work or explicit external Planning obligations; keep direct work advisory.",
+      "confidence": "high",
+      "source": "#1337",
+      "promotion target": "implementation issue: transition/gate matrix"
+    },
+    {
+      "title": "F4: Existing gates know workflow sufficiency but do not yet consume a durable artifact-level contract.",
+      "summary": "start and implement expose next_safe_action, workflow_sufficiency, work_shape_guidance, planning_safety_gate, active_parent_decomposition_requirement, and parent_intent_status, but the missing abstraction is a declared/recorded work-shape level that gates can check.",
+      "evidence": "workspace_runtime_primitives.py defines _planning_safety_gate_payload, _work_shape_guidance_payload, next_safe_action, and parent_intent_status. Current behavior gates missing active Planning in some cases, but there is no lane artifact presence/absence check.",
+      "risk if unchanged": "Agents can still treat 'epic-shaped' or 'lane-shaped' as a private thought and proceed with direct implementation without leaving a checkable ownership record.",
+      "suggested action": "Add explicit artifact-level readiness facts and gates: direct, slice, lane, epic. Hard-block implementation only when agent-declared or recorded work shape requires an artifact that is missing, unless the user explicitly narrows the request to a lower artifact level.",
+      "confidence": "medium-high",
+      "source": "#1337",
+      "promotion target": "implementation issue: planning gate readiness"
+    },
+    {
+      "title": "F5: Command contracts are strong for reviews and execplans but missing lane lifecycle commands.",
+      "summary": "new-plan, promote-to-plan, create-review, closeout, archive-plan, and summary are command-owned and generated-runtime-consumed. Lane create/promote/activate/close/archive equivalents do not exist.",
+      "evidence": "planning operation contracts under packages/planning/src/repo_planning_bootstrap/contracts/operations/ cover execplan/review lifecycle. planning help describes ordered roadmap lanes and promotion to execplans, but no lane command surface appears in front-door operations.",
+      "risk if unchanged": "Implementers will add lane state by hand or overload promote-to-plan/new-plan with lane semantics.",
+      "suggested action": "Add lane lifecycle commands through the same operation-IR/front-door path: create-lane, promote-lane, activate-lane, close-lane, archive-lane or carefully scoped equivalents.",
+      "confidence": "high",
+      "source": "#1338",
+      "promotion target": "implementation issue: lane command workflow"
+    },
+    {
+      "title": "F6: Closeout already has parent-intent protections, but lane proof aggregation is not first-class.",
+      "summary": "closeout_report, parent_intent_status, applicable_intent_status, completion_options, and final_response_rendering can block broad/plain-done claims, but there is no lane artifact to aggregate slice proof or lane residual work.",
+      "evidence": "workspace_runtime_primitives.py closeout_report/final_response_rendering paths use parent_intent_status and completion_options. planning closeout/archive fields support slice/lane/epic scope wording, and tests cover slice-vs-parent closeout, but lane proof aggregation is inferred from state/archives rather than owned by a lane record.",
+      "risk if unchanged": "Slice proof can be prevented from masquerading as epic proof, but lane completion remains hard to prove or report without rereading scattered slices.",
+      "suggested action": "Define lane closeout fields for aggregated slice proof, residual lane work, continuation owner, and parent-epic contribution; have report/final-response render lane-level caveats.",
+      "confidence": "high",
+      "source": "#1339",
+      "promotion target": "implementation issue: lane closeout/reporting"
+    },
+    {
+      "title": "F7: state.toml should remain an index/queue/projection surface.",
+      "summary": "state.toml currently carries active_items, work_items, roadmap.lanes, and candidates. It should point to durable artifacts and provide compact queue/order state, not own lane acceptance, sequencing, proof aggregation, or closeout.",
+      "evidence": "state.toml header says it is managed state. Planning summary tests route continuation through work_items/roadmap.lanes, but #1334 refinement explicitly says state.toml should remain an index/queue/projection surface.",
+      "risk if unchanged": "state.toml becomes both scheduler and durable semantic contract, making hand edits risky and making schema evolution harder.",
+      "suggested action": "Introduce lane artifact references in state.toml and make summary/report project lane summaries from lane files.",
+      "confidence": "high",
+      "source": "#1335,#1336",
+      "promotion target": "implementation issue: state/index projection"
+    },
+    {
+      "title": "F8: Implementation should be decomposed into small slices in priority order.",
+      "summary": "The review can now promote #1334 to implementation-ready by creating implementation issues, but one PR should not try to change schema, commands, gates, report UX, migration, and docs all at once.",
+      "evidence": "#1334 explicitly asks for follow-up implementation issues in priority order; package command generation means CLI and TypeScript/Python targets must stay current whenever commands change.",
+      "risk if unchanged": "A broad implementation PR would repeat the original failure mode: under-planned epic-shaped work.",
+      "suggested action": "Create implementation issues for lane schema/projection first, then gates, commands, closeout/reporting, and migration/docs.",
+      "confidence": "high",
+      "source": "#1334",
+      "promotion target": "GitHub implementation issues"
+    },
+    {
+      "title": "F9: Execplans must not become lane artifacts by accretion.",
+      "summary": "The attached investigation usefully sharpens the main design hazard: execplans are already large and concrete, so adding lane strategy/proof aggregation there would keep the current ambiguity.",
+      "evidence": "Existing execplans own touched paths, concrete steps, proof commands, local caveats, and slice closeout. The peer investigation recommends lane-level strategy and proof aggregation live in a smaller durable middle home, while execplans reference or project lane contribution.",
+      "risk if unchanged": "The implementation could appear to add lane support while actually making slice artifacts harder to understand and harder to close honestly.",
+      "suggested action": "Make #1340 acceptance explicitly reject execplan-as-lane design and require lane artifacts to own strategy, sequencing, proof aggregation, residual lane work, and lane-to-epic contribution.",
+      "confidence": "high",
+      "source": "attached peer investigation; #1340",
+      "promotion target": "implementation issue: lane artifact contract"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1335",
+      "status_after_review": "satisfied-by-this-review",
+      "evidence": "current_state_map, findings F1/F7, and references to schemas/state/commands/tests"
+    },
+    {
+      "issue": "#1336",
+      "status_after_review": "satisfied-by-this-review",
+      "evidence": "proposed_hierarchy.lane_artifact and implementation_issues[0]"
+    },
+    {
+      "issue": "#1337",
+      "status_after_review": "satisfied-by-this-review",
+      "evidence": "transition_gate_matrix and findings F3/F4"
+    },
+    {
+      "issue": "#1338",
+      "status_after_review": "satisfied-by-this-review",
+      "evidence": "command_workflow_matrix and finding F5"
+    },
+    {
+      "issue": "#1339",
+      "status_after_review": "satisfied-by-this-review",
+      "evidence": "closeout_reporting_contract and finding F6"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promote #1334 to implementation-ready after linking this review and creating the implementation issues below.",
+    "defer": "Do not implement #1326-style durable applicable-intent discovery in this lane; this lane owns Planning hierarchy and workflow artifacts.",
+    "dismiss": "Do not pursue a state.toml-only lane design; it conflicts with the abstraction ladder and overloads managed queue state.",
+    "current_state_map": {
+      "direct_work": {
+        "current_surfaces": [
+          "start",
+          "implement --changed",
+          "proof",
+          "report/closeout guidance"
+        ],
+        "artifact_status": "no Planning artifact required",
+        "owner": "agent judgment plus changed-path proof",
+        "keep": true
+      },
+      "grounding_review": {
+        "current_surfaces": [
+          ".agentic-workspace/planning/reviews/*.review.json",
+          "planning create-review"
+        ],
+        "artifact_status": "first-class review record",
+        "owner": "Planning review artifact",
+        "keep": true
+      },
+      "epic_decomposition": {
+        "current_surfaces": [
+          ".agentic-workspace/planning/decompositions/*.decomposition.json",
+          "planning-decomposition.schema.json"
+        ],
+        "artifact_status": "first-class decomposition record",
+        "owner": "parent original intent, soft requirements, final acceptance direction, candidate lanes",
+        "keep": true
+      },
+      "lane": {
+        "current_surfaces": [
+          "decomposition.candidate_lanes",
+          "state.toml work_items",
+          "state.toml roadmap.lanes",
+          "execplan.parent_lane",
+          "archive-plan --parent-lane-closeout wording"
+        ],
+        "artifact_status": "missing first-class durable lane contract",
+        "owner": "currently blurred across state/projection/execplan",
+        "change": "add .agentic-workspace/planning/lanes/*.lane.json"
+      },
+      "slice_execplan": {
+        "current_surfaces": [
+          ".agentic-workspace/planning/execplans/*.plan.json",
+          "planning new-plan",
+          "planning promote-to-plan",
+          "planning closeout",
+          "planning archive-plan"
+        ],
+        "artifact_status": "first-class execplan record",
+        "owner": "concrete implementation slice, touched paths, exact proof, closeout, residue",
+        "keep": true
+      },
+      "state_toml": {
+        "current_surfaces": [
+          ".agentic-workspace/planning/state.toml"
+        ],
+        "artifact_status": "managed index/queue/projection state",
+        "owner": "active/queued work and references to durable artifacts",
+        "change": "store lane refs and compact status only, not lane contract"
+      }
+    },
+    "proposed_hierarchy": {
+      "direct": {
+        "responsibility": "Small, routine, low-risk work where target and proof are obvious.",
+        "artifact": "none",
+        "claims_allowed": [
+          "direct work done after proof"
+        ]
+      },
+      "slice_execplan": {
+        "responsibility": "Bounded non-trivial implementation unit with exact scope, touched paths, proof commands, and slice closeout.",
+        "artifact": ".agentic-workspace/planning/execplans/*.plan.json",
+        "claims_allowed": [
+          "slice complete",
+          "lane advanced only when lane artifact records contribution"
+        ],
+        "must_not_own": [
+          "lane-level technical strategy",
+          "lane proof aggregation",
+          "lane closeout state beyond slice contribution"
+        ]
+      },
+      "lane_artifact": {
+        "responsibility": "Concrete sub-outcome under an epic: technical strategy, subsystem involvement, technology choices, ordered/partial slice set, dependencies, acceptance boundary, proof aggregation, residual lane work, and lane closeout.",
+        "artifact": ".agentic-workspace/planning/lanes/*.lane.json",
+        "recommended_status": "preferred unless a smaller implementation proves equal clarity",
+        "claims_allowed": [
+          "lane ready",
+          "slice promoted",
+          "lane complete after aggregated proof"
+        ],
+        "minimal_fields": [
+          "kind",
+          "id",
+          "title",
+          "status",
+          "parent_decomposition_ref",
+          "lane_outcome",
+          "purpose_for_parent",
+          "subsystems",
+          "technical_strategy",
+          "technology_choices",
+          "acceptance_boundary",
+          "slice_order",
+          "dependencies",
+          "current_slice",
+          "proof_strategy",
+          "proof_aggregation",
+          "residual_lane_work",
+          "parent_contribution",
+          "lane_to_epic_contribution",
+          "parent_close_permission",
+          "closeout_state",
+          "promotion_rules",
+          "references"
+        ]
+      },
+      "epic_decomposition": {
+        "responsibility": "Original user intent, soft requirements, non-goals, final acceptance direction, broad constraints, candidate lanes, and parent proof expectations.",
+        "artifact": ".agentic-workspace/planning/decompositions/*.decomposition.json",
+        "claims_allowed": [
+          "epic shaped",
+          "lane promoted",
+          "epic complete after lane completion evidence satisfies parent acceptance"
+        ]
+      }
+    },
+    "transition_gate_matrix": [
+      {
+        "task_shape": "direct",
+        "artifact_required": "none",
+        "implementation_allowed": true,
+        "read_only_allowed": true,
+        "completion_claim_allowed": "after changed-path proof and acceptance reconciliation",
+        "gate_class": "advisory",
+        "next_command": "implement --changed <paths> and proof --changed <paths>"
+      },
+      {
+        "task_shape": "slice",
+        "artifact_required": "execplan when non-trivial, risky, or needs durable continuation",
+        "implementation_allowed": "after execplan exists or agent records why direct work remains sufficient",
+        "read_only_allowed": true,
+        "completion_claim_allowed": "slice only, after execplan proof",
+        "gate_class": "hard when agent-declared/recorded slice needs Planning but no execplan exists",
+        "next_command": "planning new-plan or planning promote-to-plan"
+      },
+      {
+        "task_shape": "lane",
+        "artifact_required": "lane artifact plus one current slice execplan",
+        "implementation_allowed": "blocked until lane artifact exists and current slice is selected, unless the user explicitly narrows the request to a lower-level slice",
+        "read_only_allowed": true,
+        "completion_claim_allowed": "lane only after aggregate lane proof; slice claims remain slice-scoped",
+        "gate_class": "hard after agent declares lane-shaped work or decomposition promotes lane",
+        "next_command": "planning lane create/promote/activate, then planning new-plan for current slice"
+      },
+      {
+        "task_shape": "epic",
+        "artifact_required": "decomposition plus at least one lane artifact before implementation",
+        "implementation_allowed": "blocked until decomposition exists and first lane/slice are selected, unless the user explicitly narrows the request to a bounded non-parent-closing slice",
+        "read_only_allowed": true,
+        "completion_claim_allowed": "epic only after all required lane closeouts satisfy parent acceptance",
+        "gate_class": "hard after agent judges or records epic-shaped work",
+        "next_command": "planning decomposition/create-review shaping, then lane promotion"
+      },
+      {
+        "task_shape": "review-only",
+        "artifact_required": "review record when durable grounding is needed",
+        "implementation_allowed": false,
+        "read_only_allowed": true,
+        "completion_claim_allowed": "review complete only",
+        "gate_class": "task contract",
+        "next_command": "planning create-review"
+      }
+    ],
+    "command_workflow_matrix": [
+      {
+        "level": "direct",
+        "create": "none",
+        "inspect": "start, implement, proof, report",
+        "promote": "planning new-plan only if scope grows",
+        "close": "final answer/report proof",
+        "archive": "none"
+      },
+      {
+        "level": "review",
+        "create": "planning create-review",
+        "inspect": "summary/report review routing",
+        "promote": "issue comments or planning promote-review-findings workflow",
+        "close": "link implementation issues or dismiss findings",
+        "archive": "retain compact review or shrink after findings are promoted"
+      },
+      {
+        "level": "epic",
+        "create": "decomposition artifact from template or future decomposition command",
+        "inspect": "summary decomposition projection",
+        "promote": "promote candidate lane to lane artifact",
+        "close": "epic closeout after lane aggregate proof",
+        "archive": "close decomposition after parent acceptance is satisfied"
+      },
+      {
+        "level": "lane",
+        "create": "new command needed: planning lane create/promote",
+        "inspect": "summary/report lane projection",
+        "promote": "activate next slice execplan",
+        "close": "new or extended command needed: planning lane closeout",
+        "archive": "new or extended command needed: archive lane after closeout"
+      },
+      {
+        "level": "slice",
+        "create": "planning new-plan or promote-to-plan",
+        "inspect": "summary planning_record/hierarchy_contract",
+        "promote": "from lane current_slice or direct TODO",
+        "close": "planning closeout",
+        "archive": "planning archive-plan"
+      }
+    ],
+    "closeout_reporting_contract": [
+      {
+        "level": "direct",
+        "allowed_claim": "direct work complete",
+        "proof": "changed-path proof and acceptance reconciliation",
+        "blocked_claims": [
+          "slice/lane/epic complete"
+        ],
+        "residue": "issue/Memory/docs only if durable finding exists"
+      },
+      {
+        "level": "slice",
+        "allowed_claim": "slice complete or lane advanced",
+        "proof": "execplan validation_commands/proof_report",
+        "blocked_claims": [
+          "lane complete without lane closeout",
+          "epic complete without parent acceptance proof"
+        ],
+        "residue": "required_continuation and parent_intent_status"
+      },
+      {
+        "level": "lane",
+        "allowed_claim": "lane complete",
+        "proof": "lane proof aggregation over completed slices plus lane acceptance boundary",
+        "blocked_claims": [
+          "epic complete unless parent decomposition says lane set satisfies parent acceptance"
+        ],
+        "residue": "residual_lane_work, parent_contribution, next lane/epic continuation"
+      },
+      {
+        "level": "epic",
+        "allowed_claim": "parent/original intent complete",
+        "proof": "decomposition parent_acceptance plus all required lane closeouts",
+        "blocked_claims": [
+          "plain done when any required lane remains open or unproven"
+        ],
+        "residue": "closed decomposition or explicit residual intent owner"
+      }
+    ],
+    "implementation_issues": [
+      {
+        "priority": 1,
+        "title": "Implement first-class Planning lane artifacts",
+        "body": "Add lane schema/template, package installation surfaces, summary/report projection, and tests. Keep state.toml as index/queue and make lane files own outcome, strategy, sequencing, acceptance boundary, proof aggregation, residual work, lane-to-epic contribution, parent-close permission, and closeout state. Do not make execplans the lane artifact by adding lane-level strategy/proof aggregation there.",
+        "closes_review_findings": [
+          "F1",
+          "F2",
+          "F7",
+          "F9"
+        ]
+      },
+      {
+        "priority": 2,
+        "title": "Implement Planning transition gates for declared hierarchy level",
+        "body": "Add explicit work-shape/artifact-level readiness facts consumed by start/implement/report. Preserve agent ownership of semantic judgment; hard-block only when declared or recorded broad/lane/epic work lacks required artifacts, unless the user explicitly narrows the request to a lower-level bounded slice.",
+        "closes_review_findings": [
+          "F3",
+          "F4"
+        ]
+      },
+      {
+        "priority": 3,
+        "title": "Add Planning lane lifecycle command workflow",
+        "body": "Add generated command contracts and front-door support for lane create/promote/activate/close/archive or equivalent minimal commands. Keep operation IR and generated Python/TypeScript targets current.",
+        "closes_review_findings": [
+          "F5"
+        ]
+      },
+      {
+        "priority": 4,
+        "title": "Extend closeout/reporting to lane and epic proof aggregation",
+        "body": "Render lane closeout, lane residual work, parent contribution, aggregate proof, and blocked claims in closeout_report/final_response_rendering without creating a broad dashboard.",
+        "closes_review_findings": [
+          "F6"
+        ]
+      },
+      {
+        "priority": 5,
+        "title": "Migrate existing roadmap/decomposition lane residue into the new lane model",
+        "body": "Provide compatibility projection and safe migration/cleanup for state.toml roadmap lanes, work_items lanes, decomposition candidate_lanes, and execplan parent_lane fields.",
+        "closes_review_findings": [
+          "F1",
+          "F7"
+        ]
+      }
+    ]
+  },
+  "retention": {
+    "closeout shape": "retain-full-until-implementation-issues-created",
+    "trigger": "after implementation issues link this review and #1334 is labeled implementation-ready, future closeout may shrink to a retained review stub",
+    "proof surface": [
+      "GitHub issue #1334 implementation-ready comment",
+      "child issue comments #1335-#1339",
+      "created implementation issues",
+      "PR branch containing this review artifact"
+    ]
+  },
+  "prose_templates": {
+    "implementation_ready_comment": {
+      "sections": [
+        "Review",
+        "Decision",
+        "Implementation issues",
+        "Residual caveat"
+      ],
+      "field_map": {
+        "Review": "review path and covered child issues",
+        "Decision": "recommendation.promote",
+        "Implementation issues": "recommendation.implementation_issues",
+        "Residual caveat": "non_goals and authority_boundary"
+      },
+      "rule": "Use for the GitHub issue promotion comment; keep it compact and link the review artifact."
+    }
+  },
+  "validation_commands": [
+    "uv run python scripts/run_agentic_workspace.py planning create-review --slug issue-1334-planning-hierarchy-grounding --title \"Planning hierarchy, gates, and workflows grounding\" --scope \"#1334 parent investigation and child review issues #1335-#1339\" --classification planning-hierarchy-investigation --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py summary --format json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+  ],
+  "drift_log": [
+    "2026-06-05: Review record created by planning create-review.",
+    "2026-06-05: Filled with current-state map, hierarchy recommendation, transition/gate matrix, command matrix, closeout/reporting contract, and implementation issue plan.",
+    "2026-06-05: Ingested attached peer investigation notes; strengthened execplan-boundary caution, lane-to-epic contribution fields, and explicit user-narrowing gate exception."
+  ],
+  "summary": {
+    "decision": "implementation-ready after linked issue updates",
+    "primary_recommendation": "Add first-class lane artifacts as the missing middle layer between epic decompositions and slice execplans; do not make execplans into lane artifacts by accretion.",
+    "key_boundary": "AW should gate missing declared/recorded artifact ownership; agents and humans own semantic work-shape and acceptance judgment.",
+    "small_work_policy": "No Planning artifact for direct, routine, low-risk work with obvious proof.",
+    "state_toml_policy": "state.toml remains index/queue/projection, not the durable lane contract."
+  },
+  "summary_counts": {
+    "findings": 9,
+    "review_child_issues_covered": 5,
+    "implementation_issues_recommended": 5,
+    "matrices": 3,
+    "external_investigations_ingested": 1
+  }
+}
