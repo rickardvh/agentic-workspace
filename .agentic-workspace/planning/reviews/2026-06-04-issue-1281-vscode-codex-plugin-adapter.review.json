@@ -1,0 +1,211 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Decision review for #1281 VS Code and Codex agent plugin adapter",
+  "date": "2026-06-04",
+  "classification": "adapter-distribution-review",
+  "goal": [
+    "Decide whether AW should add an optional VS Code/Copilot-compatible or Codex-compatible agent plugin adapter.",
+    "Keep AW repo-native and avoid turning plugin distribution into a second operating manual, runtime layer, or plugin platform."
+  ],
+  "scope": [
+    "Issue #1281 and its refinement comment.",
+    "Current VS Code agent plugin documentation.",
+    "Current Codex plugin overview and build documentation.",
+    "AW README, package overview, installed surfaces, and existing generated SkillSpec plugin projection."
+  ],
+  "non_goals": [
+    "Do not implement a plugin before the adapter shape is justified.",
+    "Do not move AW state, planning, memory, proof, or closeout logic into plugin-specific files.",
+    "Do not add hooks or MCP servers by default.",
+    "Do not create a general AW plugin platform or third-party extension API."
+  ],
+  "review_mode": {
+    "mode": "adapter-decision",
+    "review question": "Should AW provide a new agent plugin adapter now, and what first slice would be justified if this is revisited?",
+    "inputs inspected first": [
+      "gh issue view 1281 --json number,title,body,comments,labels,state,url",
+      "https://code.visualstudio.com/docs/agent-customization/agent-plugins",
+      "https://developers.openai.com/codex/plugins",
+      "https://developers.openai.com/codex/plugins/build",
+      "README.md",
+      "docs/package/overview.md",
+      "docs/package/installed-surfaces.md",
+      "src/agentic_workspace/contract_tooling.py",
+      "generated/workspace/plugins/codex/.codex-plugin/plugin.json"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"Implement remaining issue #1281 by investigating a VS Code agent plugin adapter and creating a PR\" --format json",
+      "uv run python scripts/run_agentic_workspace.py summary --format json",
+      "gh issue view 1281 --json number,title,body,comments,labels,state,url",
+      "rg -n \"VS Code|agent plugin|Codex plugin|plugin adapter|Copilot\" .agentic-workspace docs packages src tests --glob '!**/.venv/**' --glob '!**/node_modules/**'",
+      "rg -n \"generated_plugin_targets|agentic-workspace-routing|Codex plugin|framework-native|generated plugin\" src/agentic_workspace/contracts tests generated docs packages -g \"*.json\" -g \"*.py\" -g \"*.md\""
+    ],
+    "external evidence": [
+      "VS Code docs reviewed on 2026-06-04: agent plugins are preview bundles that can contain slash commands, skills, custom agents, hooks, and MCP servers.",
+      "VS Code docs reviewed on 2026-06-04: hooks and MCP servers can execute code; plugin MCP servers are implicitly trusted when the plugin is installed.",
+      "VS Code docs reviewed on 2026-06-04: plugin format is shared between VS Code, GitHub Copilot CLI, and Claude Code, with important format differences.",
+      "Codex docs reviewed on 2026-06-04: Codex plugins bundle skills, app integrations, and MCP servers; slash-command packaging is not the same first-class surface described by VS Code.",
+      "Codex build docs reviewed on 2026-06-04: plugin manifests can reference skills, apps, MCP servers, and lifecycle hooks; plugin hooks are skipped until the user reviews and trusts the current hook definition."
+    ],
+    "limitation": "This review does not install a plugin in VS Code, Copilot CLI, Claude Code, or Codex. The decision is based on documented capability, current AW surfaces, and existing generated metadata."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1281",
+      "label": "Investigate a VS Code agent plugin adapter",
+      "role": "decision owner",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1281"
+    },
+    {
+      "kind": "external-doc",
+      "target": "https://code.visualstudio.com/docs/agent-customization/agent-plugins",
+      "label": "VS Code agent plugins",
+      "role": "current VS Code/Copilot/Claude compatibility evidence"
+    },
+    {
+      "kind": "external-doc",
+      "target": "https://developers.openai.com/codex/plugins",
+      "label": "Codex plugins overview",
+      "role": "current Codex plugin content model"
+    },
+    {
+      "kind": "external-doc",
+      "target": "https://developers.openai.com/codex/plugins/build",
+      "label": "Codex build plugins",
+      "role": "Codex plugin manifest, MCP, and hook trust evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": "README.md",
+      "label": "AW repo-native model",
+      "role": "product boundary evidence"
+    },
+    {
+      "kind": "local-doc",
+      "target": "docs/package/overview.md",
+      "label": "Package overview",
+      "role": "not a plugin platform, runtime orchestrator, or project-management system"
+    },
+    {
+      "kind": "local-doc",
+      "target": "docs/package/installed-surfaces.md",
+      "label": "Installed surfaces",
+      "role": "current host-repo footprint and adapter boundary"
+    },
+    {
+      "kind": "generated-artifact",
+      "target": "generated/workspace/plugins/codex/.codex-plugin/plugin.json",
+      "label": "Generated Codex plugin projection",
+      "role": "existing metadata-only adapter experiment"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "issue": "#1281",
+      "kind": "cross-tool adapter investigation",
+      "implementation_allowed_after_review": false,
+      "partial_pr_may_close": "no",
+      "primary_owner_surface": "decision review and issue closeout"
+    }
+  ],
+  "summary": {
+    "current_state": "AW already exposes a repo-native operating loop through AGENTS.md, compact CLI commands, package-managed skills, and generated SkillSpec adapter metadata. The source checkout also contains a generated Codex plugin manifest projection, but it is metadata produced from SkillSpec, not a supported distribution surface or independent operating path.",
+    "decision": "Do not ship a new VS Code/Copilot/Codex plugin adapter now.",
+    "why": "The current plugin surfaces do not justify a new AW-owned adapter layer yet. VS Code plugin support is preview and includes high-trust execution surfaces; Codex plugins package a different shape than the original slash-command hypothesis; and AW's existing repo-native CLI plus thin adapter files are sufficient for the current product boundary.",
+    "first_slice_if_reopened": "If future evidence justifies promotion, start with a skills-only adapter generated from SkillSpec and validated by local install smoke tests. Add MCP only as a separate, explicit follow-up if prose skills cannot expose compact AW CLI JSON outputs cheaply enough."
+  },
+  "findings": [
+    {
+      "title": "VS Code/Copilot plugin support is useful but too broad for an AW default",
+      "summary": "VS Code agent plugins can bundle slash commands, skills, custom agents, hooks, and MCP servers. That matches the discovery problem, but it also expands AW into marketplace/distribution/trust concerns that are not part of the repo-native installed model.",
+      "evidence": "The VS Code page marks agent plugins as preview and documents command, skill, agent, hook, and MCP bundle types. It also warns that hooks and MCP servers can run code on the user's machine.",
+      "risk if treated as default": "AW would risk adding a parallel tool installation story, a new trust surface, and potentially executable plugin contents before the smaller AGENTS.md and CLI adapter path has failed.",
+      "suggested action": "Do not add a default VS Code plugin. If revisited, keep the first VS Code/Copilot slice to skills and possibly slash commands only; exclude hooks, custom agents, and MCP by default.",
+      "confidence": "high",
+      "source": "VS Code agent plugin docs reviewed 2026-06-04",
+      "promotion target": "none now",
+      "promotion trigger": "A concrete VS Code/Copilot dogfooding run shows AGENTS.md plus compact AW CLI routing is not discoverable enough."
+    },
+    {
+      "title": "Codex plugins are not equivalent to the VS Code slash-command hypothesis",
+      "summary": "Codex plugins currently present skills, apps, and MCP servers as the central bundle contents. A Codex adapter would likely be skills-only first, or skills plus a narrow MCP wrapper later, not the same command-heavy shape as the original VS Code hypothesis.",
+      "evidence": "The Codex plugin overview says plugins bundle skills, app integrations, and MCP servers. The build docs describe manifest references to skills, apps, MCP servers, and hooks.",
+      "risk if conflated": "A single adapter proposal could overfit to VS Code slash commands while under-supporting Codex, or add an MCP bridge prematurely just to compensate for missing command packaging.",
+      "suggested action": "Keep Codex adapter decisions separate from VS Code/Copilot decisions. For now, retain the generated SkillSpec Codex projection as source-checkout metadata, not a shipped support promise.",
+      "confidence": "high",
+      "source": "Codex plugin overview and build docs reviewed 2026-06-04",
+      "promotion target": "none now",
+      "promotion trigger": "A Codex-specific evaluation shows a skills-only plugin materially improves startup/proof/closeout compliance over AGENTS.md and existing skills."
+    },
+    {
+      "title": "Hooks and MCP are higher-trust surfaces and should remain excluded",
+      "summary": "Hooks execute shell commands at lifecycle points, and plugin MCP servers can expose tools and data. Both could be valuable later, but neither belongs in an initial AW adapter without a narrow, audited reason.",
+      "evidence": "VS Code documents plugin hooks running alongside user/workspace hooks and plugin MCP servers starting when enabled; it says plugin MCP servers are implicitly trusted when installed. Codex build docs state plugin-bundled hooks are skipped until reviewed and trusted.",
+      "risk if unchanged": "A plugin adapter could appear harmless while introducing executable behavior, implicit tool trust, or startup automation that bypasses AW's quiet, agent-owned judgment model.",
+      "suggested action": "Explicitly exclude hooks and MCP from any first adapter. Treat MCP as a separate issue only if it wraps existing AW CLI JSON outputs with clear approval policy and no copied state.",
+      "confidence": "high",
+      "source": "VS Code and Codex plugin documentation reviewed 2026-06-04",
+      "promotion target": "none now",
+      "promotion trigger": "A future implementation proposal requires executable lifecycle behavior or tool-server access and can justify the trust model."
+    },
+    {
+      "title": "AW already has a smaller repo-native route for the same problem",
+      "summary": "The installed AW model already routes agents through AGENTS.md, compact CLI commands, `.agentic-workspace/`, package-managed skills, and generated SkillSpec adapter metadata. A plugin should not become a second manual or a substitute source of AW behavior.",
+      "evidence": "README.md and docs/package/overview.md define AW as a small repo-native operating layer, not a plugin platform. docs/package/installed-surfaces.md says AGENTS.md is a thin adapter and durable state lives under `.agentic-workspace/`. `generated/workspace/plugins/codex/.codex-plugin/plugin.json` is generated from SkillSpec and marks itself as not hand-editable product behavior.",
+      "risk if duplicated": "Agents would have to reconcile AGENTS.md, AW CLI output, SkillSpec, plugin skills, and plugin commands, increasing rather than reducing startup cost.",
+      "suggested action": "Close #1281 as not planned for now. Preserve the current generated Codex projection as an internal/generated adapter experiment; do not promote it to a supported distributed plugin until a fresh issue names a specific failing host and proof target.",
+      "confidence": "medium-high",
+      "source": "AW docs and existing generated plugin projection",
+      "promotion target": "issue closeout",
+      "promotion trigger": "If the user wants plugin distribution despite this boundary decision, open a new bounded implementation issue with install proof requirements."
+    }
+  ],
+  "recommendation": {
+    "closure": "close-not-planned-for-now",
+    "reason": "Existing AW surfaces are sufficient for the current product boundary, and current plugin documentation does not justify a new adapter layer before host-specific dogfooding proves a failure that AGENTS.md, compact CLI output, and generated SkillSpec projections cannot solve.",
+    "do_not_open_follow_up_now": true,
+    "future_reopen_signal": "Open a fresh bounded implementation issue only after a concrete VS Code, Copilot CLI, Claude Code, or Codex evaluation shows plugin distribution would reduce missed startup/proof/closeout routing without adding more residue.",
+    "decision_matrix": [
+      {
+        "question": "Should AW provide a VS Code/Copilot-compatible agent plugin adapter now?",
+        "answer": "No. Keep AW repo-native and avoid adding a new preview-distribution surface without concrete dogfooding evidence."
+      },
+      {
+        "question": "What exact first slice should ship, if any?",
+        "answer": "None now. If reopened, the first slice should be generated SkillSpec-backed skills only, with local install smoke proof and no copied AW logic."
+      },
+      {
+        "question": "Where should the plugin live?",
+        "answer": "No plugin should ship now. If reopened, use a separated generated or distribution area, not ordinary host-repo installed payload; keep SkillSpec and AW CLI outputs as the canonical source."
+      },
+      {
+        "question": "Which parts of the plugin surface are excluded from v1?",
+        "answer": "Hooks, MCP servers, custom agents, apps, workspace recommendations, and any automatic startup execution are excluded unless a later issue separately justifies them."
+      },
+      {
+        "question": "What security/trust boundaries must be documented?",
+        "answer": "Plugins may contain executable hooks and MCP servers. Any future AW adapter must state that AW does not silently add executable lifecycle behavior, does not move state into plugin files, and does not bypass existing agent approval or repo-native proof routes."
+      },
+      {
+        "question": "How does the plugin avoid becoming a second operating manual?",
+        "answer": "By not shipping now. If reopened, generated skills should point agents to `agentic-workspace start`, `preflight`, `summary`, and `proof` JSON outputs and should not duplicate the AW workflow text."
+      }
+    ]
+  },
+  "validation_commands": [
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-06-04-issue-1281-vscode-codex-plugin-adapter.review.json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/run_agentic_workspace.py implement --changed .agentic-workspace/planning/reviews/2026-06-04-issue-1281-vscode-codex-plugin-adapter.review.json --task \"Implement #1281 by adding the VS Code/Codex plugin adapter investigation decision review\" --format json"
+  ],
+  "retention": {
+    "closeout shape": "keep until #1281 is closed or a later plugin-adapter issue supersedes this decision",
+    "trigger": "A host-specific evaluation shows existing AW startup routing is insufficient",
+    "proof surface": "This review, #1281, official VS Code/Codex plugin docs, and AW package boundary docs"
+  },
+  "drift_log": [
+    "2026-06-04: Review created after inspecting #1281, official VS Code and Codex plugin documentation, AW package boundary docs, and the existing generated Codex plugin projection."
+  ]
+}
