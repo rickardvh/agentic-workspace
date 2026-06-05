@@ -1,0 +1,44 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.lane-promote.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "lane-promote",
+    "format_option": "format"
+  },
+  "summary": "Promote a decomposition candidate lane into a first-class lane record.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "lane", "source": "derived", "required": true},
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "module-result"},
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/planning/decompositions/", "required": false}],
+  "writes": [{"surface": ".agentic-workspace/planning/lanes/", "required": false, "when": "not a dry run"}],
+  "steps": [
+    {"id": "apply_lifecycle_operation", "uses": "planning.lane-promote.apply", "description": "Promote a decomposition candidate lane to a lane record."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit planning lifecycle result in the requested format."}
+  ],
+  "guards": ["Respect dry-run mode by avoiding writes.", "Do not create slice execplans during lane promotion."],
+  "proof": ["operation contract validates against operation.schema.json"],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning lane-promote executes generated operation IR while the planning module owns lane promotion policy.",
+    "steps": [
+      {"id": "apply_lifecycle_operation", "uses": "planning.lane-promote.apply", "description": "Promote a decomposition candidate lane to a lane record.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "emit_output", "uses": "output.emit", "description": "Emit planning lifecycle result in the requested format.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
+    ]
+  }
+}

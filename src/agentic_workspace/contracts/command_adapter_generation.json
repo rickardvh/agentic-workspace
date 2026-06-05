@@ -3684,6 +3684,245 @@
       ]
     },
     {
+      "id": "planning.lane-create.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "lane-create",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.lane-create.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.lane-create.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-create.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.lane-create.lifecycle.dry-run.process"]
+    },
+    {
+      "id": "planning.lane-promote.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "lane-promote",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.lane-promote.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.lane-promote.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-promote.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.arguments",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.lane-promote.lifecycle.dry-run.process"]
+    },
+    {
+      "id": "planning.lane-activate.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "lane-activate",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.lane-activate.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.lane-activate.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-activate.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.arguments",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.lane-activate.lifecycle.dry-run.process"]
+    },
+    {
+      "id": "planning.lane-close.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "lane-close",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.lane-close.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.lane-close.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-close.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.arguments",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.lane-close.lifecycle.dry-run.process"]
+    },
+    {
+      "id": "planning.lane-archive.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "lane-archive",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.lane-archive.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.lane-archive.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-archive.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.arguments",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.lane-archive.lifecycle.dry-run.process"]
+    },
+    {
       "id": "planning.new-plan.cli",
       "status": "generated",
       "command": {

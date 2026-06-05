@@ -1,0 +1,43 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.lane-close.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "lane-close",
+    "format_option": "format"
+  },
+  "summary": "Record lane proof aggregation, residual work, and parent contribution.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "lane", "source": "derived", "required": true},
+    {"name": "proof", "source": "cli-option", "required": false},
+    {"name": "residual_work", "source": "cli-option", "required": false},
+    {"name": "parent_contribution", "source": "cli-option", "required": false},
+    {"name": "parent_close_permission", "source": "cli-option", "required": false},
+    {"name": "next_owner", "source": "cli-option", "required": false},
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "module-result"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/planning/lanes/", "required": false}],
+  "writes": [{"surface": ".agentic-workspace/planning/lanes/", "required": false, "when": "not a dry run"}],
+  "steps": [
+    {"id": "apply_lifecycle_operation", "uses": "planning.lane-close.apply", "description": "Record lane closeout evidence and parent contribution."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit planning lifecycle result in the requested format."}
+  ],
+  "guards": ["Respect dry-run mode by avoiding writes.", "Do not let slice proof alone close the parent epic without lane evidence and permission."],
+  "proof": ["operation contract validates against operation.schema.json"],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning lane-close executes generated operation IR while the planning module owns lane closeout policy.",
+    "steps": [
+      {"id": "apply_lifecycle_operation", "uses": "planning.lane-close.apply", "description": "Record lane closeout evidence and parent contribution.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "emit_output", "uses": "output.emit", "description": "Emit planning lifecycle result in the requested format.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
+    ]
+  }
+}

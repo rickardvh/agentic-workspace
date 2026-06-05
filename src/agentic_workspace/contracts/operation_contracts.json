@@ -305,6 +305,36 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.lane-activate.lifecycle",
+      "path": "operations/planning.lane-activate.lifecycle.json",
+      "command": "lane-activate",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.lane-archive.lifecycle",
+      "path": "operations/planning.lane-archive.lifecycle.json",
+      "command": "lane-archive",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.lane-close.lifecycle",
+      "path": "operations/planning.lane-close.lifecycle.json",
+      "command": "lane-close",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.lane-create.lifecycle",
+      "path": "operations/planning.lane-create.lifecycle.json",
+      "command": "lane-create",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.lane-promote.lifecycle",
+      "path": "operations/planning.lane-promote.lifecycle.json",
+      "command": "lane-promote",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.new-plan.lifecycle",
       "path": "operations/planning.new-plan.lifecycle.json",
       "command": "new-plan",

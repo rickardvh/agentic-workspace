@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
-const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -872,6 +872,372 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "planning.list-files.report",
       "path": "operations/planning.list-files.report.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Create a first-class Planning lane record.",
+      "name": "lane-create",
+      "options": [
+        {
+          "flags": [
+            "--id"
+          ],
+          "help": "Stable lane id; used as the .lane.json filename.",
+          "name": "id",
+          "required": true
+        },
+        {
+          "default": "",
+          "flags": [
+            "--title"
+          ],
+          "help": "Human-readable lane title.",
+          "name": "title"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--parent-decomposition"
+          ],
+          "help": "Optional parent decomposition record path.",
+          "name": "parent_decomposition"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--outcome"
+          ],
+          "help": "Lane-level outcome.",
+          "name": "outcome"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--purpose"
+          ],
+          "help": "How this lane advances the parent decomposition.",
+          "name": "purpose"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--proof-strategy"
+          ],
+          "help": "How slice proofs aggregate into lane proof.",
+          "name": "proof_strategy"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "lane-create",
+    "operation_ref": {
+      "id": "planning.lane-create.lifecycle",
+      "path": "operations/planning.lane-create.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "arguments": [
+        {
+          "help": "Decomposition candidate lane id to promote.",
+          "name": "lane"
+        }
+      ],
+      "help": "Promote a decomposition candidate lane into a first-class lane record.",
+      "name": "lane-promote",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "lane-promote",
+    "operation_ref": {
+      "id": "planning.lane-promote.lifecycle",
+      "path": "operations/planning.lane-promote.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "arguments": [
+        {
+          "help": "Lane id to activate.",
+          "name": "lane"
+        }
+      ],
+      "help": "Mark a lane record active and optionally select its current slice.",
+      "name": "lane-activate",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--current-slice"
+          ],
+          "help": "Optional lane slice id to mark active.",
+          "name": "current_slice"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "lane-activate",
+    "operation_ref": {
+      "id": "planning.lane-activate.lifecycle",
+      "path": "operations/planning.lane-activate.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "arguments": [
+        {
+          "help": "Lane id to close.",
+          "name": "lane"
+        }
+      ],
+      "help": "Record lane proof aggregation, residual work, and parent contribution.",
+      "name": "lane-close",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--proof"
+          ],
+          "help": "Lane-level proof evidence to aggregate.",
+          "name": "proof"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--residual-work"
+          ],
+          "help": "Residual lane work or known proof gap.",
+          "name": "residual_work"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--parent-contribution"
+          ],
+          "help": "How this lane advances the parent epic.",
+          "name": "parent_contribution"
+        },
+        {
+          "choices": [
+            "do-not-close-parent",
+            "may-advance-parent",
+            "may-close-parent-after-human-confirmation",
+            "may-close-parent"
+          ],
+          "default": "may-advance-parent",
+          "flags": [
+            "--parent-close-permission"
+          ],
+          "help": "Whether this lane permits parent advancement or closure.",
+          "name": "parent_close_permission"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--next-owner"
+          ],
+          "help": "Owner for residual lane or parent work.",
+          "name": "next_owner"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "lane-close",
+    "operation_ref": {
+      "id": "planning.lane-close.lifecycle",
+      "path": "operations/planning.lane-close.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "arguments": [
+        {
+          "help": "Closed lane id to archive.",
+          "name": "lane"
+        }
+      ],
+      "help": "Archive a closed lane record and remove its live state projection.",
+      "name": "lane-archive",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "lane-archive",
+    "operation_ref": {
+      "id": "planning.lane-archive.lifecycle",
+      "path": "operations/planning.lane-archive.lifecycle.json"
     }
   },
   {

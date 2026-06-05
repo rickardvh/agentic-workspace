@@ -3967,6 +3967,91 @@ def test_report_closeout_report_represents_generated_code_parent_intent_boundary
     assert checks["applicable-intent-status"]["status"] == "incomplete"
 
 
+def test_report_closeout_report_uses_lane_owner_proof_aggregation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "lanes" / "parent-lane.lane.json",
+        {
+            "kind": "planning-lane/v1",
+            "id": "parent-lane",
+            "title": "Parent lane",
+            "status": "active",
+            "lane_outcome": "Finish the parent lane.",
+            "current_slice": "slice-one",
+            "slice_sequence": [{"id": "slice-one", "status": "active"}],
+            "proof_aggregation": {
+                "status": "partial",
+                "evidence": ["slice proof passed"],
+                "known_gaps": ["second slice proof missing"],
+            },
+            "residual_lane_work": "Finish the second slice before lane closeout.",
+            "parent_close_permission": "not-allowed",
+            "closeout_state": {
+                "status": "open",
+                "residual_work": "Finish the second slice before lane closeout.",
+                "next_owner": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+            },
+        },
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        {
+            "schema_version": "execplan/v1",
+            "id": "slice-one",
+            "status": "active",
+            "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            "execution_run": {
+                "what happened": "Finished slice one.",
+                "changed surfaces": "src/example.py",
+                "validations run": "pytest slice tests",
+            },
+            "proof_report": {
+                "validation proof": "pytest slice tests",
+                "intent_proof": {"claim_boundary": "slice-only proof"},
+            },
+            "closure_check": {
+                "closure decision": "archive-but-keep-lane-open",
+                "larger-intent status": "open",
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    parent = report["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["lane_owner"]["status"] == "present"
+    assert parent["lane_owner"]["proof_status"] == "partial"
+    assert parent["lane_owner"]["known_gaps"] == ["second slice proof missing"]
+    assert parent["lane_owner"]["parent_close_permission"] == "not-allowed"
+    assert "Finish the second slice before lane closeout." in parent["residual_parent_intent"]
+    assert any("lane proof aggregation" in claim for claim in parent["must_not_claim"])
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert any("Do not close the lane" in claim for claim in rendering["must_not_claim"])
+    assert any("Parent intent: open" in line for line in rendering["summary_lines"])
+
+
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

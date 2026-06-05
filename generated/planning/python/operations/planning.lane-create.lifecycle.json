@@ -1,0 +1,138 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "lane-create",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Keep lane strategy and proof aggregation in the lane record, not in execplans."
+  ],
+  "id": "planning.lane-create.lifecycle",
+  "inputs": [
+    {
+      "name": "id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "title",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "parent_decomposition",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "outcome",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "proof_strategy",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Create a schema-valid lane record and compact state projection.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.lane-create.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning lane-create executes generated operation IR while the planning module owns lane file mutation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated lane-create dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Planning state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create a schema-valid lane record and compact state projection.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.lane-create.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Create a first-class Planning lane record and index it from state.toml.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/",
+      "when": "not a dry run"
+    }
+  ]
+}

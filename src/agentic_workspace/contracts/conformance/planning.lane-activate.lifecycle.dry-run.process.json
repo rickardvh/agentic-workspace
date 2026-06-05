@@ -1,0 +1,36 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.lane-activate.lifecycle.dry-run.process",
+  "operation_id": "planning.lane-activate.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_planning_cli}",
+      "lane-activate",
+      "tmp-lane",
+      "--target",
+      ".",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "lane-activate-dry-run",
+      "files": {
+        ".git/.keep": "",
+        ".agentic-workspace/planning/lanes/tmp-lane.lane.json": "{\n  \"kind\": \"planning-lane/v1\",\n  \"id\": \"tmp-lane\",\n  \"title\": \"Tmp Lane\",\n  \"status\": \"ready\",\n  \"parent_decomposition_ref\": \"\",\n  \"lane_outcome\": \"Deliver lane.\",\n  \"purpose_for_parent\": \"Advance parent.\",\n  \"subsystems\": [],\n  \"technical_strategy\": \"Use existing surfaces.\",\n  \"technology_choices\": [],\n  \"slice_sequence\": [],\n  \"current_slice\": \"\",\n  \"acceptance_boundary\": \"Lane accepted.\",\n  \"proof_strategy\": \"Aggregate slice proof.\",\n  \"proof_aggregation\": {\"status\": \"not-started\", \"evidence\": [], \"known_gaps\": []},\n  \"residual_lane_work\": \"not evaluated\",\n  \"lane_to_epic_contribution\": \"not evaluated\",\n  \"parent_close_permission\": \"not-evaluated\",\n  \"closeout_state\": {\"status\": \"open\", \"summary\": \"\", \"residual_work\": \"\", \"next_owner\": \"\"},\n  \"references\": []\n}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {"format": "json", "field_assertions": [{"path": ["dry_run"], "equals": true}]},
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {"allowed_write_paths": [], "required_paths": [".git/.keep"], "forbidden_paths": [".agentic-workspace/planning/state.toml"]},
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

@@ -5,10 +5,14 @@ import shutil
 
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
+    activate_lane_record,
     archive_execplan,
+    archive_lane_record,
     archive_parent_lane_closeout,
+    close_lane_record,
     closeout_execplan,
     create_execplan_scaffold,
+    create_lane_record,
     format_actions,
     format_result_json,
     format_summary_json,
@@ -19,6 +23,7 @@ from repo_planning_bootstrap.installer import (
     list_payload_files,
     planning_reconcile,
     planning_summary,
+    promote_decomposition_lane_to_lane_record,
     promote_todo_item_to_execplan,
     record_delegation_decision,
 )
@@ -92,6 +97,62 @@ def apply_planning_promote_to_plan_operation(values: dict, _arguments: dict, _co
         str(values.get("item_id") or ""),
         target=values.get("target"),
         plan_slug=values.get("plan_slug"),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_lane_create_operation(values: dict, _arguments: dict, _context):
+    return create_lane_record(
+        lane_id=str(values.get("id") or ""),
+        title=str(values.get("title") or ""),
+        target=values.get("target"),
+        parent_decomposition=str(values.get("parent_decomposition") or ""),
+        outcome=str(values.get("outcome") or ""),
+        purpose=str(values.get("purpose") or ""),
+        proof_strategy=str(values.get("proof_strategy") or ""),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_lane_promote_operation(values: dict, _arguments: dict, _context):
+    return promote_decomposition_lane_to_lane_record(
+        str(values.get("lane") or ""),
+        target=values.get("target"),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_lane_activate_operation(values: dict, _arguments: dict, _context):
+    return activate_lane_record(
+        str(values.get("lane") or ""),
+        target=values.get("target"),
+        current_slice=str(values.get("current_slice") or ""),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_lane_close_operation(values: dict, _arguments: dict, _context):
+    return close_lane_record(
+        str(values.get("lane") or ""),
+        target=values.get("target"),
+        proof=str(values.get("proof") or ""),
+        residual_work=str(values.get("residual_work") or ""),
+        parent_contribution=str(values.get("parent_contribution") or ""),
+        parent_close_permission=str(values.get("parent_close_permission") or "may-advance-parent"),
+        next_owner=str(values.get("next_owner") or ""),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_lane_archive_operation(values: dict, _arguments: dict, _context):
+    return archive_lane_record(
+        str(values.get("lane") or ""),
+        target=values.get("target"),
         expected_planning_revision=str(values.get("expect_planning_revision") or ""),
         dry_run=bool(values.get("dry_run")),
     )
@@ -242,6 +303,20 @@ def _print_summary(summary: dict) -> None:
         f"{summary['execplans']['archived_count']} archived"
     )
     print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
+    lanes = summary.get("lanes", {})
+    if isinstance(lanes, dict) and lanes:
+        print(
+            f"Lane records: {lanes.get('active_count', 0)} active / "
+            f"{lanes.get('open_count', 0)} open / {lanes.get('closed_count', 0)} closed"
+        )
+        for lane in lanes.get("records", [])[:3]:
+            if not isinstance(lane, dict):
+                continue
+            proof = lane.get("proof_aggregation", {}) if isinstance(lane.get("proof_aggregation"), dict) else {}
+            print(
+                f"- {lane.get('id', '')}: {lane.get('status', '')}; "
+                f"proof {proof.get('status', '')}; parent {lane.get('parent_close_permission', '')}"
+            )
     planning_surface_health = summary.get("planning_surface_health", {})
     if isinstance(planning_surface_health, dict) and planning_surface_health:
         print("Planning-surface health:")

@@ -1873,6 +1873,66 @@ candidates = [
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
 
 
+def test_implement_blocks_parent_lane_slice_without_lane_owner_artifact(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "slice-one",
+                "status": "active",
+                "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                "--task",
+                "Continue the active planning work",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["gate_result"] == "lane-owner-artifact-required"
+    assert gate["implementation_allowed"] is False
+    owner = gate["hierarchy_owner_requirement"]
+    assert owner["status"] == "missing-lane-owner-artifact"
+    assert owner["lane_id"] == "parent-lane"
+    assert ".agentic-workspace/planning/lanes/parent-lane.lane.json" in owner["required_before_implementation"][0]
+
+
 def test_implement_with_explicit_target_ignores_checkout_active_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     active_checkout = tmp_path / "active-checkout"
     isolated_target = tmp_path / "isolated-target"

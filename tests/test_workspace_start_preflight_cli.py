@@ -1881,6 +1881,48 @@ candidates = [
     assert payload["next_safe_action"]["claim_boundary"]["implementation"] == "blocked-until-planning-ownership"
 
 
+def test_start_blocks_active_parent_lane_slice_without_lane_owner_artifact(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "slice-one",
+                "status": "active",
+                "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            }
+        ),
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Continue active work", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["gate_result"] == "lane-owner-artifact-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["read_only_allowed"] is True
+    assert gate["hierarchy_owner_requirement"]["lane_id"] == "parent-lane"
+    assert payload["next_safe_action"]["completion_claim_allowed"] is False
+
+
 def test_start_allows_read_only_review_under_candidate_lane_gate(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

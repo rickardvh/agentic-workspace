@@ -39,6 +39,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.init.lifecycle',
         'planning.install.lifecycle',
         'planning.intake-artifact.lifecycle',
+        'planning.lane-activate.lifecycle',
+        'planning.lane-archive.lifecycle',
+        'planning.lane-close.lifecycle',
+        'planning.lane-create.lifecycle',
+        'planning.lane-promote.lifecycle',
         'planning.list-files.report',
         'planning.new-plan.lifecycle',
         'planning.promote-to-plan.lifecycle',
@@ -90,6 +95,17 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'remove_source': getattr(args, 'remove_source', False),
                 'item_id': getattr(args, 'item_id', ''),
                 'plan_slug': getattr(args, 'plan_slug', None),
+                'lane': getattr(args, 'lane', ''),
+                'parent_decomposition': getattr(args, 'parent_decomposition', ''),
+                'outcome': getattr(args, 'outcome', ''),
+                'purpose': getattr(args, 'purpose', ''),
+                'proof_strategy': getattr(args, 'proof_strategy', ''),
+                'current_slice': getattr(args, 'current_slice', ''),
+                'proof': getattr(args, 'proof', ''),
+                'residual_work': getattr(args, 'residual_work', ''),
+                'parent_contribution': getattr(args, 'parent_contribution', ''),
+                'parent_close_permission': getattr(args, 'parent_close_permission', 'may-advance-parent'),
+                'next_owner': getattr(args, 'next_owner', ''),
                 'plan': getattr(args, 'plan', None),
                 'apply_cleanup': getattr(args, 'apply_cleanup', False),
                 'prepare_closeout': getattr(args, 'prepare_closeout', False),
@@ -139,6 +155,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
                 'planning.intake-artifact.apply': _handle_planning_intake_artifact_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
+                'planning.lane-create.apply': _handle_planning_lane_create_apply,
+                'planning.lane-promote.apply': _handle_planning_lane_promote_apply,
+                'planning.lane-activate.apply': _handle_planning_lane_activate_apply,
+                'planning.lane-close.apply': _handle_planning_lane_close_apply,
+                'planning.lane-archive.apply': _handle_planning_lane_archive_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
                 'planning.delegation-decision.apply': _handle_planning_delegation_decision_apply,
@@ -225,6 +246,36 @@ def _handle_planning_promote_to_plan_apply(values: dict[str, Any], arguments: di
     from .planning_runtime import apply_planning_promote_to_plan_operation
 
     return apply_planning_promote_to_plan_operation(values, arguments, context)
+
+
+def _handle_planning_lane_create_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_lane_create_operation
+
+    return apply_planning_lane_create_operation(values, arguments, context)
+
+
+def _handle_planning_lane_promote_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_lane_promote_operation
+
+    return apply_planning_lane_promote_operation(values, arguments, context)
+
+
+def _handle_planning_lane_activate_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_lane_activate_operation
+
+    return apply_planning_lane_activate_operation(values, arguments, context)
+
+
+def _handle_planning_lane_close_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_lane_close_operation
+
+    return apply_planning_lane_close_operation(values, arguments, context)
+
+
+def _handle_planning_lane_archive_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_lane_archive_operation
+
+    return apply_planning_lane_archive_operation(values, arguments, context)
 
 
 def _handle_planning_archive_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

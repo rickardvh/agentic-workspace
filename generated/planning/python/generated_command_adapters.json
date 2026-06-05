@@ -352,6 +352,166 @@
       },
       "status": "generated"
     },
+    "lane-activate": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "lane-activate",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.lane-activate.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.lane-activate.cli",
+      "operation_id": "planning.lane-activate.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-activate.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "lane-archive": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "lane-archive",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.lane-archive.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.lane-archive.cli",
+      "operation_id": "planning.lane-archive.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-archive.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "lane-close": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "lane-close",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.lane-close.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.lane-close.cli",
+      "operation_id": "planning.lane-close.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-close.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "lane-create": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "lane-create",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.lane-create.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.lane-create.cli",
+      "operation_id": "planning.lane-create.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-create.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "lane-promote": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "lane-promote",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.lane-promote.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.lane-promote.cli",
+      "operation_id": "planning.lane-promote.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.lane-promote.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "list-files": {
       "command": {
         "command_manifest": "package:planning:cli",

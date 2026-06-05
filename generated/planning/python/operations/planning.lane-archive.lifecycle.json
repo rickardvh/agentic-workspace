@@ -1,0 +1,112 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "lane-archive",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Archive only closed lane records."
+  ],
+  "id": "planning.lane-archive.lifecycle",
+  "inputs": [
+    {
+      "name": "lane",
+      "required": true,
+      "source": "derived"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Archive a closed lane record and prune the live state projection.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.lane-archive.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning lane-archive executes generated operation IR while the planning module owns lane archive policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Archive a closed lane record and prune the live state projection.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.lane-archive.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Archive a closed lane record and remove its live state projection.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/archive/",
+      "when": "not a dry run"
+    }
+  ]
+}

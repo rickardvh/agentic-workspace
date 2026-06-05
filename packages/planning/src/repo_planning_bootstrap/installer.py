@@ -37,6 +37,7 @@ PLANNING_CLOSEOUT_EVIDENCE_ROOT = PLANNING_MANAGED_ROOT / "closeout-evidence"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
+LANE_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-lane.schema.json"
 REVIEW_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-review.schema.json"
 EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-external-intent-evidence.schema.json"
 
@@ -106,8 +107,11 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/decompositions/README.md"),
     Path(".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json"),
+    Path(".agentic-workspace/planning/lanes/README.md"),
+    Path(".agentic-workspace/planning/lanes/TEMPLATE.lane.json"),
     EXECPLAN_RECORD_SCHEMA_PATH,
     DECOMPOSITION_RECORD_SCHEMA_PATH,
+    LANE_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
@@ -139,8 +143,11 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/decompositions/README.md"),
     Path(".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json"),
+    Path(".agentic-workspace/planning/lanes/README.md"),
+    Path(".agentic-workspace/planning/lanes/TEMPLATE.lane.json"),
     EXECPLAN_RECORD_SCHEMA_PATH,
     DECOMPOSITION_RECORD_SCHEMA_PATH,
+    LANE_RECORD_SCHEMA_PATH,
     REVIEW_RECORD_SCHEMA_PATH,
     EXTERNAL_INTENT_EVIDENCE_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
@@ -170,6 +177,7 @@ PAYLOAD_GUIDANCE_FRAGMENTS = {
 TODO_EMPTY_STATE_LINE = "- No active work right now."
 _COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
 EXECPLAN_RECORD_KIND = "planning-execplan/v1"
+LANE_RECORD_KIND = "planning-lane/v1"
 REVIEW_RECORD_KIND = "planning-review/v1"
 PLANNING_REFERENCE_KIND_DEFAULT = "artifact"
 PLANNING_REFERENCE_ROLE_DEFAULT = "context"
@@ -482,6 +490,8 @@ def planning_record_schema_findings(record_path: Path) -> list[str]:
     kind = payload.get("kind")
     if kind == EXECPLAN_RECORD_KIND:
         return _json_schema_findings(payload=payload, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+    if kind == LANE_RECORD_KIND:
+        return _json_schema_findings(payload=payload, schema_path=LANE_RECORD_SCHEMA_PATH)
     if kind == REVIEW_RECORD_KIND:
         return _json_schema_findings(payload=payload, schema_path=REVIEW_RECORD_SCHEMA_PATH)
     return [f"unsupported planning record kind: {kind!r}"]
@@ -1847,6 +1857,7 @@ def planning_summary(
 
     ownership_review = _ownership_review(target_root)
     decomposition_projection = _planning_decomposition_projection(target_root=target_root, decomposition_dir=decomposition_dir)
+    lane_projection = _planning_lane_projection(target_root=target_root)
 
     active_execplans: list[dict[str, str]] = []
     completed_execplans: list[dict[str, Any]] = []
@@ -1989,6 +2000,7 @@ def planning_summary(
         follow_through_contract=follow_through_contract,
         context_budget_contract=context_budget_contract,
         roadmap_lanes=roadmap_lanes,
+        lane_records=lane_projection.get("records", []) if isinstance(lane_projection, dict) else [],
         active_execplans=active_execplans,
     )
     handoff_contract = _active_handoff_contract(
@@ -2021,6 +2033,7 @@ def planning_summary(
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
         "decomposition": decomposition_projection,
+        "lanes": lane_projection,
         "work_maturity": work_maturity,
         "execution_readiness": execution_readiness,
         "autopilot_loop": _autopilot_loop_status(
@@ -2106,6 +2119,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     work_maturity = summary.get("work_maturity", {})
+    lanes = summary.get("lanes", {})
     warnings = list(summary.get("warnings", []))
     findings = [
         {
@@ -2215,6 +2229,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "completed_execplans",
                 "ownership_review",
                 "work_maturity",
+                "lanes",
                 "writer_helpers",
                 "active",
                 "system_intent",
@@ -2236,6 +2251,9 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "todo_item_count": summary["todo"]["item_count"],
             "active_execplan_count": summary["execplans"]["active_count"],
             "completed_execplan_count": summary["execplans"].get("completed_count", 0),
+            "lane_record_count": lanes.get("record_count", 0) if isinstance(lanes, dict) else 0,
+            "active_lane_count": lanes.get("active_count", 0) if isinstance(lanes, dict) else 0,
+            "closed_lane_count": lanes.get("closed_count", 0) if isinstance(lanes, dict) else 0,
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
             "ready_slice_count": work_maturity.get("counts", {}).get("ready_slices", 0) if isinstance(work_maturity, dict) else 0,
@@ -2250,10 +2268,20 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "completed_execplans": completed_execplans,
         "ownership_review": summary.get("ownership_review", {}),
         "work_maturity": work_maturity,
+        "lanes": lanes,
         "writer_helpers": {
             "status": "available",
             "rule": "Use planning writer helpers before hand-authoring schema-backed planning records.",
             "helpers": [
+                {
+                    "artifact": "lane_record",
+                    "command": "agentic-planning lane-create --id <lane-id> --title <title> --target ./repo --format json",
+                    "writes": [
+                        ".agentic-workspace/planning/lanes/<lane-id>.lane.json",
+                        ".agentic-workspace/planning/state.toml",
+                    ],
+                    "proof": "agentic-planning summary --target ./repo --format json",
+                },
                 {
                     "artifact": "execplan",
                     "command": "agentic-planning promote-to-plan <todo-or-roadmap-id> --target ./repo --format json",
@@ -2674,6 +2702,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ".agentic-workspace/docs/external-intent-evidence-contract.md",
             ".agentic-workspace/docs/finished-work-inspection-contract.md",
             ".agentic-workspace/planning/execplans/README.md",
+            ".agentic-workspace/planning/lanes/README.md",
         ],
         "command": "agentic-workspace summary --format json --verbose",
         "shared_fields": [
@@ -2685,6 +2714,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "execplans",
             "machine_first_planning",
             "decomposition",
+            "lanes",
             "work_maturity",
             "execution_readiness",
             "autopilot_loop",
@@ -2941,6 +2971,15 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "candidate_lanes",
                 "candidate_count",
                 "candidates",
+            ],
+            "lanes": [
+                "status",
+                "active_count",
+                "open_count",
+                "closed_count",
+                "records",
+                "migration",
+                "rule",
             ],
         },
         "rules": [
@@ -3314,6 +3353,97 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
     }
 
 
+def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
+    lane_dir = target_root / PLANNING_MANAGED_ROOT / "lanes"
+    archive_dir = lane_dir / "archive"
+    records: list[dict[str, Any]] = []
+    invalid_records: list[dict[str, str]] = []
+    if lane_dir.exists():
+        for path in sorted(lane_dir.glob("*.lane.json")):
+            if path.name == "TEMPLATE.lane.json":
+                continue
+            record = _load_lane_record(path)
+            if record is None:
+                invalid_records.append(
+                    {
+                        "path": path.relative_to(target_root).as_posix(),
+                        "reason": "not a planning-lane/v1 JSON record",
+                    }
+                )
+                continue
+            findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
+            if findings:
+                invalid_records.append({"path": path.relative_to(target_root).as_posix(), "reason": "; ".join(findings)})
+                continue
+            proof = record.get("proof_aggregation", {}) if isinstance(record.get("proof_aggregation"), dict) else {}
+            closeout = record.get("closeout_state", {}) if isinstance(record.get("closeout_state"), dict) else {}
+            slices = record.get("slice_sequence", []) if isinstance(record.get("slice_sequence"), list) else []
+            records.append(
+                {
+                    "id": str(record.get("id", "")).strip(),
+                    "title": str(record.get("title", "")).strip(),
+                    "status": str(record.get("status", "")).strip(),
+                    "path": path.relative_to(target_root).as_posix(),
+                    "parent_decomposition_ref": str(record.get("parent_decomposition_ref", "")).strip(),
+                    "lane_outcome": str(record.get("lane_outcome", "")).strip(),
+                    "purpose_for_parent": str(record.get("purpose_for_parent", "")).strip(),
+                    "subsystems": [str(item).strip() for item in record.get("subsystems", []) if str(item).strip()]
+                    if isinstance(record.get("subsystems"), list)
+                    else [],
+                    "current_slice": str(record.get("current_slice", "")).strip(),
+                    "slice_count": len(slices),
+                    "ready_slice_count": sum(1 for item in slices if isinstance(item, dict) and item.get("status") == "ready"),
+                    "active_slice_count": sum(1 for item in slices if isinstance(item, dict) and item.get("status") == "active"),
+                    "completed_slice_count": sum(1 for item in slices if isinstance(item, dict) and item.get("status") == "completed"),
+                    "proof_aggregation": {
+                        "status": str(proof.get("status", "")).strip(),
+                        "evidence_count": len(proof.get("evidence", [])) if isinstance(proof.get("evidence"), list) else 0,
+                        "known_gap_count": len(proof.get("known_gaps", [])) if isinstance(proof.get("known_gaps"), list) else 0,
+                        "known_gaps": [str(item).strip() for item in proof.get("known_gaps", []) if str(item).strip()]
+                        if isinstance(proof.get("known_gaps"), list)
+                        else [],
+                    },
+                    "residual_lane_work": str(record.get("residual_lane_work", "")).strip(),
+                    "lane_to_epic_contribution": str(record.get("lane_to_epic_contribution", "")).strip(),
+                    "parent_close_permission": str(record.get("parent_close_permission", "")).strip(),
+                    "closeout_state": {
+                        "status": str(closeout.get("status", "")).strip(),
+                        "summary": str(closeout.get("summary", "")).strip(),
+                        "residual_work": str(closeout.get("residual_work", "")).strip(),
+                        "next_owner": str(closeout.get("next_owner", "")).strip(),
+                    },
+                }
+            )
+    archived_count = 0
+    if archive_dir.exists():
+        archived_count = sum(1 for path in archive_dir.glob("*.lane.json") if path.is_file())
+    active_records = [record for record in records if record.get("status") == "active"]
+    open_records = [record for record in records if record.get("status") not in {"closed", "archived"}]
+    return {
+        "status": "present" if records else "none",
+        "record_count": len(records),
+        "active_count": len(active_records),
+        "open_count": len(open_records),
+        "closed_count": sum(1 for record in records if record.get("status") == "closed"),
+        "archived_count": archived_count,
+        "records": records,
+        "invalid_records": invalid_records,
+        "migration": {
+            "legacy_lane_sources": [
+                ".agentic-workspace/planning/state.toml roadmap.lanes",
+                ".agentic-workspace/planning/decompositions/*.decomposition.json candidate_lanes",
+            ],
+            "preferred_owner": ".agentic-workspace/planning/lanes/<id>.lane.json",
+            "promotion_command": "agentic-planning lane-promote <lane-id> --target . --format json",
+            "rule": "Legacy state and decomposition lane rows remain selector-backed projections or candidates until promoted into a lane record.",
+        },
+        "rule": (
+            "Lane records own strategy, slice ordering, proof aggregation, residual lane work, and lane-to-epic contribution. "
+            "Execplans own concrete implementation slices."
+        ),
+    }
+
+
 def _decomposition_issue_refs(payload: dict[str, Any]) -> set[str]:
     refs: set[str] = set()
     for value in (payload.get("title", ""), payload.get("larger_intended_outcome", ""), payload.get("notes", "")):
@@ -3481,6 +3611,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "lanes",
             "work_maturity",
             "execution_readiness",
             "autopilot_loop",
@@ -3529,6 +3660,7 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
             "current_execution_pressure",
             "residue_governance",
             "decomposition",
+            "lanes",
             "detail_commands",
             "warnings",
             "warning_count",
@@ -3567,6 +3699,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
         roadmap_lanes = _roadmap_candidate_lanes(target_root / "ROADMAP.md")
         roadmap_candidates = _roadmap_candidates(target_root / "ROADMAP.md")
     execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    lane_projection = _planning_lane_projection(target_root=target_root)
     active_execplans: list[dict[str, str]] = []
     if execplan_dir.exists():
         seen_stems: set[str] = set()
@@ -3653,6 +3786,13 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "active_plan_required": bool(active_items or active_execplans),
             },
             "decomposition": {"status": "not-evaluated", "detail": "Use compact or full summary for decomposition detail."},
+            "lanes": {
+                "status": lane_projection.get("status", "none"),
+                "active_count": lane_projection.get("active_count", 0),
+                "open_count": lane_projection.get("open_count", 0),
+                "closed_count": lane_projection.get("closed_count", 0),
+                "record_count": lane_projection.get("record_count", 0),
+            },
             "residue_governance": residue_governance,
             "roadmap": {
                 "lane_count": len(roadmap_lanes),
@@ -3673,6 +3813,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "current_execution_pressure",
                 "residue_governance",
                 "roadmap",
+                "lanes",
             ],
             "warning_count": warning_count,
         }
@@ -4038,6 +4179,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     execplans = dict(summary.get("execplans", {}))
     machine_first_planning = dict(summary.get("machine_first_planning", {}))
     decomposition = dict(summary.get("decomposition", {}))
+    lanes = dict(summary.get("lanes", {}))
     work_maturity = dict(summary.get("work_maturity", {}))
     execution_readiness = dict(summary.get("execution_readiness", {}))
     roadmap = dict(summary.get("roadmap", {}))
@@ -4178,6 +4320,38 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "recommended_next_action": decomposition.get("recommended_next_action", ""),
             "rule": decomposition.get("rule", ""),
         }
+    compact_lanes = {
+        "status": lanes.get("status", "none"),
+        "record_count": lanes.get("record_count", 0),
+        "active_count": lanes.get("active_count", 0),
+        "open_count": lanes.get("open_count", 0),
+        "closed_count": lanes.get("closed_count", 0),
+        "archived_count": lanes.get("archived_count", 0),
+        "records": [
+            {
+                key: record.get(key)
+                for key in (
+                    "id",
+                    "title",
+                    "status",
+                    "path",
+                    "parent_decomposition_ref",
+                    "current_slice",
+                    "slice_count",
+                    "proof_aggregation",
+                    "residual_lane_work",
+                    "lane_to_epic_contribution",
+                    "parent_close_permission",
+                    "closeout_state",
+                )
+                if key in record
+            }
+            for record in lanes.get("records", [])
+            if isinstance(record, dict)
+        ],
+        "migration": lanes.get("migration", {}),
+        "rule": lanes.get("rule", ""),
+    }
     autopilot_loop = dict(summary.get("autopilot_loop", {}))
     if autopilot_loop.get("status") == "satisfied" and int(autopilot_loop.get("roadmap_lane_count", 0) or 0) == 0:
         autopilot_loop = {
@@ -4222,6 +4396,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         },
         "machine_first_planning": compact_machine_first_planning,
         "decomposition": compact_decomposition,
+        "lanes": compact_lanes,
         "work_maturity": _compact_work_maturity_projection(work_maturity),
         "execution_readiness": compact_execution_readiness,
         "autopilot_loop": autopilot_loop,
@@ -8470,6 +8645,7 @@ def _active_hierarchy_contract(
     follow_through_contract: dict[str, Any],
     context_budget_contract: dict[str, Any],
     roadmap_lanes: list[dict[str, Any]],
+    lane_records: list[dict[str, Any]],
     active_execplans: list[dict[str, str]],
 ) -> dict[str, Any]:
     if (
@@ -8507,7 +8683,7 @@ def _active_hierarchy_contract(
     todo_item = active_contract.get("todo_item", {})
 
     parent_lane_ref = intent_continuity.get("parent lane", "").strip() or execplan_parent_lane.get("id", "")
-    parent_lane = _resolve_parent_lane(parent_lane_ref=parent_lane_ref, roadmap_lanes=roadmap_lanes)
+    parent_lane = _resolve_parent_lane(parent_lane_ref=parent_lane_ref, roadmap_lanes=roadmap_lanes, lane_records=lane_records)
     if parent_lane.get("source") == "execplan":
         parent_lane.update(
             {
@@ -8524,6 +8700,7 @@ def _active_hierarchy_contract(
         [
             *follow_through_contract.get("minimal_refs", []),
             *([".agentic-workspace/planning/state.toml"] if parent_lane.get("id") or roadmap_lanes else []),
+            *(str(parent_lane.get("path", "")).strip() for _ in [0] if str(parent_lane.get("path", "")).strip()),
             *(reference.get("target", "") for reference in parent_lane.get("references", []) if isinstance(reference, dict)),
         ]
     )
@@ -8883,8 +9060,28 @@ def summary_todo_queue(*, target_root: Path) -> list[dict[str, str]]:
     return queue
 
 
-def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, Any]]) -> dict[str, Any]:
+def _resolve_parent_lane(
+    *,
+    parent_lane_ref: str,
+    roadmap_lanes: list[dict[str, Any]],
+    lane_records: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     if parent_lane_ref:
+        for lane in lane_records or []:
+            if parent_lane_ref == lane.get("id", "") or parent_lane_ref == lane.get("title", ""):
+                return {
+                    "id": str(lane.get("id", "")).strip(),
+                    "title": str(lane.get("title", "")).strip(),
+                    "status": str(lane.get("status", "")).strip(),
+                    "path": str(lane.get("path", "")).strip(),
+                    "proof_aggregation": dict(lane.get("proof_aggregation", {})) if isinstance(lane.get("proof_aggregation"), dict) else {},
+                    "residual_lane_work": str(lane.get("residual_lane_work", "")).strip(),
+                    "lane_to_epic_contribution": str(lane.get("lane_to_epic_contribution", "")).strip(),
+                    "parent_close_permission": str(lane.get("parent_close_permission", "")).strip(),
+                    "closeout_state": dict(lane.get("closeout_state", {})) if isinstance(lane.get("closeout_state"), dict) else {},
+                    "references": [],
+                    "source": "lane-record",
+                }
         for lane in roadmap_lanes:
             if parent_lane_ref == lane.get("id", "") or parent_lane_ref == lane.get("title", ""):
                 return {
@@ -8911,6 +9108,430 @@ def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, 
         "references": [],
         "source": "unspecified",
     }
+
+
+def _lane_record_path(target_root: Path, lane_id: str) -> Path:
+    return target_root / PLANNING_MANAGED_ROOT / "lanes" / f"{_slugify(lane_id)}.lane.json"
+
+
+def _lane_archive_path(target_root: Path, lane_id: str) -> Path:
+    return target_root / PLANNING_MANAGED_ROOT / "lanes" / "archive" / f"{_slugify(lane_id)}.lane.json"
+
+
+def _write_lane_record(*, record_path: Path, record: dict[str, Any]) -> None:
+    _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=LANE_RECORD_SCHEMA_PATH)
+
+
+def _load_lane_record(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("kind") != LANE_RECORD_KIND:
+        return None
+    return payload
+
+
+def _default_lane_record(
+    *,
+    lane_id: str,
+    title: str,
+    parent_decomposition_ref: str = "",
+    lane_outcome: str = "",
+    purpose_for_parent: str = "",
+    proof_strategy: str = "",
+    references: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    lane_title = title.strip() or _title_from_slug(lane_id)
+    return {
+        "kind": LANE_RECORD_KIND,
+        "id": lane_id,
+        "title": lane_title,
+        "status": "ready",
+        "parent_decomposition_ref": parent_decomposition_ref,
+        "lane_outcome": lane_outcome or f"Deliver {lane_title}.",
+        "purpose_for_parent": purpose_for_parent or "Advance the parent decomposition without claiming parent closure from slice proof.",
+        "subsystems": [],
+        "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+        "technology_choices": [],
+        "slice_sequence": [],
+        "current_slice": "",
+        "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+        "proof_strategy": proof_strategy or "Aggregate slice proof and record known gaps before lane closeout.",
+        "proof_aggregation": {"status": "not-started", "evidence": [], "known_gaps": []},
+        "residual_lane_work": "not evaluated",
+        "lane_to_epic_contribution": "not evaluated",
+        "parent_close_permission": "not-evaluated",
+        "closeout_state": {"status": "open", "summary": "", "residual_work": "", "next_owner": ""},
+        "references": references or [],
+        "notes": "",
+    }
+
+
+def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dict[str, Any]:
+    references = record.get("references", [])
+    return {
+        "id": str(record.get("id", "")).strip(),
+        "title": str(record.get("title", "")).strip(),
+        "maturity": "active" if record.get("status") == "active" else "ready",
+        "status": str(record.get("status", "")).strip() or "ready",
+        "surface": lane_relative,
+        "owner_surface": lane_relative,
+        "outcome": str(record.get("lane_outcome", "")).strip(),
+        "reason": str(record.get("purpose_for_parent", "")).strip(),
+        "promotion_signal": "Create or select the next slice execplan from the lane's slice_sequence.",
+        "refs": [
+            str(reference.get("target", "")).strip()
+            for reference in references
+            if isinstance(reference, dict) and str(reference.get("target", "")).strip()
+        ],
+    }
+
+
+def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lane_relative: str) -> None:
+    state = _read_state_from_toml(target_root) or {
+        "kind": PLANNING_STATE_KIND,
+        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
+        "work_items": [],
+        "active": {"execplans": []},
+        "todo": {"active_items": [], "queued_items": []},
+        "roadmap": {"lanes": [], "candidates": []},
+    }
+    next_state = copy.deepcopy(state)
+    roadmap = next_state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        roadmap = {"lanes": [], "candidates": []}
+    lanes = roadmap.get("lanes", [])
+    if not isinstance(lanes, list):
+        lanes = []
+    lane_id = str(record.get("id", "")).strip()
+    projection = _lane_state_projection(record, lane_relative=lane_relative)
+    updated = False
+    next_lanes: list[Any] = []
+    for raw in lanes:
+        if isinstance(raw, dict) and str(raw.get("id", "")).strip() == lane_id:
+            next_lanes.append({**raw, **projection})
+            updated = True
+        else:
+            next_lanes.append(raw)
+    if not updated:
+        next_lanes.append(projection)
+    roadmap["lanes"] = next_lanes
+    roadmap.setdefault("candidates", [])
+    next_state["roadmap"] = roadmap
+    _write_state_to_toml(target_root, next_state)
+
+
+def _remove_roadmap_lane_state(target_root: Path, lane_id: str) -> None:
+    state = _read_state_from_toml(target_root)
+    if not isinstance(state, dict):
+        return
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict) or not isinstance(roadmap.get("lanes"), list):
+        return
+    next_state = copy.deepcopy(state)
+    next_roadmap = dict(roadmap)
+    next_roadmap["lanes"] = [raw for raw in roadmap["lanes"] if not (isinstance(raw, dict) and str(raw.get("id", "")).strip() == lane_id)]
+    next_state["roadmap"] = next_roadmap
+    _write_state_to_toml(target_root, next_state)
+
+
+def create_lane_record(
+    *,
+    lane_id: str,
+    title: str,
+    target: str | Path | None = None,
+    parent_decomposition: str = "",
+    outcome: str = "",
+    purpose: str = "",
+    proof_strategy: str = "",
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    slug = _slugify(lane_id)
+    result = InstallResult(target_root=target_root, message=f"Create lane record '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    if not slug:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--id must contain at least one alphanumeric character")
+        return result
+    record_path = _lane_record_path(target_root, slug)
+    if record_path.exists():
+        result.add("manual review", record_path, "target lane record already exists")
+        return result
+    refs = (
+        [{"kind": "decomposition", "target": parent_decomposition, "label": parent_decomposition, "role": "parent"}]
+        if parent_decomposition.strip()
+        else []
+    )
+    record = _default_lane_record(
+        lane_id=slug,
+        title=title,
+        parent_decomposition_ref=parent_decomposition.strip(),
+        lane_outcome=outcome.strip(),
+        purpose_for_parent=purpose.strip(),
+        proof_strategy=proof_strategy.strip(),
+        references=refs,
+    )
+    findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
+    if findings:
+        result.add("manual review", record_path, f"lane record did not validate against planning-lane.schema.json: {'; '.join(findings)}")
+        return result
+    lane_relative = record_path.relative_to(target_root).as_posix()
+    if dry_run:
+        result.add("would create", record_path, "schema-valid lane record")
+        result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    _write_lane_record(record_path=record_path, record=record)
+    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+    result.add("created", record_path, "schema-valid lane record")
+    result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
+def promote_decomposition_lane_to_lane_record(
+    lane_id: str,
+    *,
+    target: str | Path | None = None,
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message=f"Promote decomposition lane '{lane_id}' to lane record", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    decomposition_root = target_root / PLANNING_MANAGED_ROOT / "decompositions"
+    matched_path: Path | None = None
+    matched_record: dict[str, Any] | None = None
+    matched_lane: dict[str, Any] | None = None
+    matched_index = -1
+    for path in sorted(decomposition_root.glob("*.decomposition.json")) if decomposition_root.exists() else []:
+        if path.name == "TEMPLATE.decomposition.json":
+            continue
+        record = _load_lane_candidate_decomposition(path)
+        if record is None:
+            continue
+        for index, lane in enumerate(record.get("candidate_lanes", [])):
+            if isinstance(lane, dict) and str(lane.get("id", "")).strip() == lane_id:
+                matched_path = path
+                matched_record = record
+                matched_lane = lane
+                matched_index = index
+                break
+        if matched_lane is not None:
+            break
+    if matched_path is None or matched_record is None or matched_lane is None:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"decomposition lane '{lane_id}' was not found")
+        return result
+    slug = _slugify(lane_id)
+    record_path = _lane_record_path(target_root, slug)
+    if record_path.exists():
+        result.add("manual review", record_path, "target lane record already exists")
+        return result
+    source_relative = matched_path.relative_to(target_root).as_posix()
+    record = _default_lane_record(
+        lane_id=slug,
+        title=str(matched_lane.get("title") or _title_from_slug(slug)),
+        parent_decomposition_ref=source_relative,
+        lane_outcome=str(matched_lane.get("outcome") or matched_record.get("larger_intended_outcome") or ""),
+        purpose_for_parent=str(matched_lane.get("slice_contribution_to_parent") or matched_lane.get("outcome") or ""),
+        proof_strategy=str(matched_lane.get("proof") or ""),
+        references=[
+            {
+                "kind": "decomposition",
+                "target": source_relative,
+                "label": lane_id,
+                "role": "parent",
+                "locator": f"candidate_lanes[{matched_index}]",
+            }
+        ],
+    )
+    residual_parent = str(matched_lane.get("residual_parent_intent") or "").strip()
+    if residual_parent:
+        record["lane_to_epic_contribution"] = (
+            str(matched_lane.get("slice_contribution_to_parent") or "").strip() or "partial parent contribution"
+        )
+        record["residual_lane_work"] = residual_parent
+        record["parent_close_permission"] = "do-not-close-parent"
+    lane_relative = record_path.relative_to(target_root).as_posix()
+    updated_record = copy.deepcopy(matched_record)
+    updated_lanes = list(updated_record.get("candidate_lanes", []))
+    updated_lane = copy.deepcopy(matched_lane)
+    updated_lane["readiness"] = "promoted"
+    updated_lane["owner_surface"] = lane_relative
+    updated_lanes[matched_index] = updated_lane
+    updated_record["candidate_lanes"] = updated_lanes
+    if dry_run:
+        result.add("would create", record_path, "schema-valid lane record from decomposition lane")
+        result.add("would update", matched_path, f"mark decomposition lane '{lane_id}' as promoted")
+        result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    _write_lane_record(record_path=record_path, record=record)
+    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
+    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+    result.add("created", record_path, "schema-valid lane record from decomposition lane")
+    result.add("updated", matched_path, f"marked decomposition lane '{lane_id}' as promoted")
+    result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
+def _load_lane_candidate_decomposition(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-decomposition/v1":
+        return None
+    lanes = payload.get("candidate_lanes")
+    return payload if isinstance(lanes, list) else None
+
+
+def activate_lane_record(
+    lane_id: str,
+    *,
+    target: str | Path | None = None,
+    current_slice: str = "",
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    slug = _slugify(lane_id)
+    record_path = _lane_record_path(target_root, slug)
+    result = InstallResult(target_root=target_root, message=f"Activate lane '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    record = _load_lane_record(record_path)
+    if record is None:
+        result.add("manual review", record_path, f"lane record '{slug}' was not found")
+        return result
+    record = copy.deepcopy(record)
+    record["status"] = "active"
+    if current_slice.strip():
+        record["current_slice"] = current_slice.strip()
+        for slice_record in record.get("slice_sequence", []):
+            if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == current_slice.strip():
+                slice_record["status"] = "active"
+    lane_relative = record_path.relative_to(target_root).as_posix()
+    if dry_run:
+        result.add("would update", record_path, "mark lane active and record current slice")
+        result.add("would update", target_root / PLANNING_STATE_PATH, f"project active lane '{slug}'")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    _write_lane_record(record_path=record_path, record=record)
+    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+    result.add("updated", record_path, "marked lane active and recorded current slice")
+    result.add("updated", target_root / PLANNING_STATE_PATH, f"projected active lane '{slug}'")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
+def close_lane_record(
+    lane_id: str,
+    *,
+    target: str | Path | None = None,
+    proof: str = "",
+    residual_work: str = "",
+    parent_contribution: str = "",
+    parent_close_permission: str = "may-advance-parent",
+    next_owner: str = "",
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    slug = _slugify(lane_id)
+    record_path = _lane_record_path(target_root, slug)
+    result = InstallResult(target_root=target_root, message=f"Close lane '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    if parent_close_permission not in {
+        "do-not-close-parent",
+        "may-advance-parent",
+        "may-close-parent-after-human-confirmation",
+        "may-close-parent",
+    }:
+        result.add("manual review", record_path, "--parent-close-permission is not a supported lane close permission")
+        return result
+    record = _load_lane_record(record_path)
+    if record is None:
+        result.add("manual review", record_path, f"lane record '{slug}' was not found")
+        return result
+    record = copy.deepcopy(record)
+    record["status"] = "closed"
+    evidence = [str(item).strip() for item in record.get("proof_aggregation", {}).get("evidence", []) if str(item).strip()]
+    if proof.strip():
+        evidence.append(proof.strip())
+    known_gaps = [str(item).strip() for item in record.get("proof_aggregation", {}).get("known_gaps", []) if str(item).strip()]
+    if residual_work.strip() and residual_work.strip().lower() not in {"none", "n/a"}:
+        known_gaps.append(residual_work.strip())
+    record["proof_aggregation"] = {
+        "status": "satisfied" if evidence and not known_gaps else "partial",
+        "evidence": _dedupe(evidence),
+        "known_gaps": _dedupe(known_gaps),
+    }
+    record["residual_lane_work"] = residual_work.strip() or "none"
+    record["lane_to_epic_contribution"] = parent_contribution.strip() or record.get("lane_to_epic_contribution", "")
+    record["parent_close_permission"] = parent_close_permission
+    record["closeout_state"] = {
+        "status": "closed" if not known_gaps else "blocked",
+        "summary": parent_contribution.strip() or "Lane closeout recorded.",
+        "residual_work": residual_work.strip() or "none",
+        "next_owner": next_owner.strip() or ("parent decomposition" if known_gaps else "none"),
+    }
+    lane_relative = record_path.relative_to(target_root).as_posix()
+    if dry_run:
+        result.add("would update", record_path, "record lane proof aggregation, parent contribution, and closeout state")
+        result.add("would update", target_root / PLANNING_STATE_PATH, f"project closed lane '{slug}'")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    _write_lane_record(record_path=record_path, record=record)
+    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+    result.add("updated", record_path, "recorded lane proof aggregation, parent contribution, and closeout state")
+    result.add("updated", target_root / PLANNING_STATE_PATH, f"projected closed lane '{slug}'")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
+def archive_lane_record(
+    lane_id: str,
+    *,
+    target: str | Path | None = None,
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    slug = _slugify(lane_id)
+    record_path = _lane_record_path(target_root, slug)
+    archive_path = _lane_archive_path(target_root, slug)
+    result = InstallResult(target_root=target_root, message=f"Archive lane '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    record = _load_lane_record(record_path)
+    if record is None:
+        result.add("manual review", record_path, f"lane record '{slug}' was not found")
+        return result
+    closeout_state = record.get("closeout_state", {}) if isinstance(record.get("closeout_state"), dict) else {}
+    if record.get("status") != "closed" and closeout_state.get("status") != "closed":
+        result.add("manual review", record_path, "lane must be closed before archive")
+        return result
+    archived = copy.deepcopy(record)
+    archived["status"] = "archived"
+    if dry_run:
+        result.add("would move", record_path, archive_path.relative_to(target_root).as_posix())
+        result.add("would update", target_root / PLANNING_STATE_PATH, f"remove archived lane '{slug}' from roadmap.lanes")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    _write_lane_record(record_path=archive_path, record=archived)
+    record_path.unlink()
+    _remove_roadmap_lane_state(target_root, slug)
+    result.add("archived", archive_path, "moved closed lane record to lanes/archive")
+    result.add("updated", target_root / PLANNING_STATE_PATH, f"removed archived lane '{slug}' from roadmap.lanes")
+    _add_planning_mutation_proof_actions(result)
+    return result
 
 
 def _execplan_parent_lane(path: Path) -> dict[str, str]:

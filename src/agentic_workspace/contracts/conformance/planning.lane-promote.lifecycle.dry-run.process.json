@@ -1,0 +1,36 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.lane-promote.lifecycle.dry-run.process",
+  "operation_id": "planning.lane-promote.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_planning_cli}",
+      "lane-promote",
+      "candidate-lane",
+      "--target",
+      ".",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "lane-promote-dry-run",
+      "files": {
+        ".git/.keep": "",
+        ".agentic-workspace/planning/decompositions/parent.decomposition.json": "{\n  \"kind\": \"planning-decomposition/v1\",\n  \"title\": \"Parent\",\n  \"status\": \"ready-for-lane-promotion\",\n  \"larger_intended_outcome\": \"Parent intent.\",\n  \"non_goals\": [],\n  \"candidate_lanes\": [\n    {\"id\": \"candidate-lane\", \"title\": \"Candidate Lane\", \"readiness\": \"ready\", \"outcome\": \"Deliver candidate lane.\", \"owner_surface\": \"\"}\n  ],\n  \"proof_expectations\": [],\n  \"promotion_rule\": \"Promote ready lanes.\"\n}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {"format": "json", "field_assertions": [{"path": ["dry_run"], "equals": true}]},
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {"allowed_write_paths": [], "required_paths": [".git/.keep"], "forbidden_paths": [".agentic-workspace/planning/lanes/candidate-lane.lane.json"]},
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}
