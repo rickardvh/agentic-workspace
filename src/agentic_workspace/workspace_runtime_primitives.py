@@ -19308,6 +19308,78 @@ def _parent_intent_status_payload(
     }
 
 
+def _unplanned_parent_intent_status_payload(
+    *,
+    parent_intent_status: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+    generated_surface_trust: dict[str, Any],
+) -> dict[str, Any]:
+    parent_intent_status = _as_dict(parent_intent_status)
+    task = " ".join(str(task_text or "").split())
+    if parent_intent_status.get("status") != "guidance-only" or not task or not changed_paths:
+        return parent_intent_status
+
+    generated_surface_trust = _as_dict(generated_surface_trust)
+    generated_items = [item for item in _list_payload(generated_surface_trust.get("items")) if isinstance(item, dict)]
+    if generated_surface_trust.get("status") != "present" or not generated_items:
+        return parent_intent_status
+
+    generated_paths = [str(item.get("path") or "").strip() for item in generated_items if str(item.get("path") or "").strip()]
+    path_summary = ", ".join(generated_paths[:3])
+    if len(generated_paths) > 3:
+        path_summary = f"{path_summary}, ..."
+
+    must_not_claim = [
+        "Do not claim the parent/original intent is satisfied from generated-surface freshness or changed-path proof.",
+        "Do not silently narrow the explicit task text into a generated-surface slice without Planning/decomposition evidence when agent judgment says the task is broad.",
+    ]
+    return {
+        "kind": "agentic-workspace/parent-intent-status/v1",
+        "status": "needs-planning",
+        "original_intent": task,
+        "parent_acceptance_target": task,
+        "current_slice": f"changed generated surface(s): {path_summary}" if path_summary else "changed generated surface(s)",
+        "proof_boundary": "changed-path/generated-surface proof only",
+        "proof_is_slice_only": True,
+        "residual_parent_intent": (
+            "Parent/original intent has not been recorded in Planning; preserve it before treating this generated-surface "
+            "slice as the whole request."
+        ),
+        "continuation_owner": "Planning",
+        "parent_proof_required": "Create or select Planning/decomposition/execplan evidence before claiming parent completion.",
+        "required_next_action": "Preserve the raw task as parent/original-intent evidence in Planning before narrowing or claiming completion.",
+        "closure_decision": "not-recorded",
+        "larger_intent_status": "not-recorded",
+        "must_not_claim": must_not_claim,
+        "source_fields": [
+            "task_intent.task_excerpt",
+            "changed_paths",
+            "generated_surface_trust",
+            "planning.active.planning_record.parent_acceptance",
+        ],
+        "authority_boundary": _authority_boundary_payload(
+            surface="parent_intent_status",
+            observed_by_aw=[
+                "task_text_available=True",
+                "active_parent_acceptance=False",
+                f"generated_surface_count={len(generated_items)}",
+            ],
+            recommended_by_aw=["preserve raw task text in Planning/decomposition before parent-completion claims"],
+            agent_owned_decisions=[
+                "whether the explicit task is broad enough to require decomposition before implementation",
+                "the concrete first slice and proof boundary",
+            ],
+            human_owned_decisions=["acceptance of parent intent, decomposition, and completion"],
+            rule="AW preserves explicit task text and mechanical changed-path facts; it does not semantically classify the prompt.",
+        ),
+        "rule": (
+            "When changed paths narrow explicit task text before Planning records parent acceptance, AW preserves the raw task "
+            "as candidate parent intent; the agent owns semantic work-shape judgment."
+        ),
+    }
+
+
 def _applicable_intent_status_payload(
     *,
     active_planning_record: dict[str, Any],
@@ -20721,12 +20793,24 @@ def _implement_payload(
         intent_discovery=intent_discovery,
         intent_acknowledgement=intent_acknowledgement,
     )
+    generated_surface_trust = _generated_surface_trust_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        proof=proof,
+        cli_invoke=config.cli_invoke,
+    )
     active_planning_record_for_intent = _active_planning_record_for_report_section(target_root=target_root)
     parent_completion_boundary = _completion_boundary_payload(active_planning_record=active_planning_record_for_intent)
     parent_intent_status = _parent_intent_status_payload(
         active_planning_record=active_planning_record_for_intent,
         intent_check={},
         completion_boundary=parent_completion_boundary,
+    )
+    parent_intent_status = _unplanned_parent_intent_status_payload(
+        parent_intent_status=parent_intent_status,
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        generated_surface_trust=generated_surface_trust,
     )
     applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_planning_record_for_intent)
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
@@ -20818,12 +20902,7 @@ def _implement_payload(
         "parent_intent_status": parent_intent_status,
         "applicable_intent_status": applicable_intent_status,
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
-        "generated_surface_trust": _generated_surface_trust_payload(
-            target_root=target_root,
-            changed_paths=normalized_paths,
-            proof=proof,
-            cli_invoke=config.cli_invoke,
-        ),
+        "generated_surface_trust": generated_surface_trust,
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
@@ -21190,7 +21269,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(tiny_context, dict):
         parent_packet = tiny_context.get("parent_intent_status", {})
         parent_status = str(parent_packet.get("status") or "").strip() if isinstance(parent_packet, dict) else ""
-        if parent_status in {"", "guidance-only", "not-recorded"}:
+        if parent_status in {"", "guidance-only", "not-recorded", "needs-planning"}:
             tiny_context.pop("parent_intent_status", None)
             selectors = projected.get("drill_down", {}).get("available_selectors", [])
             if isinstance(selectors, list):
