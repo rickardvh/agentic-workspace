@@ -28,11 +28,14 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/lanes/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/lanes/TEMPLATE.lane.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
     ],
     "installed_paths": [
@@ -50,11 +53,14 @@
       ".agentic-workspace/planning/execplans/README.md",
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
       ".agentic-workspace/planning/execplans/archive/README.md",
+      ".agentic-workspace/planning/lanes/README.md",
+      ".agentic-workspace/planning/lanes/TEMPLATE.lane.json",
       ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
       ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      ".agentic-workspace/planning/schemas/planning-lane.schema.json",
       ".agentic-workspace/planning/schemas/planning-review.schema.json"
     ]
   },
@@ -193,6 +199,41 @@
     {
       "source_path": "generated/planning/python/operations/planning.list-files.report.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.list-files.report.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.lane-create.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.lane-create.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.lane-promote.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.lane-promote.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.lane-activate.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.lane-activate.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.lane-close.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.lane-close.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.lane-archive.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.lane-archive.lifecycle.json",
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
@@ -380,6 +421,20 @@
       "rationale": "Defines archive role so completed plans stop cluttering active state while preserving recovery evidence."
     },
     {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/lanes/README.md",
+      "installed_path": ".agentic-workspace/planning/lanes/README.md",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Explains first-class lane ownership for grouped implementation slices, proof aggregation, residual work, and parent contribution."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/lanes/TEMPLATE.lane.json",
+      "installed_path": ".agentic-workspace/planning/lanes/TEMPLATE.lane.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Canonical lane template that keeps lane strategy and proof aggregation outside concrete execplan slices."
+    },
+    {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
       "installed_path": ".agentic-workspace/planning/pre-ingestion-refinement.md",
       "classification": "extraction candidate",
@@ -434,6 +489,13 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Schema for compact closeout evidence retained when full execplan archive retention is skipped by size guardrails."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for first-class lane records so lane ownership, proof aggregation, and parent contribution are validated separately from execplans."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
@@ -711,6 +773,41 @@
     {
       "source_path": "generated/planning/python/commands/planning_list_files_report.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_list_files_report.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_lane_create_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_create_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_lane_promote_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_promote_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_lane_activate_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_activate_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_lane_close_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_close_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_lane_archive_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_archive_lifecycle.py",
       "classification": "maintainer/development only",
       "owner": "generated command module projection",
       "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."

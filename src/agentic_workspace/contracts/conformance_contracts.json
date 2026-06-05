@@ -292,6 +292,36 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.lane-activate.lifecycle.dry-run.process",
+      "operation_id": "planning.lane-activate.lifecycle",
+      "path": "conformance/planning.lane-activate.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.lane-archive.lifecycle.dry-run.process",
+      "operation_id": "planning.lane-archive.lifecycle",
+      "path": "conformance/planning.lane-archive.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.lane-close.lifecycle.dry-run.process",
+      "operation_id": "planning.lane-close.lifecycle",
+      "path": "conformance/planning.lane-close.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.lane-create.lifecycle.dry-run.process",
+      "operation_id": "planning.lane-create.lifecycle",
+      "path": "conformance/planning.lane-create.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.lane-promote.lifecycle.dry-run.process",
+      "operation_id": "planning.lane-promote.lifecycle",
+      "path": "conformance/planning.lane-promote.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.new-plan.lifecycle.dry-run.process",
       "operation_id": "planning.new-plan.lifecycle",
       "path": "conformance/planning.new-plan.lifecycle.dry-run.process.json",

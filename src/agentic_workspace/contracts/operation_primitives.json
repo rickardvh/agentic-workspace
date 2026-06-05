@@ -884,6 +884,66 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
+      "id": "planning.lane-create.apply",
+      "summary": "Create a first-class Planning lane record and compact state projection.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lane lifecycle state mutation and installed-surface interpretation remain package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
+      "id": "planning.lane-promote.apply",
+      "summary": "Promote a decomposition candidate lane into a first-class lane record.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lane lifecycle state mutation and installed-surface interpretation remain package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
+      "id": "planning.lane-activate.apply",
+      "summary": "Mark a lane record active and optionally select its current slice.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lane lifecycle state mutation and installed-surface interpretation remain package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
+      "id": "planning.lane-close.apply",
+      "summary": "Record lane proof aggregation, residual work, and parent contribution.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lane lifecycle state mutation and installed-surface interpretation remain package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
+      "id": "planning.lane-archive.apply",
+      "summary": "Archive a closed lane record and remove its live state projection.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lane lifecycle state mutation and installed-surface interpretation remain package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
       "id": "planning.prompt.render",
       "summary": "Render package-local planning prompt guidance for a selected bootstrap command.",
       "kind": "planning-runtime",

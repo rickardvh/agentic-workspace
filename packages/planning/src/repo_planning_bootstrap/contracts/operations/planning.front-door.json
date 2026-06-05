@@ -12,6 +12,11 @@
       "delegation-decision",
       "handoff",
       "intake-artifact",
+      "lane-activate",
+      "lane-archive",
+      "lane-close",
+      "lane-create",
+      "lane-promote",
       "new-plan",
       "promote-to-plan"
     ]

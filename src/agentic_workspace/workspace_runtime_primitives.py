@@ -1664,6 +1664,12 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     )
     promote_command = f"agentic-workspace planning promote-to-plan --item-id <item-id>{target_arg} --format json"
+    lane_create_command = f"agentic-workspace planning lane-create --id <lane-id> --title <title>{target_arg} --format json"
+    lane_promote_command = f"agentic-workspace planning lane-promote <lane-id>{target_arg} --format json"
+    lane_activate_command = f"agentic-workspace planning lane-activate <lane-id>{target_arg} --format json"
+    lane_close_command = (
+        f"agentic-workspace planning lane-close <lane-id>{target_arg} --proof <proof> --parent-contribution <summary> --format json"
+    )
     delegation_command = (
         f"agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason>{target_arg} --format json"
     )
@@ -1679,11 +1685,38 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
+            lane_create_command,
+            lane_promote_command,
+            lane_activate_command,
+            lane_close_command,
+            f"agentic-workspace planning lane-archive <lane-id>{target_arg} --format json",
             delegation_command,
             f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
             f"agentic-workspace planning close-item --item <item-id>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
         ],
+        "planning_hierarchy": {
+            "direct": {
+                "artifact": "none",
+                "rule": "Narrow direct work may proceed without a Planning artifact until it widens into sequencing, proof, or handoff risk.",
+            },
+            "slice": {
+                "artifact": ".agentic-workspace/planning/execplans/<id>.plan.json",
+                "command": new_plan_command,
+                "owns": "concrete implementation steps, touched paths, validation commands, execution residue, and slice closeout",
+            },
+            "lane": {
+                "artifact": ".agentic-workspace/planning/lanes/<id>.lane.json",
+                "create_command": lane_create_command,
+                "promote_command": lane_promote_command,
+                "owns": "lane outcome, subsystem strategy, slice sequence, proof aggregation, residual lane work, and parent contribution",
+            },
+            "epic": {
+                "artifact": ".agentic-workspace/planning/decompositions/<id>.decomposition.json",
+                "owns": "high-level intent, soft requirements, candidate lanes, and parent acceptance",
+            },
+            "rule": "Do not solve lane-shaped work by expanding execplans into lane artifacts; promote or create a lane owner first, then execute concrete slices with execplans.",
+        },
         "post_new_plan_tightening": {
             "rule": "new-plan creates a schema-valid scaffold, not an implementation-ready contract.",
             "tighten_before_implementation": [
@@ -1719,6 +1752,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "promote_existing_item_command": promote_command,
             "canonical_surfaces": [
                 ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/lanes/<id>.lane.json for lane strategy and proof aggregation",
                 ".agentic-workspace/planning/execplans/<id>.plan.json",
                 ".agentic-workspace/planning/decompositions/<id>.decomposition.json for epic shaping",
             ],
@@ -1731,6 +1765,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             ],
             "planning_only_write_scope": [
                 ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/lanes/",
                 ".agentic-workspace/planning/execplans/",
                 ".agentic-workspace/planning/decompositions/",
             ],
@@ -1780,6 +1815,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Use agentic-workspace planning subcommands for planning mutations.",
             "After new-plan, tighten scaffold fields before implementation.",
             "For ordered roadmap lanes, execute one lane at a time; a lane may use multiple execplans, but an execplan should not span unrelated lanes.",
+            "Use lane records for lane strategy, sequencing, proof aggregation, residual work, and lane-to-epic contribution; do not overload execplans with lane ownership.",
             "Prefer checked-in Agentic Workspace plans as the shared authority for required planning.",
             "If an agent runtime is hardwired to use native plans or todos, treat them as private working memory and bridge durable decisions into checked-in Planning before implementation, handoff, or closeout; do not edit .agentic-workspace/WORKFLOW.md as task state.",
             "Do not create root PLAN.md, DOC_CLEANUP_PLAN.md, or similar freehand durable-state files unless repo config explicitly routes there.",
@@ -2017,6 +2053,13 @@ def _print_planning_help(payload: dict[str, Any]) -> None:
     print("Planning lifecycle:")
     for command in payload["lifecycle_commands"]:
         print(f"- {command}")
+    hierarchy = payload.get("planning_hierarchy", {})
+    if hierarchy:
+        print("Planning hierarchy:")
+        for level in ("direct", "epic", "lane", "slice"):
+            item = hierarchy.get(level, {})
+            if isinstance(item, dict):
+                print(f"- {level}: {item.get('artifact', '')}")
     tightening = payload.get("post_new_plan_tightening", {})
     if isinstance(tightening, dict) and tightening:
         print(f"- After new-plan: {tightening.get('rule', '')}")
@@ -13642,7 +13685,19 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
         payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return {}
-    return payload if isinstance(payload, dict) else {}
+    if not isinstance(payload, dict):
+        return {}
+    parent_lane = _as_dict(payload.get("parent_lane"))
+    lane_id = str(parent_lane.get("id") or parent_lane.get("lane_id") or "").strip()
+    if lane_id:
+        matching_record = next(
+            (record for record in _fast_planning_lane_records(target_root=target_root) if str(record.get("id") or "").strip() == lane_id),
+            None,
+        )
+        if isinstance(matching_record, dict):
+            payload = copy.deepcopy(payload)
+            payload["_lane_owner_record"] = matching_record
+    return payload
 
 
 def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -> dict[str, Any]:
@@ -15682,6 +15737,7 @@ def _next_safe_action_packet(
     if decision in {
         "active-execplan-required",
         "candidate-lane-promotion-required",
+        "lane-owner-artifact-required",
         "parent-decomposition-decision-required",
         "planning-escalation-required",
         "implementation-owner-missing",
@@ -16654,7 +16710,11 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
         "workflow_obligations": compact_workflow_obligations,
-        "closeout_obligations": _compact_start_closeout_obligations(preflight.get("closeout_obligations", {})),
+        "closeout_obligations": _compact_start_closeout_obligations(
+            preflight.get("closeout_obligations", {}),
+            cli_invoke=config.cli_invoke,
+            target_root=target_root,
+        ),
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
@@ -17304,6 +17364,28 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "absent",
     ):
         compact["active_parent_decomposition_requirement"] = active_parent_decomposition_requirement
+    hierarchy_owner_requirement = gate.get("hierarchy_owner_requirement")
+    if isinstance(hierarchy_owner_requirement, dict) and hierarchy_owner_requirement.get("status") not in (
+        None,
+        "",
+        "no-recorded-parent-lane",
+    ):
+        compact["hierarchy_owner_requirement"] = {
+            key: hierarchy_owner_requirement.get(key)
+            for key in (
+                "required",
+                "status",
+                "lane_id",
+                "active_execplan",
+                "lane_record",
+                "invalid_lane_record",
+                "validation_errors",
+                "required_before_implementation",
+                "command",
+                "rule",
+            )
+            if key in hierarchy_owner_requirement
+        }
     repair_route = gate.get("repair_route")
     if isinstance(repair_route, dict) and repair_route.get("status") not in (None, "", "absent"):
         compact["repair_route"] = repair_route
@@ -18028,6 +18110,182 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _fast_planning_lane_schema_findings(*, target_root: Path, payload: object) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["lane record must be a JSON object"]
+    schema_path = target_root / ".agentic-workspace" / "planning" / "schemas" / "planning-lane.schema.json"
+    if not schema_path.is_file():
+        return [".agentic-workspace/planning/schemas/planning-lane.schema.json is missing"]
+    try:
+        from jsonschema import Draft202012Validator
+    except ImportError:
+        return ["jsonschema is not installed"]
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"planning lane schema is missing or invalid JSON: {exc}"]
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    findings: list[str] = []
+    for error in errors:
+        location = ".".join((str(part) for part in error.path)) or "<root>"
+        findings.append(f"{location}: {error.message}")
+    return findings
+
+
+def _fast_planning_lane_records(*, target_root: Path, include_invalid: bool = False) -> list[dict[str, Any]]:
+    lanes_dir = target_root / ".agentic-workspace" / "planning" / "lanes"
+    if not lanes_dir.is_dir():
+        return []
+    records: list[dict[str, Any]] = []
+    target_resolved = target_root.resolve()
+    for path in sorted(lanes_dir.glob("*.lane.json")):
+        if path.name == "TEMPLATE.lane.json":
+            continue
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(target_resolved)
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("kind") != "planning-lane/v1":
+            continue
+        schema_findings = _fast_planning_lane_schema_findings(target_root=target_root, payload=payload)
+        payload = copy.deepcopy(payload)
+        payload["_path"] = resolved.relative_to(target_resolved).as_posix()
+        payload["_valid"] = not schema_findings
+        if schema_findings:
+            payload["_validation_errors"] = schema_findings
+            if include_invalid:
+                records.append(payload)
+            continue
+        records.append(payload)
+    return records
+
+
+def _fast_active_execplan_record(*, target_root: Path, active_summary: dict[str, Any]) -> dict[str, Any]:
+    surface = str(active_summary.get("active_execplan") or "").strip()
+    if not surface:
+        return {}
+    try:
+        target_resolved = target_root.resolve()
+        record_path = (target_root / surface).resolve()
+        record_path.relative_to(target_resolved)
+    except (OSError, ValueError):
+        return {}
+    if record_path.suffix.lower() != ".json" or not record_path.is_file():
+        return {}
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    payload = copy.deepcopy(payload)
+    payload["_path"] = record_path.relative_to(target_root.resolve()).as_posix()
+    return payload
+
+
+def _planning_hierarchy_owner_requirement(
+    *,
+    target_root: Path,
+    active_summary: dict[str, Any],
+    planning_revision: dict[str, Any],
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    active_record = _fast_active_execplan_record(target_root=target_root, active_summary=active_summary)
+    parent_lane = _as_dict(active_record.get("parent_lane"))
+    lane_id = str(parent_lane.get("id") or parent_lane.get("lane_id") or "").strip()
+    if not lane_id:
+        return {
+            "required": False,
+            "status": "no-recorded-parent-lane",
+            "rule": "Direct work and standalone slices do not require a lane owner artifact unless the agent/user declares lane-shaped work.",
+        }
+    lane_records = _fast_planning_lane_records(target_root=target_root, include_invalid=True)
+    matching_records = [record for record in lane_records if str(record.get("id") or "").strip() == lane_id]
+    matching_record = next((record for record in matching_records if record.get("_valid") is True), None)
+    if matching_record:
+        return {
+            "required": False,
+            "status": "lane-owner-present",
+            "lane_id": lane_id,
+            "lane_record": str(matching_record.get("_path") or f".agentic-workspace/planning/lanes/{lane_id}.lane.json"),
+            "proof_aggregation": _as_dict(matching_record.get("proof_aggregation")),
+            "residual_lane_work": str(matching_record.get("residual_lane_work") or "").strip(),
+            "parent_close_permission": str(matching_record.get("parent_close_permission") or "").strip(),
+            "rule": "The active execplan is a slice; its parent lane owner owns strategy, ordering, aggregate proof, and residual lane work.",
+        }
+    invalid_record = next((record for record in matching_records if record.get("_valid") is False), None)
+    if invalid_record:
+        invalid_path = str(invalid_record.get("_path") or f".agentic-workspace/planning/lanes/{lane_id}.lane.json")
+        return {
+            "required": True,
+            "status": "missing-or-invalid-lane-owner-artifact",
+            "lane_id": lane_id,
+            "active_execplan": str(active_summary.get("active_execplan") or active_record.get("_path") or "").strip(),
+            "recorded_parent_lane": parent_lane,
+            "invalid_lane_record": invalid_path,
+            "validation_errors": [str(item) for item in _list_payload(invalid_record.get("_validation_errors")) if str(item).strip()],
+            "required_before_implementation": [
+                f"repair or replace {invalid_path}",
+                "record a schema-valid lane outcome, slice sequence, proof aggregation strategy, and residual lane work before continuing lane/epic implementation",
+                "or explicitly narrow the active work so it does not claim lane or parent completion",
+            ],
+            "command": _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    f"agentic-workspace planning lane-create --id {lane_id} --target . --format json",
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
+            "authority_boundary": _authority_boundary_payload(
+                surface="planning_hierarchy_owner_requirement",
+                enforced_by_aw=["missing-or-invalid-lane-owner-artifact"],
+                observed_by_aw=[f"active_execplan_parent_lane={lane_id}", "lane_record_match=True", "lane_record_valid=False"],
+                recommended_by_aw=["repair or replace the lane record before lane/epic implementation claims"],
+                agent_owned_decisions=[
+                    "whether the current user request is only the active slice or still the larger lane",
+                    "the concrete lane outcome, slice sequence, and proof strategy",
+                ],
+                human_owned_decisions=["acceptance of the lane decomposition and parent-close permission"],
+                rule="AW validates recorded Planning artifacts and gates invalid owners; it does not infer business scope from prompt keywords.",
+            ),
+            "rule": "A slice with a recorded parent lane requires a schema-valid lane owner artifact before lane/epic implementation or completion claims.",
+        }
+    return {
+        "required": True,
+        "status": "missing-lane-owner-artifact",
+        "lane_id": lane_id,
+        "active_execplan": str(active_summary.get("active_execplan") or active_record.get("_path") or "").strip(),
+        "recorded_parent_lane": parent_lane,
+        "required_before_implementation": [
+            f"create or promote .agentic-workspace/planning/lanes/{lane_id}.lane.json",
+            "record lane outcome, slice sequence, proof aggregation strategy, and residual lane work before continuing lane/epic implementation",
+            "or explicitly narrow the active work so it does not claim lane or parent completion",
+        ],
+        "command": _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f"agentic-workspace planning lane-create --id {lane_id} --target . --format json",
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+        "authority_boundary": _authority_boundary_payload(
+            surface="planning_hierarchy_owner_requirement",
+            enforced_by_aw=["missing-lane-owner-artifact"],
+            observed_by_aw=[f"active_execplan_parent_lane={lane_id}", "lane_record_match=False"],
+            recommended_by_aw=["create or promote a lane record before lane/epic implementation claims"],
+            agent_owned_decisions=[
+                "whether the current user request is only the active slice or still the larger lane",
+                "the concrete lane outcome, slice sequence, and proof strategy",
+            ],
+            human_owned_decisions=["acceptance of the lane decomposition and parent-close permission"],
+            rule="AW observes recorded Planning artifacts and gates missing owners; it does not infer business scope from prompt keywords.",
+        ),
+        "rule": "A slice with a recorded parent lane cannot serve as the lane artifact. The lane owner must exist before lane/epic implementation or completion claims.",
+    }
+
+
 def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, Any]:
     active_summary = _fast_planning_active_summary(target_root=target_root)
     has_active_planning = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
@@ -18405,18 +18663,24 @@ def _compact_start_workflow_obligations(value: Any) -> dict[str, Any]:
     }
 
 
-def _compact_start_closeout_obligations(value: Any) -> dict[str, Any]:
+def _compact_start_closeout_obligations(
+    value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_root: Path | None = None
+) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
     required = value.get("required_before_lane_closeout", [])
     if not isinstance(required, list):
         required = []
+    target_arg = _command_target_arg(target_root)
     return {
         "status": value.get("status", "unknown"),
         "required_before_lane_closeout_count": len(required),
         "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
         "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-        "detail_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        "detail_command": _command_with_cli_invoke(
+            command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json",
+            cli_invoke=cli_invoke,
+        ),
     }
 
 
@@ -19147,6 +19411,10 @@ def _parent_intent_status_payload(
     active_milestone = _as_dict(active_planning_record.get("active_milestone"))
     delegated = _as_dict(active_planning_record.get("delegated_judgment"))
     execution = _as_dict(active_planning_record.get("execution_run"))
+    lane_owner = _as_dict(active_planning_record.get("_lane_owner_record"))
+    lane_proof = _as_dict(lane_owner.get("proof_aggregation"))
+    lane_closeout = _as_dict(lane_owner.get("closeout_state"))
+    lane_acceptance = _as_dict(lane_owner.get("acceptance_boundary"))
 
     def present(*values: Any) -> str:
         for value in values:
@@ -19165,6 +19433,7 @@ def _parent_intent_status_payload(
         intent_continuity.get("larger intended outcome"),
         intent_check.get("larger_intent"),
         completion_boundary.get("final_satisfaction"),
+        lane_owner.get("lane_outcome"),
     )
     current_slice = present(
         parent_acceptance.get("current_slice"),
@@ -19173,6 +19442,7 @@ def _parent_intent_status_payload(
         delegated.get("requested_outcome"),
         active_milestone.get("scope"),
         execution.get("what happened"),
+        lane_owner.get("current_slice"),
     )
     residual_intent = present(
         parent_acceptance.get("residual_parent_intent"),
@@ -19180,6 +19450,8 @@ def _parent_intent_status_payload(
         completion_boundary.get("required_residual_intent"),
         required_continuation.get("required follow-on for the larger intended outcome"),
         intent_satisfaction.get("unsolved intent passed to"),
+        lane_owner.get("residual_lane_work"),
+        lane_closeout.get("residual_work"),
     )
     continuation_owner = present(
         parent_acceptance.get("continuation_owner"),
@@ -19187,24 +19459,29 @@ def _parent_intent_status_payload(
         required_continuation.get("owner surface"),
         intent_continuity.get("continuation surface"),
         intent_check.get("continuation_surface"),
+        lane_closeout.get("next_owner"),
     )
     proof_boundary = present(
         parent_acceptance.get("proof_boundary"),
         intent_proof.get("claim_boundary"),
         intent_proof.get("claim boundary"),
         completion_boundary.get("bounded_slice_success"),
+        lane_proof.get("status"),
+        lane_owner.get("proof_strategy"),
     )
     parent_acceptance_target = present(
         parent_acceptance.get("parent_acceptance"),
         parent_acceptance.get("acceptance_target"),
         parent_acceptance.get("final_satisfaction"),
         completion_boundary.get("final_satisfaction"),
+        lane_acceptance.get("summary"),
         original_intent,
     )
     parent_proof_required = present(
         parent_acceptance.get("parent_proof_required"),
         parent_acceptance.get("evidence_required_for_parent_completion"),
         completion_boundary.get("evidence_required_for_final_completion"),
+        lane_proof.get("status"),
     )
     required_continuation_signal = _required_continuation_present(required_continuation)
     has_parent_signal = bool(
@@ -19215,6 +19492,7 @@ def _parent_intent_status_payload(
         or intent_satisfaction
         or intent_continuity
         or required_continuation_signal
+        or lane_owner
     )
     if not has_parent_signal:
         return {
@@ -19246,6 +19524,14 @@ def _parent_intent_status_payload(
 
     closure_status = str(closure_check.get("larger-intent status") or closure_check.get("larger_intent_status") or "").strip().lower()
     closure_decision = str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+    lane_closeout_status = str(lane_closeout.get("status") or lane_owner.get("status") or "").strip().lower()
+    lane_parent_close_permission = str(lane_owner.get("parent_close_permission") or "").strip().lower()
+    lane_blocks_parent_close = bool(lane_owner) and (
+        lane_closeout_status not in {"closed", "complete", "completed", "done"}
+        or lane_parent_close_permission not in {"allowed", "allow", "yes", "true", "approved", "parent-close-allowed"}
+        or bool(_list_payload(lane_proof.get("known_gaps")))
+        or bool(residual_intent)
+    )
     intent_satisfied = (
         truthy_yes(intent_satisfaction.get("was original intent fully satisfied?"))
         or truthy_yes(intent_continuity.get("this slice completes the larger intended outcome"))
@@ -19263,12 +19549,14 @@ def _parent_intent_status_payload(
         and closure_decision in {"archive-and-close", "close", "closed", ""}
         and required_follow_on not in {"yes", "true"}
         and intent_trust not in {"follow-up-required", "needs-review"}
+        and not lane_blocks_parent_close
     )
     parent_open = (
         not parent_closed
         or closure_status in {"open", "partial", "unfinished", "follow-up-required"}
         or required_follow_on in {"yes", "true"}
         or intent_trust in {"follow-up-required", "needs-review"}
+        or lane_blocks_parent_close
     )
     proof_boundary_lower = proof_boundary.lower()
     proof_is_slice_only = any(token in proof_boundary_lower for token in ("slice", "work", "current", "bounded"))
@@ -19280,6 +19568,10 @@ def _parent_intent_status_payload(
     ]
     if narrowed_proof:
         must_not_claim.append("Do not report the work as fully done when proof only covers the current slice.")
+    if lane_blocks_parent_close:
+        must_not_claim.append(
+            "Do not close the lane or parent epic while lane proof aggregation, known gaps, or residual lane work remain open."
+        )
     return {
         "kind": "agentic-workspace/parent-intent-status/v1",
         "status": status,
@@ -19291,6 +19583,16 @@ def _parent_intent_status_payload(
         "residual_parent_intent": residual_intent,
         "continuation_owner": continuation_owner,
         "parent_proof_required": parent_proof_required,
+        "lane_owner": {
+            "status": "present" if lane_owner else "absent",
+            "id": str(lane_owner.get("id") or "").strip(),
+            "path": str(lane_owner.get("_path") or "").strip(),
+            "closeout_status": lane_closeout_status or "not-recorded",
+            "proof_status": str(lane_proof.get("status") or "").strip() or "not-recorded",
+            "known_gaps": [str(item).strip() for item in _list_payload(lane_proof.get("known_gaps")) if str(item).strip()],
+            "residual_lane_work": str(lane_owner.get("residual_lane_work") or lane_closeout.get("residual_work") or "").strip(),
+            "parent_close_permission": lane_parent_close_permission or "not-recorded",
+        },
         "closure_decision": closure_decision or "not-recorded",
         "larger_intent_status": closure_status or "not-recorded",
         "must_not_claim": must_not_claim,
@@ -22375,6 +22677,12 @@ def _planning_safety_gate_payload(
         target_root=target_root,
         active_summary=active_summary,
     )
+    hierarchy_owner_requirement = _planning_hierarchy_owner_requirement(
+        target_root=target_root,
+        active_summary=active_summary,
+        planning_revision=planning_revision,
+        config=config,
+    )
     active_plan_reliance = _active_plan_reliance_payload(
         target_root=target_root,
         active_planning_present=active_planning_present,
@@ -22404,6 +22712,12 @@ def _planning_safety_gate_payload(
             "Active epic-backed planning is linked to a parent decomposition lane that has not been updated, linked, or explicitly skipped."
         )
         required_next_action = "update-link-or-skip-parent-decomposition"
+        workflow_sufficient = False
+    elif active_planning_present and hierarchy_owner_requirement.get("required"):
+        status = "blocked"
+        decision = "lane-owner-artifact-required"
+        reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
+        required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
     elif active_planning_present:
         status = "satisfied"
@@ -22470,6 +22784,7 @@ def _planning_safety_gate_payload(
         observed_by_aw=[
             f"active_planning_present={active_planning_present}",
             f"dirty_shape={path_classification.get('dirty_shape')}",
+            f"hierarchy_owner_status={hierarchy_owner_requirement.get('status')}",
             *[f"issue_ref={issue_ref}" for issue_ref in issue_refs],
         ],
         recommended_by_aw=[required_next_action] if workflow_sufficient else [],
@@ -22514,6 +22829,7 @@ def _planning_safety_gate_payload(
         "issue_refs": issue_refs,
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
+        "hierarchy_owner_requirement": hierarchy_owner_requirement,
         "repair_route": {
             "status": "retired",
             "fit_criteria": [

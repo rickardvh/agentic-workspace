@@ -1,0 +1,43 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1",
+  "title": "First implementation lane",
+  "status": "shaping",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/<parent>.decomposition.json",
+  "lane_outcome": "State the concrete lane-level outcome that advances the parent epic.",
+  "purpose_for_parent": "State why this lane exists in the parent decomposition.",
+  "subsystems": [],
+  "technical_strategy": "State the implementation strategy across slices without putting slice tasks here.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "slice-1",
+      "title": "First concrete slice",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "State how this slice advances the lane.",
+      "proof": "State the slice proof expectation; exact commands belong in the execplan.",
+      "residual_after_slice": "State what lane work remains after this slice."
+    }
+  ],
+  "current_slice": "",
+  "acceptance_boundary": "State what must be true before this lane can be called complete.",
+  "proof_strategy": "State how slice proofs aggregate into lane proof.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "State remaining lane work or 'none' after closeout.",
+  "lane_to_epic_contribution": "State how this lane advances or closes the parent epic.",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [],
+  "notes": ""
+}

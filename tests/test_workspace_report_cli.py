@@ -47,6 +47,11 @@ def _machine_command_values(value: object, *, key: str = "") -> list[str]:
     return values
 
 
+def _write_planning_lane_schema(target: Path) -> None:
+    schema = json.loads(Path(".agentic-workspace/planning/schemas/planning-lane.schema.json").read_text(encoding="utf-8"))
+    _write_json(target / ".agentic-workspace" / "planning" / "schemas" / "planning-lane.schema.json", schema)
+
+
 def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -2908,7 +2913,9 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert options["stop-with-status"]["allowed"] is True
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
-    compact = json.loads(capsys.readouterr().out)["answer"]
+    compact_payload = json.loads(capsys.readouterr().out)
+    compact = compact_payload["answer"]
+    assert "--target ./repo" not in json.dumps(compact_payload)
     compact_boundary = compact["checks"]["intent_satisfaction"]["completion_boundary"]
     assert compact_boundary["partial_pr_may_close"] == "no"
     assert compact_boundary["required_follow_up_owner"] == ".agentic-workspace/planning/state.toml"
@@ -3965,6 +3972,204 @@ def test_report_closeout_report_represents_generated_code_parent_intent_boundary
     checks = {check["id"]: check for check in report["completeness"]["checks"]}
     assert checks["parent-intent-status"]["status"] == "incomplete"
     assert checks["applicable-intent-status"]["status"] == "incomplete"
+
+
+def test_report_closeout_report_uses_lane_owner_proof_aggregation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_planning_lane_schema(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "lanes" / "parent-lane.lane.json",
+        {
+            "kind": "planning-lane/v1",
+            "id": "parent-lane",
+            "title": "Parent lane",
+            "status": "active",
+            "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/parent.decomposition.json",
+            "lane_outcome": "Finish the parent lane.",
+            "purpose_for_parent": "Advance the parent epic.",
+            "subsystems": ["workspace"],
+            "technical_strategy": "Complete the lane across ordered slices.",
+            "technology_choices": [],
+            "current_slice": "slice-one",
+            "slice_sequence": [
+                {
+                    "id": "slice-one",
+                    "title": "Slice one",
+                    "status": "active",
+                    "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+                    "depends_on": [],
+                    "purpose_for_lane": "Deliver the first lane slice.",
+                    "proof": "pytest slice tests",
+                    "residual_after_slice": "second slice proof missing",
+                }
+            ],
+            "acceptance_boundary": "The parent lane is complete when both slices are proven.",
+            "proof_strategy": "Aggregate slice proof into lane proof before parent closeout.",
+            "proof_aggregation": {
+                "status": "partial",
+                "evidence": ["slice proof passed"],
+                "known_gaps": ["second slice proof missing"],
+            },
+            "residual_lane_work": "Finish the second slice before lane closeout.",
+            "lane_to_epic_contribution": "This lane advances the parent epic after proof aggregation is complete.",
+            "parent_close_permission": "do-not-close-parent",
+            "closeout_state": {
+                "status": "open",
+                "summary": "Slice one is complete but lane proof is still partial.",
+                "residual_work": "Finish the second slice before lane closeout.",
+                "next_owner": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+            },
+            "references": [],
+        },
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        {
+            "schema_version": "execplan/v1",
+            "id": "slice-one",
+            "status": "active",
+            "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            "intent_continuity": {
+                "larger intended outcome": "Finish the parent lane.",
+                "this slice completes the larger intended outcome": "no",
+                "continuation surface": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "yes",
+                "owner surface": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+                "activation trigger": "after lane owner is repaired",
+            },
+            "execution_run": {
+                "what happened": "Finished slice one.",
+                "changed surfaces": "src/example.py",
+                "validations run": "pytest slice tests",
+            },
+            "proof_report": {
+                "validation proof": "pytest slice tests",
+                "intent_proof": {"claim_boundary": "slice-only proof"},
+            },
+            "closure_check": {
+                "closure decision": "archive-but-keep-lane-open",
+                "larger-intent status": "open",
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    parent = report["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["lane_owner"]["status"] == "present"
+    assert parent["lane_owner"]["proof_status"] == "partial"
+    assert parent["lane_owner"]["known_gaps"] == ["second slice proof missing"]
+    assert parent["lane_owner"]["parent_close_permission"] == "do-not-close-parent"
+    assert "Finish the parent lane." in parent["residual_parent_intent"]
+    assert parent["lane_owner"]["residual_lane_work"] == "Finish the second slice before lane closeout."
+    assert any("lane proof aggregation" in claim for claim in parent["must_not_claim"])
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert any("Do not close the lane" in claim for claim in rendering["must_not_claim"])
+    assert any("Parent intent: open" in line for line in rendering["summary_lines"])
+
+
+def test_report_closeout_report_ignores_invalid_lane_owner_proof_aggregation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_planning_lane_schema(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "slice-one", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/slice-one.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "lanes" / "parent-lane.lane.json",
+        {
+            "kind": "planning-lane/v1",
+            "id": "parent-lane",
+            "title": "Malformed parent lane",
+            "status": "active",
+            "proof_aggregation": {
+                "status": "partial",
+                "evidence": ["invalid lane evidence must not be consumed"],
+                "known_gaps": ["invalid lane gap must not be consumed"],
+            },
+        },
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "execplans" / "slice-one.plan.json",
+        {
+            "schema_version": "execplan/v1",
+            "id": "slice-one",
+            "status": "active",
+            "parent_lane": {"id": "parent-lane", "label": "Parent lane"},
+            "intent_continuity": {
+                "larger intended outcome": "Finish the parent lane.",
+                "this slice completes the larger intended outcome": "no",
+                "continuation surface": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "yes",
+                "owner surface": ".agentic-workspace/planning/lanes/parent-lane.lane.json",
+                "activation trigger": "after lane owner is repaired",
+            },
+            "execution_run": {
+                "what happened": "Finished slice one.",
+                "changed surfaces": "src/example.py",
+                "validations run": "pytest slice tests",
+            },
+            "proof_report": {
+                "validation proof": "pytest slice tests",
+                "intent_proof": {"claim_boundary": "slice-only proof"},
+            },
+            "closure_check": {
+                "closure decision": "archive-but-keep-lane-open",
+                "larger-intent status": "open",
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    parent = report["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["lane_owner"]["status"] == "absent"
+    assert parent["lane_owner"]["proof_status"] == "not-recorded"
+    assert parent["lane_owner"]["known_gaps"] == []
+    assert "invalid lane gap must not be consumed" not in json.dumps(parent)
 
 
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:

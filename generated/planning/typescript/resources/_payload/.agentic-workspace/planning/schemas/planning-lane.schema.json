@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-planning/planning-lane.schema.json",
+  "title": "Planning Lane Record",
+  "type": "object",
+  "required": [
+    "kind",
+    "id",
+    "title",
+    "status",
+    "parent_decomposition_ref",
+    "lane_outcome",
+    "purpose_for_parent",
+    "subsystems",
+    "technical_strategy",
+    "slice_sequence",
+    "acceptance_boundary",
+    "proof_strategy",
+    "proof_aggregation",
+    "residual_lane_work",
+    "lane_to_epic_contribution",
+    "parent_close_permission",
+    "closeout_state",
+    "references"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "planning-lane/v1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "shaping",
+        "ready",
+        "active",
+        "blocked",
+        "closed",
+        "archived"
+      ]
+    },
+    "parent_decomposition_ref": {
+      "type": "string"
+    },
+    "lane_outcome": {
+      "type": "string"
+    },
+    "purpose_for_parent": {
+      "type": "string"
+    },
+    "subsystems": {
+      "$ref": "#/$defs/string_array"
+    },
+    "technical_strategy": {
+      "type": "string"
+    },
+    "technology_choices": {
+      "$ref": "#/$defs/string_array"
+    },
+    "slice_sequence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/slice"
+      }
+    },
+    "current_slice": {
+      "type": "string"
+    },
+    "acceptance_boundary": {
+      "type": "string"
+    },
+    "proof_strategy": {
+      "type": "string"
+    },
+    "proof_aggregation": {
+      "$ref": "#/$defs/proof_aggregation"
+    },
+    "residual_lane_work": {
+      "type": "string"
+    },
+    "lane_to_epic_contribution": {
+      "type": "string"
+    },
+    "parent_close_permission": {
+      "enum": [
+        "not-evaluated",
+        "do-not-close-parent",
+        "may-advance-parent",
+        "may-close-parent-after-human-confirmation",
+        "may-close-parent"
+      ]
+    },
+    "closeout_state": {
+      "$ref": "#/$defs/closeout_state"
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reference"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "slice": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "status",
+        "execplan_ref",
+        "depends_on",
+        "purpose_for_lane"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "ready",
+            "active",
+            "blocked",
+            "completed",
+            "skipped"
+          ]
+        },
+        "execplan_ref": {
+          "type": "string"
+        },
+        "depends_on": {
+          "$ref": "#/$defs/string_array"
+        },
+        "purpose_for_lane": {
+          "type": "string"
+        },
+        "proof": {
+          "type": "string"
+        },
+        "residual_after_slice": {
+          "type": "string"
+        }
+      }
+    },
+    "proof_aggregation": {
+      "type": "object",
+      "required": [
+        "status",
+        "evidence",
+        "known_gaps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not-started",
+            "partial",
+            "satisfied",
+            "blocked"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/string_array"
+        },
+        "known_gaps": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "closeout_state": {
+      "type": "object",
+      "required": [
+        "status",
+        "summary",
+        "residual_work",
+        "next_owner"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "open",
+            "ready-for-closeout",
+            "closed",
+            "blocked"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "residual_work": {
+          "type": "string"
+        },
+        "next_owner": {
+          "type": "string"
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "locator": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

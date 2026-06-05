@@ -1,0 +1,112 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "lane-promote",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Do not create slice execplans during lane promotion."
+  ],
+  "id": "planning.lane-promote.lifecycle",
+  "inputs": [
+    {
+      "name": "lane",
+      "required": true,
+      "source": "derived"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Promote a decomposition candidate lane to a lane record.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.lane-promote.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning lane-promote executes generated operation IR while the planning module owns lane promotion policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/decompositions/"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Promote a decomposition candidate lane to a lane record.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.lane-promote.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Promote a decomposition candidate lane into a first-class lane record.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/",
+      "when": "not a dry run"
+    }
+  ]
+}

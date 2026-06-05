@@ -200,6 +200,36 @@ def apply_planning_intake_artifact_operation(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
+def apply_planning_lane_activate_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_lane_activate_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
+def apply_planning_lane_archive_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_lane_archive_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
+def apply_planning_lane_close_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_lane_close_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
+def apply_planning_lane_create_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_lane_create_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
+def apply_planning_lane_promote_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_lane_promote_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
 def apply_planning_new_plan_operation(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.runtime_projection import apply_planning_new_plan_operation as source_function
 
@@ -265,6 +295,11 @@ __all__ = [
     'apply_planning_closeout_operation',
     'apply_planning_delegation_decision_operation',
     'apply_planning_intake_artifact_operation',
+    'apply_planning_lane_activate_operation',
+    'apply_planning_lane_archive_operation',
+    'apply_planning_lane_close_operation',
+    'apply_planning_lane_create_operation',
+    'apply_planning_lane_promote_operation',
     'apply_planning_new_plan_operation',
     'apply_planning_promote_to_plan_operation',
     'emit_planning_operation_output',

@@ -25,8 +25,15 @@ def test_planning_help_command_returns_lifecycle_guidance(capsys) -> None:
 
     assert payload["kind"] == "agentic-workspace/planning-help/v1"
     assert any("new-plan" in command for command in payload["lifecycle_commands"])
+    assert any("lane-create" in command for command in payload["lifecycle_commands"])
+    assert any("lane-promote" in command for command in payload["lifecycle_commands"])
+    assert any("lane-close" in command for command in payload["lifecycle_commands"])
     assert all("agentic-planning" not in command for command in payload["lifecycle_commands"])
     assert any(command.startswith("agentic-workspace planning new-plan") for command in payload["lifecycle_commands"])
+    assert payload["planning_hierarchy"]["direct"]["artifact"] == "none"
+    assert payload["planning_hierarchy"]["lane"]["artifact"] == ".agentic-workspace/planning/lanes/<id>.lane.json"
+    assert "proof aggregation" in payload["planning_hierarchy"]["lane"]["owns"]
+    assert "Do not solve lane-shaped work" in payload["planning_hierarchy"]["rule"]
     assert "schema-valid scaffold" in payload["post_new_plan_tightening"]["rule"]
     assert "execution_bounds" in payload["post_new_plan_tightening"]["tighten_before_implementation"]
     assert "--verbose" in payload["post_new_plan_tightening"]["after_write"]
@@ -63,10 +70,13 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     output = capsys.readouterr().out
 
     assert "Planning lifecycle" in output
+    assert "Planning hierarchy" in output
     assert "Durable repo-visible state bridge" in output
     assert "Prep-only" in output
     assert "Reference validity" in output
     assert "agentic-workspace planning new-plan" in output
+    assert "agentic-workspace planning lane-create" in output
+    assert "planning/lanes/<id>.lane.json" in output
     assert "agentic-planning new-plan" not in output
     assert "After new-plan" in output
     assert "Ordered lanes" in output
@@ -110,6 +120,34 @@ def test_planning_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert payload["message"] == "Create execplan scaffold 'front-door-plan'"
     assert payload["dry_run"] is True
     assert payload["lifecycle_plan"]["next_safe_command"].startswith("agentic-workspace planning new-plan")
+
+
+def test_planning_front_door_runs_lane_create_operation(tmp_path, capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "planning",
+                "lane-create",
+                "--id",
+                "front-door-lane",
+                "--title",
+                "Front door lane",
+                "--target",
+                str(tmp_path),
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["message"] == "Create lane record 'front-door-lane'"
+    assert payload["dry_run"] is True
+    assert payload["lifecycle_plan"]["next_safe_command"] == (
+        "Review actions and rerun the same command without --dry-run only if the plan matches intent."
+    )
 
 
 def test_planning_front_door_rewrites_closeout_summary_action_to_top_level(tmp_path, capsys) -> None:

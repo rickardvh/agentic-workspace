@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+import json
+import tomllib
+from pathlib import Path
+
+from repo_planning_bootstrap.installer import (
+    activate_lane_record,
+    archive_lane_record,
+    close_lane_record,
+    create_lane_record,
+    planning_report,
+    planning_summary,
+    promote_decomposition_lane_to_lane_record,
+)
+
+
+def _write_decomposition(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Planning hierarchy",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Tie epic, lane, and slice artifacts together.",
+                "parent_acceptance": {
+                    "original_intent": "Tie epic, lane, and slice artifacts together.",
+                    "acceptance_target": "Lane strategy and proof aggregation are durable before slices execute.",
+                    "parent_proof_required": "Focused Planning and workspace tests pass.",
+                },
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "lane-artifacts",
+                        "title": "Lane artifacts",
+                        "readiness": "ready",
+                        "outcome": "Add first-class lane owner artifacts.",
+                        "owner_surface": "",
+                        "proof": "Lane summary and lifecycle tests pass.",
+                        "slice_contribution_to_parent": "Creates the missing middle planning layer.",
+                        "residual_parent_intent": "transition gates and reporting still need implementation.",
+                        "parent_proof_boundary": "lane-only",
+                        "human_confirmation_needed": [],
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused Planning tests pass."],
+                "promotion_rule": "Promote ready lanes to lane records before slice execplans.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_lane_create_projects_first_class_lane_record(tmp_path: Path) -> None:
+    result = create_lane_record(
+        lane_id="planning-lane",
+        title="Planning Lane",
+        target=tmp_path,
+        outcome="Represent lane strategy outside execplans.",
+        purpose="Make the parent intent concrete before slices start.",
+    )
+
+    assert [action.kind for action in result.actions] == ["created", "updated", "proof", "proof"]
+    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "planning-lane.lane.json"
+    record = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert record["kind"] == "planning-lane/v1"
+    assert record["lane_outcome"] == "Represent lane strategy outside execplans."
+    assert record["slice_sequence"] == []
+
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    assert state["roadmap"]["lanes"][0]["owner_surface"] == ".agentic-workspace/planning/lanes/planning-lane.lane.json"
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["lanes"]["record_count"] == 1
+    assert summary["lanes"]["records"][0]["id"] == "planning-lane"
+    assert summary["lanes"]["migration"]["preferred_owner"] == ".agentic-workspace/planning/lanes/<id>.lane.json"
+    assert "lanes" in summary["schema"]["shared_fields"]
+
+
+def test_promote_decomposition_lane_creates_lane_owner_without_execplan(tmp_path: Path) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "parent.decomposition.json"
+    _write_decomposition(decomposition_path)
+
+    result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "proof", "proof"]
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
+    assert lane_path.exists()
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/lane-artifacts.plan.json").exists()
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert lane["parent_decomposition_ref"] == ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    assert lane["parent_close_permission"] == "do-not-close-parent"
+    assert lane["residual_lane_work"] == "transition gates and reporting still need implementation."
+
+    decomposition = json.loads(decomposition_path.read_text(encoding="utf-8"))
+    candidate = decomposition["candidate_lanes"][0]
+    assert candidate["readiness"] == "promoted"
+    assert candidate["owner_surface"] == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
+
+
+def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> None:
+    create_lane_record(lane_id="closeable-lane", title="Closeable Lane", target=tmp_path)
+    activate_lane_record("closeable-lane", target=tmp_path)
+
+    close_result = close_lane_record(
+        "closeable-lane",
+        target=tmp_path,
+        proof="lane lifecycle tests passed",
+        residual_work="none",
+        parent_contribution="lane artifacts now own strategy and proof aggregation",
+        parent_close_permission="may-advance-parent",
+    )
+    assert [action.kind for action in close_result.actions] == ["updated", "updated", "proof", "proof"]
+    summary = planning_summary(target=tmp_path, profile="compact")
+    lane = summary["lanes"]["records"][0]
+    assert lane["status"] == "closed"
+    assert lane["proof_aggregation"]["status"] == "satisfied"
+    assert lane["lane_to_epic_contribution"] == "lane artifacts now own strategy and proof aggregation"
+    assert lane["parent_close_permission"] == "may-advance-parent"
+
+    archive_result = archive_lane_record("closeable-lane", target=tmp_path)
+    assert [action.kind for action in archive_result.actions] == ["archived", "updated", "proof", "proof"]
+    assert not (tmp_path / ".agentic-workspace/planning/lanes/closeable-lane.lane.json").exists()
+    assert (tmp_path / ".agentic-workspace/planning/lanes/archive/closeable-lane.lane.json").exists()
+    post_archive = planning_summary(target=tmp_path, profile="compact")
+    assert post_archive["lanes"]["record_count"] == 0
+    assert post_archive["lanes"]["archived_count"] == 1
+
+
+def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:
+    create_lane_record(lane_id="report-lane", title="Report Lane", target=tmp_path)
+
+    report = planning_report(target=tmp_path)
+
+    assert report["status"]["lane_record_count"] == 1
+    assert report["lanes"]["records"][0]["id"] == "report-lane"
+    helpers = {helper["artifact"]: helper for helper in report["writer_helpers"]["helpers"]}
+    assert "lane-create" in helpers["lane_record"]["command"]
