@@ -80,6 +80,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `applicable_intent.missing_authority` | array of string | no |  | Recorded missing authority or acceptance evidence. |  |  |
 | `applicable_intent.stale_or_superseded` | array of object | no |  | Sources whose freshness state indicates stale or superseded evidence. |  |  |
 | `applicable_intent.manual_verification` | array of object | yes |  | Manual/domain/compliance verification obligations that must remain visible before broad closeout. |  |  |
+| `applicable_intent.durable_outcomes` | array of object | no |  | Recorded clarification, accepted-interpretation, waiver, or deferral outcomes with owner, evidence anchor, stale condition, reopen trigger, affected claims, and resolved items. |  |  |
+| `applicable_intent.resolved_outcome_count` | integer | no |  | Number of durable applicable-intent outcome records surfaced by this projection. |  |  |
 | `applicable_intent.durable_outcome_routing` | array of object | yes |  | Owner-surface guidance for clarifications, accepted interpretations, waivers, and deferred outcomes. |  |  |
 | `applicable_intent.blocked_claims` | array of string | yes |  | Completion claims that should not be made while applicable-intent conflicts or missing verification remain. |  |  |
 | `applicable_intent.closeout_blocked` | boolean | yes |  | Whether applicable-intent evidence blocks broad/plain closeout claims. |  |  |

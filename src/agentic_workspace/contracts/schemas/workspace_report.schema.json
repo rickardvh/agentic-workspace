@@ -532,6 +532,19 @@
           },
           "description": "Manual/domain/compliance verification obligations that must remain visible before broad closeout."
         },
+        "durable_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Recorded clarification, accepted-interpretation, waiver, or deferral outcomes with owner, evidence anchor, stale condition, reopen trigger, affected claims, and resolved items."
+        },
+        "resolved_outcome_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of durable applicable-intent outcome records surfaced by this projection."
+        },
         "durable_outcome_routing": {
           "type": "array",
           "items": {

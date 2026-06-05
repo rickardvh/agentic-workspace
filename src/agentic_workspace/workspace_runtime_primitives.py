@@ -987,6 +987,70 @@ def _compact_verification(value: Any) -> dict[str, Any]:
     }
 
 
+def _applicable_intent_durable_outcomes_payload(applicable: dict[str, Any]) -> list[dict[str, Any]]:
+    outcomes: list[dict[str, Any]] = []
+    raw_outcomes = _list_payload(
+        applicable.get("durable_outcomes") or applicable.get("resolved_outcomes") or applicable.get("durable_outcome_evidence")
+    )
+    for index, raw in enumerate(raw_outcomes, start=1):
+        if not isinstance(raw, dict):
+            continue
+        outcome = str(raw.get("outcome") or raw.get("type") or raw.get("status") or "accepted-interpretation").strip()
+        summary = str(raw.get("summary") or raw.get("decision") or raw.get("reason") or "").strip()
+        owner = str(raw.get("owner") or raw.get("accepted_by") or raw.get("waived_by") or raw.get("review_owner") or "").strip()
+        owner_surface = str(raw.get("owner_surface") or raw.get("surface") or raw.get("source") or "").strip()
+        evidence_anchor = str(raw.get("evidence_anchor") or raw.get("evidence") or raw.get("locator") or "").strip()
+        status = str(raw.get("record_status") or raw.get("state") or "recorded").strip()
+        resolves = _dedupe(
+            [
+                str(item).strip()
+                for item in (
+                    _list_payload(raw.get("resolves"))
+                    + _list_payload(raw.get("resolves_conflicts"))
+                    + _list_payload(raw.get("resolves_missing_authority"))
+                    + _list_payload(raw.get("resolves_manual_verification"))
+                )
+                if str(item).strip()
+            ]
+        )
+        outcomes.append(
+            {
+                "id": str(raw.get("id") or f"durable-outcome-{index}"),
+                "outcome": outcome,
+                "status": status,
+                "summary": summary,
+                "owner": owner or "human/domain owner",
+                "owner_surface": owner_surface or "Planning, Verification, assurance, docs/config, or issue evidence",
+                "evidence_anchor": evidence_anchor or "durable outcome record",
+                "stale_when": str(raw.get("stale_when") or raw.get("stale") or "owner surface changes or later evidence supersedes it"),
+                "reopen_trigger": str(raw.get("reopen_trigger") or raw.get("reopen_when") or "affected intent, owner, or evidence changes"),
+                "affected_claims": _dedupe([str(item).strip() for item in _list_payload(raw.get("affected_claims")) if str(item).strip()]),
+                "resolves": resolves,
+                "closeout_effect": str(
+                    raw.get("closeout_effect")
+                    or (
+                        "deferred-with-owner"
+                        if outcome == "deferred-with-owner"
+                        else "satisfies recorded applicable-intent obligation for resolved items"
+                    )
+                ),
+            }
+        )
+    return outcomes
+
+
+def _applicable_intent_resolved_items(durable_outcomes: list[dict[str, Any]]) -> set[str]:
+    resolved: set[str] = set()
+    unresolved_states = {"", "pending", "missing", "rejected", "stale", "superseded"}
+    for outcome in durable_outcomes:
+        if not isinstance(outcome, dict):
+            continue
+        if str(outcome.get("status") or "").strip() in unresolved_states:
+            continue
+        resolved.update(str(item).strip() for item in _list_payload(outcome.get("resolves")) if str(item).strip())
+    return resolved
+
+
 def _applicable_intent_source_projection_payload(
     *,
     target_root: Path,
@@ -1178,6 +1242,7 @@ def _applicable_intent_source_projection_payload(
         verification=verification,
         assurance_requirements=assurance_requirements,
     )
+    durable_outcomes = [item for item in _list_payload(planning_applicable.get("durable_outcomes")) if isinstance(item, dict)]
     conflicts = [str(item) for item in _list_payload(planning_applicable.get("conflicts")) if str(item).strip()]
     missing_authority = [str(item) for item in _list_payload(planning_applicable.get("missing_authority")) if str(item).strip()]
     manual_required = [str(item) for item in _list_payload(planning_applicable.get("manual_verification_needed")) if str(item).strip()]
@@ -1276,6 +1341,8 @@ def _applicable_intent_source_projection_payload(
         "missing_authority": missing_authority,
         "stale_or_superseded": stale_or_superseded,
         "manual_verification": manual_verification,
+        "durable_outcomes": durable_outcomes,
+        "resolved_outcome_count": len(durable_outcomes),
         "durable_outcome_routing": durable_outcome_routing,
         "blocked_claims": blocked_claims,
         "closeout_blocked": conflict_status != "none",
@@ -8384,6 +8451,7 @@ def _closeout_report_completeness_payload(
         evidence_text(
             applicable_intents.get("conflicts"),
             applicable_intents.get("manual_verification_needed"),
+            applicable_intents.get("durable_outcomes"),
             applicable_intents.get("sources"),
             "no applicable-intent conflicts recorded",
         ),
@@ -9333,6 +9401,22 @@ def _closeout_report_final_response_rendering_payload(
             fragments.append("missing authority: " + "; ".join(missing[:2]))
         summary_lines.append("Applicable intent: " + ("; ".join(fragments) if fragments else "unresolved applicable-intent obligation"))
         must_not_claim.extend(str(item) for item in _list_payload(applicable_intent_status.get("must_not_claim")) if str(item).strip())
+
+    durable_outcomes = [item for item in _list_payload(applicable_intent_status.get("durable_outcomes")) if isinstance(item, dict)]
+    if durable_outcomes:
+        must_include.append("applicable intent outcome")
+        outcome = durable_outcomes[0]
+        fragments = [
+            str(outcome.get("outcome") or "recorded-outcome"),
+            f"owner: {outcome.get('owner')}",
+            f"evidence: {outcome.get('evidence_anchor')}",
+        ]
+        stale_when = str(outcome.get("stale_when") or "").strip()
+        if stale_when:
+            fragments.append(f"stale when: {stale_when}")
+        summary_lines.append(
+            "Applicable intent outcome: " + "; ".join(fragment for fragment in fragments if fragment and fragment != "owner: None")
+        )
 
     boundary_text = present(completion_decision)
     completion_boundary_text = present(
@@ -20111,6 +20195,7 @@ def _applicable_intent_status_payload(
     system_intents = [str(item).strip() for item in _list_payload(applicable.get("system_intents")) if str(item).strip()]
     subsystem_intents = [str(item).strip() for item in _list_payload(applicable.get("subsystem_intents")) if str(item).strip()]
     user_intents = [str(item).strip() for item in _list_payload(applicable.get("user_intents")) if str(item).strip()]
+    durable_outcomes = _applicable_intent_durable_outcomes_payload(applicable)
 
     for status in _list_payload(assurance_requirements.get("evidence_status")):
         if not isinstance(status, dict):
@@ -20130,14 +20215,16 @@ def _applicable_intent_status_payload(
         elif reason:
             manual_verification.append(f"{gap_id}: {reason}")
 
+    resolved_items = _applicable_intent_resolved_items(durable_outcomes)
+    conflicts = [item for item in conflicts if item not in resolved_items]
+    missing_authority = [item for item in missing_authority if item not in resolved_items]
+    manual_verification = [item for item in manual_verification if item not in resolved_items]
     manual_verification = _dedupe(manual_verification)
     evidence_count = len(sources) + len(user_intents) + len(system_intents) + len(subsystem_intents) + len(soft_intents)
     blocking = bool(conflicts or missing_authority or manual_verification)
     status = "attention" if blocking else "present" if evidence_count else "guidance-only"
-    blocked_claims = _dedupe(
-        [str(item).strip() for item in _list_payload(applicable.get("blocked_claims")) if str(item).strip()]
-        or (["claim-work-complete", "close-parent-lane"] if blocking else [])
-    )
+    raw_blocked_claims = [str(item).strip() for item in _list_payload(applicable.get("blocked_claims")) if str(item).strip()]
+    blocked_claims = _dedupe((raw_blocked_claims if blocking else []) or (["claim-work-complete", "close-parent-lane"] if blocking else []))
     return {
         "kind": "agentic-workspace/applicable-intent-status/v1",
         "status": status,
@@ -20149,6 +20236,8 @@ def _applicable_intent_status_payload(
         "conflicts": conflicts,
         "missing_authority": missing_authority,
         "manual_verification_needed": manual_verification,
+        "durable_outcomes": durable_outcomes,
+        "resolved_outcome_count": len(durable_outcomes),
         "blocked_claims": blocked_claims,
         "closeout_blocked": blocking,
         "authority_boundary": _authority_boundary_payload(
