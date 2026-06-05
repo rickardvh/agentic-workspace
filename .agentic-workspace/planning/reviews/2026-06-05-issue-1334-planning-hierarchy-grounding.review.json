@@ -63,7 +63,8 @@
       "packages/planning/tests/test_promote.py",
       "tests/test_workspace_start_preflight_cli.py",
       "tests/test_workspace_implement_cli.py",
-      "tests/test_workspace_report_cli.py"
+      "tests/test_workspace_report_cli.py",
+      "2026-06-05 attached peer investigation notes for #1334"
     ]
   },
   "references": [
@@ -125,9 +126,9 @@
     {
       "title": "F2: The likely lane artifact should be the preferred model, not an optional alternative.",
       "summary": "The user-refined abstraction ladder maps cleanly to existing surfaces: decomposition = epic intent, lane artifact = technical strategy and sequencing, execplan = concrete implementation slice.",
-      "evidence": "#1334 comment proposes epic/decomposition, lane artifact, and slice/execplan. Decomposition candidate_lanes already name lane outcome/proof but cannot own active sequencing or aggregated closeout. Execplan template already warns that an execplan should not span unrelated lanes.",
-      "risk if unchanged": "A neutral investigation could defer the lane artifact and leave the same abstraction gap that motivated #1334.",
-      "suggested action": "Implement lane artifacts unless the implementation slice proves a simpler structure preserves the same responsibilities without overloading state.toml or execplans.",
+      "evidence": "#1334 comment proposes epic/decomposition, lane artifact, and slice/execplan. Decomposition candidate_lanes already name lane outcome/proof but cannot own active sequencing or aggregated closeout. Execplan template already warns that an execplan should not span unrelated lanes. The attached peer investigation independently reached the same ladder and explicitly warned that adding more lane fields to execplans would preserve the ambiguity.",
+      "risk if unchanged": "A neutral investigation could defer the lane artifact and leave the same abstraction gap that motivated #1334; an execplan-heavy fix would turn the concrete slice artifact into the missing lane artifact by accretion.",
+      "suggested action": "Implement lane artifacts unless the implementation slice proves a simpler structure preserves the same responsibilities without overloading state.toml or execplans; do not solve the lane gap by expanding execplans into lane journals.",
       "confidence": "high",
       "source": "#1336",
       "promotion target": "implementation issue: lane artifact contract",
@@ -148,7 +149,7 @@
       "summary": "start and implement expose next_safe_action, workflow_sufficiency, work_shape_guidance, planning_safety_gate, active_parent_decomposition_requirement, and parent_intent_status, but the missing abstraction is a declared/recorded work-shape level that gates can check.",
       "evidence": "workspace_runtime_primitives.py defines _planning_safety_gate_payload, _work_shape_guidance_payload, next_safe_action, and parent_intent_status. Current behavior gates missing active Planning in some cases, but there is no lane artifact presence/absence check.",
       "risk if unchanged": "Agents can still treat 'epic-shaped' or 'lane-shaped' as a private thought and proceed with direct implementation without leaving a checkable ownership record.",
-      "suggested action": "Add explicit artifact-level readiness facts and gates: direct, slice, lane, epic. Hard-block implementation only when agent-declared or recorded work shape requires an artifact that is missing.",
+      "suggested action": "Add explicit artifact-level readiness facts and gates: direct, slice, lane, epic. Hard-block implementation only when agent-declared or recorded work shape requires an artifact that is missing, unless the user explicitly narrows the request to a lower artifact level.",
       "confidence": "medium-high",
       "source": "#1337",
       "promotion target": "implementation issue: planning gate readiness"
@@ -192,6 +193,16 @@
       "confidence": "high",
       "source": "#1334",
       "promotion target": "GitHub implementation issues"
+    },
+    {
+      "title": "F9: Execplans must not become lane artifacts by accretion.",
+      "summary": "The attached investigation usefully sharpens the main design hazard: execplans are already large and concrete, so adding lane strategy/proof aggregation there would keep the current ambiguity.",
+      "evidence": "Existing execplans own touched paths, concrete steps, proof commands, local caveats, and slice closeout. The peer investigation recommends lane-level strategy and proof aggregation live in a smaller durable middle home, while execplans reference or project lane contribution.",
+      "risk if unchanged": "The implementation could appear to add lane support while actually making slice artifacts harder to understand and harder to close honestly.",
+      "suggested action": "Make #1340 acceptance explicitly reject execplan-as-lane design and require lane artifacts to own strategy, sequencing, proof aggregation, residual lane work, and lane-to-epic contribution.",
+      "confidence": "high",
+      "source": "attached peer investigation; #1340",
+      "promotion target": "implementation issue: lane artifact contract"
     }
   ],
   "issue_classifications": [
@@ -302,6 +313,11 @@
         "claims_allowed": [
           "slice complete",
           "lane advanced only when lane artifact records contribution"
+        ],
+        "must_not_own": [
+          "lane-level technical strategy",
+          "lane proof aggregation",
+          "lane closeout state beyond slice contribution"
         ]
       },
       "lane_artifact": {
@@ -332,6 +348,8 @@
           "proof_aggregation",
           "residual_lane_work",
           "parent_contribution",
+          "lane_to_epic_contribution",
+          "parent_close_permission",
           "closeout_state",
           "promotion_rules",
           "references"
@@ -369,7 +387,7 @@
       {
         "task_shape": "lane",
         "artifact_required": "lane artifact plus one current slice execplan",
-        "implementation_allowed": "blocked until lane artifact exists and current slice is selected",
+        "implementation_allowed": "blocked until lane artifact exists and current slice is selected, unless the user explicitly narrows the request to a lower-level slice",
         "read_only_allowed": true,
         "completion_claim_allowed": "lane only after aggregate lane proof; slice claims remain slice-scoped",
         "gate_class": "hard after agent declares lane-shaped work or decomposition promotes lane",
@@ -378,7 +396,7 @@
       {
         "task_shape": "epic",
         "artifact_required": "decomposition plus at least one lane artifact before implementation",
-        "implementation_allowed": "blocked until decomposition exists and first lane/slice are selected",
+        "implementation_allowed": "blocked until decomposition exists and first lane/slice are selected, unless the user explicitly narrows the request to a bounded non-parent-closing slice",
         "read_only_allowed": true,
         "completion_claim_allowed": "epic only after all required lane closeouts satisfy parent acceptance",
         "gate_class": "hard after agent judges or records epic-shaped work",
@@ -479,17 +497,18 @@
       {
         "priority": 1,
         "title": "Implement first-class Planning lane artifacts",
-        "body": "Add lane schema/template, package installation surfaces, summary/report projection, and tests. Keep state.toml as index/queue and make lane files own outcome, strategy, sequencing, acceptance boundary, proof aggregation, residual work, and closeout state.",
+        "body": "Add lane schema/template, package installation surfaces, summary/report projection, and tests. Keep state.toml as index/queue and make lane files own outcome, strategy, sequencing, acceptance boundary, proof aggregation, residual work, lane-to-epic contribution, parent-close permission, and closeout state. Do not make execplans the lane artifact by adding lane-level strategy/proof aggregation there.",
         "closes_review_findings": [
           "F1",
           "F2",
-          "F7"
+          "F7",
+          "F9"
         ]
       },
       {
         "priority": 2,
         "title": "Implement Planning transition gates for declared hierarchy level",
-        "body": "Add explicit work-shape/artifact-level readiness facts consumed by start/implement/report. Preserve agent ownership of semantic judgment; hard-block only when declared or recorded broad/lane/epic work lacks required artifacts.",
+        "body": "Add explicit work-shape/artifact-level readiness facts consumed by start/implement/report. Preserve agent ownership of semantic judgment; hard-block only when declared or recorded broad/lane/epic work lacks required artifacts, unless the user explicitly narrows the request to a lower-level bounded slice.",
         "closes_review_findings": [
           "F3",
           "F4"
@@ -557,19 +576,21 @@
   ],
   "drift_log": [
     "2026-06-05: Review record created by planning create-review.",
-    "2026-06-05: Filled with current-state map, hierarchy recommendation, transition/gate matrix, command matrix, closeout/reporting contract, and implementation issue plan."
+    "2026-06-05: Filled with current-state map, hierarchy recommendation, transition/gate matrix, command matrix, closeout/reporting contract, and implementation issue plan.",
+    "2026-06-05: Ingested attached peer investigation notes; strengthened execplan-boundary caution, lane-to-epic contribution fields, and explicit user-narrowing gate exception."
   ],
   "summary": {
     "decision": "implementation-ready after linked issue updates",
-    "primary_recommendation": "Add first-class lane artifacts as the missing middle layer between epic decompositions and slice execplans.",
+    "primary_recommendation": "Add first-class lane artifacts as the missing middle layer between epic decompositions and slice execplans; do not make execplans into lane artifacts by accretion.",
     "key_boundary": "AW should gate missing declared/recorded artifact ownership; agents and humans own semantic work-shape and acceptance judgment.",
     "small_work_policy": "No Planning artifact for direct, routine, low-risk work with obvious proof.",
     "state_toml_policy": "state.toml remains index/queue/projection, not the durable lane contract."
   },
   "summary_counts": {
-    "findings": 8,
+    "findings": 9,
     "review_child_issues_covered": 5,
     "implementation_issues_recommended": 5,
-    "matrices": 3
+    "matrices": 3,
+    "external_investigations_ingested": 1
   }
 }
