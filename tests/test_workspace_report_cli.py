@@ -3974,6 +3974,189 @@ def test_report_closeout_report_represents_generated_code_parent_intent_boundary
     assert checks["applicable-intent-status"]["status"] == "incomplete"
 
 
+def _write_applicable_intent_fixture(target: Path) -> None:
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[workspace]
+default_preset = "full"
+
+[assurance.requirements.privacy_soft_intent]
+level = "high"
+applies_to_planning_refs = ["privacy-soft-intent"]
+authority_refs = ["docs/privacy-contract.md"]
+required_evidence = ["privacy_owner_acceptance"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+review_owner = "privacy-owner"
+""",
+    )
+    _write(
+        target / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.privacy_owner_review]
+protocol_id = "privacy_soft_review"
+title = "Privacy owner review"
+steps = ["Review the privacy contract against the changed behavior"]
+expected_observations = ["Privacy owner acceptance is recorded"]
+pass_evidence_labels = ["privacy_owner_acceptance"]
+fail_evidence_labels = ["privacy_owner_gap"]
+manual_boundary = "Human/domain owner acceptance is required."
+
+[protocols.privacy_soft_review]
+title = "Privacy soft-intent verification"
+purpose = "Represent the manual privacy review obligation."
+planning_refs = ["privacy-soft-intent"]
+scenario_refs = ["privacy_owner_review"]
+expected_evidence = ["privacy_owner_acceptance"]
+review_owner = "privacy-owner"
+authority_refs = ["docs/privacy-contract.md"]
+retention = "retain-summary"
+
+[known_gaps.privacy_owner_not_recorded]
+protocol_id = "privacy_soft_review"
+scenario_id = "privacy_owner_review"
+reason = "Privacy owner acceptance has not been recorded."
+owner = "privacy-owner"
+status = "open"
+evidence_labels = ["privacy_owner_acceptance"]
+blocked_claims = ["claim-work-complete", "close-parent-lane"]
+residual_risk = "Manual privacy acceptance remains unresolved."
+reopen_trigger = "privacy-sensitive behavior changes"
+""",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "execplans" / "privacy-soft-intent.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Privacy soft intent fixture",
+            "active_milestone": {"id": "privacy-soft-intent", "status": "complete", "scope": "Privacy-sensitive change."},
+            "delegated_judgment": {
+                "requested outcome": "Change privacy-sensitive behavior while preserving required privacy-owner acceptance.",
+                "hard constraints": "Do not claim broad completion before manual privacy verification is accepted or waived.",
+            },
+            "assurance_requirement_refs": ["privacy-soft-intent"],
+            "verification_protocol_refs": ["privacy_soft_review"],
+            "applicable_intents": {
+                "user_intents": ["ship the privacy-sensitive change"],
+                "system_intents": ["manual privacy acceptance must stay visible when required"],
+                "subsystem_intents": ["privacy contract governs this subsystem"],
+                "soft_intents": ["privacy-owner acceptance is required"],
+                "sources": [
+                    {"source": "GitHub #1326", "intent": "preserve applicable soft/system/subsystem intents"},
+                    {"source": "docs/privacy-contract.md", "intent": "privacy owner acceptance required"},
+                ],
+                "conflicts": ["ordinary tests passed but privacy-owner acceptance is missing"],
+                "missing_authority": ["privacy-owner acceptance"],
+                "manual_verification_needed": ["privacy_soft_intent: privacy_owner_acceptance"],
+                "blocked_claims": ["claim-work-complete", "close-parent-lane"],
+            },
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Changed privacy-sensitive behavior.",
+                "scope touched": "privacy subsystem",
+                "changed surfaces": "src/privacy.py",
+                "validations run": "ordinary tests passed",
+                "result for continuation": "manual privacy acceptance remains unresolved",
+            },
+            "proof_report": {
+                "validation proof": "ordinary tests passed",
+                "proof achieved now": "yes for ordinary tests; no for privacy-owner acceptance",
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "open",
+                "closure decision": "archive-but-keep-lane-open",
+                "why this decision is honest": "Manual privacy acceptance remains unresolved.",
+                "evidence carried forward": "ordinary tests plus missing privacy-owner acceptance",
+                "reopen trigger": "plain completion is claimed without privacy-owner acceptance",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'privacy-soft-intent', title = 'Privacy soft intent fixture', surface = '.agentic-workspace/planning/execplans/privacy-soft-intent.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+
+def test_report_applicable_intent_section_projects_sources_authority_and_durable_outcomes(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    capsys.readouterr()
+    _write_applicable_intent_fixture(target)
+
+    assert cli.main(["report", "--target", str(target), "--section", "applicable_intent", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/applicable-intent-sources/v1"
+    assert answer["status"] == "attention"
+    assert answer["conflict_status"] == "conflict-blocking-closeout"
+    source_types = {source["source_type"] for source in answer["sources"]}
+    assert {"Planning", "Memory", "assurance", "Verification"} <= source_types
+    assert "configured" in answer["authority_vocabulary"]["authority_classes"]
+    assert "stale" in answer["authority_vocabulary"]["freshness_trust_states"]
+    assert "waived-with-reason" in answer["authority_vocabulary"]["manual_verification_states"]
+    assert answer["manual_verification"][0]["status"] == "required"
+    assert answer["durable_outcome_routing"][0]["outcome"] == "clarified-intent"
+    assert "claim-work-complete" in answer["blocked_claims"]
+    assert answer["authority_boundary"]["surface"] == "applicable_intent"
+    assert "semantic applicability of each source" in answer["authority_boundary"]["agent_owned_decisions"]
+
+
+def test_report_router_surfaces_applicable_intent_compactly(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    capsys.readouterr()
+    _write_applicable_intent_fixture(target)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    context = _report_context(json.loads(capsys.readouterr().out))
+    applicable = context["applicable_intent"]
+    assert applicable["status"] == "attention"
+    assert applicable["source_count"] >= 4
+    assert applicable["conflict_status"] == "conflict-blocking-closeout"
+    assert applicable["manual_verification_count"] >= 1
+    assert applicable["closeout_blocked"] is True
+    assert applicable["detail_command"].endswith("--section applicable_intent --format json")
+    assert applicable["attention_required"] is True
+
+
+def test_report_closeout_report_caveats_unresolved_soft_applicable_intent_from_verification(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    capsys.readouterr()
+    _write_applicable_intent_fixture(target)
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    applicable = report["applicable_intent_status"]
+    assert applicable["closeout_blocked"] is True
+    assert "privacy_soft_intent: privacy_owner_acceptance" in applicable["manual_verification_needed"]
+    checks = {check["id"]: check for check in report["completeness"]["checks"]}
+    assert checks["applicable-intent-status"]["status"] == "incomplete"
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert "applicable intent status" in rendering["must_include"]
+    assert any("applicable intent conflicts" in claim for claim in rendering["must_not_claim"])
+
+
 def test_report_closeout_report_uses_lane_owner_proof_aggregation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -69,6 +69,37 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `agent_configuration_queries` | object | yes |  | Compact queries agents should ask before opening broader configuration docs. |  |  |
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
 | `durable_intent` | object | yes |  | Compact decision projection for durable task, subsystem, and system intent pressure. |  |  |
+| `applicable_intent` | ref `#/$defs/applicable_intent` | yes |  | Compact applicable-intent source, authority, freshness, conflict, durable-outcome, and manual-verification evidence. |  |  |
+| `applicable_intent.kind` | const `"agentic-workspace/applicable-intent-sources/v1"` | yes |  | Discriminator for the applicable-intent source projection. |  |  |
+| `applicable_intent.status` | string | yes |  | Whether source evidence is present, guidance-only, or requires attention. |  |  |
+| `applicable_intent.source_count` | integer | yes |  | Number of applicable-intent source records surfaced in this projection. |  |  |
+| `applicable_intent.sources` | array of object | yes |  | Structural or configured source records from Planning, Memory, assurance, Verification, standing intent, durable intent, or external work evidence. |  |  |
+| `applicable_intent.authority_vocabulary` | object | yes |  | Stable vocabulary for authority classes, freshness/trust states, conflict states, and manual-verification states. |  |  |
+| `applicable_intent.conflict_status` | string | yes |  | Compact status for whether the projection has no conflict, a possible conflict, a closeout-blocking conflict, or a clarification requirement. |  |  |
+| `applicable_intent.conflicts` | array of string | no |  | Recorded conflict statements from existing owner surfaces. |  |  |
+| `applicable_intent.missing_authority` | array of string | no |  | Recorded missing authority or acceptance evidence. |  |  |
+| `applicable_intent.stale_or_superseded` | array of object | no |  | Sources whose freshness state indicates stale or superseded evidence. |  |  |
+| `applicable_intent.manual_verification` | array of object | yes |  | Manual/domain/compliance verification obligations that must remain visible before broad closeout. |  |  |
+| `applicable_intent.durable_outcome_routing` | array of object | yes |  | Owner-surface guidance for clarifications, accepted interpretations, waivers, and deferred outcomes. |  |  |
+| `applicable_intent.blocked_claims` | array of string | yes |  | Completion claims that should not be made while applicable-intent conflicts or missing verification remain. |  |  |
+| `applicable_intent.closeout_blocked` | boolean | yes |  | Whether applicable-intent evidence blocks broad/plain closeout claims. |  |  |
+| `applicable_intent.closeout_status` | ref `#/$defs/applicable_intent_status` | no |  | Closeout-oriented applicable-intent status summary. |  |  |
+| `applicable_intent.closeout_status.kind` | const `"agentic-workspace/applicable-intent-status/v1"` | yes |  | Discriminator for the applicable-intent status packet. |  |  |
+| `applicable_intent.closeout_status.status` | string | yes |  | Whether applicable-intent evidence is present, guidance-only, or requires attention. |  |  |
+| `applicable_intent.next_actions` | array of string | no |  | Suggested next inspection or resolution actions. |  |  |
+| `applicable_intent.authority_boundary` | ref `#/$defs/authority_boundary` | yes |  | Authority boundary showing that AW assembles structural/configured evidence while agent and human owners decide semantic applicability and acceptance. |  |  |
+| `applicable_intent.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
+| `applicable_intent.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
+| `applicable_intent.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
+| `applicable_intent.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
+| `applicable_intent.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
+| `applicable_intent.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `applicable_intent.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
+| `applicable_intent.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
+| `applicable_intent.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `applicable_intent.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
+| `applicable_intent.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
+| `applicable_intent.rule` | string | no |  | Usage rule for when this projection should be consulted. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |

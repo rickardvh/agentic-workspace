@@ -1,0 +1,155 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Applicable intent source surfaces and gaps grounding",
+  "date": "2026-06-05",
+  "scope": [
+    "#1326 parent lane and #1327 review child"
+  ],
+  "classification": "applicable-intent-grounding",
+  "goal": [
+    "Map current applicable-intent source surfaces before implementing #1326.",
+    "Identify the smallest existing AW surfaces that can represent source discovery, authority/freshness, conflicts, durable clarification or waiver outcomes, manual verification, and closeout caveats."
+  ],
+  "non_goals": [
+    "Do not add a policy engine or global intent registry.",
+    "Do not make AW decide semantic applicability or choose which source wins a conflict.",
+    "Do not force applicable-intent machinery onto small direct work."
+  ],
+  "review_mode": {
+    "mode": "applicable-intent-grounding",
+    "review question": "Which existing surfaces can carry applicable-intent evidence for #1326 without a new broad state store?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "GitHub #1326-#1332, report/closeout code, Verification manifest/runtime, assurance requirement projection, Memory index/manifest, Planning active records"
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"Implement the #1326 lane\" --format json",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "gh issue view 1326 --json number,title,state,body,comments,url,labels",
+      "gh issue view 1327..1332 --json number,title,state,body,comments,url",
+      "rg -n \"applicable_intents|assurance_requirements|verification|standing_intent|closeout_report\" src tests packages .agentic-workspace"
+    ],
+    "evidence sources": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/reporting_support.py",
+      "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+      ".agentic-workspace/memory/repo/index.md",
+      ".agentic-workspace/memory/repo/manifest.toml",
+      "tests/test_workspace_report_cli.py",
+      "GitHub #1326",
+      "GitHub #1327",
+      "GitHub #1328",
+      "GitHub #1329",
+      "GitHub #1330",
+      "GitHub #1331",
+      "GitHub #1332"
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1326",
+      "label": "parent applicable-intent lane",
+      "role": "parent_intent",
+      "locator": "issue"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1327",
+      "label": "grounding review child",
+      "role": "review_slice",
+      "locator": "issue"
+    }
+  ],
+  "findings": [
+    {
+      "title": "F1: Applicable-intent evidence already exists, but it is split across Planning, Memory, Verification, assurance, standing intent, and external issue evidence.",
+      "summary": "No single compact report tells an agent which intent sources may matter before broad or soft-intent closeout.",
+      "evidence": "report already builds durable_intent, standing_intent, assurance_requirements, verification, memory_consult, external_work_reconciliation, and closeout_report; closeout also has a Planning-backed applicable_intents status packet.",
+      "risk if unchanged": "Agents either over-read raw surfaces or miss subsystem/system/soft intents and resolve conflicts only in chat.",
+      "suggested action": "Add a compact report section that assembles structural/configured source evidence while preserving agent/human semantic ownership.",
+      "promotion target": "#1328"
+    },
+    {
+      "title": "F2: Authority and freshness need a stable vocabulary that does not imply AW semantic resolution.",
+      "summary": "Existing authority_boundary packets are the right model, but applicable-intent sources need small enumerations for authority class, freshness/trust, and conflict status.",
+      "evidence": "assurance and Verification already say AW reports configured match facts and does not decide semantic intent; #1329 asks for authoritative/advisory/stale/conflicting/manual-owner wording.",
+      "risk if unchanged": "Agents can describe AW as having classified or resolved an intent conflict when it only exposed evidence.",
+      "suggested action": "Expose a stable vocabulary and authority_boundary in applicable_intent output.",
+      "promotion target": "#1329"
+    },
+    {
+      "title": "F3: Durable clarification and waiver outcomes fit existing owner surfaces.",
+      "summary": "Planning parent acceptance, decision facts, Memory, Verification known gaps, assurance waivers, issue comments, docs/config, and closeout evidence can own outcomes without a new approval log.",
+      "evidence": "#1330 explicitly names those owners; current closeout and Verification surfaces already retain summaries, evidence labels, known gaps, blocked claims, and reopen triggers.",
+      "risk if unchanged": "Clarifications or waivers remain chat-only and future sessions rediscover the same conflict.",
+      "suggested action": "Add owner-routing guidance to applicable_intent output and fixtures.",
+      "promotion target": "#1330"
+    },
+    {
+      "title": "F4: Manual soft-intent verification must affect closeout, not only proof selection.",
+      "summary": "Verification and assurance can represent manual evidence requirements and known gaps, but closeout completeness must treat unresolved manual requirements as caveats/blockers.",
+      "evidence": "Verification manifests support scenarios, expected_evidence, evidence_bundles, known_gaps, blocked_claims, and review_owner; closeout_report already blocks Planning.applicable_intents but its completeness path needs assurance/Verification enrichment.",
+      "risk if unchanged": "Ordinary tests can pass while final reports hide unresolved domain or compliance acceptance.",
+      "suggested action": "Feed assurance/Verification manual obligations into applicable-intent closeout status and final-response rendering.",
+      "promotion target": "#1331 and #1332"
+    }
+  ],
+  "recommendation": {
+    "promote": "Implement #1328-#1332 in one bounded lane because the children share one representative fixture and one compact report surface.",
+    "defer": "Do not build a global policy engine, automated business-risk classifier, or new intent state store.",
+    "dismiss": "Do not duplicate Memory, Planning, Verification, or assurance ownership; assemble their evidence through report surfaces."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_applicable_intent_section_projects_sources_authority_and_durable_outcomes tests/test_workspace_report_cli.py::test_report_router_surfaces_applicable_intent_compactly tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unresolved_soft_applicable_intent_from_verification -q"
+  ],
+  "drift_log": [
+    "2026-06-05: Review record created by create-review.",
+    "2026-06-05: Filled with #1326/#1327 source-surface grounding and implementation recommendation."
+  ]
+}

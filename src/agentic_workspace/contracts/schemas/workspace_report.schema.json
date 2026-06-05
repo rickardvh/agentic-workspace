@@ -33,6 +33,7 @@
     "assurance_requirements",
     "verification",
     "durable_intent",
+    "applicable_intent",
     "product_managed_enclave",
     "ownership_diagnostics",
     "surface_value_guardrail",
@@ -215,6 +216,10 @@
     "durable_intent": {
       "type": "object",
       "description": "Compact decision projection for durable task, subsystem, and system intent pressure."
+    },
+    "applicable_intent": {
+      "$ref": "#/$defs/applicable_intent",
+      "description": "Compact applicable-intent source, authority, freshness, conflict, durable-outcome, and manual-verification evidence."
     },
     "workflow_obligations": {
       "type": "object",
@@ -450,6 +455,124 @@
       },
       "additionalProperties": true,
       "description": "Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations."
+    },
+    "applicable_intent": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "source_count",
+        "sources",
+        "authority_vocabulary",
+        "conflict_status",
+        "manual_verification",
+        "durable_outcome_routing",
+        "blocked_claims",
+        "closeout_blocked",
+        "authority_boundary"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/applicable-intent-sources/v1",
+          "description": "Discriminator for the applicable-intent source projection."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether source evidence is present, guidance-only, or requires attention."
+        },
+        "source_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of applicable-intent source records surfaced in this projection."
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Structural or configured source records from Planning, Memory, assurance, Verification, standing intent, durable intent, or external work evidence."
+        },
+        "authority_vocabulary": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Stable vocabulary for authority classes, freshness/trust states, conflict states, and manual-verification states."
+        },
+        "conflict_status": {
+          "type": "string",
+          "description": "Compact status for whether the projection has no conflict, a possible conflict, a closeout-blocking conflict, or a clarification requirement."
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recorded conflict statements from existing owner surfaces."
+        },
+        "missing_authority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recorded missing authority or acceptance evidence."
+        },
+        "stale_or_superseded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Sources whose freshness state indicates stale or superseded evidence."
+        },
+        "manual_verification": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Manual/domain/compliance verification obligations that must remain visible before broad closeout."
+        },
+        "durable_outcome_routing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Owner-surface guidance for clarifications, accepted interpretations, waivers, and deferred outcomes."
+        },
+        "blocked_claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Completion claims that should not be made while applicable-intent conflicts or missing verification remain."
+        },
+        "closeout_blocked": {
+          "type": "boolean",
+          "description": "Whether applicable-intent evidence blocks broad/plain closeout claims."
+        },
+        "closeout_status": {
+          "$ref": "#/$defs/applicable_intent_status",
+          "description": "Closeout-oriented applicable-intent status summary."
+        },
+        "next_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Suggested next inspection or resolution actions."
+        },
+        "authority_boundary": {
+          "$ref": "#/$defs/authority_boundary",
+          "description": "Authority boundary showing that AW assembles structural/configured evidence while agent and human owners decide semantic applicability and acceptance."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Usage rule for when this projection should be consulted."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Applicable-intent source projection across existing AW surfaces without semantic conflict resolution."
     },
     "authority_boundary": {
       "type": "object",

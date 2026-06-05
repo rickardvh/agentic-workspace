@@ -987,6 +987,327 @@ def _compact_verification(value: Any) -> dict[str, Any]:
     }
 
 
+def _applicable_intent_source_projection_payload(
+    *,
+    target_root: Path,
+    active_planning_record: dict[str, Any] | None = None,
+    assurance_requirements: dict[str, Any] | None = None,
+    verification: dict[str, Any] | None = None,
+    standing_intent: dict[str, Any] | None = None,
+    durable_intent: dict[str, Any] | None = None,
+    external_work_reconciliation: dict[str, Any] | None = None,
+    memory_consult: dict[str, Any] | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    active_planning_record = _as_dict(active_planning_record)
+    assurance_requirements = _as_dict(assurance_requirements)
+    verification = _as_dict(verification)
+    standing_intent = _as_dict(standing_intent)
+    durable_intent = _as_dict(durable_intent)
+    external_work_reconciliation = _as_dict(external_work_reconciliation)
+    memory_consult = _as_dict(memory_consult)
+    sources: list[dict[str, Any]] = []
+
+    def add_source(
+        *,
+        source_id: str,
+        source_type: str,
+        owner_surface: str,
+        authority_class: str,
+        evidence_anchor: str,
+        match_evidence: list[str] | None = None,
+        freshness: str = "current",
+        trust: str = "unverified",
+        next_read: str = "",
+        owner: str = "agent",
+        status: str = "present",
+    ) -> None:
+        if not source_id or any(item.get("id") == source_id for item in sources):
+            return
+        sources.append(
+            {
+                "id": source_id,
+                "source_type": source_type,
+                "owner_surface": owner_surface,
+                "authority_class": authority_class,
+                "freshness": freshness,
+                "trust": trust,
+                "status": status,
+                "structural_match_evidence": _dedupe([str(item) for item in (match_evidence or []) if str(item).strip()]),
+                "evidence_anchor": evidence_anchor,
+                "next_read": next_read,
+                "resolution_owner": owner,
+            }
+        )
+
+    requested_outcome = str(
+        active_planning_record.get("requested_outcome")
+        or _as_dict(active_planning_record.get("canonical_core")).get("requested_outcome")
+        or _as_dict(active_planning_record.get("delegated_judgment")).get("requested outcome")
+        or _as_dict(active_planning_record.get("delegated_judgment")).get("requested_outcome")
+        or ""
+    ).strip()
+    active_plan_path = str(active_planning_record.get("source_path") or active_planning_record.get("path") or "").strip()
+    if requested_outcome or active_planning_record:
+        add_source(
+            source_id="planning.active",
+            source_type="Planning",
+            owner_surface=active_plan_path or ".agentic-workspace/planning/state.toml",
+            authority_class="authoritative",
+            freshness="current",
+            trust="current",
+            evidence_anchor=requested_outcome or "active Planning record",
+            match_evidence=["active Planning record selected for current work"],
+            next_read="agentic-workspace summary --target ./repo --format json",
+            owner="agent",
+        )
+    for ref in _list_payload(active_planning_record.get("references")):
+        if not isinstance(ref, dict):
+            continue
+        target = str(ref.get("target") or ref.get("label") or "").strip()
+        if not target:
+            continue
+        add_source(
+            source_id=f"planning.reference.{_decision_slug(target)}",
+            source_type="issue" if "github" in target.lower() or "#" in target else "Planning",
+            owner_surface=active_plan_path or ".agentic-workspace/planning/execplans",
+            authority_class="authoritative",
+            freshness="current",
+            trust="current",
+            evidence_anchor=target,
+            match_evidence=[str(ref.get("role") or "active Planning reference")],
+            next_read=str(ref.get("locator") or "agentic-workspace summary --target ./repo --format json"),
+            owner="agent",
+        )
+
+    memory_index = target_root / ".agentic-workspace" / "memory" / "repo" / "index.md"
+    memory_manifest = target_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    if memory_index.exists():
+        add_source(
+            source_id="memory.repo.index",
+            source_type="Memory",
+            owner_surface=".agentic-workspace/memory/repo/index.md",
+            authority_class="learned",
+            freshness="current" if memory_manifest.exists() else "unverified",
+            trust="advisory",
+            evidence_anchor="repo Memory index is present",
+            match_evidence=_list_payload(memory_consult.get("read_first")) or ["Memory index route is available"],
+            next_read=".agentic-workspace/memory/repo/index.md",
+            owner="agent",
+        )
+
+    if standing_intent:
+        add_source(
+            source_id="standing_intent.effective",
+            source_type="docs/contracts",
+            owner_surface=".agentic-workspace/docs/standing-intent-contract.md",
+            authority_class="advisory",
+            freshness="current",
+            trust="advisory",
+            evidence_anchor=str(
+                _as_dict(standing_intent.get("effective_view")).get("rule") or standing_intent.get("status") or "standing intent available"
+            ),
+            match_evidence=["standing intent report is available"],
+            next_read="agentic-workspace report --target ./repo --section standing_intent --format json",
+            owner="agent",
+        )
+    if durable_intent and durable_intent.get("status") not in {None, "", "absent"}:
+        add_source(
+            source_id="durable_intent.projection",
+            source_type="docs/contracts",
+            owner_surface=".agentic-workspace/system-intent/",
+            authority_class="authoritative",
+            freshness="current",
+            trust="current",
+            evidence_anchor=str(durable_intent.get("status")),
+            match_evidence=["durable intent projection is present"],
+            next_read="agentic-workspace report --target ./repo --section durable_intent --format json",
+            owner="agent",
+        )
+
+    for requirement in _list_payload(assurance_requirements.get("active")):
+        if not isinstance(requirement, dict):
+            continue
+        requirement_id = str(requirement.get("id") or "assurance-requirement").strip()
+        add_source(
+            source_id=f"assurance.{requirement_id}",
+            source_type="assurance",
+            owner_surface=".agentic-workspace/config.toml [assurance.requirements]",
+            authority_class="configured",
+            freshness="current",
+            trust="configured",
+            evidence_anchor=requirement_id,
+            match_evidence=_list_payload(requirement.get("applies_because")),
+            next_read="agentic-workspace report --target ./repo --section assurance_requirements --format json",
+            owner=str(requirement.get("review_owner") or "human/domain owner"),
+        )
+    for protocol in _list_payload(verification.get("active_protocols")):
+        if not isinstance(protocol, dict):
+            continue
+        protocol_id = str(protocol.get("id") or "verification-protocol").strip()
+        add_source(
+            source_id=f"verification.{protocol_id}",
+            source_type="Verification",
+            owner_surface=".agentic-workspace/verification/manifest.toml",
+            authority_class="verification-owned",
+            freshness="current",
+            trust="configured",
+            evidence_anchor=protocol_id,
+            match_evidence=_list_payload(protocol.get("applies_because")),
+            next_read="agentic-workspace report --target ./repo --section verification --format json",
+            owner=str(protocol.get("review_owner") or "agent"),
+        )
+
+    external_state = _as_dict(external_work_reconciliation.get("external_work_state"))
+    if external_work_reconciliation and external_work_reconciliation.get("status") not in {None, "", "absent", "unavailable"}:
+        add_source(
+            source_id="external_work.reconciliation",
+            source_type="issue",
+            owner_surface=".agentic-workspace/local/cache/external-intent-evidence.json",
+            authority_class="configured",
+            freshness=str(external_state.get("freshness") or "current"),
+            trust=str(external_work_reconciliation.get("trust") or "unverified"),
+            evidence_anchor=str(external_work_reconciliation.get("status")),
+            match_evidence=["external work cache/reconciliation is available"],
+            next_read="agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
+            owner="agent",
+        )
+
+    planning_applicable = _applicable_intent_status_payload(
+        active_planning_record=active_planning_record,
+        verification=verification,
+        assurance_requirements=assurance_requirements,
+    )
+    conflicts = [str(item) for item in _list_payload(planning_applicable.get("conflicts")) if str(item).strip()]
+    missing_authority = [str(item) for item in _list_payload(planning_applicable.get("missing_authority")) if str(item).strip()]
+    manual_required = [str(item) for item in _list_payload(planning_applicable.get("manual_verification_needed")) if str(item).strip()]
+    stale_or_superseded: list[dict[str, str]] = []
+    for source in sources:
+        if source.get("freshness") in {"stale", "superseded"}:
+            stale_or_superseded.append(
+                {
+                    "source_id": str(source.get("id")),
+                    "freshness": str(source.get("freshness")),
+                    "owner_surface": str(source.get("owner_surface")),
+                }
+            )
+
+    conflict_status = (
+        "conflict-blocking-closeout"
+        if conflicts
+        else "clarification-required"
+        if missing_authority or manual_required
+        else "possible-conflict"
+        if stale_or_superseded
+        else "none"
+    )
+    manual_verification = [
+        {
+            "id": f"manual-{index}",
+            "status": "required",
+            "summary": item,
+            "owner": "human/domain owner",
+            "evidence_anchor": "assurance, Verification, or Planning applicable_intents",
+            "closeout_effect": "blocks or caveats broad/full closeout until verified, accepted, waived, or deferred",
+        }
+        for index, item in enumerate(manual_required, start=1)
+    ]
+    durable_outcome_routing = [
+        {
+            "outcome": "clarified-intent",
+            "owner_surface": "Planning parent acceptance, decision fact, docs/config, or issue comment",
+            "retain": "summary plus evidence anchor; no raw transcript",
+            "stale_when": "the clarified owner surface changes or a later human instruction supersedes it",
+        },
+        {
+            "outcome": "accepted-interpretation",
+            "owner_surface": "Planning closeout evidence or decision record",
+            "retain": "accepted interpretation, owner, evidence, and scope",
+            "stale_when": "acceptance owner, subsystem contract, or proof boundary changes",
+        },
+        {
+            "outcome": "waiver",
+            "owner_surface": "assurance waiver, Verification known gap, closeout evidence, or issue comment",
+            "retain": "waiver reason, owner, affected claims, and reopen trigger",
+            "stale_when": "waived requirement changes or evidence becomes available",
+        },
+        {
+            "outcome": "deferred-with-owner",
+            "owner_surface": "Planning residual work, issue follow-up, or Verification known gap",
+            "retain": "owner, trigger, blocked claims, and next inspection route",
+            "stale_when": "owner accepts, rejects, or supersedes the deferred outcome",
+        },
+    ]
+    blocked_claims = _dedupe(
+        [str(item) for item in _list_payload(planning_applicable.get("blocked_claims")) if str(item).strip()]
+        or (["claim-work-complete", "close-parent-lane"] if conflict_status != "none" else [])
+    )
+    return {
+        "kind": "agentic-workspace/applicable-intent-sources/v1",
+        "status": "attention" if conflict_status != "none" else "present" if sources else "guidance-only",
+        "source_count": len(sources),
+        "sources": sources,
+        "authority_vocabulary": {
+            "authority_classes": [
+                "authoritative",
+                "configured",
+                "learned",
+                "advisory",
+                "human-owned",
+                "compliance-owned",
+                "verification-owned",
+                "unknown",
+            ],
+            "freshness_trust_states": ["current", "stale", "superseded", "unverified", "conflicting", "absent-required"],
+            "conflict_states": ["none", "possible-conflict", "conflict-blocking-closeout", "clarification-required"],
+            "manual_verification_states": [
+                "not-applicable",
+                "required",
+                "verified",
+                "accepted-by-owner",
+                "waived-with-reason",
+                "deferred-with-owner",
+                "blocked-pending-clarification",
+                "stale-or-needs-reverification",
+            ],
+        },
+        "conflict_status": conflict_status,
+        "conflicts": conflicts,
+        "missing_authority": missing_authority,
+        "stale_or_superseded": stale_or_superseded,
+        "manual_verification": manual_verification,
+        "durable_outcome_routing": durable_outcome_routing,
+        "blocked_claims": blocked_claims,
+        "closeout_blocked": conflict_status != "none",
+        "closeout_status": planning_applicable,
+        "next_actions": [
+            "Resolve conflicts through the smallest durable owner before broad closeout."
+            if conflict_status != "none"
+            else "Use sources as read-first evidence when agent judgment finds them relevant.",
+            _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_report --format json",
+                cli_invoke=cli_invoke,
+            ),
+        ],
+        "authority_boundary": _authority_boundary_payload(
+            surface="applicable_intent",
+            observed_by_aw=[
+                "active Planning records",
+                "Memory index/manifest presence",
+                "standing and durable intent projections",
+                "assurance requirement matches",
+                "Verification protocol/gap matches",
+                "external work reconciliation availability",
+            ],
+            recommended_by_aw=["read structurally matched sources and route durable clarification or waiver outcomes"],
+            agent_owned_decisions=["semantic applicability of each source", "which source governs when meanings conflict"],
+            human_owned_decisions=["domain/compliance acceptance, waiver, or clarification"],
+            rule="AW assembles structural/configured evidence; it does not infer or resolve semantic intent.",
+        ),
+        "rule": "Use this projection for broad, architectural, compliance-relevant, or subsystem-affecting work; do not force it onto small direct work.",
+    }
+
+
 def _assurance_requirements_with_verification(assurance_requirements: dict[str, Any], verification: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(assurance_requirements, dict) or not isinstance(verification, dict):
         return assurance_requirements
@@ -6270,6 +6591,18 @@ def _run_report_command(
         assurance_requirements=assurance_requirements,
     )
     assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
+    memory_consult = _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+    applicable_intent = _applicable_intent_source_projection_payload(
+        target_root=target_root,
+        active_planning_record=raw_active_planning_record or active_planning_record,
+        assurance_requirements=assurance_requirements,
+        verification=verification,
+        standing_intent=standing_intent,
+        durable_intent=durable_intent,
+        external_work_reconciliation=external_work_reconciliation,
+        memory_consult=memory_consult,
+        cli_invoke=config.cli_invoke,
+    )
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -6296,7 +6629,7 @@ def _run_report_command(
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
-        "memory_consult": _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
@@ -6307,6 +6640,7 @@ def _run_report_command(
         ),
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
         "workflow_obligations": _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record),
+        "applicable_intent": applicable_intent,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
         "product_managed_enclave": _product_managed_enclave_payload(target_root=target_root, ownership_payload=ownership_payload),
@@ -7247,6 +7581,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when evidence production or review provenance matters more than ordinary proof selection",
     },
     {
+        "section": "applicable_intent",
+        "kind": "agentic-workspace/applicable-intent-sources/v1",
+        "purpose": "compact applicable intent source, authority, conflict, durable-outcome, and manual-verification evidence",
+        "when_to_use": "before broad, subsystem-affecting, architectural, compliance-relevant, or soft-intent closeout decisions",
+    },
+    {
         "section": "successful_completion_cost",
         "kind": "agentic-workspace/successful-completion-cost/v1",
         "purpose": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
@@ -7928,6 +8268,8 @@ def _closeout_report_completeness_payload(
     closeout_trust: dict[str, Any],
     completion_contract: dict[str, Any],
     traceability_rows: list[dict[str, Any]],
+    verification: dict[str, Any] | None = None,
+    assurance_requirements: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     execution = _as_dict(active_planning_record.get("execution_run"))
     closure_check = _as_dict(active_planning_record.get("closure_check"))
@@ -7941,7 +8283,11 @@ def _closeout_report_completeness_payload(
         intent_check=intent_check,
         completion_boundary=completion_boundary,
     )
-    applicable_intents = _applicable_intent_status_payload(active_planning_record=active_planning_record)
+    applicable_intents = _applicable_intent_status_payload(
+        active_planning_record=active_planning_record,
+        verification=verification,
+        assurance_requirements=assurance_requirements,
+    )
     options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
     keep_parent_open = _as_dict(options.get("keep-parent-open"))
     route_residue = _as_dict(options.get("route-residue"))
@@ -9127,6 +9473,8 @@ def _closeout_report_payload(
         closeout_trust=closeout_trust,
         completion_contract=completion_contract,
         traceability_rows=traceability_rows,
+        verification=verification,
+        assurance_requirements=_as_dict(closeout_trust.get("assurance_requirements")),
     )
     profile_policy = _closeout_report_profile_policy_payload(
         closeout_trust=closeout_trust,
@@ -9480,7 +9828,7 @@ def _run_lazy_report_section_command(
 
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
 
-    if normalized in {"assurance_requirements", "verification"}:
+    if normalized in {"assurance_requirements", "verification", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
             active_planning_record=active_planning_record,
@@ -9492,6 +9840,38 @@ def _run_lazy_report_section_command(
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        if normalized == "applicable_intent":
+            payload["memory_consult"] = _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+            payload["standing_intent"] = standing_intent_payload(
+                target_root=target_root,
+                config_policy={
+                    "improvement_latitude": config.improvement_latitude,
+                    "improvement_latitude_source": config.improvement_latitude_source,
+                    "optimization_bias": config.optimization_bias,
+                    "optimization_bias_source": config.optimization_bias_source,
+                    "workflow_artifact_profile": config.workflow_artifact_profile,
+                    "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+                },
+                active_planning=active_planning_record,
+                memory_installed="memory" in payload.get("installed_modules", []),
+            )
+            payload["durable_intent"] = _intent_decision_projection(target_root=target_root, config=config, compact=True)
+            payload["external_work_reconciliation"] = _external_work_reconciliation_payload(
+                module_reports=[],
+                external_work_delta=_external_work_delta_payload(target_root=target_root),
+                cli_invoke=config.cli_invoke,
+            )
+            payload["applicable_intent"] = _applicable_intent_source_projection_payload(
+                target_root=target_root,
+                active_planning_record=active_planning_record,
+                assurance_requirements=payload["assurance_requirements"],
+                verification=verification,
+                standing_intent=payload["standing_intent"],
+                durable_intent=payload["durable_intent"],
+                external_work_reconciliation=payload["external_work_reconciliation"],
+                memory_consult=payload["memory_consult"],
+                cli_invoke=config.cli_invoke,
+            )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "successful_completion_cost":
@@ -9871,6 +10251,28 @@ def _run_report_router_command(
         external_evidence_safety=external_evidence_safety,
         cli_invoke=config.cli_invoke,
     )
+    assurance_requirements = _assurance_requirements_report_payload(
+        config=config,
+        active_planning_record=active_planning_record,
+    )
+    verification = _verification_report_payload(
+        target_root=target_root,
+        active_planning_record=active_planning_record,
+        assurance_requirements=assurance_requirements,
+    )
+    assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
+    memory_consult = _tiny_memory_consult_payload(config=config)
+    durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
+    applicable_intent = _applicable_intent_source_projection_payload(
+        target_root=target_root,
+        active_planning_record=active_planning_record,
+        assurance_requirements=assurance_requirements,
+        verification=verification,
+        durable_intent=durable_intent,
+        external_work_reconciliation=external_work_reconciliation,
+        memory_consult=memory_consult,
+        cli_invoke=config.cli_invoke,
+    )
     closeout_report_route = _closeout_report_route_payload(
         completion_contract=completion_contract,
         config=config,
@@ -9908,10 +10310,11 @@ def _run_report_router_command(
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
-        "memory_consult": _tiny_memory_consult_payload(config=config),
+        "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
-        "durable_intent": _intent_decision_projection(target_root=target_root, config=config, compact=True),
+        "durable_intent": durable_intent,
+        "applicable_intent": applicable_intent,
         "effective_authority": _effective_authority_payload(
             target_root=target_root, config=config, installed_modules=installed_modules, module_reports=[]
         ),
