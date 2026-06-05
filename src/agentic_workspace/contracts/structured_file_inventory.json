@@ -361,6 +361,32 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/planning/lanes/archive/*.lane.json",
+      "format": "json",
+      "owner": "planning",
+      "status": "schema-backed",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "editable_by_agents": false,
+      "generated": false,
+      "notes": "Archived lane records validate against the planning lane schema while remaining historical audit evidence.",
+      "storage_class": "historical-audit-distillation",
+      "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
+      "reconstructable_from": [
+        "git history",
+        "issue or PR references embedded in the archive record",
+        "commit history around the closeout"
+      ],
+      "guardrails": {
+        "max_bytes": 25000,
+        "preferred_refs": [
+          "issue ids",
+          "commit SHAs",
+          "validation command names"
+        ],
+        "routed_to": "#538"
+      }
+    },
+    {
       "pattern": ".agentic-workspace/planning/external-intent-evidence.json",
       "format": "json",
       "owner": "planning-evidence",

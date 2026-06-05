@@ -610,6 +610,9 @@ def report_router_payload(
             "omitted_section_hint_count": max(0, len(section_hints) - len(compact_section_hints)),
         },
     }
+    applicable_intent = _report_router_applicable_intent(payload.get("applicable_intent", {}))
+    if applicable_intent.get("attention_required"):
+        router_payload["applicable_intent"] = applicable_intent
     maintainer_mode = router_payload.get("maintainer_mode", {})
     if not (isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled"):
         router_payload.pop("maintainer_mode", None)
@@ -705,11 +708,12 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
         "execution_shape": 1,
         "routine_work_context": 2,
         "improvement_intake": 3,
-        "operating_posture": 4,
-        "external_work_reconciliation": 5,
-        "module_reports": 6,
-        "successful_completion_cost": 7,
-        "findings": 8,
+        "applicable_intent": 4,
+        "operating_posture": 5,
+        "external_work_reconciliation": 6,
+        "module_reports": 7,
+        "successful_completion_cost": 8,
+        "findings": 9,
     }
     ordered = sorted(
         hints,
@@ -855,6 +859,41 @@ def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
         "recommended_next_action": value.get("recommended_next_action", ""),
         "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
     }
+
+
+def _report_router_applicable_intent(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable", "source_count": 0}
+    manual = value.get("manual_verification", [])
+    manual = manual if isinstance(manual, list) else []
+    conflicts = _support_list_payload(value.get("conflicts"))
+    missing_authority = _support_list_payload(value.get("missing_authority"))
+    authority_boundary = value.get("authority_boundary", {})
+    if isinstance(authority_boundary, dict):
+        authority_boundary = {
+            "surface": authority_boundary.get("surface", "applicable_intent"),
+            "authority_class": authority_boundary.get("authority_class", "advisory-support"),
+            "rule": authority_boundary.get("reporting_rule") or authority_boundary.get("rule", ""),
+        }
+    else:
+        authority_boundary = {}
+    compact = {
+        "status": value.get("status", "unavailable"),
+        "source_count": value.get("source_count", 0),
+        "conflict_status": value.get("conflict_status", "unknown"),
+    }
+    attention_required = bool(value.get("closeout_blocked", False) or conflicts or missing_authority or manual)
+    if attention_required:
+        compact["attention_required"] = True
+        compact["conflict_count"] = len(conflicts)
+        compact["missing_authority_count"] = len(missing_authority)
+        compact["manual_verification_count"] = len(manual)
+        compact["closeout_blocked"] = bool(value.get("closeout_blocked", False))
+        compact["kind"] = value.get("kind", "agentic-workspace/applicable-intent-sources/v1")
+        compact["detail_command"] = "agentic-workspace report --target ./repo --section applicable_intent --format json"
+        compact["blocked_claims"] = value.get("blocked_claims", [])
+        compact["authority_boundary"] = authority_boundary
+    return compact
 
 
 def _report_router_closeout_report(value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_arg: str = "./repo") -> dict[str, Any]:
@@ -1054,6 +1093,7 @@ def report_section_hints(
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
         "durable_intent": "task, subsystem, and system intent pressure relevant to decisions before implementation or closeout",
+        "applicable_intent": "compact applicable-intent source, authority, conflict, durable-outcome, and manual-verification evidence",
         "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
         "reuse_pressure": "changed-path reuse and abstraction-pressure facts before adding local code",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
@@ -1094,6 +1134,7 @@ def report_section_hints(
         "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
         "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
         "durable_intent": "inspect now when task intent may generalize into durable system or subsystem direction",
+        "applicable_intent": "inspect before broad, subsystem-affecting, compliance-relevant, or soft-intent closeout decisions",
         "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
         "reuse_pressure": "inspect before implementation when deciding whether to reuse, accept duplication, or route extraction follow-up",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
@@ -1141,6 +1182,10 @@ def report_section_hints(
     hints: list[dict[str, Any]] = []
     for section, purpose in section_purposes.items():
         if section in payload:
+            if section == "applicable_intent":
+                applicable_compact = _report_router_applicable_intent(payload.get("applicable_intent", {}))
+                if not applicable_compact.get("attention_required"):
+                    continue
             advanced_feature = advanced_sections.get(section)
             relevant_advanced_section = section == "maintenance_pressure" and maintenance_pressure_status == "attention"
             if advanced_feature and advanced_feature not in enabled_advanced_features and not relevant_advanced_section:

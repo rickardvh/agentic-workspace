@@ -26,6 +26,7 @@
     "agent_configuration_queries",
     "system_intent_mirror",
     "durable_intent",
+    "applicable_intent",
     "workflow_obligations",
     "assurance_requirements",
     "product_managed_enclave",

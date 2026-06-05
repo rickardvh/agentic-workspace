@@ -1,0 +1,69 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "github-1326-applicable-intent",
+  "title": "Implement applicable-intent operating model",
+  "status": "archived",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "AW can surface applicable intent sources, authority and freshness posture, durable clarification or waiver outcomes, manual verification status, and closeout caveats without becoming a semantic policy engine.",
+  "purpose_for_parent": "Close #1326 and child issues #1327-#1332 through compact evidence across existing Planning, Memory, Verification, assurance, closeout, and final-response surfaces.",
+  "subsystems": [
+    "workspace reporting",
+    "Planning",
+    "Verification",
+    "Memory",
+    "assurance",
+    "closeout/final-response rendering"
+  ],
+  "technical_strategy": "Reuse existing report/start/implement, Verification, assurance, Planning, Memory guidance, and closeout surfaces. Add a compact applicable-intent projection and representative fixtures rather than a policy engine or broad intent registry.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "github-1326-applicable-intent-implementation",
+      "title": "Implement #1326 applicable-intent lane",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/github-1326-applicable-intent-implementation.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Deliver the compact applicable-intent projection, durable outcome routing, manual verification closeout behavior, and representative regression fixtures.",
+      "proof": "Focused applicable-intent report/closeout tests plus workspace proof checks.",
+      "residual_after_slice": "none if #1326 and children #1327-#1332 are honestly satisfied"
+    }
+  ],
+  "current_slice": "github-1326-applicable-intent-implementation",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Representative fixtures must cover source discovery, authority/conflict vocabulary, durable outcome routing, manual soft-intent verification, and closeout/final-response caveats.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "Focused applicable-intent tests passed; make test-workspace and make lint-workspace passed; contract tooling, structured inventory, maintainer surfaces, schema docs, generated package checks, summary, doctor, and applicable_intent dogfooding passed."
+    ],
+    "known_gaps": [
+      "No residual #1326 lane work. Dogfooding follow-ups are routed to GitHub #1349 and #1350."
+    ]
+  },
+  "residual_lane_work": "No residual #1326 lane work. Dogfooding follow-ups are routed to GitHub #1349 and #1350.",
+  "lane_to_epic_contribution": "Closes #1326 and children #1327-#1332 by adding compact applicable-intent source projection, authority/freshness/conflict vocabulary, durable outcome routing, manual verification closeout effects, schema/reference docs, and regression fixtures across existing AW surfaces.",
+  "parent_close_permission": "may-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Closes #1326 and children #1327-#1332 by adding compact applicable-intent source projection, authority/freshness/conflict vocabulary, durable outcome routing, manual verification closeout effects, schema/reference docs, and regression fixtures across existing AW surfaces.",
+    "residual_work": "No residual #1326 lane work. Dogfooding follow-ups are routed to GitHub #1349 and #1350.",
+    "next_owner": "GitHub #1349 and #1350 for dogfooding follow-ups only"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "GitHub #1326",
+      "label": "Parent applicable-intent lane",
+      "role": "parent-intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1326"
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #1327-#1332",
+      "label": "Review and implementation children",
+      "role": "closure-set",
+      "locator": ""
+    }
+  ],
+  "notes": "Keep AW authority language explicit: AW exposes structural/configured evidence and recommended owners; the agent, human, domain, or compliance owner decides semantic applicability and acceptance."
+}
