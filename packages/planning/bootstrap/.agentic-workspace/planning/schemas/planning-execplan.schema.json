@@ -193,6 +193,7 @@
     "anti_overfitting_review": { "type": "object" },
     "direct_cli_edit_review": { "type": "object" },
     "cost_assessment": { "type": "object" },
+    "parent_acceptance": { "$ref": "#/$defs/string_map" },
     "parent_acceptance_map": {
       "anyOf": [
         { "type": "object" },

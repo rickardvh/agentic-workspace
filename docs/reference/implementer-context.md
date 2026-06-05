@@ -87,6 +87,12 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `intent_evidence` | object | yes |  | Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture. |  |  |
+| `parent_intent_status` | object | no |  | Parent/original-intent status preserving larger intent across bounded slices. |  |  |
+| `parent_intent_status.kind` | const `"agentic-workspace/parent-intent-status/v1"` | yes |  | Discriminator for the parent/original-intent status packet. |  |  |
+| `parent_intent_status.status` | string | yes |  | Whether the recorded parent/original intent is satisfied, open, or only guidance. |  |  |
+| `applicable_intent_status` | object | no |  | Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations. |  |  |
+| `applicable_intent_status.kind` | const `"agentic-workspace/applicable-intent-status/v1"` | yes |  | Discriminator for the applicable-intent status packet. |  |  |
+| `applicable_intent_status.status` | string | yes |  | Whether applicable-intent evidence is present, guidance-only, or requires attention. |  |  |
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |

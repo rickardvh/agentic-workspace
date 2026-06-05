@@ -1,0 +1,177 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Original intent preservation parent lane",
+  "status": "partially-promoted",
+  "larger_intended_outcome": "Implement #1318 so broad original user intent and applicable user/system/subsystem/soft intent remain the parent acceptance target across startup, implement, Planning decomposition, child slices, proof, closeout, and final user reporting. Slices are execution mechanics, not user-level completion unless the user explicitly asks for a slice.",
+  "parent_acceptance": {
+    "original_intent": "Preserve full original user intent and applicable intent constraints across epics, decomposition, slices, closeout, and final response.",
+    "acceptance_target": "#1318 and child issues #1319-#1325 are proven end to end, including the generated-code runtime-boundary regression and applicable-intent conflict/manual-verification fixture.",
+    "parent_proof_required": "Focused tests and PR closure matrix demonstrate Planning parent acceptance, startup/implement context, closeout blocking, final response rendering, and applicable intent handling.",
+    "residual_intent_rule": "If any child issue lacks proof, #1318 remains open and final response must name the residual parent intent.",
+    "clarification_needed_when": "Ask or keep parent open when clear broad intent would otherwise be narrowed to a slice."
+  },
+  "non_goals": [
+    "Do not create a new project-management system or broad dashboard.",
+    "Do not add an automatic business-logic classifier or policy engine.",
+    "Do not force full Planning ceremony for small direct work."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "github-1319-grounding-review",
+      "title": "Grounding review before implementation",
+      "readiness": "promoted",
+      "outcome": "Review existing startup, implement, Planning, Verification, closeout, and final-response surfaces before implementation.",
+      "owner_surface": ".agentic-workspace/planning/reviews/2026-06-05-issue-1318-original-intent-preservation-grounding.review.json",
+      "proof": "Review record names current gaps and concrete reuse points.",
+      "slice_contribution_to_parent": "Provides grounding evidence for all implementation lanes.",
+      "residual_parent_intent": "Implementation and proof still remain after review.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1320-start-implement-parent-intent",
+      "title": "Capture parent original intent in startup and implement context",
+      "readiness": "promoted",
+      "outcome": "Startup and implement surfaces preserve the original parent intent when current work is a slice.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Focused startup/implement tests show parent intent survives broad request handling.",
+      "slice_contribution_to_parent": "Preserves parent intent before code changes and changed-path proof selection.",
+      "residual_parent_intent": "Planning contract, closeout blocking, final response, and applicable-intent proof remain unless implemented together.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "github-1319-grounding-review"
+      ],
+      "parallel_with": [
+        "github-1321-parent-acceptance-contract"
+      ]
+    },
+    {
+      "id": "github-1321-parent-acceptance-contract",
+      "title": "Parent acceptance contract in decomposition and child slices",
+      "readiness": "promoted",
+      "outcome": "Decomposition and active slices record original parent acceptance, slice contribution, residual parent intent, and parent closure proof.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Planning schema/template/projection tests cover the parent acceptance contract.",
+      "slice_contribution_to_parent": "Makes parent acceptance explicit in decomposition and child slice records.",
+      "residual_parent_intent": "Parent closeout still needs blocking/final-response proof.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "github-1319-grounding-review"
+      ],
+      "parallel_with": [
+        "github-1322-block-parent-closeout"
+      ]
+    },
+    {
+      "id": "github-1322-block-parent-closeout",
+      "title": "Block parent closeout on narrower proof",
+      "readiness": "promoted",
+      "outcome": "Closeout blocks broad parent completion when proof only covers a narrower slice.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Closeout completion_options and final_response_rendering tests block parent/plain-done claims.",
+      "slice_contribution_to_parent": "Prevents narrow proof from authorizing parent closure.",
+      "residual_parent_intent": "Generated-code regression and final UX still need proof unless included.",
+      "parent_proof_boundary": "parent-closure",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "github-1321-parent-acceptance-contract"
+      ],
+      "parallel_with": [
+        "github-1323-generated-code-runtime-boundary-fixture"
+      ]
+    },
+    {
+      "id": "github-1323-generated-code-runtime-boundary-fixture",
+      "title": "Generated-code runtime-boundary regression fixture",
+      "readiness": "promoted",
+      "outcome": "A request that all runtime code be generated from IR cannot be narrowed to one fresh generated target or one primitive migration.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Representative fixture asserts parent status remains open and final response must name residual runtime-boundary intent.",
+      "slice_contribution_to_parent": "Proves the motivating under-scoping failure mode is blocked.",
+      "residual_parent_intent": "None for #1323 if fixture passes; remaining child lanes still govern #1318.",
+      "parent_proof_boundary": "parent-closure",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "github-1322-block-parent-closeout"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1324-final-response-slice-parent-status",
+      "title": "Plain slice-vs-parent final response",
+      "readiness": "promoted",
+      "outcome": "Final user-facing closeout says what landed, what parent intent remains, what proof covers, and what must not be claimed.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Final-response rendering tests cover required facts and must_not_claim constraints.",
+      "slice_contribution_to_parent": "Makes parent-vs-slice status visible to the user.",
+      "residual_parent_intent": "None for #1324 if rendered output passes; remaining child lanes still govern #1318.",
+      "parent_proof_boundary": "parent-closure",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "github-1322-block-parent-closeout"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1325-applicable-intent-stack",
+      "title": "Applicable intent stack and conflict handling",
+      "readiness": "promoted",
+      "outcome": "User, system, subsystem, soft/manual, compliance, assurance, and Verification intents are surfaced with conflict and manual-verification state.",
+      "owner_surface": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      "proof": "Fixture shows conflict or missing authority blocks or caveats closeout and final response cannot hide it.",
+      "slice_contribution_to_parent": "Reconciles user intent with applicable system/subsystem/soft/manual obligations.",
+      "residual_parent_intent": "#1326 durable source discovery remains separate unless explicitly implemented.",
+      "parent_proof_boundary": "manual-confirmation-needed",
+      "human_confirmation_needed": [
+        "Human/domain owner accepts or clarifies conflicts and manual verification obligations."
+      ],
+      "depends_on": [
+        "github-1319-grounding-review"
+      ],
+      "parallel_with": [
+        "github-1320-start-implement-parent-intent",
+        "github-1321-parent-acceptance-contract"
+      ]
+    }
+  ],
+  "dependency_assumptions": [
+    "#1321 and #1322 should land together or in close sequence because parent acceptance without closeout blocking is weak.",
+    "#1323 should land early enough to prevent a generic wording-only fix.",
+    "#1325 is part of #1318 closure standard, while broader durable intent-source discovery in #1326 remains a sibling lane unless this PR explicitly implements it."
+  ],
+  "parallelization_assumptions": [
+    "Review, Planning contract, closeout blocking, final rendering, and applicable-intent evidence can be implemented in one integrated PR only if tests prove the end-to-end path.",
+    "A child slice may close only when its proof maps back to the parent acceptance target."
+  ],
+  "proof_expectations": [
+    "Grounding review exists before implementation.",
+    "Startup/implement, Planning decomposition/slice, closeout_report, completion_options, final_response_rendering, Verification/applicable-intent, and generated-code runtime-boundary fixtures all pass.",
+    "Parent closure remains blocked unless the original parent intent and applicable intent stack are satisfied or explicitly routed."
+  ],
+  "promotion_rule": "Promote child lanes only with explicit parent acceptance, slice contribution, residual parent intent, proof boundary, and final-response consequence.",
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1318",
+      "label": "parent lane",
+      "role": "parent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1319",
+      "label": "grounding review",
+      "role": "child"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1320-#1325",
+      "label": "implementation children",
+      "role": "child-set"
+    }
+  ],
+  "notes": "Parent acceptance target: broad original intent remains the completion target; decomposition does not authorize reducing scope. Generated-code regression target: all runtime code should be generated from IR representations as a single source of truth cannot be closed by proof that some generated target is fresh."
+}

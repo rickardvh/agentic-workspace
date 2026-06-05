@@ -3838,6 +3838,135 @@ reopen_trigger = "parent lane asks for full parser behavior-preservation closure
     assert "1 verification evidence row(s)" in traceability["assurance-verification"]["evidence"]
 
 
+def test_report_closeout_report_represents_generated_code_parent_intent_boundary(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "generated-runtime-boundary.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Generated Runtime Boundary",
+            "active_milestone": {
+                "id": "generated-runtime-boundary",
+                "status": "complete",
+                "scope": "Refresh generated parser adapter and prove the generated target is current.",
+            },
+            "delegated_judgment": {
+                "requested outcome": "Refresh the generated parser adapter without losing the parent runtime-generation boundary.",
+                "hard constraints": "Do not claim the full runtime boundary is satisfied by one freshness slice.",
+            },
+            "parent_acceptance": {
+                "original_intent": "all runtime code should be generated from IR representations as a single source of truth",
+                "parent_acceptance": "runtime behavior cannot be changed outside generated IR or declared primitive implementation boundaries",
+                "current_slice": "generated parser adapter freshness",
+                "slice_contribution": "parser adapter output is current",
+                "residual_parent_intent": "runtime behavior can still be changed outside generated IR/primitive implementation boundaries",
+                "proof_boundary": "slice-only",
+                "parent_proof_required": "runtime primitive boundary audit plus generated package conformance",
+                "human_confirmation_needed": ["maintainer confirms any direct runtime primitive implementation is intentionally declared"],
+            },
+            "intent_continuity": {
+                "larger intended outcome": "all runtime code should be generated from IR representations as a single source of truth",
+                "this slice completes the larger intended outcome": "no",
+                "continuation surface": "#1318",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "yes",
+                "owner surface": "#1318",
+                "activation trigger": "runtime code remains directly editable outside generated IR or primitive implementation declarations",
+            },
+            "applicable_intents": {
+                "user_intents": ["all runtime code should be generated from IR representations as a single source of truth"],
+                "system_intents": [
+                    "AW must remain repo- and agent-agnostic and should surface evidence instead of deciding semantic closure."
+                ],
+                "subsystem_intents": ["Generated command package runtime targets must be refreshed from IR before use."],
+                "soft_intents": ["Direct runtime primitive edits require maintainer-visible justification."],
+                "sources": [
+                    {"source": "GitHub #1318", "intent": "preserve full original intent across slices"},
+                    {"source": "generated package contract", "intent": "generated targets are current"},
+                ],
+                "conflicts": ["current slice proves generated parser freshness, not full runtime-generation source-of-truth"],
+                "manual_verification_needed": [
+                    "maintainer must confirm whether remaining direct runtime primitive implementations are declared primitives"
+                ],
+                "blocked_claims": ["claim-work-complete", "close-parent-lane"],
+            },
+            "execution_run": {
+                "run status": "complete",
+                "what happened": "Regenerated parser adapter and checked generated package freshness.",
+                "scope touched": "generated parser adapter",
+                "changed surfaces": "generated/workspace/python/parser_adapter.py; generated/workspace/typescript/parser_adapter.mjs",
+                "validations run": "uv run python scripts/generate/generate_command_packages.py --check",
+                "result for continuation": "slice complete; parent runtime boundary remains open",
+            },
+            "proof_report": {
+                "validation proof": "uv run python scripts/generate/generate_command_packages.py --check passed",
+                "proof achieved now": "yes, for generated parser adapter freshness only",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "slice",
+                    "proof_dimensions": ["generated target freshness"],
+                    "unproven_after_tests": ["full runtime-generation source-of-truth boundary"],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "open",
+                "closure decision": "archive-but-keep-lane-open",
+                "why this decision is honest": "The slice proof is real, but the parent runtime-generation boundary remains unproven.",
+                "evidence carried forward": "generated parser freshness proof",
+                "reopen trigger": "parent completion is claimed from generated freshness proof alone",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'generated-runtime-boundary', title = 'Generated runtime boundary', surface = '.agentic-workspace/planning/execplans/generated-runtime-boundary.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    parent = report["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["original_intent"] == "all runtime code should be generated from IR representations as a single source of truth"
+    assert parent["current_slice"] == "generated parser adapter freshness"
+    assert parent["proof_is_slice_only"] is True
+    assert "runtime behavior can still be changed outside generated IR" in parent["residual_parent_intent"]
+    applicable = report["applicable_intent_status"]
+    assert applicable["status"] == "attention"
+    assert applicable["closeout_blocked"] is True
+    assert applicable["conflicts"]
+    options = {option["id"]: option for option in report["closure_boundary"]["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert options["claim-work-complete"]["blocking_fields"]
+    assert options["close-parent-lane"]["allowed"] is False
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert "parent intent status" in rendering["must_include"]
+    assert "applicable intent status" in rendering["must_include"]
+    rendered_text = rendering["rendered_summary"]["rendered_text"]
+    assert "Parent intent: open" in rendered_text
+    assert "Applicable intent:" in rendered_text
+    assert "Do not collapse current slice proof into parent completion proof." in rendering["must_not_claim"]
+    traceability = {row["id"]: row for row in report["traceability"]["rows"]}
+    assert traceability["parent-intent"]["status"] == "present"
+    assert traceability["applicable-intents"]["status"] == "missing"
+    checks = {check["id"]: check for check in report["completeness"]["checks"]}
+    assert checks["parent-intent-status"]["status"] == "incomplete"
+    assert checks["applicable-intent-status"]["status"] == "incomplete"
+
+
 def test_report_closeout_trust_blocks_broad_claim_for_missing_assurance_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

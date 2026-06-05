@@ -83,6 +83,12 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
 | `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
 | `completion_contract` | object | yes |  | Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions. |  |  |
+| `parent_intent_status` | ref `#/$defs/parent_intent_status` | no |  | Derived parent/original-intent status packet used to prevent slice proof from being reported as parent completion. |  |  |
+| `parent_intent_status.kind` | const `"agentic-workspace/parent-intent-status/v1"` | yes |  | Discriminator for the parent/original-intent status packet. |  |  |
+| `parent_intent_status.status` | string | yes |  | Whether the recorded parent/original intent is satisfied, open, or only guidance. |  |  |
+| `applicable_intent_status` | ref `#/$defs/applicable_intent_status` | no |  | Derived applicable-intent evidence and conflict packet used to keep user, system, subsystem, and soft-intent obligations visible before broad closeout. |  |  |
+| `applicable_intent_status.kind` | const `"agentic-workspace/applicable-intent-status/v1"` | yes |  | Discriminator for the applicable-intent status packet. |  |  |
+| `applicable_intent_status.status` | string | yes |  | Whether applicable-intent evidence is present, guidance-only, or requires attention. |  |  |
 | `repair_loop_residue` | object | yes |  | Derived validation-driven repair residue across Planning and Verification. |  |  |
 | `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |

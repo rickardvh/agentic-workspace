@@ -3,6 +3,13 @@
   "title": "Epic-shaped request decomposition",
   "status": "shaping",
   "larger_intended_outcome": "Describe the larger outcome before choosing implementation lanes.",
+  "parent_acceptance": {
+    "original_intent": "State the full user/request parent intent before decomposition.",
+    "acceptance_target": "State what must be true before the parent can be called complete.",
+    "parent_proof_required": "State the evidence needed for parent closure, not only slice proof.",
+    "residual_intent_rule": "Each promoted lane must name what parent intent remains unsatisfied.",
+    "clarification_needed_when": "Ask or keep the parent open when clear broad intent would otherwise be narrowed."
+  },
   "non_goals": [
     "Do not put milestone execution detail here; promote ready slices into execplans."
   ],
@@ -14,6 +21,10 @@
       "outcome": "The bounded result this lane would deliver.",
       "owner_surface": "",
       "proof": "High-level proof expectation; exact commands belong in the execplan.",
+      "slice_contribution_to_parent": "How this lane advances the parent acceptance target.",
+      "residual_parent_intent": "What parent intent remains after this lane if it lands.",
+      "parent_proof_boundary": "slice-only|parent-closure|manual-confirmation-needed",
+      "human_confirmation_needed": [],
       "depends_on": [],
       "parallel_with": []
     }

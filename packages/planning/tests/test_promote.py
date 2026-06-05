@@ -342,6 +342,13 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
                 "title": "Dogfood planning safety",
                 "status": "ready-for-lane-promotion",
                 "larger_intended_outcome": "Prevent broad work from bypassing planning.",
+                "parent_acceptance": {
+                    "original_intent": "Prevent broad work from bypassing planning.",
+                    "acceptance_target": "Broad work keeps parent acceptance, residual intent, and proof boundary visible across slices.",
+                    "parent_proof_required": "Focused workspace and Planning tests prove parent acceptance is preserved.",
+                    "residual_intent_rule": "Promoted lanes must name residual parent intent before closeout.",
+                    "clarification_needed_when": "A child slice would otherwise claim parent completion from local proof.",
+                },
                 "non_goals": [],
                 "candidate_lanes": [
                     {
@@ -351,6 +358,10 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
                         "outcome": "Represent JSON/text planning behavior in schema-valid promoted work.",
                         "owner_surface": "",
                         "proof": "Focused workspace tests pass.",
+                        "slice_contribution_to_parent": "Adds schema-valid promoted work behavior.",
+                        "residual_parent_intent": "runtime closeout proof remains.",
+                        "parent_proof_boundary": "slice-only",
+                        "human_confirmation_needed": ["maintainer accepts parent closure proof before closing parent"],
                         "depends_on": [],
                         "parallel_with": [],
                     }
@@ -379,6 +390,12 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
 
     plan = json.loads((tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safety-slice.plan.json").read_text(encoding="utf-8"))
     assert "JSON/text" in plan["canonical_core"]["next_action"]
+    assert plan["parent_acceptance"]["original_intent"] == "Prevent broad work from bypassing planning."
+    assert plan["parent_acceptance"]["current_slice"] == "Represent JSON/text planning behavior in schema-valid promoted work."
+    assert plan["parent_acceptance"]["residual_parent_intent"] == "runtime closeout proof remains."
+    assert plan["parent_acceptance"]["proof_boundary"] == "slice-only"
+    assert plan["intent_continuity"]["this slice completes the larger intended outcome"] == "no"
+    assert plan["required_continuation"]["required follow-on for the larger intended outcome"] == "yes"
 
     decomposition = json.loads(decomposition_path.read_text(encoding="utf-8"))
     schema_path = (

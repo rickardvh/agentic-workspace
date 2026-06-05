@@ -226,6 +226,13 @@ def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None
                 "title": "Shop build",
                 "status": "ready-for-lane-promotion",
                 "larger_intended_outcome": "Build the shop.",
+                "parent_acceptance": {
+                    "original_intent": "Build the complete shop.",
+                    "acceptance_target": "Storefront, checkout, and fulfillment lanes are complete.",
+                    "parent_proof_required": "Parent acceptance map proves all lanes.",
+                    "residual_intent_rule": "Each lane names remaining parent intent.",
+                    "clarification_needed_when": "A lane tries to close the parent with slice-only proof.",
+                },
                 "non_goals": ["Do not implement everything in one lane."],
                 "candidate_lanes": [
                     {
@@ -235,6 +242,10 @@ def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None
                         "outcome": "Browsable storefront.",
                         "owner_surface": ".agentic-workspace/planning/execplans/storefront.plan.json",
                         "proof": "Build and smoke test.",
+                        "slice_contribution_to_parent": "Provides the browsing lane.",
+                        "residual_parent_intent": "checkout and fulfillment remain.",
+                        "parent_proof_boundary": "slice-only",
+                        "human_confirmation_needed": [],
                         "depends_on": [],
                         "parallel_with": [],
                     }
@@ -255,7 +266,14 @@ def test_planning_summary_projects_decomposition_records(tmp_path: Path) -> None
     assert summary["decomposition"]["status"] == "present"
     assert summary["decomposition"]["record_count"] == 1
     assert summary["decomposition"]["ready_lane_count"] == 1
+    record = summary["decomposition"]["records"][0]
+    assert record["parent_acceptance"]["original_intent"] == "Build the complete shop."
+    assert record["parent_acceptance"]["acceptance_target"] == "Storefront, checkout, and fulfillment lanes are complete."
     assert summary["decomposition"]["records"][0]["candidate_lanes"][0]["id"] == "storefront"
+    lane = summary["decomposition"]["records"][0]["candidate_lanes"][0]
+    assert lane["slice_contribution_to_parent"] == "Provides the browsing lane."
+    assert lane["residual_parent_intent"] == "checkout and fulfillment remain."
+    assert lane["parent_proof_boundary"] == "slice-only"
 
 
 def test_planning_summary_warns_for_misplaced_decomposition_records(tmp_path: Path) -> None:

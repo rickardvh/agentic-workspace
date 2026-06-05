@@ -1606,6 +1606,80 @@ def test_start_surfaces_decomposed_active_work_delegation_candidates_and_auto_sk
     assert "safe_to_auto_run_commands" in audit["skipped_targets"][0]["reasons"][0]
 
 
+def test_start_surfaces_parent_intent_status_for_active_generated_code_slice(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "generated-code-slice.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        "\n".join(
+            [
+                'kind = "agentic-planning-state"',
+                'schema_version = "planning-state/v1"',
+                "",
+                "[todo]",
+                'active_items = [{ id = "generated-code-slice", surface = ".agentic-workspace/planning/execplans/generated-code-slice.plan.json", next_action = "Continue the bounded generated-code slice." }]',
+            ]
+        ),
+    )
+    _write(
+        plan_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "generated-code-slice",
+                "title": "Generated code freshness slice",
+                "status": "in_progress",
+                "active_milestone": {
+                    "id": "slice",
+                    "scope": "Refresh generated adapters after primitive changes.",
+                },
+                "parent_acceptance": {
+                    "original_intent": "all runtime code should be generated from IR representations as a single source of truth",
+                    "acceptance_target": "No runtime target contains hand-maintained behavior that belongs in generated IR.",
+                    "current_slice": "hash-gated freshness checks for generated CLI targets",
+                    "proof_boundary": "current slice only",
+                    "residual_parent_intent": "Audit remaining runtime primitives and move non-primitive behavior into command-generation IR.",
+                    "parent_proof_required": "Generated targets and runtime behavior must be traced back to IR or explicit primitive exceptions.",
+                },
+                "applicable_intents": {
+                    "sources": [{"kind": "user", "ref": "#1318"}],
+                    "user_intents": ["Preserve full original generated-code intent across slices."],
+                    "manual_verification_needed": ["Confirm this slice is not treated as closing the parent lane."],
+                },
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue implementation of the generated-code freshness slice",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _start_context(payload)
+    parent = context["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["original_intent"] == "all runtime code should be generated from IR representations as a single source of truth"
+    assert parent["current_slice"] == "hash-gated freshness checks for generated CLI targets"
+    assert parent["proof_is_slice_only"] is True
+    assert "Audit remaining runtime primitives" in parent["residual_parent_intent"]
+    applicable = context["applicable_intent_status"]
+    assert applicable["status"] == "attention"
+    assert applicable["closeout_blocked"] is True
+    assert "claim-work-complete" in applicable["blocked_claims"]
+
+
 def test_start_decomposition_only_delegation_requires_lane_promotion_before_handoff(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

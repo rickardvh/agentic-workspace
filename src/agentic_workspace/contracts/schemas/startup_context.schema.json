@@ -280,6 +280,16 @@
       "description": "Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields.",
       "additionalProperties": true
     },
+    "parent_intent_status": {
+      "type": "object",
+      "description": "Parent/original-intent status preserving larger intent across bounded startup and implementation slices.",
+      "additionalProperties": true
+    },
+    "applicable_intent_status": {
+      "type": "object",
+      "description": "Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations for startup closeout safety.",
+      "additionalProperties": true
+    },
     "planning_safety_gate": {
       "type": "object",
       "description": "Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work.",

@@ -123,6 +123,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.source_fields` | array of enum `"immediate_next_allowed_action"`, `"workflow_sufficiency"`, `"skill_routing"`, `"memory_consult"`, `"planning_safety_gate"`, `"proof"`, `"closeout_trust_inspection"`, `"continuation_state"` | yes |  | Startup fields used to derive the packet. |  |  |
 | `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down. |  |  |
 | `context` | object | no |  | Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields. |  |  |
+| `parent_intent_status` | object | no |  | Parent/original-intent status preserving larger intent across bounded startup and implementation slices. |  |  |
+| `applicable_intent_status` | object | no |  | Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations for startup closeout safety. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work. |  |  |
 | `planning_revision` | object | no |  | Optimistic Planning state revision observed by this read surface. |  |  |
 | `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
