@@ -9,12 +9,12 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "github-1309-workspace-replace-prompt-keyword-semantic-routin", maturity = "active", status = "active", priority = "P1", refs = "GitHub #1309", title = "[Workspace]: Replace prompt keyword semantic routing with agent judgment and learned guidance", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.", suggested_first_slice = "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.", path = ".agentic-workspace/planning/execplans/github-1309-workspace-replace-prompt-keyword-semantic-routin.plan.json" },
-]
+execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "github-1318-preserve-original-intent", title = "Preserve full original intent across planning slices", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json", why_now = "PR creation and review", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "Create the PR with closure matrix and proof summary.", done_when = "PR body maps #1318-#1325 to concrete evidence and leaves #1326 open.", proof = "Focused tests, workspace/planning validation, contract checks, structured inventory, generated command package check, AW summary, and Planning doctor passed.", refs = ["GitHub #1318 and child issues #1319-#1325"] },
+]
 queued_items = []
 
 [roadmap]

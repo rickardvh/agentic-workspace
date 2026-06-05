@@ -162,6 +162,14 @@
       "description": "Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture.",
       "additionalProperties": true
     },
+    "parent_intent_status": {
+      "$ref": "#/$defs/parent_intent_status",
+      "description": "Compact parent/original-intent status preserving larger intent across bounded implementation slices."
+    },
+    "applicable_intent_status": {
+      "$ref": "#/$defs/applicable_intent_status",
+      "description": "Compact applicable-intent evidence and conflict packet for broad closeout safety."
+    },
     "reuse_pressure": {
       "type": "object",
       "description": "Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up.",
@@ -353,6 +361,44 @@
       "type": "object",
       "description": "Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout.",
       "additionalProperties": true
+    },
+    "parent_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/parent-intent-status/v1",
+          "description": "Discriminator for the parent/original-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether the recorded parent/original intent is satisfied, open, or only guidance."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Parent/original-intent status preserving larger intent across bounded slices."
+    },
+    "applicable_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/applicable-intent-status/v1",
+          "description": "Discriminator for the applicable-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether applicable-intent evidence is present, guidance-only, or requires attention."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations."
     },
     "durable_intent_promotion": {
       "$ref": "#/$defs/task_intent_promotion_guidance",

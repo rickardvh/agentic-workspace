@@ -32,6 +32,9 @@
     "larger_intended_outcome": {
       "type": "string"
     },
+    "parent_acceptance": {
+      "$ref": "#/$defs/parent_acceptance"
+    },
     "non_goals": {
       "$ref": "#/$defs/string_array"
     },
@@ -105,11 +108,49 @@
         "proof": {
           "type": "string"
         },
+        "slice_contribution_to_parent": {
+          "type": "string"
+        },
+        "residual_parent_intent": {
+          "type": "string"
+        },
+        "parent_proof_boundary": {
+          "type": "string"
+        },
+        "human_confirmation_needed": {
+          "$ref": "#/$defs/string_array"
+        },
         "depends_on": {
           "$ref": "#/$defs/string_array"
         },
         "parallel_with": {
           "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "parent_acceptance": {
+      "type": "object",
+      "required": [
+        "original_intent",
+        "acceptance_target",
+        "parent_proof_required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "original_intent": {
+          "type": "string"
+        },
+        "acceptance_target": {
+          "type": "string"
+        },
+        "parent_proof_required": {
+          "type": "string"
+        },
+        "residual_intent_rule": {
+          "type": "string"
+        },
+        "clarification_needed_when": {
+          "type": "string"
         }
       }
     },

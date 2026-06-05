@@ -1,0 +1,164 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1318 original intent preservation",
+  "date": "2026-06-05",
+  "scope": [
+    "Inspect existing startup/implement, Planning decomposition, closeout, final-response, Verification, and applicable-intent surfaces before implementation."
+  ],
+  "classification": "original-intent-preservation",
+  "goal": [
+    "Ground #1318 implementation in existing AW surfaces before changing runtime behavior.",
+    "Identify the smallest contracts needed so broad parent intent cannot be silently narrowed to a completed child slice."
+  ],
+  "non_goals": [
+    "Do not add a new project-management module, policy engine, or automatic business classifier.",
+    "Do not solve the broader #1326 durable applicable-intent source lane unless #1325 needs a compact first slice."
+  ],
+  "review_mode": {
+    "mode": "original-intent-preservation",
+    "review question": "Can existing startup/implement, Planning, Verification, closeout, completion_options, and final_response_rendering surfaces preserve parent intent end to end?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run python scripts/run_agentic_workspace.py start --task <#1318 implementation> --format json; uv run python scripts/run_agentic_workspace.py summary --format json; gh issue view 1318, 1319-1325; rg over workspace_runtime_primitives.py, Planning installer/schema/tests, Verification tests, closeout/final-response tests.",
+    "evidence sources": "Issue #1318 comments and child issues #1319-#1325; src/agentic_workspace/workspace_runtime_primitives.py; packages/planning/src/repo_planning_bootstrap/installer.py; planning-decomposition schema/template; tests/test_workspace_report_cli.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_implement_cli.py; packages/planning/tests."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1318",
+      "label": "parent original-intent lane",
+      "role": "parent",
+      "locator": "issue body and owner comments"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1319-#1325",
+      "label": "child issues",
+      "role": "closure standard",
+      "locator": "issue bodies"
+    },
+    {
+      "kind": "code",
+      "target": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "label": "startup/implement/report closeout projection",
+      "role": "implementation surface",
+      "locator": "completion_boundary, completion_options, closeout_report, final_response_rendering"
+    },
+    {
+      "kind": "code",
+      "target": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "label": "Planning archive and decomposition promotion",
+      "role": "implementation surface",
+      "locator": "archive-plan, closeout, promote decomposition lane"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Existing closeout options already separate slice and parent claims, but parent intent is not plain enough.",
+      "summary": "completion_options has claim-slice-complete, claim-work-complete, keep-parent-open, and close-parent-lane, and closeout_report renders final_response_rendering. The missing contract is a compact parent-original-intent status that final chat output must include when parent status is open or proof is narrower.",
+      "evidence": "workspace_runtime_primitives.py exposes _closeout_completion_options, _completion_boundary_payload, _closeout_report_payload, and _closeout_report_final_response_rendering_payload.",
+      "risk if unchanged": "An agent can pass proof for a slice and still write a user-facing report that sounds like the broad original request is complete.",
+      "suggested action": "Add a parent_intent_status or equivalent projection from intent_satisfaction, closure_check, required_continuation, completion_boundary, and proof_report; make it drive must_include and must_not_claim in final_response_rendering.",
+      "confidence": "high",
+      "source": "code inspection",
+      "promotion target": "#1322 and #1324",
+      "promotion trigger": "implement before parent closeout",
+      "post-remediation note shape": "Keep a fixture proving parent open plus slice complete produces an explicit final-response caveat."
+    },
+    {
+      "title": "Planning decomposition names the larger outcome but lacks a first-class parent acceptance contract.",
+      "summary": "planning-decomposition/v1 currently carries larger_intended_outcome, proof_expectations, and candidate_lanes. That is enough for high-level decomposition, but not enough to force each lane to state parent acceptance, residual parent intent, and parent closure proof.",
+      "evidence": ".agentic-workspace/planning/schemas/planning-decomposition.schema.json and TEMPLATE.decomposition.json have no parent_acceptance or residual_parent_intent field.",
+      "risk if unchanged": "A promoted child lane can inherit a broad title while the actionable acceptance narrows to the lane only.",
+      "suggested action": "Extend decomposition schema/template/projection and promotion behavior with compact parent acceptance fields, then keep child execplans tied to those fields.",
+      "confidence": "high",
+      "source": "schema/template inspection",
+      "promotion target": "#1321",
+      "promotion trigger": "before implementing child-slice closeout semantics",
+      "post-remediation note shape": "Retain schema/template tests rather than prose-only guidance."
+    },
+    {
+      "title": "The generated-code runtime-boundary example should be a representative regression, not wording only.",
+      "summary": "The parent issue's motivating phrase is precise: all runtime code should be generated from IR representations as a single source of truth. The fixture needs to prove that a freshness or primitive-migration slice cannot close that parent.",
+      "evidence": "#1318 issue body and comments; existing closeout tests already create active Planning records with behavior-preservation and Verification evidence.",
+      "risk if unchanged": "The PR could improve language while still allowing the exact under-scoping failure to recur.",
+      "suggested action": "Add a report/closeout fixture where current slice proof is generated target freshness, parent intent remains open, close-parent-lane and claim-work-complete are blocked, and final_response_rendering names the residual runtime-boundary intent.",
+      "confidence": "high",
+      "source": "issue body plus existing test patterns",
+      "promotion target": "#1323",
+      "promotion trigger": "land before claiming #1318 closure",
+      "post-remediation note shape": "Keep the exact broad phrase in the test fixture."
+    },
+    {
+      "title": "Applicable intent stack can be represented compactly with existing evidence surfaces for #1325.",
+      "summary": "Verification, assurance requirements, system intent, Memory guidance, and closeout_report already carry evidence and authority boundaries. #1325 needs a compact conflict/manual-verification packet, not a new policy engine.",
+      "evidence": "workspace_runtime_primitives.py already imports Verification reports and assurance requirements; closeout_report already has authority_boundary and final_response_rendering constraints.",
+      "risk if unchanged": "A broad user request can appear complete while an applicable subsystem or soft/manual requirement remains unresolved.",
+      "suggested action": "Add a compact applicable_intent_status projection that surfaces user/system/subsystem/soft intent evidence, conflicts or missing authority, manual verification needs, and the closeout/final-response consequence.",
+      "confidence": "medium-high",
+      "source": "report and Verification surface inspection",
+      "promotion target": "#1325",
+      "promotion trigger": "same PR if #1318 parent closure is claimed",
+      "post-remediation note shape": "Do not close sibling #1326 unless durable source discovery/precedence children are also implemented."
+    }
+  ],
+  "recommendation": {
+    "promote": "Implement through existing Planning, Verification, closeout_report, completion_options, final_response_rendering, authority-boundary, schema/template, and test surfaces.",
+    "defer": "Broader #1326 durable source discovery and precedence can remain open unless implemented explicitly.",
+    "dismiss": "Do not pursue a new automatic semantic classifier, dashboard, or policy engine for this lane."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run pytest tests/test_workspace_report_cli.py packages/planning/tests/test_summary.py packages/planning/tests/test_promote.py -q"
+  ],
+  "drift_log": [
+    "2026-06-05: Review record created by create-review."
+  ]
+}

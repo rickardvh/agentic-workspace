@@ -272,6 +272,14 @@
       "type": "object",
       "description": "Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions."
     },
+    "parent_intent_status": {
+      "$ref": "#/$defs/parent_intent_status",
+      "description": "Derived parent/original-intent status packet used to prevent slice proof from being reported as parent completion."
+    },
+    "applicable_intent_status": {
+      "$ref": "#/$defs/applicable_intent_status",
+      "description": "Derived applicable-intent evidence and conflict packet used to keep user, system, subsystem, and soft-intent obligations visible before broad closeout."
+    },
     "repair_loop_residue": {
       "type": "object",
       "description": "Derived validation-driven repair residue across Planning and Verification."
@@ -405,6 +413,44 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "parent_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/parent-intent-status/v1",
+          "description": "Discriminator for the parent/original-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether the recorded parent/original intent is satisfied, open, or only guidance."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Parent/original-intent status preserving larger intent across bounded slices."
+    },
+    "applicable_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/applicable-intent-status/v1",
+          "description": "Discriminator for the applicable-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether applicable-intent evidence is present, guidance-only, or requires attention."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations."
+    },
     "authority_boundary": {
       "type": "object",
       "required": [

@@ -59,7 +59,7 @@
       "#1313: lint guardrail fails on new hardcoded prompt semantic marker tables in guarded startup/routing functions."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "ready-for-pr"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "Replace prompt keyword semantic routing with agent-owned judgment supported by repo-agnostic AW facts, selectors, guidance, and guardrails."
@@ -72,13 +72,14 @@
       "outcome": "Remove prompt keyword semantic routing and preserve useful AW support as advisory/selectable/structural evidence.",
       "constraints": "No replacement semantic classifier; keep AW repo- and agent-agnostic.",
       "latitude": "Use authority boundaries, explicit selectors, tests, docs, and lint guardrails.",
-      "escalation": "Escalate if closure requires automatic prompt semantics or broad new runtime concepts."
+      "escalation": "Escalate if closure requires automatic prompt semantics or broad new runtime concepts.",
+      "proof": "passed"
     },
     "execution": {
       "milestone": "github-1309-workspace-replace-prompt-keyword-semantic-routin",
-      "status": "in-progress",
-      "next_step": "Create PR with closure matrix and passing proof.",
-      "proof": "Required proof set passed on 2026-06-04."
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed"
     },
     "scope": {
       "touched": [
@@ -165,7 +166,7 @@
   "references": [],
   "active_milestone": {
     "id": "github-1309-workspace-replace-prompt-keyword-semantic-routin",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -201,6 +202,7 @@
     "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "rg \"prompt keyword|semantic marker|hard-coded prompt\" src tests scripts docs .agentic-workspace -g \"*.py\" -g \"*.md\" -g \"*.json\"",
     "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
     "make test-workspace",
     "make lint-workspace",
@@ -253,17 +255,17 @@
   },
   "intent_satisfaction": {
     "original intent": "Replace assumptions and clever hard-coded host-repo prompt rules with agent judgment supported by AW facts, guidance, and learning surfaces.",
-    "was original intent fully satisfied?": "yes for #1309 and children #1310-#1313",
+    "was original intent fully satisfied?": "yes",
     "evidence of intent satisfaction": "Runtime prompt marker tables were removed from guarded startup/routing and objective-drift surfaces; advisory guidance is explicitly selectable; durable-intent and architecture-decision routing use structural/configured evidence; tests cover quiet defaults and selected guidance; lint blocks reintroduction of prompt semantic marker tables, including removal-intent classifiers.",
     "unsolved intent passed to": "none"
   },
   "execution_summary": {
     "outcome delivered": "prompt keyword semantic routing removed from the scoped lane and replaced with agent-owned advisory/selectable guidance",
     "validation confirmed": "passed",
-    "follow-on routed to": "none yet",
+    "follow-on routed to": "none",
     "post-work posterity capture": "closure evidence recorded in this execplan and PR body",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "PR review"
+    "resume from": "PR review",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
     "status": "none",
@@ -274,20 +276,20 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "none"
   },
   "closure_check": {
+    "closeout scope": "slice",
     "slice status": "complete",
     "larger-intent status": "closed",
     "closure decision": "archive-and-close",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
     "why this decision is honest": "The PR demonstrates the scoped replacement across runtime behavior, selectable advisory packets, schema/reference wording, tests, and lint guardrails for #1309-#1313.",
     "evidence carried forward": "PR closure matrix plus passing proof commands listed in validation_commands and proof_report.",
     "reopen trigger": "Review finds a remaining prompt keyword semantic router in the scoped guarded surfaces, or the guardrail misses an equivalent marker table."
@@ -310,11 +312,17 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "none"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "Improvement signal review was checked and no signal was found.",
+          "owner": "none",
+          "source": "improvement_signal_review.status"
+        }
+      ],
       "continuation": [],
       "memory": [],
       "config_check": [],
@@ -325,5 +333,20 @@
   "drift_log": [
     "2026-06-04: Promoted from TODO direct-task shape into an execplan.",
     "2026-06-04: Recorded delegation decision route=keep-local."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Replace assumptions and clever hard-coded host-repo prompt rules with agent judgment supported by AW facts, guidance, and learning surfaces.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: start/preflight/summary/report/implement payload behavior and lint validation.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none yet"
+  }
 }

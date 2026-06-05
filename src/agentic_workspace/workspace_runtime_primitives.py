@@ -7757,6 +7757,16 @@ def _closeout_report_traceability_rows(
     behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
     assurance = _as_dict(closeout_trust.get("assurance_requirements"))
+    parent_intent = _parent_intent_status_payload(
+        active_planning_record=active_planning_record,
+        intent_check=intent_check,
+        completion_boundary=completion_boundary,
+    )
+    applicable_intents = _applicable_intent_status_payload(
+        active_planning_record=active_planning_record,
+        verification=verification,
+        assurance_requirements=assurance,
+    )
     evidence_status = [item for item in _list_payload(assurance.get("evidence_status")) if isinstance(item, dict)]
     verification_evidence = [item for item in _list_payload(verification.get("evidence_status")) if isinstance(item, dict)]
     if not verification_evidence:
@@ -7833,6 +7843,29 @@ def _closeout_report_traceability_rows(
             "residual_risk_or_follow_up": text_from(completion_boundary.get("required_residual_intent")),
         },
         {
+            "id": "parent-intent",
+            "intent_or_requirement": "parent/original intent status",
+            "evidence_surface": "planning.active.planning_record.intent_satisfaction + parent_acceptance",
+            "evidence": text_from(parent_intent.get("original_intent"), fallback=text_from(parent_intent.get("parent_acceptance_target"))),
+            "status": "present" if parent_intent.get("original_intent") or parent_intent.get("parent_acceptance_target") else "missing",
+            "residual_risk_or_follow_up": text_from(parent_intent.get("residual_parent_intent"), fallback=parent_intent.get("status")),
+        },
+        {
+            "id": "applicable-intents",
+            "intent_or_requirement": "applicable user/system/subsystem/soft intent evidence",
+            "evidence_surface": "planning.active.planning_record.applicable_intents + verification + assurance",
+            "evidence": text_from(
+                f"{len(_list_payload(applicable_intents.get('sources')))} source(s); "
+                f"{len(_list_payload(applicable_intents.get('conflicts')))} conflict(s); "
+                f"{len(_list_payload(applicable_intents.get('manual_verification_needed')))} manual verification item(s)"
+            ),
+            "status": "missing" if applicable_intents.get("status") == "attention" else "present",
+            "residual_risk_or_follow_up": text_from(
+                "; ".join(_list_payload(applicable_intents.get("conflicts"))),
+                fallback=text_from("; ".join(_list_payload(applicable_intents.get("manual_verification_needed")))),
+            ),
+        },
+        {
             "id": "assurance-verification",
             "intent_or_requirement": "assurance and verification evidence",
             "evidence_surface": "closeout_trust.assurance_requirements + verification",
@@ -7860,6 +7893,12 @@ def _closeout_report_completeness_payload(
     proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
     behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     intent_check = _as_dict(closeout_trust.get("intent_satisfaction_check"))
+    parent_intent = _parent_intent_status_payload(
+        active_planning_record=active_planning_record,
+        intent_check=intent_check,
+        completion_boundary=completion_boundary,
+    )
+    applicable_intents = _applicable_intent_status_payload(active_planning_record=active_planning_record)
     options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
     keep_parent_open = _as_dict(options.get("keep-parent-open"))
     route_residue = _as_dict(options.get("route-residue"))
@@ -7940,6 +7979,26 @@ def _closeout_report_completeness_payload(
         "complete" if residual else "partial",
         residual or "no residual risk explicitly recorded",
         "residual risk statement is not explicit",
+    )
+    parent_open = parent_intent.get("status") != "satisfied"
+    add_check(
+        "parent-intent-status",
+        "incomplete" if parent_open and parent_intent.get("proof_is_slice_only") else "partial" if parent_open else "complete",
+        evidence_text(parent_intent.get("original_intent"), parent_intent.get("parent_acceptance_target")),
+        evidence_text(parent_intent.get("residual_parent_intent"), parent_intent.get("parent_proof_required"))
+        or "parent/original intent is not explicitly satisfied",
+    )
+    applicable_blocked = bool(applicable_intents.get("closeout_blocked"))
+    add_check(
+        "applicable-intent-status",
+        "incomplete" if applicable_blocked else "complete",
+        evidence_text(
+            applicable_intents.get("conflicts"),
+            applicable_intents.get("manual_verification_needed"),
+            applicable_intents.get("sources"),
+            "no applicable-intent conflicts recorded",
+        ),
+        "applicable intent conflict, missing authority, or manual verification remains" if applicable_blocked else "",
     )
     preservation_status = str(behavior_preservation.get("status") or "").strip()
     preservation_claims = _list_payload(behavior_preservation.get("claims"))
@@ -8542,6 +8601,8 @@ def _closeout_report_final_response_rendering_payload(
     next_action: str,
     decision_review: dict[str, Any] | None = None,
     behavior_preservation: dict[str, Any] | None = None,
+    parent_intent_status: dict[str, Any] | None = None,
+    applicable_intent_status: dict[str, Any] | None = None,
     review_mode: str = "",
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
@@ -8556,6 +8617,8 @@ def _closeout_report_final_response_rendering_payload(
     must_not_claim: list[str] = ["Do not dump raw closeout_report JSON into the final user-facing response."]
     decision_review = _as_dict(decision_review)
     behavior_preservation = _as_dict(behavior_preservation)
+    parent_intent_status = _as_dict(parent_intent_status)
+    applicable_intent_status = _as_dict(applicable_intent_status)
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
 
     def present(text: str) -> str:
@@ -8592,6 +8655,8 @@ def _closeout_report_final_response_rendering_payload(
             "behavior preservation proof": ("behavior proof:",),
             "behavior preservation caveat": ("behavior caveat:",),
             "review focus": ("review focus:",),
+            "parent intent status": ("parent intent:",),
+            "applicable intent status": ("applicable intent:",),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -8649,7 +8714,16 @@ def _closeout_report_final_response_rendering_payload(
         caveat_lines: list[str] = []
         for line in summary_lines:
             if line.startswith(
-                ("Closeout caveat:", "Closure boundary:", "Residue:", "Evidence caveat:", "Decision gap:", "Behavior caveat:")
+                (
+                    "Closeout caveat:",
+                    "Closure boundary:",
+                    "Residue:",
+                    "Evidence caveat:",
+                    "Decision gap:",
+                    "Behavior caveat:",
+                    "Parent intent:",
+                    "Applicable intent:",
+                )
             ):
                 caveat_lines.append(line)
         if not caveat_lines and not plain_done_allowed:
@@ -8837,6 +8911,40 @@ def _closeout_report_final_response_rendering_payload(
             "Do not claim no behavior changed, business logic preserved, migration complete, or compatibility proved unless behavior_preservation evidence supports that claim or the caveat is rendered."
         )
 
+    parent_status = present(str(parent_intent_status.get("status") or ""))
+    if parent_status and parent_status not in {"satisfied", "guidance-only", "not-recorded"}:
+        must_include.append("parent intent status")
+        parent_line_parts = [parent_status]
+        original_intent = present(str(parent_intent_status.get("original_intent") or ""))
+        current_slice = present(str(parent_intent_status.get("current_slice") or ""))
+        residual_parent = present(str(parent_intent_status.get("residual_parent_intent") or ""))
+        proof_boundary = present(str(parent_intent_status.get("proof_boundary") or ""))
+        if original_intent:
+            parent_line_parts.append(f"original: {original_intent}")
+        if current_slice:
+            parent_line_parts.append(f"current slice: {current_slice}")
+        if proof_boundary:
+            parent_line_parts.append(f"proof boundary: {proof_boundary}")
+        if residual_parent:
+            parent_line_parts.append(f"residual: {residual_parent}")
+        summary_lines.append(f"Parent intent: {'; '.join(parent_line_parts[:5])}")
+        must_not_claim.extend(str(item) for item in _list_payload(parent_intent_status.get("must_not_claim")) if str(item).strip())
+
+    if applicable_intent_status.get("closeout_blocked"):
+        must_include.append("applicable intent status")
+        conflicts = [str(item) for item in _list_payload(applicable_intent_status.get("conflicts")) if str(item).strip()]
+        manual = [str(item) for item in _list_payload(applicable_intent_status.get("manual_verification_needed")) if str(item).strip()]
+        missing = [str(item) for item in _list_payload(applicable_intent_status.get("missing_authority")) if str(item).strip()]
+        fragments = []
+        if conflicts:
+            fragments.append("conflict: " + "; ".join(conflicts[:2]))
+        if manual:
+            fragments.append("manual verification: " + "; ".join(manual[:2]))
+        if missing:
+            fragments.append("missing authority: " + "; ".join(missing[:2]))
+        summary_lines.append("Applicable intent: " + ("; ".join(fragments) if fragments else "unresolved applicable-intent obligation"))
+        must_not_claim.extend(str(item) for item in _list_payload(applicable_intent_status.get("must_not_claim")) if str(item).strip())
+
     boundary_text = present(completion_decision)
     completion_boundary_text = present(
         str(
@@ -8863,7 +8971,13 @@ def _closeout_report_final_response_rendering_payload(
     elif profile_requires_detail:
         summary_lines.append("Residue: none recorded.")
 
-    if lower_trust or incomplete_or_partial or has_material_guidance_signal:
+    parent_status_blocks_done = str(parent_intent_status.get("status") or "").strip() not in {
+        "",
+        "satisfied",
+        "guidance-only",
+        "not-recorded",
+    }
+    if lower_trust or incomplete_or_partial or has_material_guidance_signal or parent_status_blocks_done:
         must_not_claim.append("Do not render this closeout as a plain done summary without the lower-trust or incomplete-evidence caveat.")
     if incomplete_or_partial:
         must_include.append("missing or partial evidence caveat")
@@ -8873,9 +8987,24 @@ def _closeout_report_final_response_rendering_payload(
 
     rendering_mode = "compact" if guidance_only else "evidence-backed" if profile_requires_detail else "compact"
     status_value = (
-        "required" if profile_requires_detail or lower_trust or incomplete_or_partial or has_material_guidance_signal else "available"
+        "required"
+        if (
+            profile_requires_detail
+            or lower_trust
+            or incomplete_or_partial
+            or has_material_guidance_signal
+            or parent_status_blocks_done
+            or applicable_intent_status.get("closeout_blocked")
+        )
+        else "available"
     )
-    plain_done_allowed = not (lower_trust or incomplete_or_partial or has_material_guidance_signal)
+    plain_done_allowed = not (
+        lower_trust
+        or incomplete_or_partial
+        or has_material_guidance_signal
+        or parent_status_blocks_done
+        or applicable_intent_status.get("closeout_blocked")
+    )
     summary_lines = summary_lines[:8]
     unique_must_include = list(dict.fromkeys(must_include))
     chat_report_template = chat_report_template_payload(
@@ -8984,6 +9113,16 @@ def _closeout_report_payload(
         requested_outcome=requested_outcome,
         intent_check=intent_check,
     )
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=active_planning_record,
+        intent_check=intent_check,
+        completion_boundary=completion_boundary,
+    )
+    applicable_intent_status = _applicable_intent_status_payload(
+        active_planning_record=active_planning_record,
+        verification=verification,
+        assurance_requirements=_as_dict(closeout_trust.get("assurance_requirements")),
+    )
     changed_surfaces = str(execution.get("changed surfaces") or "").strip()
     validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
     completion_decision = str(completion_contract.get("completion_decision", "unknown"))
@@ -9019,6 +9158,8 @@ def _closeout_report_payload(
         next_action=str(next_action),
         decision_review=decision_review,
         behavior_preservation=behavior_preservation,
+        parent_intent_status=parent_intent_status,
+        applicable_intent_status=applicable_intent_status,
         review_mode=selected_review_mode,
     )
     detail_commands = {
@@ -9103,6 +9244,8 @@ def _closeout_report_payload(
             "closure_decision": str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip(),
         },
         "intent_evidence": intent_evidence,
+        "parent_intent_status": parent_intent_status,
+        "applicable_intent_status": applicable_intent_status,
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
@@ -9259,6 +9402,8 @@ def _derived_continuation_projection_payloads(
         "external_evidence_safety": external_evidence_safety,
         "workflow_compliance_summary": workflow_compliance_summary,
         "closeout_report": closeout_report,
+        "parent_intent_status": closeout_report.get("parent_intent_status", {}),
+        "applicable_intent_status": closeout_report.get("applicable_intent_status", {}),
         "continuation_next_actions": continuation_next_actions,
         "migration_pilot_template": _migration_pilot_template_payload(cli_invoke=config.cli_invoke),
         "compact_output_criteria": _compact_output_criteria_payload(cli_invoke=config.cli_invoke),
@@ -13324,6 +13469,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     completes = str(intent_continuity.get("this slice completes the larger intended outcome", "")).strip().lower()
     continuation = str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower()
     external_closeout = _external_intent_closeout_check(target_root=target_root, planning_record=planning_record)
+    applicable_intents = _applicable_intent_status_payload(active_planning_record=raw_planning_record or planning_record)
     if completes in {"yes", "true"} and continuation in {"no", "false", "none"}:
         trust = "satisfied"
         recommended_next_action = "Closeout may claim intent satisfaction if proof also passed."
@@ -13336,6 +13482,9 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     if trust == "satisfied" and external_closeout.get("trust") != "normal":
         trust = "follow-up-required"
         recommended_next_action = str(external_closeout.get("recommended_next_action") or recommended_next_action)
+    if applicable_intents.get("closeout_blocked"):
+        trust = "needs-review"
+        recommended_next_action = "Resolve applicable-intent conflict, missing authority, or manual verification before broad closeout."
     completion_boundary = _completion_boundary_payload(
         active_planning_record=planning_record,
         raw_planning_record=raw_planning_record,
@@ -13395,9 +13544,11 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
             },
             "completion_boundary": completion_boundary,
             "external_intent_evidence": external_closeout,
+            "applicable_intent_status": applicable_intents,
             "non_substitution_rule": "Validation success alone is not closure evidence.",
         },
         "external_intent_evidence": external_closeout,
+        "applicable_intent_status": applicable_intents,
         "recommended_next_action": recommended_next_action,
     }
 
@@ -14929,6 +15080,14 @@ def _run_preflight_command(
         task_text=task_text,
         execution_posture=execution_posture,
     )
+    active_parent_record = _active_planning_record_for_report_section(target_root=target_root)
+    active_parent_boundary = _completion_boundary_payload(active_planning_record=active_parent_record)
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=active_parent_record,
+        intent_check={},
+        completion_boundary=active_parent_boundary,
+    )
+    applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_parent_record)
     if active_only:
         active_payload = {
             "kind": "preflight-response/v1",
@@ -14949,6 +15108,8 @@ def _run_preflight_command(
             "skill_routing": _startup_skill_routing_payload(target_root=target_root, cli_invoke=config.cli_invoke),
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
+            "parent_intent_status": parent_intent_status,
+            "applicable_intent_status": applicable_intent_status,
         }
         return active_payload
     startup_payload = _defaults_payload().get("startup", {})
@@ -15021,6 +15182,8 @@ def _run_preflight_command(
         "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
         "durable_intent": durable_intent,
         "active_planning_state": active_state,
+        "parent_intent_status": parent_intent_status,
+        "applicable_intent_status": applicable_intent_status,
     }
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -15779,6 +15942,33 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             **({"task_search": skill_routing["task_search"]} if isinstance(skill_routing, dict) and "task_search" in skill_routing else {}),
         },
     }
+    if isinstance(payload.get("parent_intent_status"), dict):
+        projected["parent_intent_status"] = {
+            key: payload["parent_intent_status"].get(key)
+            for key in (
+                "status",
+                "original_intent",
+                "current_slice",
+                "proof_boundary",
+                "proof_is_slice_only",
+                "residual_parent_intent",
+                "parent_proof_required",
+            )
+            if key in payload["parent_intent_status"]
+        }
+    if isinstance(payload.get("applicable_intent_status"), dict):
+        projected["applicable_intent_status"] = {
+            key: payload["applicable_intent_status"].get(key)
+            for key in (
+                "status",
+                "conflicts",
+                "missing_authority",
+                "manual_verification_needed",
+                "blocked_claims",
+                "closeout_blocked",
+            )
+            if key in payload["applicable_intent_status"]
+        }
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -16383,6 +16573,22 @@ def _start_payload(
         task_text=task_text,
         changed_paths=changed_paths,
     )
+    raw_planning_record = (
+        _raw_active_planning_record_for_closeout(planning_record=planning_record, target_root=target_root)
+        if active_planning_present and isinstance(planning_record, dict)
+        else {}
+    )
+    active_parent_record = raw_planning_record or (planning_record if isinstance(planning_record, dict) else {})
+    completion_boundary = _completion_boundary_payload(active_planning_record=active_parent_record)
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=active_parent_record,
+        intent_check={},
+        completion_boundary=completion_boundary,
+    )
+    applicable_intent_status = _applicable_intent_status_payload(
+        active_planning_record=active_parent_record,
+        assurance_requirements=assurance_requirements,
+    )
     current_need = "continue-active-planning" if active_planning_present else "first-contact-routing"
     if changed_paths:
         current_need = "changed-path-startup"
@@ -16466,6 +16672,10 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    if parent_intent_status.get("status") != "guidance-only":
+        payload["parent_intent_status"] = parent_intent_status
+    if applicable_intent_status.get("status") != "guidance-only":
+        payload["applicable_intent_status"] = applicable_intent_status
     if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
         payload["assurance_requirements"] = assurance_requirements
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
@@ -17175,6 +17385,33 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         },
         "memory": payload.get("memory_consult", {}),
     }
+    if isinstance(payload.get("parent_intent_status"), dict):
+        context["parent_intent_status"] = {
+            key: payload["parent_intent_status"].get(key)
+            for key in (
+                "status",
+                "original_intent",
+                "current_slice",
+                "proof_boundary",
+                "proof_is_slice_only",
+                "residual_parent_intent",
+                "parent_proof_required",
+            )
+            if key in payload["parent_intent_status"]
+        }
+    if isinstance(payload.get("applicable_intent_status"), dict):
+        context["applicable_intent_status"] = {
+            key: payload["applicable_intent_status"].get(key)
+            for key in (
+                "status",
+                "conflicts",
+                "missing_authority",
+                "manual_verification_needed",
+                "blocked_claims",
+                "closeout_blocked",
+            )
+            if key in payload["applicable_intent_status"]
+        }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
         cli_invocation = payload.get("cli_invocation", {})
@@ -17463,6 +17700,20 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    active_parent_record = (
+        _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root) if active_planning_present else {}
+    )
+    completion_boundary = _completion_boundary_payload(active_planning_record=active_parent_record)
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=active_parent_record,
+        intent_check={},
+        completion_boundary=completion_boundary,
+    )
+    applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_parent_record)
+    if parent_intent_status.get("status") != "guidance-only":
+        payload["parent_intent_status"] = parent_intent_status
+    if applicable_intent_status.get("status") != "guidance-only":
+        payload["applicable_intent_status"] = applicable_intent_status
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
     if startup_review["status"] == "attention":
         payload["startup_review"] = startup_review
@@ -18877,6 +19128,347 @@ def _closeout_intent_evidence_payload(
     }
 
 
+def _parent_intent_status_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    intent_check: dict[str, Any],
+    completion_boundary: dict[str, Any],
+) -> dict[str, Any]:
+    active_planning_record = _as_dict(active_planning_record)
+    intent_check = _as_dict(intent_check)
+    completion_boundary = _as_dict(completion_boundary)
+    intent_satisfaction = _as_dict(active_planning_record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(active_planning_record.get("intent_continuity"))
+    required_continuation = _as_dict(active_planning_record.get("required_continuation"))
+    closure_check = _as_dict(active_planning_record.get("closure_check"))
+    proof_report = _as_dict(active_planning_record.get("proof_report"))
+    intent_proof = _as_dict(proof_report.get("intent_proof"))
+    parent_acceptance = _as_dict(active_planning_record.get("parent_acceptance"))
+    active_milestone = _as_dict(active_planning_record.get("active_milestone"))
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    execution = _as_dict(active_planning_record.get("execution_run"))
+
+    def present(*values: Any) -> str:
+        for value in values:
+            text = str(value or "").strip()
+            if text and text.lower() not in {"none", "null", "unknown", "pending", "not recorded"}:
+                return text
+        return ""
+
+    def truthy_yes(value: Any) -> bool:
+        return str(value or "").strip().lower() in {"yes", "true", "satisfied", "complete", "completed", "closed"}
+
+    original_intent = present(
+        intent_satisfaction.get("original intent"),
+        parent_acceptance.get("original_intent"),
+        parent_acceptance.get("parent_intent"),
+        intent_continuity.get("larger intended outcome"),
+        intent_check.get("larger_intent"),
+        completion_boundary.get("final_satisfaction"),
+    )
+    current_slice = present(
+        parent_acceptance.get("current_slice"),
+        parent_acceptance.get("slice_intent"),
+        delegated.get("requested outcome"),
+        delegated.get("requested_outcome"),
+        active_milestone.get("scope"),
+        execution.get("what happened"),
+    )
+    residual_intent = present(
+        parent_acceptance.get("residual_parent_intent"),
+        parent_acceptance.get("residual_intent"),
+        completion_boundary.get("required_residual_intent"),
+        required_continuation.get("required follow-on for the larger intended outcome"),
+        intent_satisfaction.get("unsolved intent passed to"),
+    )
+    continuation_owner = present(
+        parent_acceptance.get("continuation_owner"),
+        completion_boundary.get("required_follow_up_owner"),
+        required_continuation.get("owner surface"),
+        intent_continuity.get("continuation surface"),
+        intent_check.get("continuation_surface"),
+    )
+    proof_boundary = present(
+        parent_acceptance.get("proof_boundary"),
+        intent_proof.get("claim_boundary"),
+        intent_proof.get("claim boundary"),
+        completion_boundary.get("bounded_slice_success"),
+    )
+    parent_acceptance_target = present(
+        parent_acceptance.get("parent_acceptance"),
+        parent_acceptance.get("acceptance_target"),
+        parent_acceptance.get("final_satisfaction"),
+        completion_boundary.get("final_satisfaction"),
+        original_intent,
+    )
+    parent_proof_required = present(
+        parent_acceptance.get("parent_proof_required"),
+        parent_acceptance.get("evidence_required_for_parent_completion"),
+        completion_boundary.get("evidence_required_for_final_completion"),
+    )
+    required_continuation_signal = _required_continuation_present(required_continuation)
+    has_parent_signal = bool(
+        original_intent
+        or residual_intent
+        or continuation_owner
+        or parent_acceptance
+        or intent_satisfaction
+        or intent_continuity
+        or required_continuation_signal
+    )
+    if not has_parent_signal:
+        return {
+            "kind": "agentic-workspace/parent-intent-status/v1",
+            "status": "guidance-only",
+            "original_intent": "",
+            "parent_acceptance_target": "",
+            "current_slice": "",
+            "proof_boundary": "not-recorded",
+            "proof_is_slice_only": False,
+            "residual_parent_intent": "",
+            "continuation_owner": "",
+            "parent_proof_required": "",
+            "closure_decision": "not-recorded",
+            "larger_intent_status": "not-recorded",
+            "must_not_claim": [],
+            "source_fields": [
+                "planning.active.planning_record.intent_satisfaction",
+                "planning.active.planning_record.intent_continuity",
+                "planning.active.planning_record.required_continuation",
+                "planning.active.planning_record.parent_acceptance",
+                "planning.active.planning_record.proof_report.intent_proof",
+                "planning.active.planning_record.closure_check",
+                "report.closeout_trust.intent_satisfaction_check",
+                "report.completion_contract.completion_boundary",
+            ],
+            "rule": "No explicit parent/original intent boundary was recorded for this surface.",
+        }
+
+    closure_status = str(closure_check.get("larger-intent status") or closure_check.get("larger_intent_status") or "").strip().lower()
+    closure_decision = str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+    intent_satisfied = (
+        truthy_yes(intent_satisfaction.get("was original intent fully satisfied?"))
+        or truthy_yes(intent_continuity.get("this slice completes the larger intended outcome"))
+        or truthy_yes(intent_continuity.get("this_slice_completes_the_larger_intended_outcome"))
+    )
+    intent_trust = str(intent_check.get("trust") or "").strip().lower()
+    required_follow_on = (
+        str(required_continuation.get("required follow-on for the larger intended outcome") or intent_check.get("required_follow_on") or "")
+        .strip()
+        .lower()
+    )
+    parent_closed = (
+        intent_satisfied
+        and closure_status in {"closed", "complete", "completed", "done", ""}
+        and closure_decision in {"archive-and-close", "close", "closed", ""}
+        and required_follow_on not in {"yes", "true"}
+        and intent_trust not in {"follow-up-required", "needs-review"}
+    )
+    parent_open = (
+        not parent_closed
+        or closure_status in {"open", "partial", "unfinished", "follow-up-required"}
+        or required_follow_on in {"yes", "true"}
+        or intent_trust in {"follow-up-required", "needs-review"}
+    )
+    proof_boundary_lower = proof_boundary.lower()
+    proof_is_slice_only = any(token in proof_boundary_lower for token in ("slice", "work", "current", "bounded"))
+    narrowed_proof = proof_is_slice_only and parent_open
+    status = "satisfied" if parent_closed else "open" if parent_open else "needs-review"
+    must_not_claim = [
+        "Do not claim the parent/original intent is complete unless parent_intent_status.status is satisfied.",
+        "Do not collapse current slice proof into parent completion proof.",
+    ]
+    if narrowed_proof:
+        must_not_claim.append("Do not report the work as fully done when proof only covers the current slice.")
+    return {
+        "kind": "agentic-workspace/parent-intent-status/v1",
+        "status": status,
+        "original_intent": original_intent,
+        "parent_acceptance_target": parent_acceptance_target,
+        "current_slice": current_slice,
+        "proof_boundary": proof_boundary or "not-recorded",
+        "proof_is_slice_only": narrowed_proof,
+        "residual_parent_intent": residual_intent,
+        "continuation_owner": continuation_owner,
+        "parent_proof_required": parent_proof_required,
+        "closure_decision": closure_decision or "not-recorded",
+        "larger_intent_status": closure_status or "not-recorded",
+        "must_not_claim": must_not_claim,
+        "source_fields": [
+            "planning.active.planning_record.intent_satisfaction",
+            "planning.active.planning_record.intent_continuity",
+            "planning.active.planning_record.required_continuation",
+            "planning.active.planning_record.parent_acceptance",
+            "planning.active.planning_record.proof_report.intent_proof",
+            "planning.active.planning_record.closure_check",
+            "report.closeout_trust.intent_satisfaction_check",
+            "report.completion_contract.completion_boundary",
+        ],
+        "rule": "Slices are execution mechanics; parent/original intent is complete only when explicit parent acceptance and closeout evidence say so.",
+    }
+
+
+def _unplanned_parent_intent_status_payload(
+    *,
+    parent_intent_status: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+    generated_surface_trust: dict[str, Any],
+) -> dict[str, Any]:
+    parent_intent_status = _as_dict(parent_intent_status)
+    task = " ".join(str(task_text or "").split())
+    if parent_intent_status.get("status") != "guidance-only" or not task or not changed_paths:
+        return parent_intent_status
+
+    generated_surface_trust = _as_dict(generated_surface_trust)
+    generated_items = [item for item in _list_payload(generated_surface_trust.get("items")) if isinstance(item, dict)]
+    if generated_surface_trust.get("status") != "present" or not generated_items:
+        return parent_intent_status
+
+    generated_paths = [str(item.get("path") or "").strip() for item in generated_items if str(item.get("path") or "").strip()]
+    path_summary = ", ".join(generated_paths[:3])
+    if len(generated_paths) > 3:
+        path_summary = f"{path_summary}, ..."
+
+    must_not_claim = [
+        "Do not claim the parent/original intent is satisfied from generated-surface freshness or changed-path proof.",
+        "Do not silently narrow the explicit task text into a generated-surface slice without Planning/decomposition evidence when agent judgment says the task is broad.",
+    ]
+    return {
+        "kind": "agentic-workspace/parent-intent-status/v1",
+        "status": "needs-planning",
+        "original_intent": task,
+        "parent_acceptance_target": task,
+        "current_slice": f"changed generated surface(s): {path_summary}" if path_summary else "changed generated surface(s)",
+        "proof_boundary": "changed-path/generated-surface proof only",
+        "proof_is_slice_only": True,
+        "residual_parent_intent": (
+            "Parent/original intent has not been recorded in Planning; preserve it before treating this generated-surface "
+            "slice as the whole request."
+        ),
+        "continuation_owner": "Planning",
+        "parent_proof_required": "Create or select Planning/decomposition/execplan evidence before claiming parent completion.",
+        "required_next_action": "Preserve the raw task as parent/original-intent evidence in Planning before narrowing or claiming completion.",
+        "closure_decision": "not-recorded",
+        "larger_intent_status": "not-recorded",
+        "must_not_claim": must_not_claim,
+        "source_fields": [
+            "task_intent.task_excerpt",
+            "changed_paths",
+            "generated_surface_trust",
+            "planning.active.planning_record.parent_acceptance",
+        ],
+        "authority_boundary": _authority_boundary_payload(
+            surface="parent_intent_status",
+            observed_by_aw=[
+                "task_text_available=True",
+                "active_parent_acceptance=False",
+                f"generated_surface_count={len(generated_items)}",
+            ],
+            recommended_by_aw=["preserve raw task text in Planning/decomposition before parent-completion claims"],
+            agent_owned_decisions=[
+                "whether the explicit task is broad enough to require decomposition before implementation",
+                "the concrete first slice and proof boundary",
+            ],
+            human_owned_decisions=["acceptance of parent intent, decomposition, and completion"],
+            rule="AW preserves explicit task text and mechanical changed-path facts; it does not semantically classify the prompt.",
+        ),
+        "rule": (
+            "When changed paths narrow explicit task text before Planning records parent acceptance, AW preserves the raw task "
+            "as candidate parent intent; the agent owns semantic work-shape judgment."
+        ),
+    }
+
+
+def _applicable_intent_status_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    verification: dict[str, Any] | None = None,
+    assurance_requirements: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    active_planning_record = _as_dict(active_planning_record)
+    verification = _as_dict(verification)
+    assurance_requirements = _as_dict(assurance_requirements)
+    raw = active_planning_record.get("applicable_intents")
+    if not isinstance(raw, dict):
+        raw = active_planning_record.get("applicable_intent")
+    applicable = _as_dict(raw)
+
+    sources = [item for item in _list_payload(applicable.get("sources")) if isinstance(item, dict)]
+    conflicts = [str(item).strip() for item in _list_payload(applicable.get("conflicts")) if str(item).strip()]
+    missing_authority = [str(item).strip() for item in _list_payload(applicable.get("missing_authority")) if str(item).strip()]
+    manual_verification = [
+        str(item).strip()
+        for item in _list_payload(applicable.get("manual_verification_needed") or applicable.get("manual_verification"))
+        if str(item).strip()
+    ]
+    soft_intents = [str(item).strip() for item in _list_payload(applicable.get("soft_intents")) if str(item).strip()]
+    system_intents = [str(item).strip() for item in _list_payload(applicable.get("system_intents")) if str(item).strip()]
+    subsystem_intents = [str(item).strip() for item in _list_payload(applicable.get("subsystem_intents")) if str(item).strip()]
+    user_intents = [str(item).strip() for item in _list_payload(applicable.get("user_intents")) if str(item).strip()]
+
+    for status in _list_payload(assurance_requirements.get("evidence_status")):
+        if not isinstance(status, dict):
+            continue
+        state = str(status.get("state") or "").strip()
+        requirement = str(status.get("requirement_id") or status.get("id") or "assurance requirement").strip()
+        if state in {"missing-evidence", "review-required"}:
+            manual_verification.append(f"{requirement}: {state}")
+    for gap in _list_payload(verification.get("known_gaps")) + _list_payload(verification.get("active_known_gaps")):
+        if not isinstance(gap, dict):
+            continue
+        gap_id = str(gap.get("id") or "verification-gap").strip()
+        reason = str(gap.get("reason") or gap.get("residual_risk") or "").strip()
+        blocked_claims = [str(item).strip() for item in _list_payload(gap.get("blocked_claims")) if str(item).strip()]
+        if blocked_claims:
+            manual_verification.append(f"{gap_id}: blocks {', '.join(blocked_claims)}")
+        elif reason:
+            manual_verification.append(f"{gap_id}: {reason}")
+
+    manual_verification = _dedupe(manual_verification)
+    evidence_count = len(sources) + len(user_intents) + len(system_intents) + len(subsystem_intents) + len(soft_intents)
+    blocking = bool(conflicts or missing_authority or manual_verification)
+    status = "attention" if blocking else "present" if evidence_count else "guidance-only"
+    blocked_claims = _dedupe(
+        [str(item).strip() for item in _list_payload(applicable.get("blocked_claims")) if str(item).strip()]
+        or (["claim-work-complete", "close-parent-lane"] if blocking else [])
+    )
+    return {
+        "kind": "agentic-workspace/applicable-intent-status/v1",
+        "status": status,
+        "user_intents": user_intents,
+        "system_intents": system_intents,
+        "subsystem_intents": subsystem_intents,
+        "soft_intents": soft_intents,
+        "sources": sources,
+        "conflicts": conflicts,
+        "missing_authority": missing_authority,
+        "manual_verification_needed": manual_verification,
+        "blocked_claims": blocked_claims,
+        "closeout_blocked": blocking,
+        "authority_boundary": _authority_boundary_payload(
+            surface="applicable_intent_status",
+            observed_by_aw=[
+                f"intent_source_count={evidence_count}",
+                f"conflict_count={len(conflicts)}",
+                f"manual_verification_count={len(manual_verification)}",
+            ],
+            recommended_by_aw=["ask for clarification or keep closeout partial when conflicts or manual verification remain"]
+            if blocking
+            else [],
+            agent_owned_decisions=["semantic reconciliation of applicable intents"],
+            human_owned_decisions=["acceptance, waiver, or clarification when applicable intents conflict or require manual verification"],
+            rule="AW surfaces applicable-intent evidence and conflicts; it does not decide which intent wins.",
+        ),
+        "must_not_claim": [
+            "Do not claim full closeout while applicable intent conflicts, missing authority, or manual verification obligations remain unresolved."
+        ]
+        if blocking
+        else [],
+        "rule": "Applicable user, system, subsystem, and soft intents must remain visible for broad or high-assurance work; unresolved conflicts block or caveat closeout.",
+    }
+
+
 def _read_task_text_from_file(*, target_root: Path, task_file: str | None) -> str | None:
     if not task_file:
         return None
@@ -20201,6 +20793,26 @@ def _implement_payload(
         intent_discovery=intent_discovery,
         intent_acknowledgement=intent_acknowledgement,
     )
+    generated_surface_trust = _generated_surface_trust_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        proof=proof,
+        cli_invoke=config.cli_invoke,
+    )
+    active_planning_record_for_intent = _active_planning_record_for_report_section(target_root=target_root)
+    parent_completion_boundary = _completion_boundary_payload(active_planning_record=active_planning_record_for_intent)
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=active_planning_record_for_intent,
+        intent_check={},
+        completion_boundary=parent_completion_boundary,
+    )
+    parent_intent_status = _unplanned_parent_intent_status_payload(
+        parent_intent_status=parent_intent_status,
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        generated_surface_trust=generated_surface_trust,
+    )
+    applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_planning_record_for_intent)
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -20287,13 +20899,10 @@ def _implement_payload(
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text, acceptance=acceptance),
         "intent_acknowledgement": intent_acknowledgement,
         "intent_evidence": intent_evidence,
+        "parent_intent_status": parent_intent_status,
+        "applicable_intent_status": applicable_intent_status,
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
-        "generated_surface_trust": _generated_surface_trust_payload(
-            target_root=target_root,
-            changed_paths=normalized_paths,
-            proof=proof,
-            cli_invoke=config.cli_invoke,
-        ),
+        "generated_surface_trust": generated_surface_trust,
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
@@ -20576,6 +21185,33 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 else [],
             },
             "intent_evidence": _compact_intent_evidence(payload.get("intent_evidence", {})),
+            "parent_intent_status": {
+                key: payload.get("parent_intent_status", {}).get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "original_intent",
+                    "current_slice",
+                    "proof_boundary",
+                    "proof_is_slice_only",
+                    "residual_parent_intent",
+                    "continuation_owner",
+                )
+                if isinstance(payload.get("parent_intent_status"), dict) and key in payload.get("parent_intent_status", {})
+            },
+            "applicable_intent_status": {
+                key: payload.get("applicable_intent_status", {}).get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "conflicts",
+                    "missing_authority",
+                    "manual_verification_needed",
+                    "blocked_claims",
+                    "closeout_blocked",
+                )
+                if isinstance(payload.get("applicable_intent_status"), dict) and key in payload.get("applicable_intent_status", {})
+            },
             "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
@@ -20612,6 +21248,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.workflow_sufficiency",
                 "context.acceptance",
                 "context.intent_evidence",
+                "context.parent_intent_status",
+                "context.applicable_intent_status",
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",
@@ -20627,6 +21265,22 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+    tiny_context = projected.get("context", {})
+    if isinstance(tiny_context, dict):
+        parent_packet = tiny_context.get("parent_intent_status", {})
+        parent_status = str(parent_packet.get("status") or "").strip() if isinstance(parent_packet, dict) else ""
+        if parent_status in {"", "guidance-only", "not-recorded", "needs-planning"}:
+            tiny_context.pop("parent_intent_status", None)
+            selectors = projected.get("drill_down", {}).get("available_selectors", [])
+            if isinstance(selectors, list):
+                projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "context.parent_intent_status"]
+        applicable_packet = tiny_context.get("applicable_intent_status", {})
+        applicable_status = str(applicable_packet.get("status") or "").strip() if isinstance(applicable_packet, dict) else ""
+        if applicable_status in {"", "guidance-only", "not-recorded"}:
+            tiny_context.pop("applicable_intent_status", None)
+            selectors = projected.get("drill_down", {}).get("available_selectors", [])
+            if isinstance(selectors, list):
+                projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "context.applicable_intent_status"]
     generated_surface_trust = payload.get("generated_surface_trust", {})
     if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
         projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)

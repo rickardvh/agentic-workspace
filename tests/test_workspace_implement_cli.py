@@ -1443,6 +1443,134 @@ def test_implement_allows_completed_archived_plan_residue_with_routed_continuati
     assert facts["archived_planning_residue"]["records"][0]["closure_decision"] == "archive-but-keep-lane-open"
 
 
+def test_implement_context_surfaces_parent_intent_for_active_slice(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    plan = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "generated-runtime-boundary.plan.json"
+    _write(
+        plan,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "title": "Generated Runtime Boundary",
+                "active_milestone": {
+                    "id": "generated-runtime-boundary",
+                    "status": "active",
+                    "scope": "Refresh one generated adapter.",
+                },
+                "delegated_judgment": {"requested outcome": "Refresh one generated adapter."},
+                "parent_acceptance": {
+                    "original_intent": "all runtime code should be generated from IR representations as a single source of truth",
+                    "parent_acceptance": "runtime behavior cannot be changed outside generated IR or declared primitive implementation boundaries",
+                    "current_slice": "generated parser adapter freshness",
+                    "residual_parent_intent": "runtime behavior can still be changed outside generated IR/primitive implementation boundaries",
+                    "proof_boundary": "slice-only",
+                },
+                "intent_continuity": {
+                    "larger intended outcome": "all runtime code should be generated from IR representations as a single source of truth",
+                    "this slice completes the larger intended outcome": "no",
+                    "continuation surface": "#1318",
+                },
+                "required_continuation": {
+                    "required follow-on for the larger intended outcome": "yes",
+                    "owner surface": "#1318",
+                },
+                "proof_report": {
+                    "validation proof": "pending",
+                    "intent_proof": {"status": "needs_review", "claim_boundary": "slice"},
+                },
+            },
+            indent=2,
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'generated-runtime-boundary', title = 'Generated runtime boundary', surface = '.agentic-workspace/planning/execplans/generated-runtime-boundary.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write(tmp_path / "generated" / "workspace" / "python" / "parser_adapter.py", "# generated\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/parser_adapter.py",
+                "--task",
+                "Refresh the generated parser adapter without closing the full runtime-generation boundary.",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    parent = payload["parent_intent_status"]
+    assert parent["status"] == "open"
+    assert parent["original_intent"] == "all runtime code should be generated from IR representations as a single source of truth"
+    assert parent["current_slice"] == "generated parser adapter freshness"
+    assert parent["proof_is_slice_only"] is True
+    assert "runtime behavior can still be changed outside generated IR" in parent["residual_parent_intent"]
+
+
+def test_implement_preserves_unplanned_parent_intent_for_generated_surface_slice(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}\n")
+    _write(tmp_path / "generated" / "workspace" / "python" / "parser_adapter.py", "# generated\n")
+    task = "all runtime code should be generated from IR representations as a single source of truth"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/parser_adapter.py",
+                "--task",
+                task,
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    parent = payload["parent_intent_status"]
+    assert parent["status"] == "needs-planning"
+    assert parent["original_intent"] == task
+    assert parent["parent_acceptance_target"] == task
+    assert parent["current_slice"] == "changed generated surface(s): generated/workspace/python/parser_adapter.py"
+    assert parent["proof_boundary"] == "changed-path/generated-surface proof only"
+    assert parent["proof_is_slice_only"] is True
+    assert parent["larger_intent_status"] == "not-recorded"
+    assert parent["closure_decision"] == "not-recorded"
+    assert parent["required_next_action"].startswith("Preserve the raw task")
+    assert "generated-surface freshness" in parent["must_not_claim"][0]
+    assert parent["source_fields"] == [
+        "task_intent.task_excerpt",
+        "changed_paths",
+        "generated_surface_trust",
+        "planning.active.planning_record.parent_acceptance",
+    ]
+    authority = parent["authority_boundary"]
+    assert authority["surface"] == "parent_intent_status"
+    assert "active_parent_acceptance=False" in authority["observed_by_aw"]
+    assert "semantic work-shape judgment" in parent["rule"]
+    assert "does not semantically classify the prompt" in authority["reporting_rule"]
+    assert payload["generated_surface_trust"]["status"] == "present"
+
+
 def test_implement_rejects_archived_plan_residue_with_only_activation_trigger(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

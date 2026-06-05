@@ -3247,6 +3247,9 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
             if not isinstance(payload, dict) or payload.get("kind") != "planning-decomposition/v1":
                 continue
             lanes = payload.get("candidate_lanes", [])
+            parent_acceptance = payload.get("parent_acceptance", {})
+            if not isinstance(parent_acceptance, dict):
+                parent_acceptance = {}
             lane_summaries: list[dict[str, str]] = []
             if isinstance(lanes, list):
                 for raw in lanes:
@@ -3257,6 +3260,9 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
                         "title": str(raw.get("title", "")).strip(),
                         "readiness": str(raw.get("readiness", "")).strip(),
                         "owner_surface": str(raw.get("owner_surface", "")).strip(),
+                        "slice_contribution_to_parent": str(raw.get("slice_contribution_to_parent", "")).strip(),
+                        "residual_parent_intent": str(raw.get("residual_parent_intent", "")).strip(),
+                        "parent_proof_boundary": str(raw.get("parent_proof_boundary", "")).strip(),
                     }
                     if lane["readiness"] == "ready":
                         ready_lane_count += 1
@@ -3268,6 +3274,17 @@ def _planning_decomposition_projection(*, target_root: Path, decomposition_dir: 
                     "path": path.relative_to(target_root).as_posix(),
                     "title": str(payload.get("title", "")).strip(),
                     "outcome": str(payload.get("larger_intended_outcome", "")).strip(),
+                    "parent_acceptance": {
+                        key: str(parent_acceptance.get(key, "")).strip()
+                        for key in (
+                            "original_intent",
+                            "acceptance_target",
+                            "parent_proof_required",
+                            "residual_intent_rule",
+                            "clarification_needed_when",
+                        )
+                        if str(parent_acceptance.get(key, "")).strip()
+                    },
                     "status": str(payload.get("status", "")).strip(),
                     "lane_count": len(lane_summaries),
                     "candidate_lanes": lane_summaries,
@@ -9012,6 +9029,51 @@ def _promote_decomposition_lane_to_execplan(
         done_when=proof or outcome or f"{title} is implemented, validated, and closed out honestly.",
         source_fields=source_fields,
     )
+    parent_acceptance = matched_record.get("parent_acceptance", {})
+    if not isinstance(parent_acceptance, dict):
+        parent_acceptance = {}
+    if parent_acceptance or any(
+        str(matched_lane.get(key, "")).strip()
+        for key in ("slice_contribution_to_parent", "residual_parent_intent", "parent_proof_boundary")
+    ):
+        original_intent = str(parent_acceptance.get("original_intent") or matched_record.get("larger_intended_outcome") or "").strip()
+        acceptance_target = str(parent_acceptance.get("acceptance_target") or matched_record.get("larger_intended_outcome") or "").strip()
+        residual_parent_intent = str(
+            matched_lane.get("residual_parent_intent") or parent_acceptance.get("residual_intent_rule") or ""
+        ).strip()
+        raw_human_confirmation = matched_lane.get("human_confirmation_needed")
+        if isinstance(raw_human_confirmation, list):
+            human_confirmation_needed = [str(item).strip() for item in raw_human_confirmation if str(item).strip()]
+        elif raw_human_confirmation:
+            human_confirmation_needed = [str(raw_human_confirmation).strip()]
+        else:
+            human_confirmation_needed = []
+        plan_record["parent_acceptance"] = {
+            "original_intent": original_intent,
+            "parent_intent": original_intent,
+            "parent_acceptance": acceptance_target,
+            "acceptance_target": acceptance_target,
+            "current_slice": outcome,
+            "slice_contribution": str(matched_lane.get("slice_contribution_to_parent") or outcome).strip(),
+            "residual_parent_intent": residual_parent_intent,
+            "proof_boundary": str(matched_lane.get("parent_proof_boundary") or "slice-only").strip(),
+            "parent_proof_required": str(parent_acceptance.get("parent_proof_required") or proof).strip(),
+            "human_confirmation_needed": human_confirmation_needed,
+            "clarification_needed_when": str(parent_acceptance.get("clarification_needed_when") or "").strip(),
+        }
+        plan_record["completion_criteria"].append(
+            "Parent acceptance: prove this slice's contribution and explicitly route residual parent intent before closeout."
+        )
+        plan_record["intent_satisfaction"]["original intent"] = original_intent or plan_record["intent_satisfaction"]["original intent"]
+        if residual_parent_intent:
+            plan_record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+            plan_record["intent_continuity"]["continuation surface"] = str(
+                parent_acceptance.get("continuation_owner") or "parent lane"
+            ).strip()
+            plan_record["required_continuation"]["required follow-on for the larger intended outcome"] = "yes"
+            plan_record["required_continuation"]["owner surface"] = str(
+                parent_acceptance.get("continuation_owner") or "parent lane"
+            ).strip()
     plan_record["references"] = [
         {
             "kind": "source",

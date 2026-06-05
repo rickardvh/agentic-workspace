@@ -1,0 +1,394 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Preserve full original intent across planning slices",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1318 and child issues #1319-#1325 so broad original user intent and applicable user/system/subsystem/soft intents remain visible and validated across Planning, startup/implement context, proof, closeout, and final user reporting.",
+    "hard_constraints": "Do not silently narrow clear broad intent into a smaller slice; do not add an automatic business classifier, new policy engine, broad dashboard, or project-management system; keep AW repo- and agent-agnostic and use existing Planning, Verification, closeout_report, completion_options, final_response_rendering, authority-boundary, schema/template, tests, and docs surfaces.",
+    "agent_may_decide": "Exact field names, compact projection shape, test layout, and whether #1326 remains a sibling residual lane, provided #1318/#1319-#1325 closure remains honest.",
+    "escalate_when": "A correct fix requires hiding residual parent intent, closing #1318 with only wording evidence, treating AW as the semantic intent owner, or implementing the broader #1326 lane without explicit scope.",
+    "next_action": "Create the PR with closure matrix and proof summary.",
+    "proof_expectations": [
+      "Focused tests show startup/implement context, Planning decomposition/slice projection, closeout_report, completion_options, final_response_rendering, and Verification/applicable-intent evidence preserve parent intent.",
+      "A generated-code/runtime-boundary fixture proves `all runtime code should be generated from IR representations as a single source of truth` cannot be closed by `some generated target is fresh` or `one primitive migration landed`.",
+      "Planning schema/template/projection checks pass and the review/decomposition/execplan artifacts remain schema-valid.",
+      "Workspace proof commands selected by changed paths pass before PR creation."
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+      ".agentic-workspace/planning/decompositions/github-1318-original-intent-preservation.decomposition.json",
+      ".agentic-workspace/planning/reviews/2026-06-05-issue-1318-original-intent-preservation-grounding.review.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+      ".agentic-workspace/planning/decompositions/README.md",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_report_cli.py",
+      "packages/planning/tests/test_summary.py",
+      "packages/planning/tests/test_promote.py",
+      "packages/planning/tests/test_check_planning_surfaces.py"
+    ],
+    "completion_criteria": [
+      "#1319: grounding review exists and maps implementation to existing AW surfaces.",
+      "#1320: startup/implement context carries parent original intent when work is broad or slice-backed.",
+      "#1321: decomposition and child slices carry parent acceptance, slice contribution, residual parent intent, proof boundary, and human clarification needs.",
+      "#1322: closeout blocks parent/full-work claims when proof only covers a narrower slice.",
+      "#1323: generated-code/runtime-boundary fixture blocks narrowing `all runtime code should be generated from IR` to freshness or one primitive migration.",
+      "#1324: final user-facing report plainly says current slice status, parent/original intent status, proof boundary, residual intent, and claims that must not be made.",
+      "#1325: applicable user/system/subsystem/soft intent evidence, conflict/missing-authority state, and manual-verification obligations are visible and block or caveat closeout/final response.",
+      "#1318 parent: PR body includes closure matrix for #1318-#1325 and does not close sibling #1326 unless explicitly implemented."
+    ],
+    "continuation_owner": "none if all criteria are proven; otherwise #1318 remains parent owner",
+    "closeout_decision": "archive-and-close after PR creation"
+  },
+  "goal": [
+    "Preserve the user's full original intent as the parent acceptance target across broad Planning, decomposition, child slices, proof, closeout, and final response.",
+    "Represent applicable user/system/subsystem/soft intents, conflicts, and manual-verification obligations clearly enough that closeout cannot hide them.",
+    "Prove the generated-code runtime-boundary under-scoping failure is blocked by executable fixtures."
+  ],
+  "non_goals": [
+    "Do not implement a new policy engine, automatic semantic classifier, broad dashboard, or project-management system.",
+    "Do not force this ceremony onto small direct work.",
+    "Do not close #1326 or its children unless their separate durable source-discovery scope is explicitly implemented."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Full #1318 parent closure with child issues #1319-#1325 satisfied end to end.",
+      "constraints": "Preserve parent intent; use existing AW surfaces; keep authority boundaries clear; avoid automatic semantic classification.",
+      "latitude": "Choose compact field names and projection shape that reduce review/continuation cost.",
+      "escalation": "Escalate if proof cannot honestly satisfy all child issues or if implementation would only improve wording."
+    },
+    "execution": {
+      "milestone": "github-1318-preserve-original-intent",
+      "status": "completed",
+      "next_step": "Create the PR and keep #1326 open as a sibling residual lane.",
+      "proof": "Focused fixtures plus workspace/planning validation listed in validation_commands passed."
+    },
+    "scope": {
+      "touched": [
+        "workspace runtime closeout/start/implement projections",
+        "Planning decomposition schema/template/projection/promotion",
+        "Planning review/decomposition/execplan artifacts",
+        "focused workspace and planning tests"
+      ],
+      "invariants": [
+        "Slices are execution units, not completion of the user's parent intent unless parent acceptance is proven.",
+        "AW surfaces evidence and gates; agent and human own semantic reconciliation and acceptance."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "The original user request remains the completion target across epics, decomposition, slices, closeout, and final response unless the user explicitly narrows it.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none if #1318-#1325 all pass; otherwise #1318 remains open"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no if all #1318-#1325 acceptance passes; yes if any child issue or parent fixture remains unsupported",
+    "owner surface": "#1318",
+    "activation trigger": "Any missing child closure evidence, generated-code fixture gap, applicable-intent conflict gap, or final-response caveat gap."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Parent/original-intent and applicable-intent status now flow through Planning decomposition, startup, implement, closeout_report, completion options, and final-response rendering.",
+    "intentionally deferred": "Broader #1326 durable applicable-intent source discovery unless implemented explicitly.",
+    "discovered implications": "The stale #1309 active plan had to be archived before #1318 implementation; this is dogfooding evidence for #1318.",
+    "proof achieved now": "yes",
+    "validation still needed": "none before PR creation",
+    "next likely slice": "none if this PR honestly closes #1318-#1325; otherwise keep #1318 open with named residual intent"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the #1318 lane in a new PR.",
+    "inferred intended outcome": "Do not ship a partial wording-only PR; implement the original-intent preservation lane end to end or keep parent closure open.",
+    "chosen concrete what": "Add compact parent-intent/applicable-intent contracts to existing AW surfaces and prove the generated-code under-scoping regression.",
+    "interpretation distance": "medium; issue comments require decomposition and child closure evidence before parent closure.",
+    "review guidance": "Reject closure if any child issue is supported only by prose, if final response can say plain done while parent intent is open, or if applicable-intent conflicts can be hidden."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning artifacts, Planning decomposition schema/template/projection/promotion/tests, workspace runtime projections, focused workspace tests, and generated/reference outputs required by changed contracts.",
+    "max changed files": "about 20 files including generated/reference updates if schema/docs generation requires them",
+    "required validation commands": "Focused workspace/planning tests, check_planning_surfaces, contract/tooling checks, structured inventory, maintainer surfaces, workspace tests/lint, planning tests/lint if Planning code changes, schema-reference-docs.",
+    "ask-before-refactor threshold": "Ask before adding a new module, classifier, policy engine, dashboard, or implementing #1326 as a separate parent lane.",
+    "stop before touching": "Unrelated command-generation primitive migration, direct runtime boundary enforcement, model harness changes, or broad Memory source-discovery lanes."
+  },
+  "stop_conditions": {
+    "stop when": "The implementation can only support a partial PR while claiming #1318 closure.",
+    "escalate when boundary reached": "A required fix changes parent scope, closes #1326 implicitly, or needs a new authoritative semantic classifier.",
+    "escalate on scope drift": "Implementation needs unrelated modules or a new state store.",
+    "escalate on proof failure": "Generated-code fixture, closeout blocking, applicable-intent conflict, or final-response rendering cannot be proven."
+  },
+  "context_budget": {
+    "live working set": "#1318-#1325 issues, this execplan, decomposition record, #1319 review, workspace_runtime_primitives closeout/start/implement functions, Planning decomposition schema/promotion/projection, focused tests.",
+    "recoverable later": "Historical archives and #1326 child issues unless compact routing points there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and PR closure matrix before pausing.",
+    "pre-work config pull": "Use AW start/summary/implement outputs before editing.",
+    "pre-work memory pull": "Consult Memory only if changed paths or task require durable repo knowledge.",
+    "tiny resumability note": "Implement #1318 through parent_intent/applicable_intent projections and generated-code fixture; do not close parent with wording only.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1318 and child issues #1319-#1325 end to end in a new PR.",
+    "hard constraints": "Parent intent remains completion target; no silent narrowing; no new classifier/policy engine; closure matrix required.",
+    "agent may decide locally": "Compact projection shape, test organization, PR wording, and exact child evidence mapping.",
+    "escalate when": "A child cannot be honestly closed or a broader sibling lane would be needed."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "Decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality without reducing proof.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The lane spans tightly coupled Planning contracts, runtime projections, final-response rendering, and fixtures; local implementation preserves parent-intent continuity and proof ownership.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-06-05"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from bounded slices and keep AW authority boundaries clear.",
+    "slice shaping bias": "Use slices for execution while reporting parent status separately.",
+    "broader-lane validation question": "Did this implementation satisfy the user's original parent intent, or only make a slice easier to close?",
+    "intent evidence source": "#1318 issue body/comments and .agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1318",
+      "label": "parent original-intent lane",
+      "role": "parent",
+      "locator": "issue body and comments"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1319-#1325",
+      "label": "child closure issues",
+      "role": "children",
+      "locator": "issue bodies"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": ".agentic-workspace/planning/decompositions/github-1318-original-intent-preservation.decomposition.json",
+      "label": "parent decomposition",
+      "role": "decomposition",
+      "locator": "candidate_lanes"
+    },
+    {
+      "kind": "planning-review",
+      "target": ".agentic-workspace/planning/reviews/2026-06-05-issue-1318-original-intent-preservation-grounding.review.json",
+      "label": "#1319 grounding review",
+      "role": "review",
+      "locator": "findings"
+    }
+  ],
+  "active_milestone": {
+    "id": "github-1318-preserve-original-intent",
+    "status": "complete",
+    "scope": "Implement #1318 parent and children #1319-#1325 end to end using existing AW surfaces.",
+    "ready": "complete",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Create the PR with the closure matrix and proof summary."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+    ".agentic-workspace/planning/decompositions/github-1318-original-intent-preservation.decomposition.json",
+    ".agentic-workspace/planning/reviews/2026-06-05-issue-1318-original-intent-preservation-grounding.review.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+    ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+    ".agentic-workspace/planning/decompositions/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_report_cli.py",
+    "packages/planning/tests/test_summary.py",
+    "packages/planning/tests/test_promote.py",
+    "packages/planning/tests/test_check_planning_surfaces.py"
+  ],
+  "invariants": [
+    "Original parent intent remains the completion target unless the user explicitly narrows it.",
+    "A slice proof cannot close parent intent unless it proves parent acceptance.",
+    "AW surfaces evidence, gates, and conflicts; agent/human own semantic reconciliation and acceptance."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_represents_generated_code_parent_intent_boundary -q",
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_surfaces_parent_intent_status_for_active_generated_code_slice tests/test_workspace_implement_cli.py::test_implement_context_surfaces_parent_intent_for_active_slice tests/test_workspace_report_cli.py::test_report_closeout_report_represents_generated_code_parent_intent_boundary tests/test_workspace_report_cli.py::test_report_closeout_report_caveats_unsupported_behavior_preservation_claim packages/planning/tests/test_summary.py::test_planning_summary_projects_decomposition_records packages/planning/tests/test_promote.py::test_promote_to_plan_supports_decomposition_lane -q",
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics tests/test_workspace_implement_cli.py::test_implement_context_surfaces_parent_intent_for_active_slice tests/test_workspace_report_cli.py::test_report_closeout_report_renders_planned_slice_first_inspection_contract tests/test_workspace_report_cli.py::test_report_closeout_report_uses_audit_profile_for_strict_closeout tests/test_workspace_report_cli.py::test_report_closeout_report_represents_generated_code_parent_intent_boundary -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "make test-workspace",
+    "make lint-workspace",
+    "make test-planning",
+    "make lint-planning",
+    "make typecheck-planning",
+    "make schema-reference-docs",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "make"
+  ],
+  "completion_criteria": [
+    "#1319 grounding review record exists and is referenced by the PR closure matrix.",
+    "#1320 startup/implement context carries parent original intent for broad or slice-backed work.",
+    "#1321 decomposition/schema/template/projection and active slice records carry parent acceptance, residual parent intent, proof boundary, and human clarification needs.",
+    "#1322 closeout_report/completion_options block parent/full-work claims when proof only covers a narrower slice.",
+    "#1323 generated-code runtime-boundary fixture blocks under-scoped completion.",
+    "#1324 final_response_rendering renders slice-vs-parent status plainly and blocks plain done claims.",
+    "#1325 applicable-intent conflict/manual-verification fixture blocks or caveats closeout and final response.",
+    "PR body includes closure matrix and clearly states #1326 is not closed unless implemented."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan plus #1318 decomposition",
+    "what happened": "Implemented parent/original-intent and applicable-intent status packets across startup, implement, closeout_report, completion options, final-response rendering, Planning decomposition/promotion, schemas, templates, generated payloads, and focused fixtures.",
+    "scope touched": "workspace runtime projections; workspace contracts and reference docs; Planning decomposition schema/template/projection/promotion and generated payloads; focused workspace and Planning tests; #1318 Planning artifacts.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas; docs/reference; packages/planning/src/repo_planning_bootstrap/installer.py; Planning schemas/templates/generated payloads; focused tests; #1318 Planning artifacts.",
+    "validations run": "Focused workspace/planning tests passed; contract tooling passed; structured inventory passed; maintainer surfaces passed; make test-workspace passed; make lint-workspace passed; make test-planning passed; make lint-planning passed; make typecheck-planning passed; schema-reference-docs passed; generated command package check passed; AW summary and Planning doctor passed.",
+    "result for continuation": "create PR; keep #1326 open as a sibling residual lane",
+    "next step": "Create PR with closure matrix."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; implementation stayed within existing Planning, Verification-derived closeout, report, final-response, authority-boundary, schema/template, docs, generated payload, and test surfaces.",
+    "proof status": "passed",
+    "intent served": "yes for #1318 and child issues #1319-#1325; #1326 remains a sibling residual lane and is not closed.",
+    "config compliance": "yes; used repo-local AW invocation, refreshed schema/reference/generated payload surfaces, and validated generated command package freshness.",
+    "misinterpretation risk": "lowered; final response and closeout now distinguish slice proof from parent/original-intent satisfaction and applicable-intent blockers.",
+    "follow-on decision": "PR should close #1318-#1325; leave #1326 open unless implemented separately."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Tightly coupled parent-intent runtime/planning/reporting contract; local implementation preserves proof ownership.",
+    "expected savings": "low",
+    "actual friction": "No delegation used; local context was large but tightly coupled. AW caught schema drift and stale active-plan residue through validation.",
+    "proof result": "passed",
+    "quality concern": "The first implementation attempted to add parent packets too broadly; existing closeout tests caught the over-reporting and the fix now keeps guidance-only packets quiet.",
+    "decomposition adjustment": "created explicit #1318 decomposition after user caught missing epic Planning artifacts"
+  },
+  "proof_report": {
+    "validation proof": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Validation commands listed in validation_commands passed after targeted regressions were fixed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1318 so original user intent and applicable intent stack are preserved and validated across epics, decomposition, child slices, closeout, and final response.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The PR-ready diff includes #1319 grounding review, #1320 startup/implement parent status, #1321 Planning decomposition/promotion parent acceptance, #1322 closeout completion-option blocking, #1323 generated-code runtime-boundary fixture, #1324 final-response parent/applicable rendering, and #1325 applicable-intent conflict/manual-verification blocking.",
+    "unsolved intent passed to": "#1326 remains open as a sibling residual durable source-discovery lane; not required to close #1318."
+  },
+  "execution_summary": {
+    "outcome delivered": "Parent/original-intent and applicable-intent preservation implemented across Planning, startup, implement, closeout, completion options, and final-response reporting.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#1326 sibling lane remains open; no #1318 child residue remains.",
+    "post-work posterity capture": "PR body closure matrix and this execplan closeout evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "PR review if feedback arrives"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "This lane implements explicit GitHub issues, not a newly discovered durable repo behavior.",
+    "target scope": "none",
+    "proposed durable intent": "",
+    "confidence": "high",
+    "needs review": false,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "Each #1318 child issue has concrete evidence in code, schemas/templates/generated payloads, tests, docs/reference, and PR body closure matrix; #1326 is explicitly left open.",
+    "evidence carried forward": "PR body closure matrix, focused fixtures, validation log in proof_report, #1319 grounding review, and #1318 decomposition/execplan.",
+    "reopen trigger": "Any review finding that parent/original intent can still be silently narrowed, applicable-intent blockers can be hidden, or a #1318 child issue lacks executable/schema/doc evidence."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Dogfooding found that I classified #1318 as epic-shaped but initially skipped creating the required Planning decomposition/execplan artifacts."
+    ],
+    "signals fixed": [
+      "Archived stale #1309 plan, created #1318 execplan, #1318 decomposition, and #1319 grounding review before implementation."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-05: Scaffolded by agentic-planning new-plan.",
+    "2026-06-05: User caught that the work had been treated as epic-shaped without creating the corresponding Planning decomposition/execplan artifacts; archived stale #1309 and created #1318 Planning structure before implementation."
+  ]
+}
