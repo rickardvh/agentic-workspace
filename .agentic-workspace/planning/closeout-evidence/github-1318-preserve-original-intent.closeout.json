@@ -1,0 +1,110 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Preserve full original intent across planning slices",
+  "plan_id": "github-1318-preserve-original-intent",
+  "created_at": "2026-06-05T15:43:36.375708+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1318-preserve-original-intent.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1318-preserve-original-intent",
+    "status": "completed",
+    "scope": "Implement #1318 parent and children #1319-#1325 end to end using existing AW surfaces.",
+    "ready": "complete",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1318 and child issues #1319-#1325 end to end in a new PR.",
+    "hard constraints": "Parent intent remains completion target; no silent narrowing; no new classifier/policy engine; closure matrix required.",
+    "agent may decide locally": "Compact projection shape, test organization, PR wording, and exact child evidence mapping.",
+    "escalate when": "A child cannot be honestly closed or a broader sibling lane would be needed."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan plus #1318 decomposition",
+    "what happened": "#1318 and child issues #1319-#1325 were implemented and merged; #1326 remains open as sibling residual work.",
+    "scope touched": "Planning, startup/implement, closeout, final-response, applicable-intent, and original-intent preservation surfaces.",
+    "changed surfaces": ".agentic-workspace/planning/execplans/github-1318-preserve-original-intent.plan.json; .agentic-workspace/planning/decompositions/github-1318-original-intent-preservation.decomposition.json; workspace runtime and Planning surfaces from the merged #1318 PR.",
+    "validations run": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "GitHub #1318 is closed as completed; local Planning state cleanup is required because the completed execplan remained in todo.active_items.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes; used repo-local AW invocation, refreshed schema/reference/generated payload surfaces, and validated generated command package freshness.",
+    "misinterpretation risk": "lowered; final response and closeout now distinguish slice proof from parent/original-intent satisfaction and applicable-intent blockers.",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Validation commands listed in validation_commands passed after targeted regressions were fixed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1318 so original user intent and applicable intent stack are preserved and validated across epics, decomposition, child slices, closeout, and final response.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "epic",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a epic claim with intent-status satisfied.",
+    "evidence carried forward": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #1326.",
+    "motivation worth preserving": "Future agents should continue from #1326 rather than rediscover this closeout residue.",
+    "canonical owner now": "#1326",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Parent/original-intent preservation for #1318-#1325 is complete; #1326 remains open separately.",
+    "validation confirmed": "focused pytest suites; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; generated command package check; AW summary; Planning doctor all passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "PR body closure matrix and this execplan closeout evidence.",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Archived stale #1309 plan, created #1318 execplan, #1318 decomposition, and #1319 grounding review before implementation.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "parent original-intent lane",
+          "owner": "github-issue",
+          "source": "#1318"
+        },
+        {
+          "summary": "child closure issues",
+          "owner": "github-issue",
+          "source": "#1319-#1325"
+        }
+      ]
+    }
+  }
+}
