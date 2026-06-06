@@ -63,7 +63,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "command-generation", git = "https://github.com/rickardvh/command-generation.git?rev=2d438b113d17baac63132cebc460c161d48c7713" },
+    { name = "command-generation", git = "https://github.com/rickardvh/command-generation.git?rev=7051e33b0142d7e421fc9beec4761549747e0115" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -145,7 +145,7 @@ wheels = [
 [[package]]
 name = "command-generation"
 version = "0.1.0"
-source = { git = "https://github.com/rickardvh/command-generation.git?rev=2d438b113d17baac63132cebc460c161d48c7713#2d438b113d17baac63132cebc460c161d48c7713" }
+source = { git = "https://github.com/rickardvh/command-generation.git?rev=7051e33b0142d7e421fc9beec4761549747e0115#7051e33b0142d7e421fc9beec4761549747e0115" }
 dependencies = [
     { name = "jsonschema" },
 ]

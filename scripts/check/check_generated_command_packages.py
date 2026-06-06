@@ -14,7 +14,7 @@ import sys
 import tempfile
 import tomllib
 from pathlib import Path
-from typing import Callable, NamedTuple
+from typing import NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
@@ -31,11 +31,16 @@ for SOURCE_ROOT in (
 
 import command_generation  # noqa: E402
 from command_generation import (  # noqa: E402
+    CliConformanceTarget,
     CommandGenerationHostManifest,
     PrimitiveRegistry,
+    ProcessConformanceCase,
     command_package_schema_path,
     generated_output_freshness_report,
+    materialize_case_fixture,
+    process_case_from_contract,
     render_outputs,
+    run_cli_conformance_case,
 )
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
@@ -55,23 +60,11 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     python_runtime_projection_inventory_manifest,
 )
 
-SelectedFields = Callable[[str], dict[str, object]]
+AdapterConformanceCase = ProcessConformanceCase
 
 
 def _repo_relative(path: Path) -> str:
     return os.path.relpath(path, REPO_ROOT).replace(os.sep, "/")
-
-
-class AdapterConformanceCase(NamedTuple):
-    conformance_ref: str
-    label: str
-    success_args: list[str]
-    selected_fields: SelectedFields
-    expected_fields: dict[str, object] | None
-    fixture_id: str
-    fixture_files: dict[str, str]
-    expected_exit: int
-    allow_stderr: bool
 
 
 class RunnableTypescriptConformanceCase(NamedTuple):
@@ -893,101 +886,10 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
     return errors
 
 
-def _field_value(payload: object, path: list[str]) -> object:
-    current = payload
-    for part in path:
-        if not isinstance(current, dict) or part not in current:
-            raise KeyError(".".join(path))
-        current = current[part]
-    return current
-
-
-def _selected_contract_fields(stdout: str, assertions: list[dict[str, object]]) -> dict[str, object]:
-    if not assertions:
-        return {}
-    payload = json.loads(stdout)
-    selected: dict[str, object] = {}
-    for assertion in assertions:
-        path = assertion.get("path", [])
-        if not isinstance(path, list) or not all(isinstance(part, str) for part in path):
-            raise ValueError(f"conformance assertion path is malformed: {path!r}")
-        selected[".".join(path)] = _field_value(payload, path)
-    return selected
-
-
-def _expected_contract_fields(assertions: list[dict[str, object]]) -> dict[str, object]:
-    expected: dict[str, object] = {}
-    for assertion in assertions:
-        path = assertion.get("path", [])
-        if not isinstance(path, list) or not all(isinstance(part, str) for part in path):
-            raise ValueError(f"conformance assertion path is malformed: {path!r}")
-        expected[".".join(path)] = assertion.get("equals")
-    return expected
-
-
-def _success_args_from_contract(*, contract: dict[str, object], package_id: str) -> list[str]:
-    adapter = contract.get("adapter", {})
-    if not isinstance(adapter, dict):
-        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed adapter")
-    template = adapter.get("command_template", [])
-    if not isinstance(template, list) or not all(isinstance(token, str) for token in template):
-        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed command_template")
-    expected_placeholder = "{" + CONFORMANCE_PLACEHOLDER_BY_PACKAGE[package_id] + "}"
-    if not template or template[0] != expected_placeholder:
-        raise ValueError(
-            f"conformance contract {contract.get('id')!r} starts with {template[0] if template else None!r}, "
-            f"expected {expected_placeholder!r} for package {package_id!r}"
-        )
-    return template[1:]
-
-
-def _fixture_from_contract(contract: dict[str, object]) -> tuple[str, dict[str, str]]:
-    fixtures = contract.get("fixtures", [])
-    if not isinstance(fixtures, list) or not fixtures or not isinstance(fixtures[0], dict):
-        raise ValueError(f"conformance contract {contract.get('id')!r} has no usable fixture")
-    fixture = fixtures[0]
-    fixture_id = fixture.get("id")
-    files = fixture.get("files")
-    if not isinstance(fixture_id, str) or not isinstance(files, dict) or not all(isinstance(key, str) for key in files):
-        raise ValueError(f"conformance contract {contract.get('id')!r} fixture is malformed")
-    return fixture_id, {path: str(contents) for path, contents in files.items()}
-
-
-def _expected_exit_from_contract(contract: dict[str, object]) -> int:
-    expectations = contract.get("expectations", {})
-    exit_expectation = expectations.get("exit", {}) if isinstance(expectations, dict) else {}
-    code = exit_expectation.get("code", 0) if isinstance(exit_expectation, dict) else 0
-    return int(code) if isinstance(code, int) else 0
-
-
-def _allow_stderr_from_contract(contract: dict[str, object]) -> bool:
-    expectations = contract.get("expectations", {})
-    stderr = expectations.get("stderr", {}) if isinstance(expectations, dict) else {}
-    allow_non_empty = stderr.get("allow_non_empty", False) if isinstance(stderr, dict) else False
-    return bool(allow_non_empty)
-
-
 def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str) -> AdapterConformanceCase:
-    expectations = contract.get("expectations", {})
-    stdout = expectations.get("stdout", {}) if isinstance(expectations, dict) else {}
-    assertions = stdout.get("field_assertions", []) if isinstance(stdout, dict) else []
-    if not isinstance(assertions, list) or not all(isinstance(assertion, dict) for assertion in assertions):
-        raise ValueError(f"conformance contract {contract.get('id')!r} has malformed field_assertions")
-    fixture_id, fixture_files = _fixture_from_contract(contract)
-    contract_id = str(contract.get("id", ""))
-    return AdapterConformanceCase(
-        conformance_ref=contract_id,
-        label=contract_id.removesuffix(".process").replace(".", " "),
-        success_args=_success_args_from_contract(contract=contract, package_id=package_id),
-        selected_fields=lambda stdout_text, contract_assertions=assertions: _selected_contract_fields(
-            stdout_text,
-            contract_assertions,
-        ),
-        expected_fields=_expected_contract_fields(assertions),
-        fixture_id=fixture_id,
-        fixture_files=fixture_files,
-        expected_exit=_expected_exit_from_contract(contract),
-        allow_stderr=_allow_stderr_from_contract(contract),
+    return process_case_from_contract(
+        contract=contract,
+        command_placeholder=CONFORMANCE_PLACEHOLDER_BY_PACKAGE[package_id],
     )
 
 
@@ -1070,30 +972,33 @@ def _run_python_adapter_conformance() -> list[str]:
         for package_id, registry in registries.items():
             command = command_for_package(package_id)
             for case in registry.values():
-                fixture_root = temp_root / package_id / case.fixture_id / case.conformance_ref.replace(".", "-")
-                if fixture_root.exists():
-                    shutil.rmtree(fixture_root)
-                for relative_path, contents in case.fixture_files.items():
-                    path = fixture_root / relative_path
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text(contents, encoding="utf-8")
-                process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
-                if process.returncode != case.expected_exit:
-                    if _is_runtime_crash_exit(process.returncode):
-                        retry_process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
-                        if retry_process.returncode == case.expected_exit:
+                fixture_root = materialize_case_fixture(
+                    case=case,
+                    root=temp_root / package_id / case.conformance_ref.replace(".", "-"),
+                )
+                target = CliConformanceTarget(
+                    label=f"generated Python adapter failure: {package_id}",
+                    command=tuple(command),
+                    cwd=fixture_root,
+                    env=env,
+                )
+                result, failures = run_cli_conformance_case(case=case, target=target, fixture_root=fixture_root)
+                if result is not None and result.returncode != case.expected_exit:
+                    if _is_runtime_crash_exit(result.returncode):
+                        retry_result, retry_failures = run_cli_conformance_case(case=case, target=target, fixture_root=fixture_root)
+                        if retry_result is not None and retry_result.returncode == case.expected_exit and not retry_failures:
                             recovery_message = _format_generated_adapter_retry_recovery(
                                 language="python",
                                 package_id=package_id,
                                 case=case,
                                 command=command,
-                                first_returncode=process.returncode,
+                                first_returncode=result.returncode,
                             )
                             print(recovery_message)
                             if _strict_retry_recovery_enabled():
                                 errors.append(recovery_message)
                                 continue
-                            process = retry_process
+                            failures = []
                         else:
                             errors.append(
                                 _format_generated_adapter_exit_failure(
@@ -1101,46 +1006,30 @@ def _run_python_adapter_conformance() -> list[str]:
                                     package_id=package_id,
                                     case=case,
                                     command=command,
-                                    returncode=process.returncode,
+                                    returncode=result.returncode,
                                     expected_exit=case.expected_exit,
-                                    stderr=process.stderr,
+                                    stderr=result.stderr,
                                 )
-                                + f"; retry_exit={retry_process.returncode}; retry_stderr={retry_process.stderr!r}"
+                                + (
+                                    f"; retry_exit={retry_result.returncode}; retry_stderr={retry_result.stderr!r}"
+                                    if retry_result is not None
+                                    else "; retry_result=missing"
+                                )
                             )
                             continue
-                    if process.returncode != case.expected_exit:
-                        errors.append(
-                            _format_generated_adapter_exit_failure(
-                                language="python",
-                                package_id=package_id,
-                                case=case,
-                                command=command,
-                                returncode=process.returncode,
-                                expected_exit=case.expected_exit,
-                                stderr=process.stderr,
-                            )
+                    errors.append(
+                        _format_generated_adapter_exit_failure(
+                            language="python",
+                            package_id=package_id,
+                            case=case,
+                            command=command,
+                            returncode=result.returncode,
+                            expected_exit=case.expected_exit,
+                            stderr=result.stderr,
                         )
-                        continue
-                if process.stderr.strip() and not case.allow_stderr:
-                    errors.append(
-                        f"generated Python adapter failure: {package_id} {case.label} emitted unexpected stderr: {process.stderr!r}"
                     )
                     continue
-                if case.expected_fields is None:
-                    continue
-                try:
-                    selected = case.selected_fields(process.stdout)
-                except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                    errors.append(
-                        f"generated Python adapter failure: {package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
-                        f"stdout={process.stdout!r}"
-                    )
-                    continue
-                if selected != case.expected_fields:
-                    errors.append(
-                        f"generated Python adapter failure: {package_id} {case.label} output shape drifted; "
-                        f"expected selected fields {case.expected_fields!r}, got {selected!r}"
-                    )
+                errors.extend(failure.message for failure in failures)
     return errors
 
 
@@ -3784,14 +3673,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             return f'"{python}" "{shim}"'
 
         def materialize_fixture(case: AdapterConformanceCase) -> Path:
-            fixture_root = temp_root / case.fixture_id
-            if fixture_root.exists():
-                shutil.rmtree(fixture_root)
-            for relative_path, contents in case.fixture_files.items():
-                path = fixture_root / relative_path
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(contents, encoding="utf-8")
-            return fixture_root
+            return materialize_case_fixture(case=case, root=temp_root)
 
         def compare_adapter(runnable_case: RunnableTypescriptConformanceCase) -> None:
             if not runnable_case.cli.is_file():
@@ -3801,35 +3683,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 return
             case = runnable_case.case
             fixture_root = materialize_fixture(case)
-            adapter_process = _capture(
-                [node, str(runnable_case.cli), *case.success_args],
-                cwd=fixture_root,
-                env=_conformance_env(runtime=""),
+            _adapter_result, adapter_failures = run_cli_conformance_case(
+                case=case,
+                target=CliConformanceTarget(
+                    label=f"adapter failure: {runnable_case.package_id}",
+                    command=(node, str(runnable_case.cli)),
+                    cwd=fixture_root,
+                    env=_conformance_env(runtime=""),
+                ),
+                fixture_root=fixture_root,
             )
-            if adapter_process.returncode != case.expected_exit:
-                errors.append(
-                    f"adapter failure: {runnable_case.package_id} {case.label} exit code drifted from contract; "
-                    f"expected {case.expected_exit}, got {adapter_process.returncode}; stderr={adapter_process.stderr!r}"
-                )
-            else:
-                if case.expected_fields is not None:
-                    try:
-                        adapter_selected = case.selected_fields(adapter_process.stdout)
-                    except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                        errors.append(
-                            f"adapter failure: {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
-                            f"stdout={adapter_process.stdout!r}"
-                        )
-                    else:
-                        if adapter_selected != case.expected_fields:
-                            errors.append(
-                                f"adapter failure: {runnable_case.package_id} {case.label} JSON selected fields drifted from contract; "
-                                f"expected {case.expected_fields!r}, got {adapter_selected!r}"
-                            )
-            if adapter_process.stderr.strip() and not case.allow_stderr:
-                errors.append(
-                    f"adapter failure: {runnable_case.package_id} {case.label} emitted unexpected stderr: {adapter_process.stderr!r}"
-                )
+            errors.extend(failure.message for failure in adapter_failures)
 
             if "--help" not in case.success_args:
                 invalid_args = [*case.success_args, "--definitely-invalid"]
@@ -3879,30 +3743,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 )
             exercises_runtime = "--help" not in runnable_case.case.success_args
             if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"} and exercises_runtime:
-                no_python_result = _capture(
-                    [node, str(runnable_case.cli), *runnable_case.case.success_args],
-                    cwd=fixture_root,
-                    env=_conformance_env(runtime=""),
+                _native_result, native_failures = run_cli_conformance_case(
+                    case=runnable_case.case,
+                    target=CliConformanceTarget(
+                        label=f"adapter failure: {runnable_case.package_id} native TypeScript operation",
+                        command=(node, str(runnable_case.cli)),
+                        cwd=fixture_root,
+                        env=_conformance_env(runtime=""),
+                    ),
+                    fixture_root=fixture_root,
                 )
-                if no_python_result.returncode != runnable_case.case.expected_exit:
-                    errors.append(
-                        f"adapter failure: {runnable_case.package_id} native TypeScript execution drifted without Python runtime; "
-                        f"exit={no_python_result.returncode}, stderr={no_python_result.stderr!r}"
-                    )
-                elif runnable_case.case.expected_fields is not None:
-                    try:
-                        native_selected = runnable_case.case.selected_fields(no_python_result.stdout)
-                    except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                        errors.append(
-                            f"adapter failure: {runnable_case.package_id} native TypeScript operation stdout did not satisfy "
-                            f"selected fields without Python runtime: {exc}; stdout={no_python_result.stdout!r}"
-                        )
-                    else:
-                        if native_selected != runnable_case.case.expected_fields:
-                            errors.append(
-                                f"adapter failure: {runnable_case.package_id} native TypeScript operation drifted without Python runtime; "
-                                f"selected={native_selected!r}, stderr={no_python_result.stderr!r}"
-                            )
+                errors.extend(failure.message + " without Python runtime" for failure in native_failures)
 
     return errors
 

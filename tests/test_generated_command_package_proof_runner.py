@@ -142,13 +142,13 @@ def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -
     planning_status = by_ref["planning.status.process"]
     memory_skills = by_ref["memory.list-skills.process"]
 
-    assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
+    assert list(defaults.success_args) == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_fields["answer.default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert defaults.fixture_id == "minimal-repo"
     assert defaults.fixture_files["README.md"] == "# Fixture\n"
-    assert planning_status.success_args == ["status", "--format", "json"]
+    assert list(planning_status.success_args) == ["status", "--format", "json"]
     assert planning_status.expected_fields == {"dry_run": False}
-    assert memory_skills.success_args == ["list-skills", "--format", "json"]
+    assert list(memory_skills.success_args) == ["list-skills", "--format", "json"]
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
@@ -168,13 +168,13 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     assert "from repo_planning_bootstrap.cli import main" in checker._python_command_for_package("planning-bootstrap")[-1]
     assert "from repo_memory_bootstrap.cli import main" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert "from repo_verification_bootstrap.cli import main" in checker._python_command_for_package("verification-cli")[-1]
-    assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
+    assert list(defaults.success_args) == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
     assert defaults.expected_fields["answer.default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert planning_status.expected_fields == {"dry_run": False}
     assert memory_skills.expected_fields == {"mode": "skills"}
-    assert verification_report.success_args == ["report", "--target", ".", "--format", "json"]
+    assert list(verification_report.success_args) == ["report", "--target", ".", "--format", "json"]
     assert verification_report.expected_fields == {"status": "absent", "configured": False}
 
 
@@ -647,14 +647,29 @@ def test_generated_python_conformance_strict_retry_recovery_fails(monkeypatch) -
     def fake_cases():
         return {"root-workspace": {"doctor.report.process": case}}, []
 
-    def fake_capture(command, *, cwd, env):
+    def fake_run_cli_conformance_case(*, case, target, fixture_root):
+        command = [*target.command, *case.success_args]
         calls.append(command)
         if len(calls) == 1:
-            return subprocess.CompletedProcess(command, -11, stdout="", stderr="")
-        return subprocess.CompletedProcess(command, 0, stdout='{"status": "ok"}\n', stderr="")
+            return checker.command_generation.CliConformanceResult(
+                target=target.label,
+                conformance_ref=case.conformance_ref,
+                command=tuple(command),
+                returncode=-11,
+                stdout="",
+                stderr="",
+            ), []
+        return checker.command_generation.CliConformanceResult(
+            target=target.label,
+            conformance_ref=case.conformance_ref,
+            command=tuple(command),
+            returncode=0,
+            stdout='{"status": "ok"}\n',
+            stderr="",
+        ), []
 
     monkeypatch.setattr(checker, "_adapter_conformance_cases_by_package", fake_cases)
-    monkeypatch.setattr(checker, "_capture", fake_capture)
+    monkeypatch.setattr(checker, "run_cli_conformance_case", fake_run_cli_conformance_case)
     monkeypatch.setenv("AGENTIC_GENERATED_STRICT_RETRY_RECOVERY", "1")
 
     errors = checker._run_python_adapter_conformance()
