@@ -1,0 +1,341 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Fix archived closeout proof confidence reporting",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Dogfooding finding from PR #1352",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Represent archived closeout proof text as recorded proof execution without overstating structured intent-proof confidence.",
+    "proof_expectations": [
+      "Focused closeout_report archived evidence regression.",
+      "Workspace report CLI focused regressions affected by proof confidence and parent/applicable blockers.",
+      "Workspace lint and AW summary/doctor/closeout report after closeout."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/*"
+    ],
+    "completion_criteria": [
+      "Archived closeout evidence with validation proof no longer renders as blocked by missing validation proof.",
+      "The report distinguishes recorded proof execution from missing structured intent-proof confidence.",
+      "No broad completion claim is inferred from free-form proof text."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Dogfooding finding from PR #1352"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Dogfooding finding from PR #1352",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "archived-closeout-proof-confidence-reporting",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_report_cli.py",
+        ".agentic-workspace/planning/*"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Dogfooding finding from PR #1352",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Fix archived closeout proof confidence reporting",
+    "inferred intended outcome": "Dogfooding finding from PR #1352",
+    "chosen concrete what": "Make archived closeout_report show proof execution recorded separately from structured intent-proof confidence.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime primitive closeout report projection, focused workspace report tests, and this plan artefact.",
+    "max changed files": "About 4 files, plus archive output after command-owned closeout.",
+    "required validation commands": "Focused closeout_report tests, make lint-workspace, AW summary/doctor/closeout report, git diff --check.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from archived closeout proof execution vs structured proof-confidence projection.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Dogfooding finding from PR #1352",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Narrow follow-up in closeout_report projection and focused test; local implementation keeps context and proof burden lower than delegation.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "49ad6d9e6264b8d7",
+    "recorded at": "2026-06-06T10:52:05+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "Dogfooding finding from PR #1352",
+      "label": "Dogfooding finding from PR #1352",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "archived-closeout-proof-confidence-reporting",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch closeout report proof execution projection and add focused regression coverage."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archived-closeout-proof-confidence-reporting.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py::test_report_closeout_report_uses_recent_archived_closeout_evidence_without_active_plan tests/test_workspace_report_cli.py::test_report_closeout_report_represents_generated_code_parent_intent_boundary tests/test_workspace_report_cli.py::test_report_closeout_trust_allows_work_claim_for_sufficient_intent_proof -q",
+    "make lint-workspace",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_report --format json",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Fix archived closeout proof confidence reporting is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Fixed closeout_report so archived closeout validation proof is represented as proof execution evidence without inflating structured intent-proof confidence. Placeholder proof text such as pending no longer satisfies the validation-proof blocker.",
+    "scope touched": "Workspace closeout_report projection and focused report CLI regression coverage.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py; .agentic-workspace/planning artefacts.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The dogfooding finding was valid: closeout_report conflated recorded proof execution with missing structured proof confidence. The fix separates proof_execution from proof_confidence and filters validation-proof blockers only when real proof execution is recorded.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Narrow follow-up in closeout_report projection and focused test; local implementation keeps context and proof burden lower than delegation.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused archived closeout report and adjacent proof-confidence tests passed; full tests/test_workspace_report_cli.py passed; make lint-workspace passed; git diff --check passed; AW summary passed; AW closeout_report inspected. make test-workspace was run and failed on unrelated date-sensitive upgrade-source health assertions, routed to GitHub #1353.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Dogfooding finding from PR #1352",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Archived closeout proof now renders as recorded proof execution while structured intent-proof confidence remains not_recorded unless explicitly supplied.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1353.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1353 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1353",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "GitHub #1353",
+    "proposed durable intent": "Future agents should continue from GitHub #1353 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "GitHub #1353"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to GitHub #1353.",
+        "owner": "GitHub #1353",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to GitHub #1353.",
+        "owner": "GitHub #1353",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan.",
+    "2026-06-06: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "GitHub #1353",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Dogfooding finding from PR #1352\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused archived closeout report and adjacent proof-confidence tests passed; full tests/test_workspace_report_cli.py passed; make lint-workspace passed; git diff --check passed; AW summary passed; AW closeout_report inspected. make test-workspace was run and failed on unrelated date-sensitive upgrade-source health assertions, routed to GitHub #1353.\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_report_cli.py; .agentic-workspace/planning artefacts.\nDurable residue: planning (GitHub #1353)\nMemory learning: route_to_planning\nFollow-up: none"
+  }
+}

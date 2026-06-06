@@ -1637,6 +1637,14 @@ def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_a
     assert report["planning_evidence"]["source"]["path"] == (".agentic-workspace/planning/execplans/archive/archived-closeout.plan.json")
     assert report["work_completed"] == "Implemented the archived evidence closeout report."
     assert report["changes"]["source"] == "planning.archive.execplan.execution_run"
+    assert report["validation"]["proof_execution"]["status"] == "recorded"
+    assert report["validation"]["proof_execution"]["source_field"] == "planning.archive.execplan.proof_report.validation proof"
+    assert report["validation"]["proof_execution"]["claim_boundary"] == "proof execution only"
+    assert report["validation"]["proof_confidence"]["intent_proof_status"] == "not_recorded"
+    assert report["validation"]["proof_confidence"]["confidence"] == "low"
+    assert "intent_satisfaction.closure_scope.validation_proof" not in report["gaps_and_residual_risk"]["completion_blockers"]
+    rendered_text = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
+    assert "blocked by: intent_satisfaction.closure_scope.validation_proof" not in rendered_text
 
 
 def test_report_closeout_report_prefers_retained_closeout_evidence_over_older_archive(tmp_path: Path, capsys) -> None:
