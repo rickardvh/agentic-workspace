@@ -1,0 +1,295 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1370 contract-owned conformance cases",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1370 contract-owned conformance cases across command-generation and Agentic Workspace.",
+    "hard_constraints": "Keep behavior examples contract-owned, keep target differences in thin adapters, avoid AW-specific generic runner logic, and prove generated Python/TypeScript targets.",
+    "agent_may_decide": "Use the smallest cross-repo implementation that moves reusable conformance projection/runner logic into command-generation while preserving AW product-specific contract ownership.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Completed; close the planning item after proof.",
+    "proof_expectations": [
+      "command-generation pytest",
+      "AW generated Python and TypeScript conformance proof",
+      "AW contract tooling, structured inventory, maintainer surfaces, schema reference docs, test-workspace, and lint-workspace"
+    ],
+    "touched_scope": [
+      "command-generation src/command_generation/conformance.py and public API",
+      "AW generated command package checker and proof-runner tests",
+      "AW maintainer playbook and command-generation dependency pin"
+    ],
+    "completion_criteria": [
+      "Shared command-generation conformance case runner exists and is tested.",
+      "AW generated Python and TypeScript adapter conformance consume the shared runner.",
+      "Maintainer guidance routes command behavior examples to conformance contracts before one-off tests."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement #1370 contract-owned conformance cases."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1370 contract-owned conformance cases across command-generation and Agentic Workspace.",
+      "constraints": "Keep behavior examples contract-owned, keep target differences in thin adapters, avoid AW-specific generic runner logic, and prove generated Python/TypeScript targets.",
+      "latitude": "Use the smallest cross-repo implementation that moves reusable conformance projection/runner logic into command-generation while preserving AW product-specific contract ownership.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "issue-1370-contract-conformance-cases",
+      "status": "completed",
+      "next_step": "Close the planning item and review the PRs.",
+      "proof": "Focused command-generation pytest, AW generated package conformance, contract checks, maintainer surfaces, schema reference docs, test-workspace, and lint-workspace passed."
+    },
+    "scope": {
+      "touched": [
+        "command-generation src/command_generation/conformance.py and public API",
+        "AW generated command package checker and proof-runner tests",
+        "AW maintainer playbook and command-generation dependency pin"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement #1370 contract-owned conformance cases.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1370 contract-owned conformance cases",
+    "inferred intended outcome": "Make conformance cases contract-owned and run them through one authoritative Python black-box runner with target adapters.",
+    "chosen concrete what": "Move reusable process-case projection, fixture materialization, and CLI assertion logic into command-generation; wire AW generated Python and TypeScript checks to it.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command-generation conformance API/tests/docs; AW generated-package checker/tests/docs/dependency pin/planning closeout.",
+    "max changed files": "bounded cross-repo lane",
+    "required validation commands": "command-generation pytest; AW generated package conformance; contract tooling; structured inventory; maintainer surfaces; schema reference docs; test-workspace; lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implementation complete; closeout and PR review remain.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement #1370 contract-owned conformance cases.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1370-contract-conformance-cases",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Close the planning item and review the PRs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "command-generation src/command_generation/conformance.py and public API",
+    "AW generated command package checker and proof-runner tests",
+    "AW maintainer playbook and command-generation dependency pin"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest -q in command-generation",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "make schema-reference-docs",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement #1370 contract-owned conformance cases is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added a reusable command-generation conformance case projection and black-box CLI runner, wired AW generated Python and TypeScript conformance to that shared runner, and documented the contract-owned case strategy.",
+    "scope touched": "command-generation conformance API/tests/docs; AW checker/tests/docs/dependency pin.",
+    "changed surfaces": "command-generation PR #8 and AW PR branch.",
+    "validations run": "command-generation pytest; AW generated package conformance; contract checks; maintainer surfaces; schema reference docs; test-workspace; lint-workspace.",
+    "result for continuation": "ready for PR review",
+    "next step": "Review and merge companion command-generation PR before or with AW PR."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "passed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none blocking"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "command-generation pytest; AW generated Python/TypeScript conformance; contract tooling; structured inventory; maintainer surfaces; schema reference docs; test-workspace; lint-workspace.",
+    "evidence for \"proof achieved\" state": "All listed proof commands passed in this run."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1370 contract-owned conformance cases.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Contract-owned cases are projected and run by command-generation; AW Python and TypeScript generated adapter conformance consume that shared runner; maintainer docs direct future command behavior examples into conformance contracts first.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "contract-owned conformance case runner implemented and consumed by AW generated adapter proof",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none; no blocking follow-on",
+    "post-work posterity capture": "docs updated",
+    "knowledge promoted (Memory/Docs/Config)": "command-generation README and AW maintainer playbook",
+    "resume from": "PR review"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The lane added the shared runner in command-generation, removed AW's duplicate projection/assertion logic, proved Python and TypeScript generated adapter conformance, and documented the future testing strategy.",
+    "evidence carried forward": "Companion command-generation PR #8; AW generated-package proof and workspace proof commands passed.",
+    "reopen trigger": "Reopen if generated Python or TypeScript adapter conformance stops consuming contract-owned cases through command-generation, or if the companion command-generation PR cannot merge."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan."
+  ]
+}

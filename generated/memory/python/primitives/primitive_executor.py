@@ -17,7 +17,7 @@ import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .operation_composition import expand_operation_steps, operation_fragments
 
@@ -245,12 +245,13 @@ def _toml_table_counts(*, values: dict[str, Any], arguments: dict[str, Any], con
     for record in record_values:
         if not isinstance(record, dict):
             continue
-        relevance = str(record.get(relevance_field, "")).strip().lower()
+        record_payload = cast(Mapping[str, Any], record)
+        relevance = str(record_payload.get(relevance_field, "")).strip().lower()
         if relevance == required_value:
             counts["required_count"] += 1
         elif relevance == optional_value:
             counts["optional_count"] += 1
-        if bool(record.get(routing_only_field, False)):
+        if bool(record_payload.get(routing_only_field, False)):
             counts["routing_only_count"] += 1
     return {"table_counts": counts, "table_present": True, "table_status": counts["status"]}
 
@@ -621,12 +622,13 @@ def _memory_manifest_counts(*, target_root: Path, manifest_path: str) -> dict[st
     for note in note_values:
         if not isinstance(note, dict):
             continue
-        relevance = str(note.get("task_relevance", "")).strip().lower()
+        note_payload = cast(Mapping[str, Any], note)
+        relevance = str(note_payload.get("task_relevance", "")).strip().lower()
         if relevance == "required":
             counts["required_count"] += 1
         elif relevance == "optional":
             counts["optional_count"] += 1
-        if bool(note.get("routing_only", False)):
+        if bool(note_payload.get("routing_only", False)):
             counts["routing_only_count"] += 1
     return counts
 
