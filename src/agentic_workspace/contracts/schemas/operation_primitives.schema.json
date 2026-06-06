@@ -40,6 +40,24 @@
           },
           "description": "Rules that keep the primitive set from becoming an ad hoc programming language."
         },
+        "composition_ladder": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Hierarchy of primitive, fragment, operation, and command responsibilities."
+        },
+        "fragment_rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Rules for operation-local IR fragments and their promotion boundary."
+        },
         "defer_when": {
           "type": "array",
           "items": {

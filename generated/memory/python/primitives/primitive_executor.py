@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .operation_composition import expand_operation_steps, operation_fragments
+
 
 class PrimitiveExecutionError(RuntimeError):
     pass
@@ -52,9 +54,8 @@ def run_operation_steps(
     steps = operation.get("ir_plan", {}).get("steps", [])
     if not isinstance(steps, list):
         raise PrimitiveExecutionError("operation ir_plan.steps must be a list")
-    for raw_step in steps:
-        if not isinstance(raw_step, dict):
-            raise PrimitiveExecutionError("operation ir_plan step must be an object")
+    fragments = operation_fragments(operation, error_type=PrimitiveExecutionError)
+    for raw_step in expand_operation_steps(steps, fragments=fragments, error_type=PrimitiveExecutionError):
         primitive = str(raw_step.get("uses", ""))
         arguments = raw_step.get("arguments", {})
         if not isinstance(arguments, dict):

@@ -1,0 +1,76 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1367 compositional operation IR",
+  "date": "2026-06-06",
+  "classification": "compositional-operation-ir-grounding",
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1367",
+      "label": "Compositional operation IR"
+    },
+    {
+      "kind": "issue",
+      "target": "#1364",
+      "label": "Broader generated CLI runtime migration boundary"
+    },
+    {
+      "kind": "issue",
+      "target": "#1366",
+      "label": "Strategic test inventory context"
+    }
+  ],
+  "scope": "operation-local fragments with generated Python and TypeScript execution, one representative report operation migrated, and docs/tests/checks updated",
+  "non_goals": [
+    "global operation-to-operation calls",
+    "automatic business-logic classification",
+    "general-purpose expression language",
+    "broad primitive file split",
+    "full #1364 migration completion"
+  ],
+  "summary": "The current operation model was flat operation -> ir_plan.steps -> primitive executor. The smallest implementation-ready composition slice is operation-local fragments executed by command-generation-owned Python and TypeScript runtimes, with one representative report operation migrated to the composed form.",
+  "review_method": {
+    "operation_schema": "src/agentic_workspace/contracts/schemas/operation.schema.json allowed ir_plan.steps but no reusable subflow or operation reference shape.",
+    "generator_wrapper": "scripts/generate/workspace_command_generation.py harvested primitive usage only from top-level ir_plan.steps.",
+    "executors": "command-generation rendered Python primitive_executor.py and TypeScript runtime.mjs with flat runSteps loops.",
+    "primitive_layout": "AW still has large package runtime primitive files; #1357 now inventories exact runtime-boundary minimization routes while #1364 owns actual migration."
+  },
+  "findings": [
+    {
+      "id": "flat-step-duplication",
+      "finding": "Report/lifecycle tails repeat select/load/emit or plan/apply/emit patterns. A local fragment model can express repeated subflows without introducing global hidden behavior.",
+      "implementation_route": "Add ir_plan.fragments plus uses_fragment call steps, then migrate config.report as a representative reporting pattern."
+    },
+    {
+      "id": "command-generation-owned-execution",
+      "finding": "Generated Python and TypeScript targets are rendered from command-generation. Editing generated files or AW runtime primitives would violate the generated-code boundary.",
+      "implementation_route": "Implement fragment expansion in rickardvh/command-generation#7 and pin AW to that commit before refreshing generated targets."
+    },
+    {
+      "id": "composition-hazards",
+      "finding": "Composition introduces missing-fragment, duplicate-fragment, ambiguous step, and cycle hazards.",
+      "implementation_route": "Executors reject those hazards; AW schema prevents ambiguous uses plus uses_fragment and fragment call arguments/outputs."
+    },
+    {
+      "id": "primitive-modularity",
+      "finding": "Splitting enormous runtime primitive files is downstream of the compositional model and #1364 migration inventory, not safe to complete in this first architecture slice.",
+      "implementation_route": "Document the primitive/fragment/operation/command ladder now; leave broad primitive extraction to #1364 after composition exists."
+    },
+    {
+      "id": "test-strategy",
+      "finding": "The new hierarchy supports #1366 by allowing tests at primitive, fragment, operation, and command levels instead of adding one-off command regressions for every composed subflow.",
+      "implementation_route": "Add command-generation primitive executor tests, AW contract/schema tests, generated freshness proof, and representative config command proof."
+    }
+  ],
+  "recommendation": {
+    "scope": "operation-local fragments with generated Python and TypeScript execution, one representative report operation migrated, and docs/tests/checks updated",
+    "why_honest_for_1367": "#1367 allows reusable fragments/subflows or operation references. This slice implements fragments/subflows with target parity and representative migration while explicitly leaving larger runtime migration work to #1364."
+  },
+  "validation_commands": [
+    "command-generation#7 tests for Python fragment execution and cycle rejection",
+    "AW operation schema and contract tooling validation",
+    "generated package refresh/check proving Python and TypeScript targets are current",
+    "focused config command tests proving composed config.report still behaves",
+    "make test-workspace and make lint-workspace"
+  ]
+}

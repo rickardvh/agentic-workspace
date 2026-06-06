@@ -3,6 +3,18 @@
   "summary": "Named primitive capabilities that procedural operation contracts may reference without embedding implementation code.",
   "ir_model": {
     "purpose": "Keep generated command behavior implementation-independent by expressing common package operations as a small, JSON-Schema-validated primitive sequence that thin target executors can implement.",
+    "composition_ladder": [
+      "primitive: a small target-executor or domain-runtime capability with explicit input/output expectations",
+      "fragment: an operation-local reusable subflow made of primitive steps and nested fragment calls",
+      "operation: a command-facing contract assembled from primitives and fragments",
+      "command target: generated Python and TypeScript parser, dispatch, operation executor, and runtime resources"
+    ],
+    "fragment_rules": [
+      "Fragments are operation-local and declarative; they do not create global hidden behavior.",
+      "Fragment calls use uses_fragment and cannot declare arguments or outputs on the call site.",
+      "Fragment cycles, missing fragments, and ambiguous uses plus uses_fragment steps must fail instead of falling back silently.",
+      "Promote repeated fragment shapes to broader command-generation support only when the pattern is stable across operations or packages."
+    ],
     "boundary_rules": [
       "Prefer target-executor primitives for file IO, structured data parsing, record updates, validation, rendering, and output emission.",
       "Keep package-specific inspection, heuristics, subprocess orchestration, and mutation policy behind named domain-runtime primitives until they have a smaller stable contract.",

@@ -241,6 +241,46 @@ def test_payload_assemble_supports_template_field_selectors(primitive_context: P
     assert payload == {"status": "present", "nested": {"note_count": 3, "required_count": 1}}
 
 
+def test_operation_fragments_execute_through_pinned_command_generation_dependency(primitive_context: PrimitiveContext) -> None:
+    operation = {
+        "ir_plan": {
+            "fragments": [
+                {
+                    "id": "assemble-and-emit",
+                    "description": "Reusable output fragment.",
+                    "steps": [
+                        {
+                            "id": "assemble",
+                            "description": "Build payload.",
+                            "uses": "payload.assemble",
+                            "arguments": {"fields": {"template": {"message": {"$value": "message"}}}},
+                            "outputs": ["result"],
+                        },
+                        {
+                            "id": "emit",
+                            "description": "Emit payload.",
+                            "uses": "output.emit",
+                            "outputs": ["rendered"],
+                        },
+                    ],
+                }
+            ],
+            "steps": [
+                {
+                    "id": "call-fragment",
+                    "description": "Use the reusable fragment.",
+                    "uses_fragment": "assemble-and-emit",
+                }
+            ],
+        }
+    }
+
+    result = run_operation_steps(operation, initial_values={"message": "fragment output", "format": "text"}, context=primitive_context)
+
+    assert result["result"] == {"message": "fragment output"}
+    assert result["rendered"] == "fragment output\n"
+
+
 def test_payload_verify_executes_declarative_policy(tmp_path: Path) -> None:
     contracts = tmp_path / "contracts"
     payload = tmp_path / "payload"

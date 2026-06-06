@@ -1357,7 +1357,8 @@ def _validate_typescript_native_operation_execution(
             if not isinstance(steps, list) or not steps:
                 errors.append(f"{package} operation {operation_id!r} is native but has no executable ir_plan.steps")
                 continue
-            for step in steps:
+            fragments = _operation_ir_fragments(ir_plan, package=package, operation_id=operation_id, errors=errors)
+            for step in _expand_operation_ir_steps(steps, fragments=fragments, package=package, operation_id=operation_id, errors=errors):
                 if not isinstance(step, dict):
                     errors.append(f"{package} operation {operation_id!r} has malformed ir_plan step")
                     continue
@@ -1369,6 +1370,85 @@ def _validate_typescript_native_operation_execution(
                         f"{package} operation {operation_id!r} uses TypeScript primitive {primitive!r} without runtime support"
                     )
     return errors
+
+
+def _operation_ir_fragments(
+    ir_plan: dict[str, object],
+    *,
+    package: str,
+    operation_id: str,
+    errors: list[str],
+) -> dict[str, list[object]]:
+    raw_fragments = ir_plan.get("fragments", [])
+    if raw_fragments in (None, []):
+        return {}
+    if not isinstance(raw_fragments, list):
+        errors.append(f"{package} operation {operation_id!r} ir_plan.fragments must be a list")
+        return {}
+    fragments: dict[str, list[object]] = {}
+    for raw_fragment in raw_fragments:
+        if not isinstance(raw_fragment, dict):
+            errors.append(f"{package} operation {operation_id!r} ir_plan fragment must be an object")
+            continue
+        fragment_id = str(raw_fragment.get("id", "")).strip()
+        fragment_steps = raw_fragment.get("steps", [])
+        if not fragment_id:
+            errors.append(f"{package} operation {operation_id!r} ir_plan fragment id is required")
+            continue
+        if fragment_id in fragments:
+            errors.append(f"{package} operation {operation_id!r} has duplicate ir_plan fragment {fragment_id!r}")
+            continue
+        if not isinstance(fragment_steps, list) or not fragment_steps:
+            errors.append(f"{package} operation {operation_id!r} ir_plan fragment {fragment_id!r} must declare steps")
+            continue
+        fragments[fragment_id] = fragment_steps
+    return fragments
+
+
+def _expand_operation_ir_steps(
+    steps: list[object],
+    *,
+    fragments: dict[str, list[object]],
+    package: str,
+    operation_id: str,
+    errors: list[str],
+    stack: tuple[str, ...] = (),
+) -> list[dict[str, object]]:
+    expanded: list[dict[str, object]] = []
+    for step in steps:
+        if not isinstance(step, dict):
+            errors.append(f"{package} operation {operation_id!r} has malformed ir_plan step")
+            continue
+        primitive = str(step.get("uses", "")).strip()
+        fragment_id = str(step.get("uses_fragment", "")).strip()
+        if primitive and fragment_id:
+            errors.append(f"{package} operation {operation_id!r} ir_plan step declares both uses and uses_fragment")
+            continue
+        if fragment_id:
+            if step.get("arguments") not in (None, {}):
+                errors.append(f"{package} operation {operation_id!r} ir_plan fragment call {fragment_id!r} cannot declare arguments")
+            if step.get("outputs") not in (None, []):
+                errors.append(f"{package} operation {operation_id!r} ir_plan fragment call {fragment_id!r} cannot declare outputs")
+            if fragment_id in stack:
+                errors.append(f"{package} operation {operation_id!r} ir_plan fragment cycle: {' -> '.join((*stack, fragment_id))}")
+                continue
+            fragment_steps = fragments.get(fragment_id)
+            if fragment_steps is None:
+                errors.append(f"{package} operation {operation_id!r} references unknown ir_plan fragment {fragment_id!r}")
+                continue
+            expanded.extend(
+                _expand_operation_ir_steps(
+                    fragment_steps,
+                    fragments=fragments,
+                    package=package,
+                    operation_id=operation_id,
+                    errors=errors,
+                    stack=(*stack, fragment_id),
+                )
+            )
+            continue
+        expanded.append(step)
+    return expanded
 
 
 def _validate_generated_command_projection_boundary(*, package_id: str, command: dict[str, object]) -> list[str]:

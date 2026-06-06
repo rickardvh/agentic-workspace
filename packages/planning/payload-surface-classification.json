@@ -680,6 +680,13 @@
       "rationale": "The planning wheel force-includes the target-local primitive executor as private runtime import data so shipped packages do not depend on the internal command-generation distribution."
     },
     {
+      "source_path": "generated/planning/python/primitives/operation_composition.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_composition.py",
+      "classification": "maintainer/development only",
+      "owner": "generated operation composition projection",
+      "rationale": "The planning wheel force-includes target-local operation composition helpers beside the primitive executor so shipped packages can expand operation-local IR fragments without depending on the internal command-generation distribution."
+    },
+    {
       "source_path": "generated/planning/python/primitives/resources.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/resources.py",
       "classification": "maintainer/development only",

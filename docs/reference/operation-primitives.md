@@ -16,6 +16,8 @@ Registry of implementation primitives referenced by operation contracts.
 | `ir_model` | object | no |  | Contract-level explanation of the target-executor IR model. |  |  |
 | `ir_model.purpose` | string | yes |  | Why this primitive registry exists as an operation IR boundary. |  |  |
 | `ir_model.boundary_rules` | array of string | yes |  | Rules that keep the primitive set from becoming an ad hoc programming language. |  |  |
+| `ir_model.composition_ladder` | array of string | no |  | Hierarchy of primitive, fragment, operation, and command responsibilities. |  |  |
+| `ir_model.fragment_rules` | array of string | no |  | Rules for operation-local IR fragments and their promotion boundary. |  |  |
 | `ir_model.defer_when` | array of string | no |  | Signals that behavior should remain a named runtime primitive instead of being decomposed further. |  |  |
 | `module_ir_ownership` | object | no |  | Ownership boundary for module-owned operation IR namespaces. |  |  |
 | `module_ir_ownership.rule` | string | no |  | Boundary rule for module-owned operation IR namespaces. |  |  |

@@ -86,6 +86,15 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Treat command/code generation, autopilot/self-improvement loops, package extraction, and heavy maintenance pressure as source-checkout-only maintainer tooling. Review artifacts and external tracker adapters are the reusable host-repo diagnostics that may remain behind `workspace.advanced_features`.
 - In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
 
+Operation IR has a four-level ladder:
+
+- Primitive: a minimal deterministic implementation unit owned by command generation when it is portable, or by a named package/runtime extension when it is domain-specific.
+- Fragment: an operation-local reusable sequence of primitive steps. Use this for repeated step shapes inside an operation before adding another primitive.
+- Operation: the behavior contract for one command-facing action, including effects, inputs, guards, proof, and the IR plan.
+- Command: the adapter projection that exposes an operation to a target CLI or package surface.
+
+Prefer the lowest level that expresses the behavior clearly. Do not hide ordinary composition inside a broad primitive, and do not promote a fragment into a shared primitive until repeated use and proof show that the abstraction is stable across operations or targets.
+
 As a maintainer rule of thumb:
 
 - if the fact should survive the current task, it probably belongs in memory or canonical docs
@@ -170,5 +179,4 @@ Use `docs/maintainer/installed-contract-design-checklist.md` when a package chan
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
 - Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
 - For any changed operational surface, run an operational-affordance review from `docs/maintainer/operational-affordance-design.md`: name the one primary next action, demote irrelevant or deep actions, use resolved config/local invocation, keep raw files behind compact routing, and confirm weak agents can proceed without learning package internals while strong agents can still inspect or override safely.
-
 
