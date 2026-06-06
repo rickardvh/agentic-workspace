@@ -1,0 +1,152 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for issues #1347-#1350 closeout and Planning repairs",
+  "date": "2026-06-05",
+  "scope": [
+    "Workflow obligations, Planning closeout stale active state, lane activation projection, and workspace front-door lane lifecycle forwarding"
+  ],
+  "classification": "closeout-planning-repair-grounding",
+  "goal": [
+    "Ground the implementation for #1347-#1350 so closure is based on observed gaps and targeted proof."
+  ],
+  "non_goals": [
+    "Do not redesign Planning lifecycle semantics beyond the four issue acceptances.",
+    "Do not add a new workflow-obligation engine or a new Planning state store."
+  ],
+  "review_mode": {
+    "mode": "closeout-planning-repair-grounding",
+    "review question": "Which existing AW surfaces fail to make workflow obligations, completed active state, active slice execplans, and lane lifecycle commands visible and repairable?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "AW start/implement, GitHub issue inspection, focused source/test reads, and focused regression tests.",
+    "evidence sources": "workspace runtime primitive source, Planning bootstrap installer source, workspace CLI/report tests, Planning lane/summary tests, and issue acceptance criteria for #1347-#1350."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1347",
+      "label": "Workflow obligations closeout contract"
+    },
+    {
+      "kind": "issue",
+      "target": "#1348",
+      "label": "Stale completed active Planning state"
+    },
+    {
+      "kind": "issue",
+      "target": "#1349",
+      "label": "Lane activation current slice projection"
+    },
+    {
+      "kind": "issue",
+      "target": "#1350",
+      "label": "Workspace front-door lane lifecycle forwarding"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Closeout reports did not give workflow obligations a user-visible state contract",
+      "summary": "Workflow obligations could exist in config/startup flow without a compact closeout contract that final-response rendering must include before claiming completion.",
+      "evidence": "closeout_report final-response rendering had no workflow-obligation required fact; configured obligations such as dogfooding_lane_closeout could be omitted from the chat-facing closeout scaffold.",
+      "risk if unchanged": "Agents can satisfy internal mechanics while still failing the user-facing obligation report that motivated the lane.",
+      "suggested action": "Add a closeout workflow_obligation_contract with explicit states and make final_response_rendering include required obligation status.",
+      "promotion target": "src/agentic_workspace/workspace_runtime_primitives.py and tests/test_workspace_report_cli.py",
+      "status": "implemented"
+    },
+    {
+      "id": "F2",
+      "title": "Completed execplans could remain reachable through active Planning state",
+      "summary": "Planning summary warned about historical completed execplan references, but it did not specifically identify active rows pointing at completed execplans or offer a direct cleanup route.",
+      "evidence": "Active state can retain a todo item whose execplan file has completed status; the close-item repair path did not normalize the legacy status spelling complete as completed.",
+      "risk if unchanged": "Future work may resume or route through stale active state even though later closeout evidence says the run completed.",
+      "suggested action": "Detect stale_completed_active_state, suggest close-item/closeout repair, and normalize complete as completed for cleanup.",
+      "promotion target": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_summary.py",
+      "status": "implemented"
+    },
+    {
+      "id": "F3",
+      "title": "Lane activation did not project active slice execplan ownership",
+      "summary": "Activating a lane with a current slice could project lane metadata without carrying the active slice execplan reference into the roadmap row used by summary/doctor.",
+      "evidence": "Lane state contains slice_sequence execplan_ref; roadmap lane projection omitted current_slice execplan and registration did not count roadmap execplan refs.",
+      "risk if unchanged": "A valid active lane can look incomplete or unregistered, and agents lose the concrete slice execplan pointer needed for continuation.",
+      "suggested action": "Project current_slice and execplan from the active slice, then treat roadmap execplan refs as registered live references.",
+      "promotion target": "packages/planning/src/repo_planning_bootstrap/installer.py and packages/planning/tests/test_lanes.py",
+      "status": "implemented"
+    },
+    {
+      "id": "F4",
+      "title": "Workspace Planning front door dropped lane lifecycle positionals",
+      "summary": "The workspace CLI parser accepted lane lifecycle arguments, but the primitive adapter did not forward lane ids and lane-specific options to the Planning module.",
+      "evidence": "lane-activate, lane-close, and lane-archive require a lane positional; the adapter only forwarded common target/format style options for many planning subcommands.",
+      "risk if unchanged": "Users can invoke a seemingly valid workspace command that fails or mutates the wrong shape because required lifecycle arguments are lost.",
+      "suggested action": "Forward lane lifecycle positionals and lane-specific options through _planning_module_argv.",
+      "promotion target": "src/agentic_workspace/workspace_runtime_primitives.py and tests/test_workspace_cli.py",
+      "status": "implemented"
+    }
+  ],
+  "recommendation": {
+    "promote": "#1347-#1350 are implementation-ready as one bounded lane because all findings map to existing surfaces and focused regression tests.",
+    "defer": "No broader workflow-obligation redesign or Planning lifecycle model redesign is needed for this lane.",
+    "dismiss": "No finding dismissed."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py::test_planning_front_door_forwards_lane_lifecycle_positionals tests/test_workspace_report_cli.py::test_report_closeout_report_renders_planned_slice_first_inspection_contract packages/planning/tests/test_lanes.py::test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean packages/planning/tests/test_summary.py::test_planning_summary_warns_when_active_state_points_to_completed_execplan packages/planning/tests/test_summary.py::test_close_item_accepts_complete_status_for_state_cleanup -q",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "make test-planning",
+    "make test-workspace",
+    "make lint-planning",
+    "make lint-workspace"
+  ],
+  "drift_log": [
+    "2026-06-05: Review record created by create-review."
+  ]
+}

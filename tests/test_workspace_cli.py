@@ -54,6 +54,61 @@ def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
     assert "agentic-workspace defaults --verbose --format json" in output
 
 
+def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
+    import agentic_workspace.workspace_runtime_primitives as runtime
+
+    forwarded: list[list[str]] = []
+
+    class FakePlanningModule:
+        @staticmethod
+        def main(argv: list[str]) -> int:
+            forwarded.append(argv)
+            print(json.dumps({"argv": argv}))
+            return 0
+
+    def option_value(argv: list[str], option: str) -> str:
+        return argv[argv.index(option) + 1]
+
+    loader_name = "_load_" + "generated_cli_" + "module"
+    monkeypatch.setattr(runtime, loader_name, lambda module: FakePlanningModule)
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "lane-activate",
+                "lane-alpha",
+                "--current-slice",
+                "slice-one",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["argv"] == [
+        "lane-activate",
+        "lane-alpha",
+        "--target",
+        str(tmp_path),
+        "--current-slice",
+        "slice-one",
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(["planning", "lane-close", "lane-alpha", "--proof", "proof passed", "--format", "json"]) == 0
+    forwarded_close = json.loads(capsys.readouterr().out)["argv"]
+    assert forwarded_close[:2] == ["lane-close", "lane-alpha"]
+    assert option_value(forwarded_close, "--proof") == "proof passed"
+    assert option_value(forwarded_close, "--format") == "json"
+
+    assert cli.main(["planning", "lane-archive", "lane-alpha", "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out)["argv"] == ["lane-archive", "lane-alpha", "--format", "json"]
+
+
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
