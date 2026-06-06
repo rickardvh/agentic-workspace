@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "issue-1380-active-intent-satisfaction-guard", title = "Implement #1380 active intent satisfaction guard", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/issue-1380-active-intent-satisfaction-guard.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "Tighten scaffold fields, touched paths, and validation before implementation starts.", done_when = "Implement #1380 active intent satisfaction guard is implemented, validated, and closed out honestly.", proof = "Run the proof selected by implement --changed before claiming completion." },
+]
 queued_items = []
 
 [roadmap]

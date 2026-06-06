@@ -889,6 +889,55 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_surfaces_chat_task_active_intent_contract_and_satisfaction_matrix(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Replace brittle behavior with an explicit intent contract and satisfaction matrix."
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _start_context(payload)
+    contract = context["active_intent_contract"]
+    assert contract["status"] == "present"
+    assert contract["source_count"] >= 1
+    assert "supersede" in contract["update_relationship_options"]
+    matrix = context["intent_satisfaction_matrix"]
+    assert matrix["status"] == "required-before-completion-claim"
+    assert matrix["full_completion_claim"]["allowed"] is False
+    assert "satisfaction_matrix.items" in matrix["full_completion_claim"]["blocked_by"]
+    assert "Self-review first" in matrix["full_completion_claim"]["rule"]
+    assert "active_intent_contract" in payload["drill_down"]["available_selectors"]
+    assert "intent_satisfaction_matrix" in payload["drill_down"]["available_selectors"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                task,
+                "--select",
+                "active_intent_contract,intent_satisfaction_matrix",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["values"]["active_intent_contract"]["kind"] == "agentic-workspace/active-intent-contract/v1"
+    assert selected["values"]["intent_satisfaction_matrix"]["kind"] == "agentic-workspace/intent-satisfaction-matrix/v1"
+    assert "full-intent-complete" in selected["values"]["intent_satisfaction_matrix"]["claim_levels"]
+    self_review = selected["values"]["intent_satisfaction_matrix"]["self_review_before_final_claim"]
+    assert self_review["status"] == "required"
+    assert "delegated subagent" in self_review["rule"]
+
+
 def test_start_read_only_reporting_task_does_not_suppress_acceptance_from_keywords(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

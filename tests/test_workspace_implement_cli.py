@@ -1158,6 +1158,48 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
     assert "proof.runtime_source_edit_review" in payload["drill_down"]["available_selectors"]
 
 
+def test_implement_surfaces_active_intent_contract_for_refined_chat_instruction(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    task = (
+        "Previously convert some tests, but now replace most existing tests with contract-owned tests; "
+        "do not claim the parent lane complete unless the replacement is representative."
+    )
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                task,
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _implement_context(payload)
+    contract = context["active_intent_contract"]
+    assert contract["status"] == "present"
+    assert contract["source_count"] == 1
+    assert "supersede" in contract["update_relationship_options"]
+    matrix = context["intent_satisfaction_matrix"]
+    assert matrix["status"] == "required-before-completion-claim"
+    assert matrix["full_completion_claim"]["allowed"] is False
+    assert "satisfaction_matrix.items" in matrix["full_completion_claim"]["blocked_by"]
+    assert "Self-review first" in matrix["full_completion_claim"]["rule"]
+    assert "proven level" in matrix["full_completion_claim"]["rule"]
+    assert "context.active_intent_contract" in payload["drill_down"]["available_selectors"]
+    assert "context.intent_satisfaction_matrix" in payload["drill_down"]["available_selectors"]
+
+
 def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

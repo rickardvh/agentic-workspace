@@ -13311,6 +13311,14 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
+        active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
+        intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+            active_intent_contract=active_intent_contract,
+            acceptance={},
+            proof={},
+            intent_check=intent_check,
+            parent_intent_status={},
+        )
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
         assurance_requirements = _assurance_requirements_report_payload(config=config)
@@ -13327,6 +13335,8 @@ def _report_closeout_trust_payload(
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "active_intent_contract": active_intent_contract,
+            "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
@@ -13358,6 +13368,14 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+        active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
+        intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+            active_intent_contract=active_intent_contract,
+            acceptance={},
+            proof={},
+            intent_check=intent_check,
+            parent_intent_status={},
+        )
         intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(
             planning_report=planning_report, target_root=target_root, config=config
@@ -13376,6 +13394,8 @@ def _report_closeout_trust_payload(
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "active_intent_contract": active_intent_contract,
+            "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
@@ -13425,6 +13445,25 @@ def _report_closeout_trust_payload(
         if isinstance(planning_report.get("active"), dict)
         else {},
         target_root=target_root,
+    )
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=None,
+        acceptance={},
+        active_planning_record=raw_active_planning_record
+        or (planning_report.get("active", {}).get("planning_record", {}) if isinstance(planning_report.get("active"), dict) else {}),
+    )
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=raw_active_planning_record
+        or (planning_report.get("active", {}).get("planning_record", {}) if isinstance(planning_report.get("active"), dict) else {}),
+        intent_check=intent_satisfaction_check,
+        completion_boundary=intent_satisfaction_check.get("completion_boundary", {}),
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance={},
+        proof={"intent_proof": intent_proof_check},
+        intent_check=intent_satisfaction_check,
+        parent_intent_status=parent_intent_status,
     )
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
@@ -13488,6 +13527,8 @@ def _report_closeout_trust_payload(
         "package_workflow_evidence": package_workflow_evidence,
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
+        "active_intent_contract": active_intent_contract,
+        "intent_satisfaction_matrix": intent_satisfaction_matrix,
         "intent_proof_check": intent_proof_check,
         "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "assurance_requirements": assurance_requirements,
@@ -16697,6 +16738,25 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             )
             if key in payload["applicable_intent_status"]
         }
+    if isinstance(payload.get("active_intent_contract"), dict) and not (
+        isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file"
+    ):
+        projected["active_intent_contract"] = {
+            "status": payload["active_intent_contract"].get("status"),
+            "source_count": payload["active_intent_contract"].get("source_count"),
+            "update_relationship_options": payload["active_intent_contract"].get("update_relationship_options", []),
+        }
+    if isinstance(payload.get("intent_satisfaction_matrix"), dict):
+        matrix = payload["intent_satisfaction_matrix"]
+        full_claim = _as_dict(matrix.get("full_completion_claim"))
+        projected["intent_satisfaction_matrix"] = {
+            "status": matrix.get("status"),
+            "full_completion_claim": {
+                "allowed": bool(full_claim.get("allowed")),
+                "blocked_by": full_claim.get("blocked_by", []),
+                "rule": "Self-review first; claim only the proven level.",
+            },
+        }
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -17528,6 +17588,22 @@ def _start_payload(
         and not _is_prep_only_handoff_task(task_text)
     ):
         payload["intent_evidence"] = intent_evidence
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        active_planning_record=active_parent_record,
+        issue_reference_intent=issue_reference_intent,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        proof=payload.get("proof", {}),
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
+    if active_intent_contract["status"] == "present":
+        payload["active_intent_contract"] = active_intent_contract
+        payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -17849,6 +17925,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "intent_discovery_dialogue",
         "intent_acknowledgement",
         "intent_evidence",
+        "active_intent_contract",
+        "intent_satisfaction_matrix",
         "issue_reference_intent",
         "workflow_sufficiency",
         "next_safe_action",
@@ -17881,6 +17959,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.intent_discovery_dialogue",
         "context.intent_acknowledgement",
         "context.intent_evidence",
+        "context.active_intent_contract",
+        "context.intent_satisfaction_matrix",
         "context.issue_reference_intent",
         "context.workflow_sufficiency",
         "context.guidance",
@@ -18165,6 +18245,25 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "closeout_blocked",
             )
             if key in payload["applicable_intent_status"]
+        }
+    if isinstance(payload.get("active_intent_contract"), dict) and not (
+        isinstance(payload.get("task_intent"), dict) and payload["task_intent"].get("task_argument_mode") == "task-file"
+    ):
+        context["active_intent_contract"] = {
+            "status": payload["active_intent_contract"].get("status"),
+            "source_count": payload["active_intent_contract"].get("source_count"),
+            "update_relationship_options": payload["active_intent_contract"].get("update_relationship_options", []),
+        }
+    if isinstance(payload.get("intent_satisfaction_matrix"), dict):
+        matrix = payload["intent_satisfaction_matrix"]
+        full_claim = _as_dict(matrix.get("full_completion_claim"))
+        context["intent_satisfaction_matrix"] = {
+            "status": matrix.get("status"),
+            "full_completion_claim": {
+                "allowed": bool(full_claim.get("allowed")),
+                "blocked_by": full_claim.get("blocked_by", []),
+                "rule": "Self-review first; claim only the proven level.",
+            },
         }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
@@ -18540,6 +18639,21 @@ def _start_tiny_payload_fast(
         and not _is_prep_only_handoff_task(task_text)
     ):
         payload["intent_evidence"] = intent_evidence
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        active_planning_record=active_parent_record,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        proof=payload.get("proof", {}),
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
+    if active_intent_contract["status"] == "present":
+        payload["active_intent_contract"] = active_intent_contract
+        payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -19524,6 +19638,211 @@ def _task_acceptance_payload(*, task_text: str | None, requested_outcomes: list[
         else "Provide task intent before closeout if acceptance is not obvious from the changed scope.",
         "proof_rule": "Proof should demonstrate acceptance satisfaction, not only command success.",
         "unresolved_questions": [],
+    }
+
+
+def _active_intent_contract_payload(
+    *,
+    task_text: str | None,
+    acceptance: dict[str, Any] | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+    issue_reference_intent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    task = " ".join(str(task_text or "").split())
+    acceptance = _as_dict(acceptance)
+    active_planning_record = _as_dict(active_planning_record)
+    issue_reference_intent = _as_dict(issue_reference_intent)
+    sources: list[dict[str, Any]] = []
+    if task:
+        sources.append(
+            {
+                "kind": "chat-task",
+                "authority": "current-user-instruction",
+                "summary": _task_excerpt(task, limit=220),
+            }
+        )
+    planning_intent = _as_dict(active_planning_record.get("intent_satisfaction"))
+    planning_original_intent = str(planning_intent.get("original intent", "")).strip()
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    delegated_outcome = str(delegated.get("requested outcome") or delegated.get("requested_outcome") or "").strip()
+    if planning_original_intent or delegated_outcome:
+        sources.append(
+            {
+                "kind": "planning-record",
+                "authority": "checked-in-planning",
+                "summary": planning_original_intent or delegated_outcome,
+            }
+        )
+    issue_refs = issue_reference_intent.get("issue_refs", [])
+    if not issue_refs:
+        issue_refs = re.findall(r"#\d+\b", task)
+    if issue_refs:
+        sources.append(
+            {
+                "kind": "external-reference",
+                "authority": "requires-refresh-or-cited-evidence",
+                "refs": [str(item) for item in _list_payload(issue_refs)],
+                "summary": "External references may carry intent; cite refreshed evidence before closing issue-backed scope.",
+            }
+        )
+    requested_outcomes = [str(item).strip() for item in _list_payload(acceptance.get("requested_outcomes")) if str(item).strip()]
+    acceptance_items = [item for item in _list_payload(acceptance.get("items")) if isinstance(item, dict)]
+    if not requested_outcomes and task:
+        requested_outcomes = [_task_excerpt(task, limit=180)]
+    return {
+        "kind": "agentic-workspace/active-intent-contract/v1",
+        "status": "present" if sources else "absent",
+        "controlling_sources": sources,
+        "source_count": len(sources),
+        "requested_outcomes": requested_outcomes[:8],
+        "acceptance_item_count": len(acceptance_items),
+        "update_relationship_options": [
+            "supersede",
+            "refine",
+            "constrain",
+            "narrow",
+            "reopen",
+            "branch",
+        ],
+        "later_instruction_rule": (
+            "When a later chat instruction changes the work, the agent must state whether it supersedes, refines, "
+            "constrains, narrows, reopens, or branches the active intent before claiming completion."
+        ),
+        "artifact_agnostic_rule": "Intent may come from chat, issue, PR/review comment, file, plan, or mixed sources; GitHub is optional evidence, not the owner model.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="active_intent_contract",
+            observed_by_aw=[
+                f"task_text_available={bool(task)}",
+                f"planning_record_available={bool(active_planning_record)}",
+                f"source_count={len(sources)}",
+            ],
+            recommended_by_aw=["carry this contract into implement/proof/closeout before completion claims"],
+            agent_owned_decisions=[
+                "semantic interpretation of the controlling intent",
+                "relationship between later chat instructions and existing intent",
+                "claim level supported by delivered evidence",
+            ],
+            human_owned_decisions=["acceptance of narrowed, deferred, or branched intent"],
+            rule="AW preserves intent sources and required claim-boundary structure; it does not decide semantic satisfaction.",
+        ),
+    }
+
+
+def _intent_satisfaction_matrix_payload(
+    *,
+    active_intent_contract: dict[str, Any],
+    acceptance: dict[str, Any] | None = None,
+    proof: dict[str, Any] | None = None,
+    intent_check: dict[str, Any] | None = None,
+    parent_intent_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = _as_dict(active_intent_contract)
+    acceptance = _as_dict(acceptance)
+    proof = _as_dict(proof)
+    intent_check = _as_dict(intent_check)
+    parent_intent_status = _as_dict(parent_intent_status)
+    items: list[dict[str, Any]] = []
+    for source in _list_payload(contract.get("controlling_sources")):
+        if not isinstance(source, dict):
+            continue
+        summary = str(source.get("summary") or "").strip()
+        if summary:
+            items.append(
+                {
+                    "intent_item": summary,
+                    "source": str(source.get("kind") or "intent-source"),
+                    "status": "needs-agent-evidence",
+                    "evidence_required": "Map delivered behavior or explicit deferral to this source before claiming completion.",
+                }
+            )
+    for item in _list_payload(acceptance.get("items")):
+        if not isinstance(item, dict):
+            continue
+        expectation = str(item.get("expectation") or "").strip()
+        if expectation:
+            items.append(
+                {
+                    "intent_item": expectation,
+                    "source": str(item.get("source") or "acceptance"),
+                    "status": str(item.get("status") or "unchecked"),
+                    "evidence_required": str(item.get("proof_hint") or "Name delivered behavior, proof, and any gap."),
+                }
+            )
+    if not items and contract.get("status") == "absent":
+        items.append(
+            {
+                "intent_item": "No active task intent was supplied to this AW surface.",
+                "source": "none",
+                "status": "not-applicable",
+                "evidence_required": "Pass --task or cite planning evidence before making task-satisfaction claims.",
+            }
+        )
+    intent_trust = str(intent_check.get("trust") or "").strip()
+    parent_status = str(parent_intent_status.get("status") or "").strip()
+    proof_claim_boundary = str(_as_dict(proof.get("intent_proof")).get("claim_boundary") or "").strip()
+    blocked_by = []
+    if any(str(item.get("status") or "").strip() in {"unchecked", "needs-agent-evidence"} for item in items):
+        blocked_by.append("satisfaction_matrix.items")
+    if intent_trust in {"follow-up-required", "needs-review"}:
+        blocked_by.append("closeout_trust.intent_satisfaction_check")
+    if parent_status in {"open", "needs-planning", "needs-review"}:
+        blocked_by.append("parent_intent_status")
+    if proof_claim_boundary and proof_claim_boundary not in {"work", "broad-work", "parent", "full-intent"}:
+        blocked_by.append("proof.intent_proof.claim_boundary")
+    full_completion_allowed = not blocked_by and bool(items)
+    return {
+        "kind": "agentic-workspace/intent-satisfaction-matrix/v1",
+        "status": "required-before-completion-claim" if contract.get("status") == "present" else "available-when-intent-known",
+        "claim_levels": [
+            "partial-progress",
+            "slice-complete",
+            "lane-complete",
+            "parent-complete",
+            "full-intent-complete",
+        ],
+        "items": items[:12],
+        "full_completion_claim": {
+            "allowed": full_completion_allowed,
+            "blocked_by": _dedupe(blocked_by),
+            "rule": (
+                "Do not say done, finished, complete, closes, or all unless the stated claim level matches matrix evidence; "
+                "use partial/slice/deferred wording when any item is unproven or explicitly deferred."
+            ),
+        },
+        "matrix_closeout_shape": [
+            "intent item",
+            "delivered behavior or explicit deferral",
+            "proof/evidence",
+            "gap or intentional deviation",
+            "claim level supported",
+        ],
+        "self_review_before_final_claim": {
+            "status": "required",
+            "rule": (
+                "Before final response, review your own result as if a delegated subagent returned it: compare the "
+                "original intent, delivered behavior, evidence, gaps, and claim level before saying done."
+            ),
+            "questions": [
+                "Did the result satisfy the original intent rather than a convenient slice?",
+                "Is every completion claim supported by evidence or explicitly caveated?",
+                "Would a reviewer reject the final wording as overclaiming?",
+            ],
+        },
+        "authority_boundary": _authority_boundary_payload(
+            surface="intent_satisfaction_matrix",
+            observed_by_aw=[
+                f"intent_item_count={len(items)}",
+                f"blocked_by_count={len(_dedupe(blocked_by))}",
+            ],
+            recommended_by_aw=["render a compact satisfaction matrix before broad completion claims"],
+            agent_owned_decisions=[
+                "whether evidence satisfies each semantic intent item",
+                "which completion claim level is honest",
+                "whether a gap is acceptable, deferred, or blocking",
+            ],
+            human_owned_decisions=["acceptance of partial completion, deferral, or parent/full closure"],
+            rule="AW exposes the matrix shape and mechanical blockers; the agent owns semantic satisfaction judgments.",
+        ),
     }
 
 
@@ -21792,6 +22111,18 @@ def _implement_payload(
         generated_surface_trust=generated_surface_trust,
     )
     applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_planning_record_for_intent)
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=acceptance,
+        active_planning_record=active_planning_record_for_intent,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=acceptance,
+        proof=proof,
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -21878,6 +22209,8 @@ def _implement_payload(
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text, acceptance=acceptance),
         "intent_acknowledgement": intent_acknowledgement,
         "intent_evidence": intent_evidence,
+        "active_intent_contract": active_intent_contract,
+        "intent_satisfaction_matrix": intent_satisfaction_matrix,
         "parent_intent_status": parent_intent_status,
         "applicable_intent_status": applicable_intent_status,
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
@@ -22178,6 +22511,21 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 else [],
             },
             "intent_evidence": _compact_intent_evidence(payload.get("intent_evidence", {})),
+            "active_intent_contract": {
+                "status": payload.get("active_intent_contract", {}).get("status"),
+                "source_count": payload.get("active_intent_contract", {}).get("source_count"),
+                "update_relationship_options": payload.get("active_intent_contract", {}).get("update_relationship_options", []),
+            },
+            "intent_satisfaction_matrix": {
+                "status": payload.get("intent_satisfaction_matrix", {}).get("status"),
+                "full_completion_claim": {
+                    "allowed": bool(_as_dict(payload.get("intent_satisfaction_matrix", {}).get("full_completion_claim")).get("allowed")),
+                    "blocked_by": _as_dict(payload.get("intent_satisfaction_matrix", {}).get("full_completion_claim")).get(
+                        "blocked_by", []
+                    ),
+                    "rule": "Self-review first; claim only the proven level.",
+                },
+            },
             "parent_intent_status": {
                 key: payload.get("parent_intent_status", {}).get(key)
                 for key in (
@@ -22241,6 +22589,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.workflow_sufficiency",
                 "context.acceptance",
                 "context.intent_evidence",
+                "context.active_intent_contract",
+                "context.intent_satisfaction_matrix",
                 "context.parent_intent_status",
                 "context.applicable_intent_status",
                 "context.acceptance_reconciliation",
@@ -22259,6 +22609,16 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+    if isinstance(payload.get("generated_surface_trust"), dict) and payload["generated_surface_trust"].get("status") == "present":
+        tiny_context = projected.get("context", {})
+        if isinstance(tiny_context, dict):
+            tiny_context.pop("active_intent_contract", None)
+            tiny_context.pop("intent_satisfaction_matrix", None)
+        selectors = projected.get("drill_down", {}).get("available_selectors", [])
+        if isinstance(selectors, list):
+            projected["drill_down"]["available_selectors"] = [
+                item for item in selectors if item not in {"context.active_intent_contract", "context.intent_satisfaction_matrix"}
+            ]
     tiny_context = projected.get("context", {})
     if isinstance(tiny_context, dict):
         parent_packet = tiny_context.get("parent_intent_status", {})

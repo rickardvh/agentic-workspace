@@ -2932,6 +2932,17 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert acceptance["trust"] == "normal"
     assert acceptance["evidence_present"] is True
     assert acceptance["completion_criteria_count"] == 1
+    active_intent = payload["closeout_trust"]["active_intent_contract"]
+    assert active_intent["kind"] == "agentic-workspace/active-intent-contract/v1"
+    assert active_intent["status"] == "present"
+    assert active_intent["controlling_sources"][0]["kind"] == "planning-record"
+    matrix = payload["closeout_trust"]["intent_satisfaction_matrix"]
+    assert matrix["kind"] == "agentic-workspace/intent-satisfaction-matrix/v1"
+    assert matrix["status"] == "required-before-completion-claim"
+    assert matrix["full_completion_claim"]["allowed"] is False
+    assert "closeout_trust.intent_satisfaction_check" in matrix["full_completion_claim"]["blocked_by"]
+    assert "parent_intent_status" in matrix["full_completion_claim"]["blocked_by"]
+    assert "delegated subagent" in matrix["self_review_before_final_claim"]["rule"]
     residue_action = payload["closeout_trust"]["durable_residue_action"]
     assert residue_action["action"] == "route-durable-residue"
     assert residue_action["visible_states"] == ["none-found", "capture", "route-to-owner", "dismissed"]
