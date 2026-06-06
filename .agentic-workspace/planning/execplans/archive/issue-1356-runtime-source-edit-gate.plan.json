@@ -1,0 +1,332 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Gate direct runtime-source edits",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1356: make direct edits to generated-CLI-adjacent runtime source visibly suspect unless explicitly classified as an existing primitive bugfix, a genuinely new primitive, or an accepted/suspect generated-command behavior boundary with owner, symbol, and proof evidence.",
+    "hard_constraints": "Do not make vague package-domain boundary wording sufficient. Do not add a new hand-owned runtime workaround. Keep this slice to proof/check/report surfaces for runtime-source edit classification; do not perform the #1357 inventory shrink or #1358 freshness parity lanes here.",
+    "agent_may_decide": "Exact payload shape and test placement, provided the user-facing proof surface distinguishes observed changed runtime paths, accepted edit reasons, rejected vague reasons, owner/symbol evidence, and residual risk.",
+    "escalate_when": "A correct gate requires command-generation package API changes, broad primitive inventory reclassification, or generated-target freshness/hash behavior outside #1356.",
+    "next_action": "Inspect generated-package proof and changed-path proof/implement surfaces, add the smallest runtime-source edit review packet and tests, then run focused and selected full proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement #1356 runtime-source edit gate\" --format json"
+    ],
+    "touched_scope": [
+      "scripts/check/check_generated_command_packages.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_workspace_implement_cli.py",
+      ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      ".agentic-workspace/planning/lanes/lane-1356-runtime-source-edit-gate.lane.json",
+      ".agentic-workspace/planning/execplans/issue-1356-runtime-source-edit-gate.plan.json"
+    ],
+    "completion_criteria": [
+      "Runtime-source changed paths participating in generated CLI behavior surface a review packet with observed paths, required classification, accepted reasons, rejected vague reasons, owner/symbol/proof expectations, and residual risk.",
+      "Missing or vague runtime edit classification is visibly insufficient in proof/check output.",
+      "Focused tests cover accepted primitive bugfix/new primitive classification and rejected vague package-domain boundary wording.",
+      "Closeout states that #1356 is slice/lane progress only and parent #1354 remains open for #1357, #1358, command-generation support, and dogfooding closeout."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Implement #1356 so direct runtime-source edits are gated by explicit primitive-edit classification."
+  ],
+  "non_goals": [
+    "Do not implement #1357 inventory minimization, #1358 generated target parity/freshness, command-generation#5 generic support, or final #1354 parent closeout in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1356 runtime-source edit gate.",
+      "constraints": "Runtime edit proof must require concrete primitive-edit classification; vague package-domain wording is insufficient.",
+      "latitude": "Choose compact packet shape, checks, and tests within existing proof/report surfaces.",
+      "escalation": "Escalate if generic command-generation APIs or broad inventory minimization are needed.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1356-runtime-source-edit-gate",
+      "status": "completed",
+      "next_step": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_generated_command_packages.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1354 generated-CLI single-source runtime boundary.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "activation trigger": "after #1356 lane closeout"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json."
+  },
+  "intent_interpretation": {
+    "literal request": "Gate direct runtime-source edits under the generated-CLI boundary.",
+    "inferred intended outcome": "Add proof/check/report support that makes runtime-source edits require explicit primitive bugfix/new primitive/suspect generated-command classification.",
+    "chosen concrete what": "Add a compact runtime-source edit review packet to generated-package proof or changed-path proof surfaces and tests that reject vague package-domain classification.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/check/check_generated_command_packages.py, src/agentic_workspace/workspace_runtime_primitives.py, focused tests, and this lane/decomposition/execplan closeout state.",
+    "max changed files": "about 8 source/test/planning files, excluding generated artifacts only if a contract change unexpectedly requires regeneration.",
+    "required validation commands": "Focused generated-package proof tests, focused implement changed-path tests, generated-package checks, and AW implement/proof selection for changed paths.",
+    "ask-before-refactor threshold": "Ask before moving generic APIs into command-generation, changing the runtime inventory taxonomy broadly, or altering generated target freshness semantics.",
+    "stop before touching": "#1357 inventory minimization, #1358 freshness/hash parity, command-generation package code, broad runtime primitive migration, or parent #1354 closeout."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "#1354/#1356 issues, the #1354 grounding review, generated-package check script, AW implement/proof changed-path surfaces, focused tests, and this lane/execplan.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Resume by inspecting the runtime-source edit review packet/check tests and running implement --changed before closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1356 runtime-source edit gate.",
+    "hard constraints": "Do not make vague package-domain boundary sufficient; do not claim parent #1354 closure.",
+    "agent may decide locally": "Packet names, field shape, and focused test placement.",
+    "escalate when": "The gate needs command-generation API changes, broad inventory minimization, or freshness parity behavior."
+  },
+  "post_decomposition_delegation": {
+    "status": "keep-local",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1356-runtime-source-edit-gate",
+    "status": "completed",
+    "scope": "Implement #1356 runtime-source edit proof gate only.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect existing generated-package proof and changed-path implement/proof surfaces, then implement the smallest runtime-source edit review packet and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_generated_command_packages.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_workspace_implement_cli.py",
+    ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    ".agentic-workspace/planning/lanes/lane-1356-runtime-source-edit-gate.lane.json",
+    ".agentic-workspace/planning/execplans/issue-1356-runtime-source-edit-gate.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement #1356 runtime-source edit gate\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Runtime-source edit proof/check output requires explicit primitive bugfix/new primitive/suspect generated-command classification.",
+    "Vague package-domain boundary wording is rejected or marked insufficient.",
+    "Focused tests and generated-package checks pass.",
+    "Lane closeout keeps #1354 parent open for remaining lanes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1356 by adding a generated-CLI runtime-source edit policy to the Python completion blocker report and a changed-path runtime_source_edit_review packet in AW implement/proof output. The packet reports observed runtime source paths, accepted primitive-edit reasons, rejected vague reasons, required evidence, and closeout rules without making AW the semantic classifier.",
+    "scope touched": "Generated-package proof report, AW changed-path proof selection/tiny implement projection, focused tests, #1354 decomposition, #1356 lane and execplan Planning state.",
+    "changed surfaces": "scripts/check/check_generated_command_packages.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_implement_cli.py; .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json; .agentic-workspace/planning/lanes/lane-1356-runtime-source-edit-gate.lane.json; .agentic-workspace/planning/execplans/issue-1356-runtime-source-edit-gate.plan.json; .agentic-workspace/planning/state.toml",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed inside #1356. The lane gates direct runtime-source edits but does not shrink the accepted runtime inventory or implement Python/TypeScript freshness parity; those remain explicit #1354 lanes.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests passed: uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q --tb=short (125 passed). Generated package freshness/static proof passed: uv run python scripts/generate/generate_command_packages.py --check and uv run python scripts/check/check_generated_command_packages.py. AW selected proof passed: summary, doctor, make test-workspace, make lint-workspace.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1356 so generated-CLI-adjacent runtime source edits require explicit primitive-edit classification.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1356 is satisfied as a slice/lane contribution. Parent #1354 remains open for #1357, #1358, command-generation support, and final dogfooding closeout.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1356 so generated-CLI-adjacent runtime source edits require explicit primitive-edit classification.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Focused tests passed: uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q --tb=short (125 passed). Generated package freshness/static proof passed: uv run python scripts/generate/generate_command_packages.py --check and uv run python scripts/check/check_generated_command_packages.py. AW selected proof passed: summary, doctor, make test-workspace, make lint-workspace.\nChanged surfaces: scripts/check/check_generated_command_packages.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_implement_cli.py; .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json; .agentic-workspace/planning/lanes/lane-1356-runtime-source-edit-gate.lane.json; .agentic-workspace/planning/execplans/issue-1356-runtime-source-edit-gate.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: planning (.agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  }
+}

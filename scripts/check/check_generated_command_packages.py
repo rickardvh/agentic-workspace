@@ -30,7 +30,13 @@ for SOURCE_ROOT in (
         sys.path.insert(0, str(SOURCE_ROOT))
 
 import command_generation  # noqa: E402
-from command_generation import CommandGenerationHostManifest, PrimitiveRegistry, command_package_schema_path, render_outputs  # noqa: E402
+from command_generation import (  # noqa: E402
+    CommandGenerationHostManifest,
+    PrimitiveRegistry,
+    command_package_schema_path,
+    generated_output_freshness_report,
+    render_outputs,
+)
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
@@ -130,6 +136,21 @@ PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
     "provider-integration",
 }
 PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES = {"generic-deterministic-runtime-debt"}
+PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES = {
+    "front-door-dispatch": "candidate-route: reduce by generated dispatcher support only when the dispatch semantics are contract-stable.",
+    "generic-deterministic-runtime-debt": "move-to-command-generation: generic deterministic command behavior must not remain an accepted runtime boundary.",
+    "live-workspace-inspection": "hand-owned: live repository inspection remains a package/runtime primitive until a stable IR contract exists.",
+    "mutation-orchestration": "hand-owned: mutation, safety, conflict, and provenance policy remains a package/runtime primitive until safely decomposed.",
+    "package-specific-judgment": "hand-owned: semantic package judgment remains a package/runtime primitive unless a smaller stable contract emerges.",
+    "provider-integration": "hand-owned: provider or subprocess integration remains an adapter/runtime primitive unless generic provider support is defined.",
+}
+PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES = {
+    "front-door-dispatch",
+    "live-workspace-inspection",
+    "mutation-orchestration",
+    "package-specific-judgment",
+    "provider-integration",
+}
 PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "generated-owned output coverage:",
     "accepted source fallback:",
@@ -192,6 +213,19 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+)
+RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS = (
+    "existing-primitive-bugfix",
+    "new-primitive-implementation",
+)
+RUNTIME_SOURCE_EDIT_SUSPECT_REASONS = (
+    "generated-command-behavior",
+    "interface-behavior-change",
+)
+RUNTIME_SOURCE_EDIT_REJECTED_VAGUE_REASONS = (
+    "package-domain boundary",
+    "runtime code changed",
+    "implementation detail",
 )
 PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
     "generated/workspace/python/primitives/workspace_runtime.py",
@@ -1907,6 +1941,124 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
         "accepted_output_emission_symbols": output_emission_symbols,
         "python_bridge_symbols": python_bridge_symbols,
         "generic_debt_symbols": generic_debt_symbols,
+    }
+
+
+def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[str, object]:
+    if metrics.get("status") != "available":
+        return {
+            "kind": "python-runtime-boundary-minimization/v1",
+            "status": "unavailable",
+            "minimization_claim_allowed": False,
+            "reason": metrics.get("error", "accepted runtime boundary metrics unavailable"),
+        }
+    class_counts_obj = metrics.get("accepted_runtime_symbol_count_by_class", {})
+    class_counts = {str(key): int(value) for key, value in class_counts_obj.items()} if isinstance(class_counts_obj, dict) else {}
+    accepted_symbol_count = int(metrics.get("accepted_runtime_symbol_count", 0) or 0)
+    generic_debt_symbols = metrics.get("generic_debt_symbols", [])
+    if not isinstance(generic_debt_symbols, list):
+        generic_debt_symbols = []
+    hand_owned_count = sum(class_counts.get(boundary_class, 0) for boundary_class in PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES)
+    move_candidate_count = class_counts.get("generic-deterministic-runtime-debt", 0)
+    minimization_claim_allowed = accepted_symbol_count == 0
+    status = "minimized" if minimization_claim_allowed else "not-minimized-hand-owned-boundaries-remain"
+    return {
+        "kind": "python-runtime-boundary-minimization/v1",
+        "status": status,
+        "freshness_claim_boundary": (
+            "completion_claim_allowed only means generated Python output is exact/current and accepted boundaries are inventoried; "
+            "it is not a claim that runtime boundaries are minimized."
+        ),
+        "minimization_claim_allowed": minimization_claim_allowed,
+        "whole_category_acceptance_allowed": False,
+        "accepted_symbol_count": accepted_symbol_count,
+        "remaining_hand_owned_symbol_count": hand_owned_count,
+        "move_to_command_generation_candidate_count": move_candidate_count,
+        "remaining_by_runtime_boundary_class": dict(sorted(class_counts.items())),
+        "route_by_runtime_boundary_class": {
+            key: PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES[key]
+            for key in sorted(PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES)
+        },
+        "move_to_command_generation_candidates": generic_debt_symbols,
+        "required_evidence_for_remaining_boundaries": [
+            "binding_kind",
+            "source_module",
+            "source_symbol",
+            "operation_ids",
+            "primitive_refs",
+            "owner_package",
+            "runtime_boundary_class",
+            "why_not_generic_deterministic",
+            "conformance_ref",
+            "generic_behavior_audit",
+        ],
+        "shrink_next_when": [
+            "a boundary's deterministic dataflow can be expressed as shared primitive IR",
+            "a front-door dispatch path can be rendered from command-generation without package runtime policy",
+            "a provider/runtime adapter can be split into a generic adapter contract and package-owned semantic judgment",
+        ],
+        "authority_boundary": {
+            "aw_observes": [
+                "exact generated call sites",
+                "declared runtime boundary classes",
+                "accepted symbol counts",
+                "generic debt candidates",
+            ],
+            "agent_owns": [
+                "semantic judgment about whether a boundary is safe to shrink",
+                "choosing the next implementation slice",
+                "claiming parent #1354 satisfaction",
+            ],
+            "human_owns": [
+                "acceptance of remaining hand-owned primitive boundaries",
+                "approval of product behavior changes while shrinking runtime code",
+            ],
+        },
+        "claim_rule": (
+            "Do not report the runtime primitive inventory as minimized while accepted_symbol_count is non-zero; "
+            "report it as exact/inventoried unless the remaining hand-owned symbols are actually removed or moved."
+        ),
+    }
+
+
+def _generated_target_freshness_report(ir: dict[str, object]) -> dict[str, object]:
+    outputs = list(render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT))
+    package_target_counts: dict[str, int] = {}
+
+    def target_family_for_path(path: Path) -> str | None:
+        relative_path = path.relative_to(REPO_ROOT).as_posix()
+        parts = relative_path.split("/")
+        if len(parts) < 3 or parts[0] != "generated":
+            return None
+        package_target = "/".join(parts[:3])
+        package_target_counts[package_target] = package_target_counts.get(package_target, 0) + 1
+        return parts[2]
+
+    generic_report = generated_output_freshness_report(
+        outputs,
+        repo_root=REPO_ROOT,
+        required_target_families=("python", "typescript"),
+        target_family_for_path=target_family_for_path,
+    )
+    target_families = ["python", "typescript"]
+    return {
+        "kind": "generated-target-freshness/v1",
+        "status": generic_report["status"],
+        "target_families": target_families,
+        "rendered_output_count": generic_report["rendered_output_count"],
+        "rendered_output_count_by_family": generic_report["rendered_output_count_by_family"],
+        "rendered_output_count_by_package_target": dict(sorted(package_target_counts.items())),
+        "expected_digest_by_family": generic_report["expected_digest_by_family"],
+        "stale_output_count_by_family": generic_report["stale_output_count_by_family"],
+        "stale_outputs_by_family": generic_report["stale_outputs_by_family"],
+        "missing_target_families": generic_report["missing_target_families"],
+        "freshness_check_command": "uv run python scripts/generate/generate_command_packages.py --check",
+        "refresh_command": "uv run python scripts/generate/generate_command_packages.py",
+        "validation_command": "uv run python scripts/check/check_generated_command_packages.py",
+        "cheap_check_rule": generic_report["cheap_check_rule"],
+        "claim_rule": (
+            "Do not claim generated target freshness from Python-only evidence; generated CLI freshness covers both Python and TypeScript target families."
+        ),
     }
 
 
@@ -4104,6 +4256,8 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     gate = policy.get("completion_gate", {})
     gate_state = str(gate.get("state", "")) if isinstance(gate, dict) else "malformed"
     completion_claim_allowed = current_state == "full-generated-cli-complete" and gate_state == "satisfied" and not blockers
+    runtime_metrics = _python_runtime_boundary_metrics()
+    generated_target_freshness = _generated_target_freshness_report(ir)
     return {
         "kind": "python-completion-blockers/v1",
         "current_state": current_state,
@@ -4112,10 +4266,36 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "false_completion_claim_would_fail": bool(blockers),
         "blockers": blockers,
         "blocker_count": len(blockers),
-        "accepted_runtime_boundary_metrics": _python_runtime_boundary_metrics(),
+        "accepted_runtime_boundary_metrics": runtime_metrics,
+        "runtime_boundary_minimization": _runtime_boundary_minimization_report(runtime_metrics),
+        "generated_target_freshness": generated_target_freshness,
+        "runtime_source_edit_policy": _runtime_source_edit_policy_payload(),
         "lifecycle_dry_run_metrics": _lifecycle_dry_run_metrics(),
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
+    }
+
+
+def _runtime_source_edit_policy_payload() -> dict[str, object]:
+    return {
+        "kind": "generated-cli-runtime-source-edit-policy/v1",
+        "status": "available",
+        "watched_runtime_source_paths": list(PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS),
+        "accepted_direct_edit_reasons": list(RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS),
+        "suspect_reasons": list(RUNTIME_SOURCE_EDIT_SUSPECT_REASONS),
+        "rejected_vague_reasons": list(RUNTIME_SOURCE_EDIT_REJECTED_VAGUE_REASONS),
+        "required_evidence": [
+            "changed_path",
+            "edit_reason",
+            "owner",
+            "source_symbol_or_primitive",
+            "proof",
+            "whether command-generation or AW owns the next change",
+        ],
+        "rule": (
+            "Runtime-source edits adjacent to generated CLI behavior require explicit primitive bugfix/new primitive evidence; "
+            "vague package-domain boundary wording is insufficient."
+        ),
     }
 
 
@@ -4134,6 +4314,25 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
         print(f"Accepted output-emission symbols: {metrics.get('accepted_output_emission_symbol_count')}")
         print(f"Python bridge steps: {metrics.get('python_bridge_step_count')}")
         print(f"Generic debt symbols: {metrics.get('generic_debt_symbol_count')}")
+    minimization = report.get("runtime_boundary_minimization", {})
+    if isinstance(minimization, dict) and minimization.get("status") not in {None, "unavailable"}:
+        print(f"Runtime boundary minimized: {str(minimization.get('minimization_claim_allowed')).lower()}")
+        print(f"Remaining hand-owned runtime symbols: {minimization.get('remaining_hand_owned_symbol_count')}")
+        print(f"Move-to-command-generation candidate symbols: {minimization.get('move_to_command_generation_candidate_count')}")
+        print(f"Runtime minimization claim rule: {minimization.get('claim_rule')}")
+    target_freshness = report.get("generated_target_freshness", {})
+    if isinstance(target_freshness, dict) and target_freshness.get("status"):
+        print(f"Generated target freshness: {target_freshness.get('status')}")
+        print(f"Generated target families: {target_freshness.get('target_families')}")
+        print(f"Rendered outputs by family: {target_freshness.get('rendered_output_count_by_family')}")
+        print(f"Stale outputs by family: {target_freshness.get('stale_output_count_by_family')}")
+        print(f"Generated target claim rule: {target_freshness.get('claim_rule')}")
+    runtime_edit_policy = report.get("runtime_source_edit_policy", {})
+    if isinstance(runtime_edit_policy, dict) and runtime_edit_policy.get("status") == "available":
+        print(
+            "Runtime source edit policy: explicit primitive bugfix/new primitive evidence required; "
+            "vague package-domain boundary wording is insufficient"
+        )
     lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
     if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
         print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")

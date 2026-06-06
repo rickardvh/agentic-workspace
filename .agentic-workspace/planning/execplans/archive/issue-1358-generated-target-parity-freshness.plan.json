@@ -1,0 +1,358 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Guarantee generated target parity and freshness",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1358 by making generated-target freshness proof cover both Python and TypeScript generated outputs when relevant source or generated surfaces change.",
+    "hard_constraints": "Do not directly edit generated targets as a substitute for generator output. Do not claim generated-CLI single-source satisfaction from Python-only proof. Keep the check cheap: use freshness/hash/check evidence rather than regenerating on every AW call.",
+    "agent_may_decide": "How to expose parity/freshness evidence inside existing generator/check/proof-selection surfaces.",
+    "escalate_when": "A correct fix requires new generic command-generation APIs, cross-repo changes, or broad generated target layout changes.",
+    "next_action": "Inspect generator/check freshness surfaces and add cheap Python/TypeScript parity proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q --tb=short",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <changed paths> --task \"Implement #1358 generated target parity and freshness\" --format json"
+    ],
+    "touched_scope": [
+      "scripts/check/check_generated_command_packages.py",
+      "scripts/generate/generate_command_packages.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_workspace_implement_cli.py"
+    ],
+    "completion_criteria": [
+      "Generated-package proof or proof selection exposes both Python and TypeScript generated target freshness obligations for relevant changes.",
+      "Freshness proof remains cheap and does not require regenerating on every AW call.",
+      "Stale generated outputs remain detectable by generator --check/static proof.",
+      "Parent #1354 remains open unless command-generation support and final dogfooding closeout are also satisfied."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Guarantee generated target parity and freshness."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1358 generated target parity/freshness proof.",
+      "constraints": "No generated-target hand edits as substitute for generator output; no Python-only generated freshness claims.",
+      "latitude": "Choose compact parity evidence and focused tests inside existing AW proof/check surfaces.",
+      "escalation": "Escalate if generic support must move to command-generation or if target generation architecture changes are needed.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1358-generated-target-parity-freshness",
+      "status": "completed",
+      "next_step": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_generated_command_packages.py",
+        "scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1354 generated-CLI single-source boundary across Python and TypeScript generated targets.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "activation trigger": "After this lane closes, shape/complete command-generation support and final dogfooding closeout."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json."
+  },
+  "intent_interpretation": {
+    "literal request": "Guarantee generated target parity and freshness",
+    "inferred intended outcome": "Relevant generated-CLI changes should not leave Python and TypeScript generated outputs out of sync or unproven.",
+    "chosen concrete what": "Expose parity/freshness obligations for both generated target families through existing proof/check surfaces.",
+    "interpretation distance": "low",
+    "review guidance": "Check whether the proof output can make a Python-only freshness claim, and whether TypeScript staleness remains cheaply detectable."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/check/check_generated_command_packages.py; scripts/generate/generate_command_packages.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_implement_cli.py; #1358 planning surfaces.",
+    "max changed files": "About 7 files; ask before touching generated outputs or external command-generation code.",
+    "required validation commands": "Focused tests, check_generated_command_packages.py, generate_command_packages.py --check, AW changed-path implement proof selection.",
+    "ask-before-refactor threshold": "Ask before changing generated target layout, adding cross-repo command-generation APIs, or modifying generated outputs directly.",
+    "stop before touching": "Generated target files, command-generation package internals, unrelated runtime primitives, or parent closeout claims."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #1358, #1354 decomposition, generator/check scripts, AW proof selection, and focused tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1358: add cheap Python/TypeScript generated target parity/freshness proof without editing generated targets directly.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1358 generated target parity/freshness proof.",
+    "hard constraints": "No Python-only proof claims; no direct generated-target edits as substitute for generation.",
+    "agent may decide locally": "Compact proof packet shape, tests, and integration into existing check/proof surfaces.",
+    "escalate when": "Generic support must move to command-generation or target architecture changes are needed."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "#1354",
+    "#1358",
+    ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    ".agentic-workspace/planning/lanes/lane-1358-generated-target-parity-freshness.lane.json"
+  ],
+  "active_milestone": {
+    "id": "issue-1358-generated-target-parity-freshness",
+    "status": "completed",
+    "scope": "Add generated target parity/freshness proof across Python and TypeScript generated outputs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect generator/check freshness surfaces and add cheap parity proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_generated_command_packages.py",
+    "scripts/generate/generate_command_packages.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_workspace_implement_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Do not directly edit generated targets.",
+    "Do not claim parent #1354 complete from parity proof alone."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_implement_cli.py -q --tb=short",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <changed paths> --task \"Implement #1358 generated target parity and freshness\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Proof/check output covers both Python and TypeScript generated target freshness obligations for relevant changes.",
+    "Freshness evidence is cheap and based on check/hash/proof surfaces rather than regenerating on every AW call.",
+    "Stale generated outputs remain detectable.",
+    "Parent #1354 remains open for command-generation support and final dogfooding closeout unless those are also completed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "#1358 is complete as a slice: AW proof guidance and generated-package checker output now require/name both Python and TypeScript generated target families for freshness claims.",
+    "scope touched": "scripts/check/check_generated_command_packages.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_implement_cli.py; #1358 planning surfaces",
+    "changed surfaces": "AW implement generated_cli_freshness payload; generated-package blocker report JSON/text output; focused tests.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected; no generated targets hand-edited; parent #1354 remains open for command-generation support decision and final dogfooding closeout.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "AW summary/doctor/implement were used; generated package freshness/static proof and workspace tests/lint passed",
+    "misinterpretation risk": "low for #1358; parent #1354 still needs command-generation support decision and final dogfooding closeout",
+    "follow-on decision": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "Required proof passed: 64 generated-package proof-runner tests; 62 implement CLI tests; generated package blocker report showed 296 Python and 221 TypeScript generated outputs fresh; check_generated_command_packages.py passed; generate_command_packages.py --check passed; summary/doctor passed; make test-workspace and make lint-workspace passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1358 by ensuring relevant generated-CLI changes require or expose freshness evidence for both Python and TypeScript generated targets.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated target parity/freshness evidence now covers Python and TypeScript target families.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Planning command-owned lane activation/new-plan/close sequence left compact state needing manual projection repair during #1354 dogfooding.",
+      "Planning summary/doctor did not validate an active lane slice schema before lane-close failed."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "GitHub #1361",
+      "GitHub #1362"
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub #1361 and #1362"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "GitHub #1361",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        },
+        {
+          "summary": "GitHub #1362",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #1361 tracks Planning mutations leaving compact state immediately usable without manual projection edits.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "GitHub #1362 tracks Planning diagnostics validating active lane record schemas before closeout mutation time.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1358 by ensuring relevant generated-CLI changes require or expose freshness evidence for both Python and TypeScript generated targets.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Required proof passed: 64 generated-package proof-runner tests; 62 implement CLI tests; generated package blocker report showed 296 Python and 221 TypeScript generated outputs fresh; check_generated_command_packages.py passed; generate_command_packages.py --check passed; summary/doctor passed; make test-workspace and make lint-workspace passed.\nChanged surfaces: AW implement generated_cli_freshness payload; generated-package blocker report JSON/text output; focused tests.\nDurable residue: planning (.agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Generated CLI single-source runtime boundary",
+  "status": "shaping",
+  "larger_intended_outcome": "Finish #1354 as an end-to-end system lane: command behavior should be generated from canonical IR and command-generation sources wherever applicable, direct runtime edits should be limited to existing primitive bugfixes or genuinely new primitive implementations, Python and TypeScript generated targets should stay current together, and any remaining hand-owned runtime primitive inventory should be explicit, small, justified, and reviewable.",
+  "parent_acceptance": {
+    "original_intent": "All runtime command behavior should be generated from IR representations as a single source of truth unless the edit is a bugfix in an existing primitive implementation or a genuinely new primitive implementation.",
+    "acceptance_target": "Runtime command behavior edits outside primitive bugfix/new primitive work are visibly suspect or rejected by proof/review gates; generated Python and TypeScript targets have symmetric freshness guarantees; accepted runtime boundaries are classified and minimized; generic generation/conformance support lives in command-generation where appropriate; closeout reports full-intent satisfaction and residual gaps honestly.",
+    "parent_proof_required": "Issue-linked lane closeouts for #1355-#1358 plus command-generation support, generated-package freshness/static proof, changed-path proof for runtime-source gates, inventory/minimization evidence, Python/TypeScript parity proof, and dogfooding report covering epic/lane/slice intent preservation.",
+    "residual_intent_rule": "Each lane closeout must state which #1354 parent acceptance target remains unsatisfied and whether parent closure is still blocked.",
+    "clarification_needed_when": "Ask or keep the parent open if a lane can only land a guard, audit, or transitional inventory without satisfying the stricter generated-from-IR end state."
+  },
+  "non_goals": [
+    "Do not claim #1354 complete from generated-output freshness alone.",
+    "Do not replace direct runtime edits with another hand-owned runtime workaround.",
+    "Do not move product-specific AW behavior into command-generation; command-generation should own only generic generator, renderer, primitive execution, freshness, and conformance machinery.",
+    "Do not close parent #1354 from wording-only changes or first-slice proof."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "lane-1356-runtime-source-edit-gate",
+      "title": "Gate direct runtime-source edits",
+      "readiness": "promoted",
+      "outcome": "Generated-CLI-adjacent runtime source edits are flagged by proof/check surfaces unless they provide an explicit primitive bugfix, new primitive, or accepted/suspect generated-command behavior classification with owner, symbol, and proof.",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-1356-runtime-source-edit-gate.lane.json",
+      "proof": "Focused check/proof tests demonstrate runtime source edits require explicit primitive-edit classification and vague package-domain boundary wording is insufficient.",
+      "slice_contribution_to_parent": "Prevents agents from silently treating runtime code as a relaxed command behavior implementation surface.",
+      "residual_parent_intent": "Runtime inventory minimization, Python/TypeScript freshness parity, and command-generation ownership support still remain after this lane.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [],
+      "parallel_with": [
+        "lane-1357-runtime-inventory-minimization"
+      ]
+    },
+    {
+      "id": "lane-1357-runtime-inventory-minimization",
+      "title": "Audit and shrink runtime primitive inventory",
+      "readiness": "promoted",
+      "outcome": "Accepted runtime boundaries are classified into reviewable owner/reason categories, whole-category acceptance is reduced or justified, and the blocker report distinguishes freshness from minimized runtime boundary status.",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-1357-runtime-inventory-minimization.lane.json",
+      "proof": "Inventory/check tests show accepted boundaries carry exact owner/reason/minimization evidence and route move-to-command-generation candidates explicitly.",
+      "slice_contribution_to_parent": "Makes remaining hand-owned runtime primitive inventory explicit, justified, and smaller or at least visibly transitional.",
+      "residual_parent_intent": "Runtime edit gates, target parity/freshness, external command-generation support, and dogfooding closeout still remain unless completed separately.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [],
+      "parallel_with": [
+        "lane-1356-runtime-source-edit-gate"
+      ]
+    },
+    {
+      "id": "lane-1358-generated-target-parity-freshness",
+      "title": "Guarantee generated target parity and freshness",
+      "readiness": "promoted",
+      "outcome": "Relevant command-generation, IR, primitive, runtime support, and generated-package proof changes require cheap freshness/parity evidence for both Python and TypeScript generated targets.",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-1358-generated-target-parity-freshness.lane.json",
+      "proof": "Freshness/hash/check tests fail stale Python or TypeScript output after relevant source changes and remain cheap for unrelated edits.",
+      "slice_contribution_to_parent": "Prevents agents from editing Python-facing runtime/generation surfaces while leaving TypeScript stale or unproven.",
+      "residual_parent_intent": "Inventory minimization and command-generation ownership may still remain after parity proof lands.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1356-runtime-source-edit-gate"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-command-generation-support",
+      "title": "Route generic support into command-generation",
+      "readiness": "promoted",
+      "outcome": "Any generic freshness/hash, primitive execution, target rendering, conformance, or host-manifest support needed by #1354 is implemented in rickardvh/command-generation or explicitly deferred there, while AW keeps only host-specific contracts and product primitive implementations.",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-command-generation-support.lane.json",
+      "proof": "External package tests and AW integration checks pass; any remaining AW-local wrapper policy is documented as host-specific.",
+      "slice_contribution_to_parent": "Keeps the single-source boundary from becoming another AW-local runtime workaround.",
+      "residual_parent_intent": "Parent closure remains blocked if generic support is needed but only patched locally in AW.",
+      "parent_proof_boundary": "manual-confirmation-needed",
+      "human_confirmation_needed": [
+        "Confirm whether command-generation#5 is sufficient or needs additional subissues before moving generic APIs."
+      ],
+      "depends_on": [
+        "lane-1356-runtime-source-edit-gate",
+        "lane-1357-runtime-inventory-minimization",
+        "lane-1358-generated-target-parity-freshness"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-dogfooding-intent-closeout",
+      "title": "Dogfood epic/lane/slice preservation and closeout",
+      "readiness": "promoted",
+      "outcome": "The final PR closeout reports whether AW preserved #1354 intent across epic, lane, and slice levels, names remaining parent gaps, and routes any dogfooding findings to concrete issues or fixes.",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-dogfooding-intent-closeout.lane.json",
+      "proof": "Closeout report maps each #1354 dogfooding requirement to observed evidence, fixed/routed findings, and remaining limitations.",
+      "slice_contribution_to_parent": "Prevents narrow slice completion from being misreported as full parent intent satisfaction.",
+      "residual_parent_intent": "None only if all parent acceptance targets have proof; otherwise parent #1354 stays open with explicit owner.",
+      "parent_proof_boundary": "parent-closure",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1356-runtime-source-edit-gate",
+        "lane-1357-runtime-inventory-minimization",
+        "lane-1358-generated-target-parity-freshness"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "Runtime edit gates should land before parity/freshness proof so later changed-path proof can classify runtime edits correctly.",
+    "Runtime inventory minimization can proceed in parallel with the edit gate, but parent closeout needs both.",
+    "Command-generation package changes should be made only for generic support; host-specific AW contracts remain in this repo.",
+    "Parent #1354 closure is blocked until the dogfooding closeout maps full-intent satisfaction, not just slice completion."
+  ],
+  "parallelization_assumptions": [
+    "Runtime-source edit gating and inventory audit can be separate PRs or stacked PRs if their proof surfaces remain independent.",
+    "Freshness/parity depends on the edit gate only where changed-path proof selection consumes the gate output.",
+    "External command-generation work can be shaped after the first AW-side gates clarify what generic support is actually missing."
+  ],
+  "proof_expectations": [
+    "Every lane must run generated command package freshness/static proof when command-generation, IR, operation contracts, primitive inventories, or generated targets change.",
+    "Every runtime-source lane must run changed-path proof and demonstrate primitive-edit classification in the user-facing proof surface.",
+    "Freshness/parity work must include both Python and TypeScript generated targets and fail stale output early.",
+    "Parent closeout must include dogfooding evidence for epic/lane/slice preservation, AW terminology, residual full-intent gaps, and proof selection parity."
+  ],
+  "promotion_rule": "Promote only one ready lane at a time into a first-class lane and execplan-backed slice. A lane may close without closing #1354; parent closure requires all acceptance targets and dogfooding requirements to be satisfied or explicitly deferred with owner.",
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1354",
+      "label": "parent generated-CLI single-source boundary",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1355",
+      "label": "fresh decomposition requirement",
+      "role": "this decomposition"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1356",
+      "label": "runtime edit gate lane",
+      "role": "implementation_lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1357",
+      "label": "runtime inventory minimization lane",
+      "role": "implementation_lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1358",
+      "label": "generated target parity/freshness lane",
+      "role": "implementation_lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "rickardvh/command-generation#5",
+      "label": "generic command-generation support",
+      "role": "external_lane"
+    },
+    {
+      "kind": "planning-review",
+      "target": ".agentic-workspace/planning/reviews/2026-06-06-issue-1354-generated-cli-single-source-boundary-grounding.review.json",
+      "label": "grounding review",
+      "role": "grounding"
+    }
+  ],
+  "notes": "Created after #1359 fixed AW task-shape ownership so #1354 could resume without dogfooding known-bad routing. This decomposition is fresh #1354 authority; the older python-generated-cli decomposition is background only."
+}

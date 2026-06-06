@@ -1,0 +1,66 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1356-runtime-source-edit-gate",
+  "title": "Gate direct runtime-source edits",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+  "lane_outcome": "Generated-CLI-adjacent runtime source edits are flagged by proof/check surfaces unless they provide an explicit primitive bugfix, new primitive, or accepted/suspect generated-command behavior classification with owner, symbol, and proof.",
+  "purpose_for_parent": "Prevents agents from silently treating runtime code as a relaxed command behavior implementation surface.",
+  "subsystems": [
+    "generated command package proof/checking",
+    "AW changed-path proof selection",
+    "runtime primitive/source inventory",
+    "user-facing closeout/report evidence"
+  ],
+  "technical_strategy": "Add a compact runtime-source edit review packet to generated-package proof surfaces and changed-path implement/proof output. The packet should be evidence-oriented: observed changed runtime source paths, required edit reason, accepted reasons, rejected vague reasons, owner/symbol/proof expectations, and residual risk. Keep compatibility with existing generated-package checks while making direct runtime source edits visibly suspect when classification is missing.",
+  "technology_choices": [
+    "Python check script and JSON proof payloads",
+    "existing generated-package static proof tests",
+    "existing AW implement/proof changed-path selection"
+  ],
+  "slice_sequence": [
+    {
+      "id": "direct-runtime-edit-proof-gate",
+      "title": "Add changed-path runtime edit proof gate",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1356-runtime-source-edit-gate.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Make generated-CLI-adjacent runtime source edits require explicit primitive bugfix/new primitive/suspect generated-command classification.",
+      "proof": "Focused tests plus generated-package checks demonstrate missing/vague runtime edit classification is surfaced and valid primitive reasons carry owner/symbol/proof evidence.",
+      "residual_after_slice": "Runtime inventory minimization (#1357), generated target parity/freshness (#1358), command-generation support, and final dogfooding closeout remain."
+    }
+  ],
+  "current_slice": "direct-runtime-edit-proof-gate",
+  "acceptance_boundary": "Changed-path proof or generated-package checks surface runtime-source edits with required primitive-edit classification; vague package-domain boundary wording is insufficient; user-facing closeout names any direct runtime edit boundary and residual parent #1354 gaps.",
+  "proof_strategy": "Focused check/proof tests demonstrate runtime source edits require explicit primitive-edit classification and vague package-domain boundary wording is insufficient.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "#1356 proof passed: focused generated-package/implement tests (125 passed), generated package freshness/static proof, Planning summary/doctor, make test-workspace, and make lint-workspace."
+    ],
+    "known_gaps": [
+      "This lane gates direct runtime edits but does not by itself shrink the accepted runtime inventory.",
+      "This lane does not by itself guarantee Python/TypeScript generated target freshness parity.",
+      "No residual work inside #1356. Parent #1354 still requires #1357 runtime inventory minimization, #1358 Python/TypeScript freshness parity, command-generation support, and dogfooding closeout."
+    ]
+  },
+  "residual_lane_work": "No residual work inside #1356. Parent #1354 still requires #1357 runtime inventory minimization, #1358 Python/TypeScript freshness parity, command-generation support, and dogfooding closeout.",
+  "lane_to_epic_contribution": "Adds generated-CLI runtime-source edit policy and changed-path runtime_source_edit_review so direct runtime edits require explicit primitive-edit classification instead of vague package-domain wording.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Adds generated-CLI runtime-source edit policy and changed-path runtime_source_edit_review so direct runtime edits require explicit primitive-edit classification instead of vague package-domain wording.",
+    "residual_work": "No residual work inside #1356. Parent #1354 still requires #1357 runtime inventory minimization, #1358 Python/TypeScript freshness parity, command-generation support, and dogfooding closeout.",
+    "next_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      "label": "lane-1356-runtime-source-edit-gate",
+      "role": "parent",
+      "locator": "candidate_lanes[0]"
+    }
+  ],
+  "notes": ""
+}

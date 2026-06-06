@@ -74,6 +74,10 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert freshness["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
     assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert "uv run python scripts/check/check_generated_command_packages.py" in freshness["required_commands"]
+    parity = freshness["generated_target_parity"]
+    assert parity["status"] == "required"
+    assert parity["target_families"] == ["python", "typescript"]
+    assert "Python-only proof" in parity["claim_rule"]
     proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
     assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert any(item["command"].endswith("--require-docker") for item in proof_tiers["environmental"])
@@ -1070,6 +1074,8 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
     assert payload["proof"]["generated_cli_freshness"]["status"] == "required"
     assert payload["proof"]["generated_cli_freshness"]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
+    assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
+    assert "Python-only proof" in payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["claim_rule"]
     obligations = payload["proof"]["proof_obligations"]
     assert obligations["required_proof"]["commands"] == payload["proof"]["required_commands"]
     assert obligations["recommended_confidence_checks"]["status"] == "available"
@@ -1116,6 +1122,40 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
     assert len(json.dumps(payload["generated_surface_trust"])) < 700
     assert len(encoded) < 15500
+
+
+def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Fix an existing primitive bug under the generated CLI boundary.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["kind"] == "agentic-workspace/runtime-source-edit-review/v1"
+    assert review["status"] == "classification-required"
+    assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert review["accepted_direct_edit_reasons"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
+    assert "package-domain boundary" in review["rejected_vague_reasons"]
+    assert "final report states the edit reason" in review["completion_claim_rule"]
+    assert "proof.runtime_source_edit_review" in payload["drill_down"]["available_selectors"]
 
 
 def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
@@ -1213,6 +1253,7 @@ def test_implement_package_cli_edits_select_generated_command_package_gate(capsy
     payload = json.loads(capsys.readouterr().out)
     assert "make test-memory" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
 
 
 def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:

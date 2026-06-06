@@ -1,0 +1,63 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-dogfooding-intent-closeout",
+  "title": "Dogfood epic/lane/slice preservation and closeout",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+  "lane_outcome": "The final PR closeout reports whether AW preserved #1354 intent across epic, lane, and slice levels, names remaining parent gaps, and routes any dogfooding findings to concrete issues or fixes.",
+  "purpose_for_parent": "Prevents narrow slice completion from being misreported as full parent intent satisfaction.",
+  "subsystems": [
+    "Planning closeout evidence",
+    "GitHub PR body",
+    "dogfooding follow-up issues"
+  ],
+  "technical_strategy": "Aggregate lane evidence from #1356, #1357, #1358, and command-generation support into the PR closeout. Close parent #1354 only if every acceptance target has proof or a non-blocking limitation with owner.",
+  "technology_choices": [
+    "GitHub PR body closure matrix",
+    "Planning lane archives",
+    "dogfooding issue links"
+  ],
+  "slice_sequence": [
+    {
+      "id": "parent-closeout-matrix",
+      "title": "Write parent closure and dogfooding matrix",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/generated-cli-boundary-dogfooding-closeout.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Make #1354 closure evidence explicit across epic/lane/slice work and dogfooding findings.",
+      "proof": "PR body maps each issue/lane to proof, names command-generation PR #6, and records dogfooding issues #1361/#1362.",
+      "residual_after_slice": "None if parent #1354 closure is honestly supportable."
+    }
+  ],
+  "current_slice": "parent-closeout-matrix",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Closeout report maps each #1354 dogfooding requirement to observed evidence, fixed/routed findings, and remaining limitations.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "Parent closeout evidence recorded in archived execplan generated-cli-boundary-dogfooding-closeout: #1356 runtime-source edit gate, #1357 runtime inventory minimization, #1358 generated target parity/freshness, command-generation PR #6 support and AW pin, selected AW proof, and dogfooding issues #1361/#1362."
+    ],
+    "known_gaps": [
+      "No remaining lane work. Merge ordering limitation: command-generation PR #6 must land before the AW dependency pin can merge safely."
+    ]
+  },
+  "residual_lane_work": "No remaining lane work. Merge ordering limitation: command-generation PR #6 must land before the AW dependency pin can merge safely.",
+  "lane_to_epic_contribution": "This lane aggregates the #1354 epic evidence across decomposition lanes, explicit child issue proof, command-generation support, and dogfooding findings so parent closure can be reviewed honestly.",
+  "parent_close_permission": "may-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "This lane aggregates the #1354 epic evidence across decomposition lanes, explicit child issue proof, command-generation support, and dogfooding findings so parent closure can be reviewed honestly.",
+    "residual_work": "No remaining lane work. Merge ordering limitation: command-generation PR #6 must land before the AW dependency pin can merge safely.",
+    "next_owner": "PR reviewer; command-generation PR #6 merge ordering"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      "label": "lane-dogfooding-intent-closeout",
+      "role": "parent",
+      "locator": "candidate_lanes[4]"
+    }
+  ],
+  "notes": ""
+}

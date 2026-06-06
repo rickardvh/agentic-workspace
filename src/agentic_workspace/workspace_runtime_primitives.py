@@ -22122,6 +22122,20 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "generated_cli_freshness": _tiny_generated_cli_freshness_payload(payload.get("proof", {}).get("generated_cli_freshness", {}))
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("generated_cli_freshness"), dict)
             else {},
+            "runtime_source_edit_review": {
+                key: payload.get("proof", {}).get("runtime_source_edit_review", {}).get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "changed_paths",
+                    "accepted_direct_edit_reasons",
+                    "rejected_vague_reasons",
+                    "completion_claim_rule",
+                )
+                if isinstance(payload.get("proof"), dict)
+                and isinstance(payload.get("proof", {}).get("runtime_source_edit_review"), dict)
+                and key in payload.get("proof", {}).get("runtime_source_edit_review", {})
+            },
             "proof_obligations": _tiny_proof_obligations_payload(
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
@@ -22236,6 +22250,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "task_contract",
                 "change_impact",
                 "generated_surface_trust",
+                "proof.runtime_source_edit_review",
                 "assurance_requirements",
                 "verification",
                 "routine_work_context",
@@ -22272,6 +22287,16 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     generated_cli_freshness = projected["proof"].get("generated_cli_freshness", {})
     if not (isinstance(generated_cli_freshness, dict) and generated_cli_freshness.get("kind")):
         projected["proof"].pop("generated_cli_freshness", None)
+    runtime_source_review = projected["proof"].get("runtime_source_edit_review", {})
+    if not (
+        isinstance(runtime_source_review, dict)
+        and runtime_source_review.get("changed_paths")
+        and runtime_source_review.get("status") != "not-applicable"
+    ):
+        projected["proof"].pop("runtime_source_edit_review", None)
+        selectors = projected.get("drill_down", {}).get("available_selectors", [])
+        if isinstance(selectors, list):
+            projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "proof.runtime_source_edit_review"]
     task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
     intent_proof = payload.get("proof", {}).get("intent_proof") if isinstance(payload.get("proof"), dict) else None
     acceptance_reconciliation = payload.get("acceptance_reconciliation", {})
@@ -31361,7 +31386,7 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
 
 
 def _tiny_generated_cli_freshness_payload(value: dict[str, Any]) -> dict[str, Any]:
-    return {
+    payload = {
         "kind": value.get("kind", "agentic-workspace/generated-cli-freshness/v1"),
         "status": value.get("status", "unknown"),
         "obligation": value.get("obligation", value.get("status", "unknown")),
@@ -31369,6 +31394,14 @@ def _tiny_generated_cli_freshness_payload(value: dict[str, Any]) -> dict[str, An
         "refresh_command": value.get("refresh_command", ""),
         "validation_command": value.get("validation_command", ""),
     }
+    parity = value.get("generated_target_parity")
+    if isinstance(parity, dict):
+        payload["generated_target_parity"] = {
+            "status": parity.get("status", "unknown"),
+            "target_families": parity.get("target_families", []),
+            "claim_rule": parity.get("claim_rule", ""),
+        }
+    return payload
 
 
 def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
@@ -31428,6 +31461,23 @@ def _generated_cli_freshness_payload(
         "validation_command": validation_command,
         "required_commands": related_commands,
         "obligation": obligation,
+        "generated_target_parity": {
+            "kind": "agentic-workspace/generated-target-parity/v1",
+            "status": "required" if obligation == "required" else "advisory",
+            "target_families": ["python", "typescript"],
+            "freshness_evidence": [
+                "scripts/generate/generate_command_packages.py --check compares rendered outputs for all generated Python and TypeScript package targets without writing files",
+                "scripts/check/check_generated_command_packages.py performs static generated-package proof across Python and TypeScript surfaces",
+            ],
+            "stale_detection": {
+                "python": "generated/*/python/** outputs must match command-generation render output",
+                "typescript": "generated/*/typescript/** outputs must match command-generation render output",
+            },
+            "claim_rule": (
+                "Do not claim generated CLI freshness from Python-only proof; relevant generated CLI proof must name "
+                "both Python and TypeScript generated targets or record why one family is not applicable."
+            ),
+        },
         "rule": (
             "Generated CLI freshness is relevant only for generated command package surfaces. "
             "Run the check path before trusting generated CLI output; refresh only when the check reports stale output."
@@ -31462,6 +31512,69 @@ def _tiny_surface_compatibility_review(changed_paths: list[str]) -> dict[str, An
             "size-budget assertions when existing tests define one",
             "selector/full-surface assertion for any new diagnostic field",
         ],
+    }
+
+
+_GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS = {
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+}
+
+
+def _runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    runtime_paths = [path for path in changed_paths if path in _GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS]
+    if not runtime_paths:
+        return {"kind": "agentic-workspace/runtime-source-edit-review/v1", "status": "not-applicable", "changed_paths": []}
+    return {
+        "kind": "agentic-workspace/runtime-source-edit-review/v1",
+        "status": "classification-required",
+        "changed_paths": runtime_paths,
+        "accepted_direct_edit_reasons": [
+            "existing-primitive-bugfix",
+            "new-primitive-implementation",
+        ],
+        "suspect_reasons": [
+            "generated-command-behavior",
+            "interface-behavior-change",
+        ],
+        "rejected_vague_reasons": [
+            "package-domain boundary",
+            "runtime code changed",
+            "implementation detail",
+        ],
+        "required_evidence": [
+            "changed_path",
+            "edit_reason",
+            "owner",
+            "source_symbol_or_primitive",
+            "proof",
+            "whether command-generation or AW owns the next change",
+        ],
+        "review_template": {
+            "changed_path": "<runtime source path>",
+            "edit_reason": "existing-primitive-bugfix|new-primitive-implementation|generated-command-behavior|interface-behavior-change",
+            "owner": "AW primitive implementation|command-generation|deferred issue",
+            "source_symbol_or_primitive": "<function, primitive id, or operation id>",
+            "proof": "<focused test/check proving the boundary>",
+            "residual_risk": "<none or explicit follow-up>",
+        },
+        "completion_claim_rule": (
+            "Do not claim generated-CLI boundary satisfaction from a runtime source edit until the final report states the edit reason, "
+            "owner, symbol/primitive, proof, and residual risk."
+        ),
+        "authority_boundary": _authority_boundary_payload(
+            surface="runtime_source_edit_review",
+            observed_by_aw=["changed runtime source path"],
+            recommended_by_aw=["classify direct runtime edit before closeout"],
+            agent_owned_decisions=["edit reason", "owner judgment", "whether the change belongs in command-generation"],
+            rule="AW reports runtime-source edit evidence and required proof; the agent owns the semantic classification.",
+        ),
+        "rule": "Vague package-domain boundary wording is insufficient for generated-CLI-adjacent runtime source edits.",
     }
 
 
@@ -32191,6 +32304,9 @@ def _proof_selection_for_changed_paths(
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
+    runtime_source_review = _runtime_source_edit_review_for_changed_paths(changed_paths)
+    if runtime_source_review["changed_paths"]:
+        proof_selection["runtime_source_edit_review"] = runtime_source_review
     direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
     if direct_cli_review["changed_paths"]:
         proof_selection["direct_cli_edit_review"] = direct_cli_review
