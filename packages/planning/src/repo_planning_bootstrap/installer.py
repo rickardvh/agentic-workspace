@@ -1581,7 +1581,9 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
             if _has_unresolved_placeholders(text):
                 result.add("manual review", path, "starter placeholders still need custom values")
 
+    lane_projection = _planning_lane_projection(target_root=target_root)
     warnings = _run_planning_checker(target_root)
+    warnings.extend(_planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection))
     result.warnings.extend(warnings)
     for warning in warnings:
         result.add("warning", target_root / warning["path"], warning["message"])
@@ -1901,6 +1903,7 @@ def planning_summary(
 
     state = _read_state_from_toml(target_root)
     warnings = _run_planning_checker(target_root)
+    warnings.extend(_planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection))
     warnings.extend(_unsupported_planning_state_activation_shape_warnings(target_root=target_root, state=state))
     warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
@@ -3449,6 +3452,47 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
             "Execplans own concrete implementation slices."
         ),
     }
+
+
+def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[str, Any] | None = None) -> list[dict[str, str]]:
+    projection = lane_projection if lane_projection is not None else _planning_lane_projection(target_root=target_root)
+    warnings: list[dict[str, str]] = []
+    invalid_records = projection.get("invalid_records", []) if isinstance(projection, dict) else []
+    if isinstance(invalid_records, list):
+        for record in invalid_records:
+            if not isinstance(record, dict):
+                continue
+            path = str(record.get("path", "")).strip() or (PLANNING_MANAGED_ROOT / "lanes").as_posix()
+            reason = str(record.get("reason", "")).strip() or "lane record failed schema validation"
+            warnings.append(
+                {
+                    "warning_class": "planning_lane_schema_invalid",
+                    "path": path,
+                    "message": f"Planning lane record is invalid: {reason}",
+                    "suggested_fix": "Repair the lane record against planning-lane.schema.json before relying on summary or lane closeout.",
+                }
+            )
+    records = projection.get("records", []) if isinstance(projection, dict) else []
+    if isinstance(records, list):
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            if str(record.get("status", "")).strip() != "closed":
+                continue
+            path = str(record.get("path", "")).strip() or (PLANNING_MANAGED_ROOT / "lanes").as_posix()
+            lane_id = str(record.get("id", "")).strip() or Path(path).stem.removesuffix(".lane")
+            warnings.append(
+                {
+                    "warning_class": "closed_lane_record_live_state",
+                    "path": path,
+                    "message": (
+                        f"Closed lane '{lane_id}' remains in live Planning state; archive it so compact routing "
+                        "does not treat completed lane evidence as selectable work."
+                    ),
+                    "suggested_fix": f"Run agentic-planning lane-archive {lane_id} --target . --format json.",
+                }
+            )
+    return warnings
 
 
 def _decomposition_issue_refs(payload: dict[str, Any]) -> set[str]:
@@ -9554,6 +9598,7 @@ def close_lane_record(
     _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
     result.add("updated", record_path, "recorded lane proof aggregation, parent contribution, and closeout state")
     result.add("updated", target_root / PLANNING_STATE_PATH, f"projected closed lane '{slug}'")
+    result.add("next safe action", record_path, f"agentic-planning lane-archive {slug} --target . --format json")
     _add_planning_mutation_proof_actions(result)
     return result
 
