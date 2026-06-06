@@ -11887,10 +11887,12 @@ def closeout_execplan(
         )
         return result
 
-    plan_path = _resolve_execplan_path(target_root, plan)
+    resolved_plan, plan_path = _resolve_closeout_execplan_path(target_root=target_root, plan=plan, result=result)
     if plan_path is None:
-        result.add("manual review", target_root / PLANNING_STATE_PATH, f"execplan '{plan}' was not found")
+        if plan.strip():
+            result.add("manual review", target_root / PLANNING_STATE_PATH, f"execplan '{plan}' was not found")
         return result
+    plan = resolved_plan
     record_path = _canonical_execplan_record_path(plan_path)
     record = _load_execplan_record(plan_path)
     if record is None:
@@ -14928,6 +14930,87 @@ def _resolve_execplan_path(target_root: Path, plan: str) -> Path | None:
     if archive_json.exists():
         return archive_json.resolve()
     return None
+
+
+def _closeout_active_todo_execplan_candidates(*, target_root: Path) -> list[dict[str, str]]:
+    state = _read_state_from_toml(target_root) or {}
+    todo = state.get("todo")
+    if not isinstance(todo, dict):
+        return []
+    active_items = todo.get("active_items", [])
+    if not isinstance(active_items, list):
+        return []
+
+    candidates: list[dict[str, str]] = []
+    for raw in active_items:
+        if not isinstance(raw, dict):
+            continue
+        item_id = str(raw.get("id") or raw.get("title") or "").strip()
+        plan_ref = _active_execplan_reference(raw)
+        if not plan_ref:
+            continue
+        plan_path = _resolve_execplan_path(target_root, plan_ref)
+        if plan_path is None:
+            continue
+        candidates.append(
+            {
+                "id": item_id or plan_path.stem.removesuffix(".plan"),
+                "plan_arg": item_id or plan_ref,
+                "path": plan_path.relative_to(target_root).as_posix(),
+            }
+        )
+    return candidates
+
+
+def _resolve_closeout_execplan_path(
+    *,
+    target_root: Path,
+    plan: str,
+    result: InstallResult,
+) -> tuple[str, Path | None]:
+    normalized_plan = plan.strip()
+    if normalized_plan:
+        return normalized_plan, _resolve_execplan_path(target_root, normalized_plan)
+
+    candidates = _closeout_active_todo_execplan_candidates(target_root=target_root)
+    if len(candidates) == 1:
+        candidate = candidates[0]
+        result.add(
+            "resolved",
+            target_root / candidate["path"],
+            f"planning closeout selected single active TODO item '{candidate['id']}' from {candidate['path']}",
+        )
+        return candidate["plan_arg"], target_root / candidate["path"]
+
+    if not candidates:
+        result.warnings.append(
+            {
+                "warning_class": "closeout_plan_argument_required",
+                "path": PLANNING_STATE_PATH.as_posix(),
+                "message": "planning closeout needs a plan argument because no active TODO item points at an execplan.",
+                "suggested_fix": "Rerun planning closeout <plan> with the execplan id or path.",
+            }
+        )
+        result.add(
+            "manual review",
+            target_root / PLANNING_STATE_PATH,
+            "planning closeout needs a plan argument; no active TODO execplan reference was found",
+        )
+        result.add("next safe action", target_root / PLANNING_STATE_PATH, "rerun planning closeout <plan> with the execplan id or path")
+        return normalized_plan, None
+
+    candidate_commands = "; ".join(f"agentic-planning closeout {candidate['plan_arg']}" for candidate in candidates)
+    result.warnings.append(
+        {
+            "warning_class": "closeout_plan_argument_required",
+            "path": PLANNING_STATE_PATH.as_posix(),
+            "message": "planning closeout needs a plan argument because multiple active TODO items point at execplans.",
+            "suggested_fix": f"Choose one active plan and rerun: {candidate_commands}.",
+        }
+    )
+    result.add("manual review", target_root / PLANNING_STATE_PATH, f"ambiguous active TODO execplans: {candidate_commands}")
+    result.add("next safe action", target_root / PLANNING_STATE_PATH, f"choose one active plan and rerun: {candidate_commands}")
+    return normalized_plan, None
 
 
 def _execplan_status(path: Path) -> str:

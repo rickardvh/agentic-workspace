@@ -772,6 +772,87 @@ candidates = []
     assert archived["durable_residue"]["status"] == "none"
 
 
+def test_planning_closeout_uses_single_active_todo_execplan_when_plan_is_omitted(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py::test_active_todo_closeout -q",
+                "--what-happened",
+                "implemented active TODO closeout plan inference.",
+                "--scope-touched",
+                "packages/planning closeout plan resolution",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; closeout resolved the single active TODO execplan without manual state repair.",
+                "--outcome-summary",
+                "planning closeout can infer the active TODO execplan when the plan argument is omitted.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "resolved" and "single active TODO item" in action["detail"] for action in payload["actions"])
+    assert not record_path.exists()
+    assert archived["execution_run"]["what happened"] == "implemented active TODO closeout plan inference."
+    assert archived["closure_check"]["closure decision"] == "archive-and-close"
+
+
+def test_planning_closeout_omitted_plan_reports_actionable_active_todo_diagnostic(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+  { id = "plan-beta", status = "active", surface = ".agentic-workspace/planning/execplans/plan-beta.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json", status="active")
+    _write_execplan_record(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-beta.plan.json", status="active")
+
+    assert planning_cli.main(["closeout", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(warning["warning_class"] == "closeout_plan_argument_required" for warning in payload["warnings"])
+    assert not any("execplan '' was not found" in action["detail"] for action in payload["actions"])
+    assert any("agentic-planning closeout plan-alpha" in action["detail"] for action in payload["actions"])
+    assert any("agentic-planning closeout plan-beta" in action["detail"] for action in payload["actions"])
+
+
 def test_planning_closeout_completes_active_run_before_archive_validation(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

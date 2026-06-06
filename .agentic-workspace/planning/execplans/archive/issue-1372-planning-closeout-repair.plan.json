@@ -1,0 +1,321 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1372 Planning closeout repair for scaffolded execplans",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair.",
+    "hard_constraints": "Keep scope inside Planning closeout resolution/repair behavior and focused tests. Do not broaden into unrelated closeout trust or test-suite replacement work.",
+    "agent_may_decide": "Exact helper shape, warning wording, and focused regression fixture as long as closeout either resolves the active TODO execplan or routes to the exact usable command.",
+    "escalate_when": "The fix requires changing the execplan schema, broad archive validation semantics, or workspace closeout-report behavior.",
+    "next_action": "Add focused Planning tests for empty-plan closeout against single active TODO execplan state, then implement the smallest closeout resolver/diagnostic change.",
+    "proof_expectations": [
+      "cd packages/planning && uv run pytest tests/test_archive.py -q",
+      "make sync-planning",
+      "make test-planning",
+      "make planning-surfaces"
+    ],
+    "touched_scope": [
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_archive.py",
+      ".agentic-workspace/planning/execplans/issue-1372-planning-closeout-repair.plan.json"
+    ],
+    "completion_criteria": [
+      "planning closeout now resolves a single active TODO execplan when the plan argument is omitted and reports concrete rerun commands for ambiguous omitted-plan state."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair."
+  ],
+  "non_goals": [
+    "Do not change execplan schema.",
+    "Do not broaden into workspace closeout_report UX.",
+    "Do not implement #1373/#1374 test replacement work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair.",
+      "constraints": "Keep scope inside Planning closeout resolution/repair behavior and focused tests.",
+      "latitude": "Exact helper shape, warning wording, and focused regression fixture.",
+      "escalation": "Escalate when the fix requires changing execplan schema, broad archive validation semantics, or workspace closeout-report behavior.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1372-planning-closeout-repair",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_archive.py",
+        ".agentic-workspace/planning/execplans/issue-1372-planning-closeout-repair.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve Planning closeout repair ergonomics so agents can close proven scaffolded execplans through command-owned paths.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1372 Planning closeout repair for scaffolded execplans",
+    "inferred intended outcome": "Fix the specific #1372 defect where omitted-plan closeout cannot use active TODO execplan state and pushes agents toward manual managed-plan edits.",
+    "chosen concrete what": "planning closeout now resolves a single active TODO execplan when the plan argument is omitted and reports concrete rerun commands for ambiguous omitted-plan state.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_archive.py, Planning sync output, and this execplan.",
+    "max changed files": "Planning source/test plus generated installed Planning surfaces if sync updates them.",
+    "required validation commands": "cd packages/planning && uv run pytest tests/test_archive.py -q; make sync-planning; make test-planning; make planning-surfaces.",
+    "ask-before-refactor threshold": "Ask before changing schemas, broad archive validation rules, or workspace closeout report UX.",
+    "stop before touching": "Generated command targets, command-generation repo, #1373/#1374 test replacement, or unrelated Planning summary behavior."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from focused closeout resolver tests in packages/planning/tests/test_archive.py.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair.",
+    "hard constraints": "Keep scope inside Planning closeout resolution/repair behavior and focused tests.",
+    "agent may decide locally": "Exact helper shape, warning wording, and regression fixture.",
+    "escalate when": "The fix requires changing execplan schema, broad archive validation semantics, or workspace closeout-report behavior."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#1372 is a bounded Planning package defect with focused tests and no useful external delegation slice.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "8e0cd2b1d3dc61be",
+    "recorded at": "2026-06-06T19:46:34+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1372-planning-closeout-repair",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No required continuation remains for this archived slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_archive.py",
+    ".agentic-workspace/planning/execplans/issue-1372-planning-closeout-repair.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_archive.py -q",
+    "make sync-planning",
+    "make test-planning",
+    "make planning-surfaces"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "planning closeout resolves a single active TODO execplan when plan is omitted.",
+    "planning closeout reports actionable diagnostics for omitted-plan active TODO edge cases.",
+    "Focused and package-level Planning proof passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "implemented Planning closeout active TODO execplan inference and actionable omitted-plan diagnostics.",
+    "scope touched": "packages/planning closeout resolver and archive regression tests.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/planning/execplans/issue-1372-planning-closeout-repair.plan.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; this is an existing Planning runtime primitive bugfix for closeout_execplan, with no schema or broad archive-validation change.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "#1372 is a bounded Planning package defect with focused tests and no useful external delegation slice.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: focused closeout regression tests; cd packages/planning && uv run pytest tests/test_archive.py::test_planning_closeout_uses_single_active_todo_execplan_when_plan_is_omitted tests/test_archive.py::test_planning_closeout_omitted_plan_reports_actionable_active_todo_diagnostic tests/test_archive.py::test_planning_closeout_completes_active_run_before_archive_validation -q; make sync-planning; make test-planning; make typecheck-planning; make planning-surfaces; make lint-planning; AW summary and doctor --modules planning.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "planning closeout now resolves a single active TODO execplan when the plan argument is omitted and reports concrete rerun commands for ambiguous omitted-plan state.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan.",
+    "2026-06-06: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1372 by making planning closeout handle scaffolded active TODO execplan state without forcing manual managed-plan repair.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: focused closeout regression tests; cd packages/planning && uv run pytest tests/test_archive.py::test_planning_closeout_uses_single_active_todo_execplan_when_plan_is_omitted tests/test_archive.py::test_planning_closeout_omitted_plan_reports_actionable_active_todo_diagnostic tests/test_archive.py::test_planning_closeout_completes_active_run_before_archive_validation -q; make sync-planning; make test-planning; make typecheck-planning; make planning-surfaces; make lint-planning; AW summary and doctor --modules planning.\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/planning/execplans/issue-1372-planning-closeout-repair.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}
