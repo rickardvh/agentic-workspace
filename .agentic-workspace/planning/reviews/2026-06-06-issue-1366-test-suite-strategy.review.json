@@ -1,0 +1,115 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1366 test suite inventory and simplification strategy",
+  "date": "2026-06-06",
+  "classification": "test-suite-strategy-grounding",
+  "goal": "Inventory current Python test surfaces, identify consolidation pressure, and define an implementation-ready testing strategy aligned with compositional IR and contract-owned conformance cases.",
+  "scope": [
+    "root workspace tests",
+    "packages/memory tests",
+    "packages/planning tests",
+    "packages/verification tests",
+    "interaction with #1367 compositional operation IR",
+    "interaction with #1373, #1374, and command-generation#9 replacement follow-ups"
+  ],
+  "non_goals": [
+    "broad deletion of tests before equivalent coverage exists",
+    "migrating all regressions into contract-owned cases in this lane",
+    "changing runtime behavior",
+    "changing command-generation contracts beyond documenting follow-up ownership"
+  ],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1366",
+      "label": "Inventory and simplify test suite strategy"
+    },
+    {
+      "kind": "issue",
+      "target": "#1367",
+      "label": "Compositional operation IR"
+    },
+    {
+      "kind": "issue",
+      "target": "#1373",
+      "label": "Plan post-migration replacement of regression tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "issue",
+      "target": "#1374",
+      "label": "Replace AW generated-command behavior tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "issue",
+      "target": "rickardvh/command-generation#9",
+      "label": "Replace command-generation behavior tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/2026-06-06-issue-1367-compositional-operation-ir-grounding.review.json",
+      "label": "Compositional IR grounding review"
+    }
+  ],
+  "summary": "The suite collects quickly, but tests are concentrated in broad workflow surfaces where narrow regressions have accumulated. The right near-term move is a documented test hierarchy and follow-up ownership for contract-owned replacements, not broad pruning before primitive/fragment/operation contract cases can carry the behavior.",
+  "summary_counts": {
+    "python_test_files": 64,
+    "ast_test_functions": 1577,
+    "total_test_lines": 53534,
+    "root_workspace_collected_tests": 1098,
+    "planning_collected_tests": 337,
+    "memory_collected_tests": 247,
+    "verification_collected_tests": 6,
+    "root_collect_seconds": 0.67,
+    "planning_collect_seconds": 2.02,
+    "memory_collect_seconds": 1.14,
+    "verification_collect_seconds": 0.26
+  },
+  "review_method": {
+    "collection": "pytest --collect-only was run for root tests and package tests to measure count and collection cost.",
+    "inventory": "AST-based counting through uv run python measured test functions, file count, and largest files by tests and lines.",
+    "issue_review": "Issue #1366 and related follow-ups #1373, #1374, and command-generation#9 were reviewed to separate strategy closure from post-migration replacement work.",
+    "architecture_review": "The #1367 grounding review was used to map tests to primitive, fragment/subflow, operation, and command levels."
+  },
+  "findings": [
+    {
+      "id": "sprawl-pressure-is-readability-not-collection-time",
+      "finding": "Collection is fast enough that immediate optimization pressure is not raw pytest startup. The visible risk is review cost and duplicate intent in broad workflow files.",
+      "evidence": "Root tests collected 1098 tests in 0.67s; planning collected 337 in 2.02s; memory collected 247 in 1.14s; verification collected 6 in 0.26s.",
+      "suggested action": "Avoid deleting tests for count alone. Consolidate when a change touches a cluster and equivalent stronger coverage can be shown.",
+      "confidence": "high"
+    },
+    {
+      "id": "largest-clusters-are-workflow-contract-surfaces",
+      "finding": "The largest files are command/workflow/report/planning surfaces where small regressions can obscure the intended contract.",
+      "evidence": "Top clusters include test_model_cli_harness.py, test_workspace_report_cli.py, packages/planning/tests/test_summary.py, test_workspace_start_preflight_cli.py, test_generated_command_package_proof_runner.py, test_workspace_lifecycle_cli.py, packages/planning/tests/test_archive.py, test_workspace_implement_cli.py, test_contract_tooling.py, and test_workspace_proof_cli.py.",
+      "suggested action": "When touching these areas, prefer scenario matrices, contract-owned conformance cases, or representative black-box tests over more one-off tests.",
+      "confidence": "high"
+    },
+    {
+      "id": "contract-owned-replacement-is-a-separate-lane",
+      "finding": "The suite cannot honestly be converted wholesale before the contract-owned case shape and target adapters are stable.",
+      "evidence": "#1373, #1374, and command-generation#9 already own the replacement work after the #1370/#1367 direction. #1366 should ground and guide that work rather than silently doing a partial migration.",
+      "suggested action": "Ship strategy guidance now; use the replacement follow-ups for broad conversion and pruning.",
+      "confidence": "high"
+    },
+    {
+      "id": "no-prune-surfaces",
+      "finding": "Archive/closeout, startup/preflight, proof/report, generated package freshness, schema/reference docs, and package install boundaries are high-risk areas.",
+      "evidence": "These surfaces have recurring dogfooding failures and broad collaboration effects; no equivalent contract-owned matrix exists yet for many of them.",
+      "suggested action": "Require explicit stronger/equivalent coverage before removing tests in these areas.",
+      "confidence": "medium"
+    }
+  ],
+  "recommendation": {
+    "implementation_now": "Add maintainer testing-strategy guidance, link it from the contributor playbook and maintainer index, preserve this review as grounding evidence, and add a small maintainer-surface test so future agents see the route before adding regressions.",
+    "implementation_later": "Use #1373, #1374, and command-generation#9 to replace existing behavior regressions with contract-owned conformance cases once the contract shape and adapters are stable.",
+    "closeout_boundary": "#1366 can close as an investigation/strategy lane if the PR reports that no broad pruning was attempted and names the concrete replacement follow-ups."
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ]
+}

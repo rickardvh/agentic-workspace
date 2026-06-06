@@ -1,0 +1,330 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1366 test suite inventory and simplification strategy",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.",
+    "hard_constraints": "Do not broadly delete or rewrite tests before equivalent coverage exists. Keep this lane to inventory, review evidence, guidance, and minimal maintainer-surface proof.",
+    "agent_may_decide": "Which clusters to name, which follow-up issues own replacement work, and the smallest documentation/test surface that prevents more one-off regression sprawl.",
+    "escalate_when": "The work requires deleting substantial tests, changing runtime behavior, or completing #1373/#1374/command-generation#9 instead of grounding #1366.",
+    "next_action": "Add the grounding review, maintainer testing-strategy guide, playbook/index links, and focused proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_maintainer_surfaces.py -q",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "make maintainer-surfaces",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "docs/maintainer/testing-strategy.md",
+      "docs/maintainer/contributor-playbook.md",
+      "docs/maintainer/index.md",
+      "tests/test_maintainer_surfaces.py",
+      ".agentic-workspace/planning/reviews/2026-06-06-issue-1366-test-suite-strategy.review.json"
+    ],
+    "completion_criteria": [
+      "Test inventory and consolidation strategy are captured in a planning review.",
+      "Future-agent guidance explains when to add, merge, convert, or prune tests.",
+      "The strategy is linked from maintainer surfaces and protected by focused proof.",
+      "Broad test replacement is explicitly routed to #1373, #1374, and command-generation#9."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration."
+  ],
+  "non_goals": [
+    "Do not broadly delete tests in this lane.",
+    "Do not migrate all behavior tests into contract-owned cases before #1373/#1374/command-generation#9.",
+    "Do not change runtime behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.",
+      "constraints": "Do not broadly delete or rewrite tests before equivalent coverage exists. Keep this lane to inventory, review evidence, guidance, and minimal maintainer-surface proof.",
+      "latitude": "Which clusters to name, which follow-up issues own replacement work, and the smallest documentation/test surface that prevents more one-off regression sprawl.",
+      "escalation": "Escalate when the work requires deleting substantial tests, changing runtime behavior, or completing #1373/#1374/command-generation#9 instead of grounding #1366.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1366-test-suite-strategy",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "docs/maintainer/testing-strategy.md",
+        "docs/maintainer/contributor-playbook.md",
+        "docs/maintainer/index.md",
+        "tests/test_maintainer_surfaces.py",
+        ".agentic-workspace/planning/reviews/2026-06-06-issue-1366-test-suite-strategy.review.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future agents have a checked-in strategy for adding, merging, converting, and pruning tests without adding narrow regressions by default.",
+    "intentionally deferred": "Broad conversion of existing behavior tests into contract-owned conformance cases remains owned by #1373, #1374, and command-generation#9.",
+    "discovered implications": "Collection cost is low; the immediate risk is review/maintenance cost from duplicate intent in broad workflow test surfaces.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1366 test suite inventory and simplification strategy",
+    "inferred intended outcome": "Ground #1366 with inventory evidence and ship enough maintainer guidance to steer future test work toward contract-owned cases and scenario consolidation.",
+    "chosen concrete what": "Add a review record, testing-strategy guide, playbook/index links, and focused maintainer-surface proof.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs/maintainer/testing-strategy.md, docs/maintainer/contributor-playbook.md, docs/maintainer/index.md, tests/test_maintainer_surfaces.py, and the #1366 planning review/execplan surfaces.",
+    "max changed files": "7 expected checked-in files plus planning state.",
+    "required validation commands": "uv run pytest tests/test_maintainer_surfaces.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make maintainer-surfaces; AW summary and planning doctor.",
+    "ask-before-refactor threshold": "Ask before broad test deletion, runtime changes, or starting #1373/#1374/command-generation#9 replacement work.",
+    "stop before touching": "Generated command runtime behavior, broad test files, package runtime code, or command-generation source."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Test strategy inventory and maintainer guidance require repository-local context and proof; no bounded external delegation target reduces risk.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "7cd33de681b98c4d",
+    "recorded at": "2026-06-06T19:23:03+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1366-test-suite-strategy",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add the grounding review, maintainer testing-strategy guide, playbook/index links, and focused proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/maintainer/testing-strategy.md",
+    "docs/maintainer/contributor-playbook.md",
+    "docs/maintainer/index.md",
+    "tests/test_maintainer_surfaces.py",
+    ".agentic-workspace/planning/reviews/2026-06-06-issue-1366-test-suite-strategy.review.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement #1366 test suite inventory and simplification strategy is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Inventory data was gathered for root and package tests, a #1366 grounding review was recorded, maintainer testing-strategy guidance was added, and the guidance was linked from maintainer entrypoints.",
+    "scope touched": "Maintainer testing guidance, #1366 planning review/execplan surfaces, and maintainer-surface proof.",
+    "changed surfaces": "docs/maintainer/testing-strategy.md; docs/maintainer/contributor-playbook.md; docs/maintainer/index.md; tests/test_maintainer_surfaces.py; .agentic-workspace/planning/reviews/2026-06-06-issue-1366-test-suite-strategy.review.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed inside the strategy/investigation lane. Broad pruning and conformance-case replacement are intentionally deferred to #1373, #1374, and command-generation#9.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Test strategy inventory and maintainer guidance require repository-local context and proof; no bounded external delegation target reduces risk.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: uv run pytest tests/test_maintainer_surfaces.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1366 is implementation-ready and preventively documented: future agents have a checked-in hierarchy for add/merge/convert/prune decisions and a review record with counts, risks, no-prune areas, and replacement follow-ups.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "Closeout routed docs residue to docs/maintainer/testing-strategy.md.",
+    "motivation worth preserving": "Future agents should continue from docs/maintainer/testing-strategy.md rather than rediscover this closeout residue.",
+    "canonical owner now": "docs/maintainer/testing-strategy.md",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "docs/maintainer/testing-strategy.md",
+    "proposed durable intent": "Future agents should continue from docs/maintainer/testing-strategy.md rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "docs/maintainer/testing-strategy.md"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan.",
+    "2026-06-06: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "promote_to_docs_contracts_checks_code",
+    "target": "docs/maintainer/testing-strategy.md",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1366 by grounding the current test-suite shape and shipping future-agent guidance for consolidation, pruning, and contract-owned conformance migration.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: uv run pytest tests/test_maintainer_surfaces.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json.\nChanged surfaces: docs/maintainer/testing-strategy.md; docs/maintainer/contributor-playbook.md; docs/maintainer/index.md; tests/test_maintainer_surfaces.py; .agentic-workspace/planning/reviews/2026-06-06-issue-1366-test-suite-strategy.review.json\nDurable residue: docs (docs/maintainer/testing-strategy.md)\nMemory learning: promote_to_docs_contracts_checks_code\nFollow-up: none"
+  }
+}
