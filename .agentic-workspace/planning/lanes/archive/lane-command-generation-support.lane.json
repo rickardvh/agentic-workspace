@@ -1,0 +1,63 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-command-generation-support",
+  "title": "Route generic support into command-generation",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+  "lane_outcome": "Any generic freshness/hash, primitive execution, target rendering, conformance, or host-manifest support needed by #1354 is implemented in rickardvh/command-generation or explicitly deferred there, while AW keeps only host-specific contracts and product primitive implementations.",
+  "purpose_for_parent": "Keeps the single-source boundary from becoming another AW-local runtime workaround.",
+  "subsystems": [
+    "command-generation public API",
+    "AW generated-package checker",
+    "AW dependency pin"
+  ],
+  "technical_strategy": "Move generic rendered-output freshness compare/count/digest mechanics into command-generation, while AW keeps only host-specific target-family classification and policy wording.",
+  "technology_choices": [
+    "command_generation.generated_output_freshness_report",
+    "AW git dependency pin",
+    "focused command-generation and AW tests"
+  ],
+  "slice_sequence": [
+    {
+      "id": "generated-output-freshness-api",
+      "title": "Add and consume generic generated output freshness support",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/command-generation-output-freshness-support.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Ensure generic freshness/hash mechanics live in command-generation instead of AW-local checker code.",
+      "proof": "command-generation `uv run pytest` passed; AW focused/generated/workspace proof passed against the pinned command-generation commit.",
+      "residual_after_slice": "Final dogfooding intent closeout remains for parent #1354."
+    }
+  ],
+  "current_slice": "generated-output-freshness-api",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "External package tests and AW integration checks pass; any remaining AW-local wrapper policy is documented as host-specific.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "command-generation PR #6 opened at ae8fd35cb867db9e69e6d728219a960e458d9139 with uv run pytest passing; AW pins the commit and full selected AW proof passed."
+    ],
+    "known_gaps": [
+      "No residual command-generation support work discovered for this PR. Final dogfooding intent closeout remains for parent #1354."
+    ]
+  },
+  "residual_lane_work": "No residual command-generation support work discovered for this PR. Final dogfooding intent closeout remains for parent #1354.",
+  "lane_to_epic_contribution": "Moves generic generated-output freshness compare/count/digest mechanics into command-generation while AW keeps host-specific target family classification and policy.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Moves generic generated-output freshness compare/count/digest mechanics into command-generation while AW keeps host-specific target family classification and policy.",
+    "residual_work": "No residual command-generation support work discovered for this PR. Final dogfooding intent closeout remains for parent #1354.",
+    "next_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      "label": "lane-command-generation-support",
+      "role": "parent",
+      "locator": "candidate_lanes[3]"
+    }
+  ],
+  "notes": ""
+}

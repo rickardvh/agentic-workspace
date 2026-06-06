@@ -1,0 +1,343 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Audit and shrink runtime primitive inventory",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1357 by making the generated-package inventory proof distinguish current/fresh generated targets from minimized runtime boundary status.",
+    "hard_constraints": "Do not relax the generated-from-IR parent intent. Do not treat whole runtime files or packages as acceptable command-behavior implementation surfaces. Keep generic generation support routed to command-generation and keep AW-owned primitive implementations exact and reviewable.",
+    "agent_may_decide": "How to summarize accepted runtime symbols, minimization status, and move-candidate routing inside existing check/proof surfaces.",
+    "escalate_when": "A correct fix requires changing command-generation APIs, adding a new runtime module, or removing a runtime primitive whose behavior is not understood.",
+    "next_action": "Inspect the runtime inventory/check implementation, add compact minimization reporting, and run focused proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_generated_command_package_proof_runner.py -q --tb=short",
+      "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/generate/generate_command_packages.py --check"
+    ],
+    "touched_scope": [
+      "scripts/check/check_generated_command_packages.py",
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "tests/test_generated_command_package_proof_runner.py"
+    ],
+    "completion_criteria": [
+      "The generated-package proof distinguishes generated target freshness/completion from runtime-boundary minimization.",
+      "Accepted runtime boundaries are exact and reviewable by symbol/owner/reason rather than accepted as a whole category.",
+      "Move-to-command-generation or generated-command-behavior candidates are surfaced explicitly instead of hidden behind package-domain wording.",
+      "#1354 remains open unless later lanes satisfy parity/freshness and external command-generation support."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Audit and shrink runtime primitive inventory."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1357 by making accepted runtime primitive inventory minimization explicit in generated-package proof.",
+      "constraints": "Keep scope inside existing generated-package inventory/check surfaces and do not soften the parent single-source boundary.",
+      "latitude": "Choose compact status fields, exact-symbol summaries, and tests that make the remaining runtime inventory reviewable.",
+      "escalation": "Escalate if the work requires new command-generation APIs, unsafe primitive removal, or a broader generated target migration.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1357-runtime-inventory-minimization",
+      "status": "completed",
+      "next_step": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_generated_command_packages.py",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/operation_primitives.json",
+        "tests/test_generated_command_package_proof_runner.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1354 generated-CLI single-source boundary: runtime command behavior is generated from canonical IR/command-generation wherever applicable and hand-owned primitive runtime code stays minimal, exact, and justified.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "activation trigger": "After this lane closes, promote #1358 and any command-generation support lane needed for full #1354 satisfaction."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json."
+  },
+  "intent_interpretation": {
+    "literal request": "Audit and shrink runtime primitive inventory",
+    "inferred intended outcome": "Make the remaining AW-owned primitive runtime inventory exact, justified, and visibly transitional where it should later move toward generated/command-generation support.",
+    "chosen concrete what": "Expose minimization status and exact accepted-boundary evidence in the generated-package blocker/proof report.",
+    "interpretation distance": "low",
+    "review guidance": "Check whether the report separates freshness from minimization and whether any accepted runtime boundary is still justified only by vague package-domain wording."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/operation_primitives.json; tests/test_generated_command_package_proof_runner.py; planning closeout artifacts for this lane.",
+    "max changed files": "About 6 files; ask before touching generated targets or command-generation in this slice.",
+    "required validation commands": "Focused generated-package proof runner tests, generated package blocker JSON check, generated package static check, and generator --check.",
+    "ask-before-refactor threshold": "Ask before moving primitives, editing generated targets directly, or adding new command-generation APIs.",
+    "stop before touching": "Generated target files, unrelated runtime primitives, broad command dispatch behavior, or TypeScript parity work reserved for #1358."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate exact accepted-boundary inventory and minimization status."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #1357, the #1354 decomposition, the runtime inventory contracts, generated-package check script, and proof-runner tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from #1357: expose runtime-boundary minimization status in generated-package proof without closing #1354.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make #1357 runtime inventory minimization reviewable in generated-package proof.",
+    "hard constraints": "Do not soften the generated CLI single-source boundary or substitute package-level acceptance for exact primitive evidence.",
+    "agent may decide locally": "The compact field names and exact report layout inside existing proof surfaces.",
+    "escalate when": "The fix requires unsafe primitive removal, new command-generation support, or broader parity/freshness work."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "#1354",
+    "#1357",
+    ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    ".agentic-workspace/planning/lanes/lane-1357-runtime-inventory-minimization.lane.json"
+  ],
+  "active_milestone": {
+    "id": "issue-1357-runtime-inventory-minimization",
+    "status": "completed",
+    "scope": "Expose exact runtime-boundary minimization evidence in generated-package proof.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect the current runtime inventory metrics and add compact minimization reporting."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_generated_command_packages.py",
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "tests/test_generated_command_package_proof_runner.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Do not directly edit generated targets in this slice.",
+    "Do not claim #1354 complete from inventory reporting alone."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_generated_command_package_proof_runner.py -q --tb=short",
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/generate/generate_command_packages.py --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Runtime-boundary minimization status is reported separately from generated target freshness/completion.",
+    "Accepted runtime boundaries are exact-symbol evidence with owner/reason/minimization metadata.",
+    "Generic/generated-command behavior candidates are visible and routed instead of hidden by broad package-domain acceptance.",
+    "Lane closeout keeps #1354 open for #1358 and command-generation support."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "#1357 is complete as a slice: accepted runtime boundaries are exact/inventoried and the proof report blocks minimized-inventory claims while hand-owned symbols remain.",
+    "scope touched": "scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; #1357 planning surfaces",
+    "changed surfaces": "Generated-package blocker report JSON/text output and proof-runner tests.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected; parent #1354 remains open for #1358 parity/freshness and command-generation support.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "AW startup/summary/implement proof routing was used; generated package freshness check passed",
+    "misinterpretation risk": "low for this slice; parent #1354 remains open because inventory reporting does not itself generate or remove runtime behavior",
+    "follow-on decision": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "Focused generated-package proof passed: tests/test_generated_command_package_proof_runner.py 64 passed; check_generated_command_packages.py passed; generate_command_packages.py --check passed. Runtime-boundary minimization report now separates completion/freshness from minimization and reports 85 remaining accepted hand-owned symbols.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1357 by making remaining AW-owned runtime primitive inventory exact, justified, minimized where possible, and visibly separate from generated target freshness.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Runtime inventory minimization status is now distinct from generated target freshness/completion.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Planning command-owned lane activation/new-plan/close sequence left compact state needing manual projection repair during #1354 dogfooding."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "GitHub #1361"
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub #1361"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "GitHub #1361",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #1361 tracks Planning mutations leaving compact state immediately usable without manual projection edits.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-06-06: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1357 by making remaining AW-owned runtime primitive inventory exact, justified, minimized where possible, and visibly separate from generated target freshness.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Focused generated-package proof passed: tests/test_generated_command_package_proof_runner.py 64 passed; check_generated_command_packages.py passed; generate_command_packages.py --check passed. Runtime-boundary minimization report now separates completion/freshness from minimization and reports 85 remaining accepted hand-owned symbols.\nChanged surfaces: Generated-package blocker report JSON/text output and proof-runner tests.\nDurable residue: planning (.agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  }
+}

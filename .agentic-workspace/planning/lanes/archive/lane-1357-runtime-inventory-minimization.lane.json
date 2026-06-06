@@ -1,0 +1,64 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1357-runtime-inventory-minimization",
+  "title": "Audit and shrink runtime primitive inventory",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+  "lane_outcome": "Accepted runtime boundaries are classified into reviewable owner/reason categories, whole-category acceptance is reduced or justified, and the blocker report distinguishes freshness from minimized runtime boundary status.",
+  "purpose_for_parent": "Makes remaining hand-owned runtime primitive inventory explicit, justified, and smaller or at least visibly transitional.",
+  "subsystems": [
+    "generated command package static proof",
+    "Python runtime projection inventory",
+    "operation primitive inventory",
+    "workspace proof selection"
+  ],
+  "technical_strategy": "Use the existing generated-package inventory/check surfaces to separate freshness/completeness from runtime-boundary minimization. Keep exact accepted runtime symbols visible, attach reviewable minimization status, and route generic/generated-command behavior candidates without creating a new runtime module.",
+  "technology_choices": [
+    "Python static proof script",
+    "existing JSON inventory contracts",
+    "focused pytest coverage"
+  ],
+  "slice_sequence": [
+    {
+      "id": "runtime-inventory-minimization-proof",
+      "title": "Expose runtime boundary minimization status in generated package proof",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1357-runtime-inventory-minimization.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Make generated-package proof distinguish fresh/inventoried generated targets from minimized runtime boundaries.",
+      "proof": "Focused generated-package proof-runner tests and generated-package checks show minimization_claim_allowed remains false while accepted hand-owned runtime symbols remain.",
+      "residual_after_slice": "Generated target parity/freshness (#1358), command-generation support, and final dogfooding closeout remain for parent #1354."
+    }
+  ],
+  "current_slice": "runtime-inventory-minimization-proof",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Inventory/check tests show accepted boundaries carry exact owner/reason/minimization evidence and route move-to-command-generation candidates explicitly.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "Focused generated-package proof passed: tests/test_generated_command_package_proof_runner.py 64 passed; check_generated_command_packages.py passed; generate_command_packages.py --check passed. Runtime-boundary minimization report now separates completion/freshness from minimization and reports 85 remaining accepted hand-owned symbols."
+    ],
+    "known_gaps": [
+      "No residual work inside #1357. Parent #1354 still requires #1358 generated target parity/freshness and command-generation support shaping."
+    ]
+  },
+  "residual_lane_work": "No residual work inside #1357. Parent #1354 still requires #1358 generated target parity/freshness and command-generation support shaping.",
+  "lane_to_epic_contribution": "Makes remaining hand-owned runtime primitive inventory exact/inventoried and blocks minimized-inventory claims while accepted runtime symbols remain.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Makes remaining hand-owned runtime primitive inventory exact/inventoried and blocks minimized-inventory claims while accepted runtime symbols remain.",
+    "residual_work": "No residual work inside #1357. Parent #1354 still requires #1358 generated target parity/freshness and command-generation support shaping.",
+    "next_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      "label": "lane-1357-runtime-inventory-minimization",
+      "role": "parent",
+      "locator": "candidate_lanes[1]"
+    }
+  ],
+  "notes": ""
+}

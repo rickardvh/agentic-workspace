@@ -1,0 +1,65 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1358-generated-target-parity-freshness",
+  "title": "Guarantee generated target parity and freshness",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+  "lane_outcome": "Relevant command-generation, IR, primitive, runtime support, and generated-package proof changes require cheap freshness/parity evidence for both Python and TypeScript generated targets.",
+  "purpose_for_parent": "Prevents agents from editing Python-facing runtime/generation surfaces while leaving TypeScript stale or unproven.",
+  "subsystems": [
+    "generated command package generator",
+    "generated package static proof",
+    "Python generated targets",
+    "TypeScript generated targets",
+    "AW changed-path proof selection"
+  ],
+  "technical_strategy": "Add cheap generated-target freshness evidence that covers both Python and TypeScript outputs. Prefer a manifest/hash or existing generator --check integration over regenerating on every call, and make proof selection surface parity obligations whenever relevant source or generated target paths change.",
+  "technology_choices": [
+    "existing generator --check command",
+    "static generated-package proof script",
+    "focused pytest coverage"
+  ],
+  "slice_sequence": [
+    {
+      "id": "generated-target-parity-freshness-proof",
+      "title": "Require Python and TypeScript generated target freshness proof",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1358-generated-target-parity-freshness.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Prevent source/runtime/generator edits from proving only Python generated output while leaving TypeScript stale or unmentioned.",
+      "proof": "Focused tests and generated-package checks demonstrate stale generated targets are detected cheaply and proof guidance names both Python and TypeScript targets.",
+      "residual_after_slice": "Command-generation support and final #1354 dogfooding closeout remain unless this slice proves no external generic support is needed."
+    }
+  ],
+  "current_slice": "generated-target-parity-freshness-proof",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Freshness/hash/check tests fail stale Python or TypeScript output after relevant source changes and remain cheap for unrelated edits.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "Required proof passed: 64 generated-package proof-runner tests; 62 implement CLI tests; generated package blocker report showed 296 Python and 221 TypeScript generated outputs fresh; check_generated_command_packages.py passed; generate_command_packages.py --check passed; summary/doctor passed; make test-workspace and make lint-workspace passed."
+    ],
+    "known_gaps": [
+      "No residual work inside #1358. Parent #1354 still requires command-generation support decision and final dogfooding closeout."
+    ]
+  },
+  "residual_lane_work": "No residual work inside #1358. Parent #1354 still requires command-generation support decision and final dogfooding closeout.",
+  "lane_to_epic_contribution": "Prevents Python-only generated freshness claims by making AW proof guidance and generated-package checker output name both Python and TypeScript generated target families.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Prevents Python-only generated freshness claims by making AW proof guidance and generated-package checker output name both Python and TypeScript generated target families.",
+    "residual_work": "No residual work inside #1358. Parent #1354 still requires command-generation support decision and final dogfooding closeout.",
+    "next_owner": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+      "label": "lane-1358-generated-target-parity-freshness",
+      "role": "parent",
+      "locator": "candidate_lanes[2]"
+    }
+  ],
+  "notes": ""
+}

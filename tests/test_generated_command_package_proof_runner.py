@@ -332,6 +332,34 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["baseline_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
     assert runtime_metrics["new_symbols_since_baseline"] == []
     assert runtime_metrics["removed_symbols_since_baseline"] == []
+    minimization = report["runtime_boundary_minimization"]
+    assert minimization["kind"] == "python-runtime-boundary-minimization/v1"
+    assert minimization["status"] == "not-minimized-hand-owned-boundaries-remain"
+    assert minimization["minimization_claim_allowed"] is False
+    assert minimization["whole_category_acceptance_allowed"] is False
+    assert minimization["accepted_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert minimization["remaining_hand_owned_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert "not a claim that runtime boundaries are minimized" in minimization["freshness_claim_boundary"]
+    assert "generic-deterministic-runtime-debt" in minimization["route_by_runtime_boundary_class"]
+    assert "agent_owns" in minimization["authority_boundary"]
+    assert "accepted_symbol_count is non-zero" in minimization["claim_rule"]
+    target_freshness = report["generated_target_freshness"]
+    assert target_freshness["kind"] == "generated-target-freshness/v1"
+    assert target_freshness["status"] == "fresh"
+    assert target_freshness["target_families"] == ["python", "typescript"]
+    assert target_freshness["rendered_output_count_by_family"]["python"] > 0
+    assert target_freshness["rendered_output_count_by_family"]["typescript"] > 0
+    assert target_freshness["stale_output_count_by_family"] == {}
+    assert target_freshness["missing_target_families"] == []
+    assert "do not rewrite generated files" in target_freshness["cheap_check_rule"]
+    assert "Python-only evidence" in target_freshness["claim_rule"]
+    edit_policy = report["runtime_source_edit_policy"]
+    assert edit_policy["kind"] == "generated-cli-runtime-source-edit-policy/v1"
+    assert "src/agentic_workspace/workspace_runtime_primitives.py" in edit_policy["watched_runtime_source_paths"]
+    assert edit_policy["accepted_direct_edit_reasons"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
+    assert "package-domain boundary" in edit_policy["rejected_vague_reasons"]
+    assert "source_symbol_or_primitive" in edit_policy["required_evidence"]
+    assert "vague package-domain boundary wording is insufficient" in edit_policy["rule"]
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
     assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
@@ -382,6 +410,38 @@ def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:
     ]
 
 
+def test_runtime_boundary_minimization_routes_generic_debt_to_command_generation() -> None:
+    payload = _run_checker_case(
+        """
+        metrics = checker._python_runtime_boundary_metrics()
+        metrics["accepted_runtime_symbol_count"] += 1
+        metrics["accepted_runtime_symbol_count_by_class"]["generic-deterministic-runtime-debt"] = 1
+        metrics["generic_debt_symbols"] = [
+            {
+                "operation_id": "workspace.example.report",
+                "source_module": "agentic_workspace.workspace_runtime_primitives",
+                "source_symbol": "_example_generated_command_behavior",
+                "runtime_boundary_class": "generic-deterministic-runtime-debt",
+            }
+        ]
+        _emit({"minimization": checker._runtime_boundary_minimization_report(metrics)})
+        """
+    )
+    minimization = payload["minimization"]
+
+    assert minimization["minimization_claim_allowed"] is False
+    assert minimization["move_to_command_generation_candidate_count"] == 1
+    assert minimization["move_to_command_generation_candidates"] == [
+        {
+            "operation_id": "workspace.example.report",
+            "source_module": "agentic_workspace.workspace_runtime_primitives",
+            "source_symbol": "_example_generated_command_behavior",
+            "runtime_boundary_class": "generic-deterministic-runtime-debt",
+        }
+    ]
+    assert minimization["route_by_runtime_boundary_class"]["generic-deterministic-runtime-debt"].startswith("move-to-command-generation:")
+
+
 def test_declarative_view_specs_match_generated_operations() -> None:
     checker = _load_checker()
 
@@ -412,6 +472,18 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert runtime_metrics["python_bridge_step_count"] == 0
     assert runtime_metrics["python_bridge_symbols"] == []
     assert runtime_metrics["generic_debt_symbol_count"] == 0
+    minimization = payload["runtime_boundary_minimization"]
+    assert minimization["status"] == "not-minimized-hand-owned-boundaries-remain"
+    assert minimization["minimization_claim_allowed"] is False
+    assert minimization["remaining_hand_owned_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    target_freshness = payload["generated_target_freshness"]
+    assert target_freshness["status"] == "fresh"
+    assert target_freshness["target_families"] == ["python", "typescript"]
+    assert target_freshness["rendered_output_count_by_family"]["python"] > 0
+    assert target_freshness["rendered_output_count_by_family"]["typescript"] > 0
+    assert payload["runtime_source_edit_policy"]["status"] == "available"
+    assert "new-primitive-implementation" in payload["runtime_source_edit_policy"]["accepted_direct_edit_reasons"]
+    assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
     assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
 
 
