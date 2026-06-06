@@ -175,7 +175,7 @@
     "changed surfaces": "dependency pin and planning evidence hygiene",
     "validations run": "See proof_report.validation proof.",
     "result for continuation": "AW #1369 points at rebased command-generation PR #7 head.",
-    "next step": "Commit and push AW PR follow-up; update PR body with c3a3ec2 pin."
+    "next step": "Commit and push AW PR follow-up; update PR body with 2d438b1 merge pin."
   },
   "finished_run_review": {
     "review status": "complete",
@@ -196,7 +196,7 @@
     "decomposition adjustment": "pending"
   },
   "proof_report": {
-    "validation proof": "Updated pyproject.toml/uv.lock to command-generation c3a3ec2217ccf577d8491370a25702bd03126676; generated package proof with Node passed; generated freshness check passed; focused fragment tests passed; structured inventory passed.",
+    "validation proof": "Updated pyproject.toml/uv.lock to command-generation 2d438b113d17baac63132cebc460c161d48c7713; generated package proof with Node passed; generated freshness check passed; focused fragment tests passed; structured inventory passed.",
     "proof achieved now": "passed",
     "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
