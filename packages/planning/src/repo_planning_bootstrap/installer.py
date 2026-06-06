@@ -22,7 +22,13 @@ from repo_planning_bootstrap._render import (
     render_quickstart,
     render_routing,
 )
-from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
+from repo_planning_bootstrap._source import (
+    UPGRADE_SOURCE_PATH,
+    is_default_upgrade_source_text,
+    is_valid_upgrade_source_text,
+    render_upgrade_source,
+    resolve_upgrade_source,
+)
 
 PLANNING_MANAGED_ROOT = module_root("planning")
 WORKSPACE_WORKFLOW_PATH = Path(".agentic-workspace") / "WORKFLOW.md"
@@ -13529,6 +13535,9 @@ def _copy_payload(
         if target_relative.name.endswith(".template.md"):
             target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
         destination = target_root / target_relative
+        if relative == UPGRADE_SOURCE_PATH:
+            _copy_upgrade_source_file(source=source, destination=destination, result=result, force=force)
+            continue
         existed = destination.exists()
         if existed and conservative:
             result.add("skipped", destination, "already present")
@@ -13579,6 +13588,9 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
     if not source.exists():
         result.add("manual review", destination, "payload source file is missing")
         return
+    if relative == UPGRADE_SOURCE_PATH:
+        _copy_upgrade_source_file(source=source, destination=destination, result=result, force=False)
+        return
 
     if destination.exists():
         if not overwrite:
@@ -13601,6 +13613,30 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
     result.add("copied", destination, source.as_posix())
+
+
+def _copy_upgrade_source_file(*, source: Path, destination: Path, result: InstallResult, force: bool) -> None:
+    if destination.exists():
+        existing = destination.read_text(encoding="utf-8")
+        if is_valid_upgrade_source_text(existing) and not force:
+            result.add("current", destination, "upgrade source metadata already recorded; preserving repo-local source selection")
+            return
+        action = "would overwrite" if result.dry_run else "overwritten"
+        detail = (
+            "refresh upgrade source metadata with current install date"
+            if is_valid_upgrade_source_text(existing)
+            else "upgrade source metadata missing or invalid; refreshing with packaged default"
+        )
+    else:
+        action = "would copy" if result.dry_run else "copied"
+        detail = f"{source.as_posix()} with current install date"
+
+    if result.dry_run:
+        result.add(action, destination, detail)
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(render_upgrade_source(), encoding="utf-8")
+    result.add(action, destination, detail)
 
 
 def _remove_bundled_skill_file(*, relative: Path, target_root: Path) -> bool:
@@ -13787,6 +13823,8 @@ def _can_remove_payload_file(*, relative: Path, target_root: Path) -> bool:
         if expected_text is None:
             return False
         return destination.read_text(encoding="utf-8") == expected_text
+    if relative == UPGRADE_SOURCE_PATH:
+        return is_default_upgrade_source_text(destination.read_text(encoding="utf-8"))
     expected = _expected_target_file_bytes(relative=relative, target_root=target_root)
     if expected is None:
         return False

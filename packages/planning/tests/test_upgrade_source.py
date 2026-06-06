@@ -3,7 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from repo_planning_bootstrap import runtime_projection
-from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, default_upgrade_source, resolve_upgrade_source
+from repo_planning_bootstrap._source import (
+    UPGRADE_SOURCE_PATH,
+    current_recorded_at,
+    default_upgrade_source,
+    render_upgrade_source,
+    resolve_upgrade_source,
+)
 from repo_planning_bootstrap.installer import doctor_bootstrap
 
 
@@ -17,6 +23,14 @@ def test_default_upgrade_source_uses_master_branch() -> None:
     assert source.source_type == "git"
     assert source.source_ref == "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
     assert source.source_label == "agentic-planning monorepo master"
+
+
+def test_render_upgrade_source_uses_current_recorded_date() -> None:
+    rendered = render_upgrade_source()
+
+    assert 'source_type = "git"' in rendered
+    assert 'source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"' in rendered
+    assert f'recorded_at = "{current_recorded_at()}"' in rendered
 
 
 def test_resolve_upgrade_source_reads_checked_in_file(tmp_path: Path) -> None:
