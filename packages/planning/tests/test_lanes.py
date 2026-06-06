@@ -173,8 +173,11 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
         parent_contribution="lane artifacts now own strategy and proof aggregation",
         parent_close_permission="may-advance-parent",
     )
-    assert [action.kind for action in close_result.actions] == ["updated", "updated", "proof", "proof"]
+    assert [action.kind for action in close_result.actions] == ["updated", "updated", "next safe action", "proof", "proof"]
+    assert any("lane-archive closeable-lane" in action.detail for action in close_result.actions if action.kind == "next safe action")
     summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert any(warning["warning_class"] == "closed_lane_record_live_state" for warning in summary["planning_surface_health"]["warnings"])
     lane = summary["lanes"]["records"][0]
     assert lane["status"] == "closed"
     assert lane["proof_aggregation"]["status"] == "satisfied"
@@ -186,8 +189,63 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert not (tmp_path / ".agentic-workspace/planning/lanes/closeable-lane.lane.json").exists()
     assert (tmp_path / ".agentic-workspace/planning/lanes/archive/closeable-lane.lane.json").exists()
     post_archive = planning_summary(target=tmp_path, profile="compact")
+    assert post_archive["planning_surface_health"]["status"] == "clean"
     assert post_archive["lanes"]["record_count"] == 0
     assert post_archive["lanes"]["archived_count"] == 1
+
+
+def test_summary_and_doctor_validate_invalid_active_lane_schema(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "invalid-lane.lane.json"
+    lane_path.parent.mkdir(parents=True, exist_ok=True)
+    lane_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-lane/v1",
+                "id": "invalid-lane",
+                "title": "Invalid Lane",
+                "status": "active",
+                "parent_decomposition_ref": "",
+                "lane_outcome": "Expose schema diagnostics before closeout.",
+                "purpose_for_parent": "Prove diagnostics catch malformed slices.",
+                "subsystems": [],
+                "technical_strategy": "Use an intentionally malformed slice.",
+                "slice_sequence": [
+                    {
+                        "id": "bad-slice",
+                        "title": "Bad Slice",
+                        "status": "active",
+                        "execplan": ".agentic-workspace/planning/execplans/bad-slice.plan.json",
+                        "done_when": "This key is not part of the lane slice schema.",
+                    }
+                ],
+                "acceptance_boundary": "Diagnostics report the schema error.",
+                "proof_strategy": "Summary and doctor warnings name the invalid record.",
+                "proof_aggregation": {"status": "not-started", "evidence": [], "known_gaps": []},
+                "residual_lane_work": "",
+                "lane_to_epic_contribution": "",
+                "parent_close_permission": "do-not-close-parent",
+                "closeout_state": {"status": "open", "summary": "", "residual_work": "", "next_owner": ""},
+                "references": [],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    schema_warning = next(warning for warning in warnings if warning["warning_class"] == "planning_lane_schema_invalid")
+    assert schema_warning["path"].endswith("invalid-lane.lane.json")
+    assert "slice_sequence.0" in schema_warning["message"]
+    assert "execplan_ref" in schema_warning["message"]
+
+    doctor = doctor_bootstrap(target=tmp_path)
+    doctor_warning = next(warning for warning in doctor.warnings if warning["warning_class"] == "planning_lane_schema_invalid")
+    assert doctor_warning["path"].endswith("invalid-lane.lane.json")
+    assert "done_when" in doctor_warning["message"]
 
 
 def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:
