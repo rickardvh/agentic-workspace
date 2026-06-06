@@ -1,0 +1,128 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Audit runtime boundary inventory for #1357",
+  "plan_id": "issue-1357-runtime-boundary-inventory",
+  "created_at": "2026-06-06T16:22:20.650896+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-1357-runtime-boundary-inventory.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-1357-runtime-boundary-inventory.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "issue-1357-runtime-boundary-inventory",
+    "status": "completed",
+    "scope": "#1357 audit/minimization evidence only.",
+    "ready": "ready",
+    "blocked": "none after execplan activation; proof pending",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make #1357 honestly supportable by turning the accepted Python runtime boundary inventory into exact per-symbol minimization evidence.",
+    "hard constraints": "Keep scope to #1357 audit/report evidence; do not claim #1364 generated CLI migration or #1367 compositional IR implementation is complete.",
+    "agent may decide locally": "May add schema fields, inventory metadata, checker report output, tests, and generated reference docs needed to prove exact ownership and minimization routing.",
+    "escalate when": "Escalate if satisfying #1357 requires actually migrating runtime command behavior or changing command-generation architecture."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added exact minimization metadata to every accepted runtime boundary, enforced it in the generated-package checker, exposed it in python-completion-blockers output, and covered it with focused tests.",
+    "scope touched": "scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/issue-1357-runtime-boundary-inventory.plan.json",
+    "changed surfaces": "runtime boundary inventory schema/data, generated command package proof report, focused tests, planning execplan/state",
+    "validations run": "uv run pytest tests/test_generated_command_package_proof_runner.py::test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_has_json_cli_mode tests/test_contract_tooling.py::test_python_runtime_projection_inventory_tracks_generated_output_debt -q -> 4 passed; uv run python scripts/check/check_generated_command_packages.py -> ok; uv run python scripts/generate/generate_command_packages.py --check -> ok; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -> passed; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> ok; uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; uv run python scripts/run_agentic_workspace.py summary --target . --format json -> warning_count 0; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json -> healthy; make schema-reference-docs -> ok; make test-workspace -> ok; make lint-workspace -> ok",
+    "result for continuation": "#1357 slice complete; #1364 generated CLI migration and #1367 compositional IR remain open",
+    "next step": "Create PR for #1357 and continue issue priority order after merge."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no runtime behavior migration or command-generation architecture changes were made",
+    "proof status": "passed",
+    "intent served": "yes for #1357 audit/minimization evidence; no claim that #1364/#1367 are complete",
+    "config compliance": "AW start/implement used; active execplan created when AW required planning ownership",
+    "misinterpretation risk": "low; report explicitly distinguishes fresh/inventoried from minimized",
+    "follow-on decision": "continue with #1367/#1364 in priority order after this PR merges"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_generated_command_package_proof_runner.py::test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_has_json_cli_mode tests/test_contract_tooling.py::test_python_runtime_projection_inventory_tracks_generated_output_debt -q -> 4 passed; uv run python scripts/check/check_generated_command_packages.py -> ok; uv run python scripts/generate/generate_command_packages.py --check -> ok; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -> passed; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> ok; uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; uv run python scripts/run_agentic_workspace.py summary --target . --format json -> warning_count 0; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json -> healthy; make schema-reference-docs -> ok; make test-workspace -> ok; make lint-workspace -> ok",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_generated_command_package_proof_runner.py::test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_has_json_cli_mode tests/test_contract_tooling.py::test_python_runtime_projection_inventory_tracks_generated_output_debt -q -> 4 passed; uv run python scripts/check/check_generated_command_packages.py -> ok; uv run python scripts/generate/generate_command_packages.py --check -> ok; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -> passed; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> ok; uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; uv run python scripts/run_agentic_workspace.py summary --target . --format json -> warning_count 0; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json -> healthy; make schema-reference-docs -> ok; make test-workspace -> ok; make lint-workspace -> ok"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1357 audit and shrink accepted runtime primitive inventory for generated CLI completion.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#1357 audit evidence is satisfied: every accepted runtime boundary has exact minimization metadata; checker/report/tests enforce category, route, owner, tracking issue, edit reasons, and stale-when evidence.",
+    "unsolved intent passed to": "#1364 and #1367 remain open for actual migration/compositional IR"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "This bounded #1357 slice is complete, but the larger generated CLI migration/compositional IR intent remains open.",
+    "evidence carried forward": "focused tests, generated command package check, generated freshness check, contract tooling, structured inventory, workspace tests/lint, summary, and doctor passed.",
+    "reopen trigger": "A runtime boundary can be accepted without exact minimization metadata or the blocker report again conflates fresh/inventoried with minimized."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "accepted runtime boundary inventory is not the same as minimized runtime boundary",
+    "motivation worth preserving": "Already encoded in python_runtime_projection_inventory schema/data and checker report; no separate Memory note needed.",
+    "canonical owner now": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json and scripts/check/check_generated_command_packages.py",
+    "promotion trigger": "Promote only if future agents miss this distinction outside generated CLI work.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1357 audit/minimization evidence implemented",
+    "validation confirmed": "uv run pytest tests/test_generated_command_package_proof_runner.py::test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries tests/test_generated_command_package_proof_runner.py::test_python_completion_blocker_report_has_json_cli_mode tests/test_contract_tooling.py::test_python_runtime_projection_inventory_tracks_generated_output_debt -q -> 4 passed; uv run python scripts/check/check_generated_command_packages.py -> ok; uv run python scripts/generate/generate_command_packages.py --check -> ok; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -> passed; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> ok; uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; uv run python scripts/run_agentic_workspace.py summary --target . --format json -> warning_count 0; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json -> healthy; make schema-reference-docs -> ok; make test-workspace -> ok; make lint-workspace -> ok",
+    "follow-on routed to": "#1364 and #1367",
+    "post-work posterity capture": "PR body and this execplan",
+    "resume from": "next prioritized issue after #1357 PR",
+    "knowledge promoted (Memory/Docs/Config)": "none; this is contract/checker evidence, not durable repo memory"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Existing planning workflow follow-ups; no new issue filed from this slice.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1364 remains the full generated CLI migration owner.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#1367 owns compositional operation IR/modular primitive architecture.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none; this is contract/checker evidence, not durable repo memory",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none; this is contract/checker evidence, not durable repo memory",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "No new issue needed; follow-ons already exist as #1364 and #1367.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  }
+}

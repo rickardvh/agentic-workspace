@@ -1771,6 +1771,19 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     assert {"runtime-facade-call", "operation-function-call"} <= binding_kinds
     assert all(entry["status"] == "accepted-permanent-package-domain-boundary" for entry in accepted_boundaries["entries"])
     assert all(entry["operation_ids"] and entry["primitive_refs"] for entry in accepted_boundaries["entries"])
+    assert all(entry["minimization_category"] for entry in accepted_boundaries["entries"])
+    assert all(entry["minimization_route"] for entry in accepted_boundaries["entries"])
+    assert all(entry["minimization_owner"] for entry in accepted_boundaries["entries"])
+    assert all(entry["minimization_tracking_issue"].startswith("#") for entry in accepted_boundaries["entries"])
+    assert all(
+        entry["direct_edit_reasons_allowed"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
+        for entry in accepted_boundaries["entries"]
+    )
+    assert all(entry["stale_when"] for entry in accepted_boundaries["entries"])
+    front_door_entries = [entry for entry in accepted_boundaries["entries"] if entry["runtime_boundary_class"] == "front-door-dispatch"]
+    assert front_door_entries
+    assert all(entry["minimization_route"] == "candidate-extract-when-contract-stable" for entry in front_door_entries)
+    assert all(entry["minimization_tracking_issue"] == "#1367" for entry in front_door_entries)
     output_entries = [
         entry
         for entry in accepted_boundaries["entries"]

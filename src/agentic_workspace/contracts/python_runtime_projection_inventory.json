@@ -119,7 +119,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -138,7 +147,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.bootstrap-cleanup.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.cleanup) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.cleanup) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -157,7 +175,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.capture-note.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.capture_note.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.capture_note.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -176,7 +203,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.create-note.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.note.create) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.note.create) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -198,7 +234,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.init.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -220,7 +265,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.install.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -239,7 +293,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.migrate-layout.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.migrate_layout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.migrate_layout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -258,7 +321,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.promotion-report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the Memory package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the Memory package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -277,7 +349,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.route-review.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route_review.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route_review.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -296,7 +377,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.route.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -315,7 +405,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.search.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.search.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.search.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -334,7 +433,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.sync-memory.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.sync_memory.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.sync_memory.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -353,7 +461,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.uninstall.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -372,7 +489,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.upgrade.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -391,7 +517,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.adopt.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -410,7 +545,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.close-item.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -429,7 +573,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.create-review.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -448,7 +601,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.doctor.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -467,7 +629,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.handoff.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -486,7 +657,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.init.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -505,7 +685,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.install.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -524,7 +713,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.status.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -543,7 +741,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.uninstall.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -562,7 +769,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.upgrade.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -581,7 +797,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.verify-payload.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -616,7 +841,16 @@
         "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text whose wording is coupled to Memory package semantics.",
         "conformance_ref": "memory.bootstrap-cleanup.process, memory.capture-note.process, memory.create-note.dry-run.process, memory.current-show.process, memory.list-files.process, memory.list-skills.process, memory.migrate-layout.lifecycle.dry-run.process, memory.promotion-report.process, memory.prompt.process, memory.report.process, memory.route-report.process, memory.route-review.process, memory.route.process, memory.search.process, memory.sync-memory.process, memory.uninstall.lifecycle.dry-run.process, memory.upgrade.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text remain in Memory runtime because they encode Memory package semantics and compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Memory-specific fallback cases."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text remain in Memory runtime because they encode Memory package semantics and compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Memory-specific fallback cases.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -635,7 +869,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.doctor.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
+        "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -654,7 +897,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.current-show.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.current.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.current.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -673,7 +925,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.prompt.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -692,7 +953,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Non-verbose text/JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
+        "generic_behavior_audit": "Non-verbose text/JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -711,7 +981,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.route-report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose fallback; generated operation IR now builds the non-verbose text/JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
+        "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose fallback; generated operation IR now builds the non-verbose text/JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -730,7 +1009,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -749,7 +1037,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -768,7 +1065,16 @@
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.adopt.lifecycle.dry-run.process",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -787,7 +1093,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.close-item.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -806,7 +1121,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.status.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -825,7 +1149,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.create-review.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -844,7 +1177,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.doctor.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -865,7 +1207,16 @@
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.init.lifecycle.dry-run.process, planning.install.lifecycle.dry-run.process",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply, planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply, planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -884,7 +1235,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.handoff.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -903,7 +1263,16 @@
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.uninstall.lifecycle.dry-run.process",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -922,7 +1291,16 @@
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.upgrade.lifecycle.dry-run.process",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -941,7 +1319,16 @@
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.verify-payload.process",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -960,7 +1347,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.archive-plan.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.archive-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.archive-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -979,7 +1375,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.closeout.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.closeout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.closeout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -998,7 +1403,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.delegation-decision.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.delegation-decision.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.delegation-decision.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1017,7 +1431,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.intake-artifact.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.intake-artifact.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.intake-artifact.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1036,7 +1459,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.new-plan.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.new-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.new-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1055,7 +1487,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.promote-to-plan.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.promote-to-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.promote-to-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1064,13 +1505,26 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_lane_create_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.lane-create.lifecycle"],
-        "primitive_refs": ["planning.lane-create.apply"],
+        "operation_ids": [
+          "planning.lane-create.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.lane-create.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning lane lifecycle state mutation policy, validation, conflict handling, and provenance updates.",
         "conformance_ref": "planning.lane-create.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-create.apply remains an explicit package-boundary call."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-create.apply remains an explicit package-boundary call.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1079,13 +1533,26 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_lane_promote_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.lane-promote.lifecycle"],
-        "primitive_refs": ["planning.lane-promote.apply"],
+        "operation_ids": [
+          "planning.lane-promote.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.lane-promote.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning lane lifecycle state mutation policy, validation, conflict handling, and provenance updates.",
         "conformance_ref": "planning.lane-promote.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-promote.apply remains an explicit package-boundary call."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-promote.apply remains an explicit package-boundary call.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1094,13 +1561,26 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_lane_activate_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.lane-activate.lifecycle"],
-        "primitive_refs": ["planning.lane-activate.apply"],
+        "operation_ids": [
+          "planning.lane-activate.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.lane-activate.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning lane lifecycle state mutation policy, validation, conflict handling, and provenance updates.",
         "conformance_ref": "planning.lane-activate.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-activate.apply remains an explicit package-boundary call."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-activate.apply remains an explicit package-boundary call.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1109,13 +1589,26 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_lane_close_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.lane-close.lifecycle"],
-        "primitive_refs": ["planning.lane-close.apply"],
+        "operation_ids": [
+          "planning.lane-close.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.lane-close.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning lane lifecycle state mutation policy, validation, conflict handling, and provenance updates.",
         "conformance_ref": "planning.lane-close.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-close.apply remains an explicit package-boundary call."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-close.apply remains an explicit package-boundary call.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1124,13 +1617,26 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_lane_archive_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.lane-archive.lifecycle"],
-        "primitive_refs": ["planning.lane-archive.apply"],
+        "operation_ids": [
+          "planning.lane-archive.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.lane-archive.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning lane lifecycle state mutation policy, validation, conflict handling, and provenance updates.",
         "conformance_ref": "planning.lane-archive.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-archive.apply remains an explicit package-boundary call."
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR owns dataflow while planning.lane-archive.apply remains an explicit package-boundary call.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1175,7 +1681,16 @@
         "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text whose wording is coupled to Planning state semantics.",
         "conformance_ref": "planning.adopt.lifecycle.dry-run.process, planning.archive-plan.lifecycle.dry-run.process, planning.close-item.process, planning.closeout.lifecycle.dry-run.process, planning.create-review.process, planning.delegation-decision.lifecycle.dry-run.process, planning.doctor.process, planning.handoff.process, planning.init.lifecycle.dry-run.process, planning.install.lifecycle.dry-run.process, planning.intake-artifact.lifecycle.dry-run.process, planning.list-files.process, planning.new-plan.lifecycle.dry-run.process, planning.promote-to-plan.lifecycle.dry-run.process, planning.prompt.process, planning.reconcile.process, planning.report.process, planning.status.process, planning.summary.process, planning.uninstall.lifecycle.dry-run.process, planning.upgrade.lifecycle.dry-run.process, planning.verify-payload.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text remain in Planning runtime because they encode Planning state view semantics and package compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Planning-specific fallback cases."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text remain in Planning runtime because they encode Planning state view semantics and package compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Planning-specific fallback cases.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1194,7 +1709,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "planning.reconcile.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1213,7 +1737,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.summary.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1232,7 +1765,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "planning.prompt.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1251,7 +1793,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "delegation-outcome.append.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1278,7 +1829,16 @@
         "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, defaults-router, delegation-outcome, memory route/report text, and codegen-owned planning-module tiny text are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for prompt payload text, workspace-system-intent text, and config/defaults compatibility surfaces whose wording depends on workspace package policy.",
         "conformance_ref": "config.report.process, defaults.report.process, delegation-outcome.append.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, defaults-router text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: prompt payload text, workspace-system-intent text, and config/defaults compatibility emitters remain in workspace runtime because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named package-specific fallback cases."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, defaults-router text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: prompt payload text, workspace-system-intent text, and config/defaults compatibility emitters remain in workspace runtime because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named package-specific fallback cases.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1297,7 +1857,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "config.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1316,7 +1885,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1335,7 +1913,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1354,7 +1941,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1375,7 +1971,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "prompt.init.process, prompt.uninstall.process, prompt.upgrade.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1396,7 +2001,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "prompt.init.process, prompt.uninstall.process, prompt.upgrade.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1415,7 +2029,16 @@
         "why_not_generic_deterministic": "The symbol owns provider-specific integration or external-tool behavior rather than deterministic target-executor logic.",
         "conformance_ref": "external-intent.refresh-github.help.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as provider-integration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as provider-integration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "provider-integration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for provider or subprocess integration",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the provider interaction has a generic adapter contract owned by command-generation or shared runtime primitives.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1434,7 +2057,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "implement.context.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1455,7 +2087,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "init.lifecycle.dry-run.process, install.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1476,7 +2117,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "uninstall.lifecycle.destructive-refusal.process, upgrade.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1497,7 +2147,16 @@
         "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
         "conformance_ref": "doctor.report.process, status.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "live-workspace-inspection",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1516,7 +2175,16 @@
         "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
         "conformance_ref": "memory.front-door.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "front-door-dispatch-extraction-candidate",
+        "minimization_route": "candidate-extract-when-contract-stable",
+        "minimization_owner": "workspace package runtime boundary with command-generation architecture follow-up",
+        "minimization_tracking_issue": "#1367",
+        "stale_when": "Stale when module front-door dispatch can be represented as generated command composition or a stable cross-package dispatch primitive without package runtime policy.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1535,7 +2203,16 @@
         "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
         "conformance_ref": "modules.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "live-workspace-inspection",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1554,7 +2231,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "ownership.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1573,7 +2259,16 @@
         "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
         "conformance_ref": "planning.front-door.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "front-door-dispatch-extraction-candidate",
+        "minimization_route": "candidate-extract-when-contract-stable",
+        "minimization_owner": "workspace package runtime boundary with command-generation architecture follow-up",
+        "minimization_tracking_issue": "#1367",
+        "stale_when": "Stale when module front-door dispatch can be represented as generated command composition or a stable cross-package dispatch primitive without package runtime policy.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1592,7 +2287,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "preflight.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1611,7 +2315,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "proof.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1630,7 +2343,16 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "reconcile.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1649,7 +2371,16 @@
         "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
         "conformance_ref": "report.combined.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "live-workspace-inspection",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1668,7 +2399,16 @@
         "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
         "conformance_ref": "setup.guidance.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "live-workspace-inspection",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1687,7 +2427,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "skills.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1706,7 +2455,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "start.context.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1725,7 +2483,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "summary.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1744,7 +2511,16 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "config.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "operation-function-call",
@@ -1765,7 +2541,16 @@
         "why_not_generic_deterministic": "Verification report semantics classify repo-specific protocol activation, bounded evidence, stale conditions, and known gaps behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "verification.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while verification.report.load names the Verification package-domain report boundary. This entry is not accepted as portable codegen coverage."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while verification.report.load names the Verification package-domain report boundary. This entry is not accepted as portable codegen coverage.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       }
     ]
   },

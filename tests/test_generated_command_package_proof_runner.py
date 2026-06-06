@@ -222,6 +222,24 @@ def test_full_python_completion_rejects_wrong_operation_function_call_metadata()
     assert any("must declare operation_ids" in error for error in errors)
 
 
+def test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        entry = next(item for item in inventory["accepted_runtime_boundaries"]["entries"] if item["binding_kind"] == "operation-function-call")
+        entry["minimization_route"] = "move-to-command-generation-or-ir"
+        entry["direct_edit_reasons_allowed"] = ["implementation detail"]
+        entry.pop("stale_when", None)
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_python_completion_accepted_runtime_boundaries()[0]})
+        """
+    )
+
+    assert any("must declare minimization_route=" in error for error in errors)
+    assert any("direct_edit_reasons_allowed must be" in error for error in errors)
+    assert any("must include non-empty stale_when" in error for error in errors)
+
+
 def test_full_python_completion_rejects_weak_output_boundary_audit() -> None:
     errors = _checker_case_errors(
         """
@@ -326,6 +344,14 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["status"] == "available"
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_package"].values())
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_class"].values())
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(
+        runtime_metrics["accepted_runtime_symbol_count_by_minimization_category"].values()
+    )
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(
+        runtime_metrics["accepted_runtime_symbol_count_by_minimization_route"].values()
+    )
+    assert runtime_metrics["accepted_runtime_symbol_count_by_minimization_route"]["keep-as-hand-owned-primitive"] > 0
+    assert runtime_metrics["accepted_runtime_symbol_count_by_minimization_tracking_issue"]["#1364"] > 0
     assert runtime_metrics["python_bridge_step_count"] == 0
     assert runtime_metrics["python_bridge_symbols"] == []
     assert runtime_metrics["generic_debt_symbol_count"] == 0
@@ -339,6 +365,21 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert minimization["whole_category_acceptance_allowed"] is False
     assert minimization["accepted_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
     assert minimization["remaining_hand_owned_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert minimization["remaining_by_minimization_route"]["keep-as-hand-owned-primitive"] > 0
+    assert minimization["remaining_by_minimization_tracking_issue"]["#1364"] > 0
+    assert minimization["contract_stable_extraction_candidate_count"] == runtime_metrics[
+        "accepted_runtime_symbol_count_by_minimization_route"
+    ].get("candidate-extract-when-contract-stable", 0)
+    assert minimization["exact_runtime_boundary_inventory"]
+    exact_entry = minimization["exact_runtime_boundary_inventory"][0]
+    assert {
+        "symbol_id",
+        "minimization_category",
+        "minimization_route",
+        "minimization_owner",
+        "minimization_tracking_issue",
+        "stale_when",
+    } <= set(exact_entry)
     assert "not a claim that runtime boundaries are minimized" in minimization["freshness_claim_boundary"]
     assert "generic-deterministic-runtime-debt" in minimization["route_by_runtime_boundary_class"]
     assert "agent_owns" in minimization["authority_boundary"]
@@ -468,6 +509,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["next_owner"] == "none"
     runtime_metrics = payload["accepted_runtime_boundary_metrics"]
     assert runtime_metrics["accepted_runtime_symbol_count_by_package"]
+    assert runtime_metrics["accepted_runtime_symbol_count_by_minimization_category"]
+    assert runtime_metrics["accepted_runtime_symbol_count_by_minimization_route"]["keep-as-hand-owned-primitive"] > 0
     assert runtime_metrics["output_fallback_symbol_count"] == runtime_metrics["accepted_output_emission_symbol_count"]
     assert runtime_metrics["python_bridge_step_count"] == 0
     assert runtime_metrics["python_bridge_symbols"] == []
@@ -476,6 +519,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert minimization["status"] == "not-minimized-hand-owned-boundaries-remain"
     assert minimization["minimization_claim_allowed"] is False
     assert minimization["remaining_hand_owned_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert minimization["exact_runtime_boundary_inventory"]
+    assert minimization["remaining_by_minimization_tracking_issue"]["#1364"] > 0
     target_freshness = payload["generated_target_freshness"]
     assert target_freshness["status"] == "fresh"
     assert target_freshness["target_families"] == ["python", "typescript"]

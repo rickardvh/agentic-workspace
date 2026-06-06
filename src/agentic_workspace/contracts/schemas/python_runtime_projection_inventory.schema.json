@@ -194,10 +194,16 @@
         "operation_ids",
         "primitive_refs",
         "runtime_boundary_class",
+        "minimization_category",
+        "minimization_route",
+        "minimization_owner",
+        "minimization_tracking_issue",
+        "direct_edit_reasons_allowed",
         "why_not_generic_deterministic",
         "conformance_ref",
         "status",
-        "generic_behavior_audit"
+        "generic_behavior_audit",
+        "stale_when"
       ],
       "properties": {
         "binding_kind": {
@@ -277,6 +283,49 @@
           ],
           "description": "Non-generic package-domain runtime classification."
         },
+        "minimization_category": {
+          "enum": [
+            "primitive-bugfix-or-new-primitive-eligible",
+            "package-specific-judgment",
+            "mutation-safety-orchestration",
+            "live-workspace-inspection",
+            "provider-integration",
+            "generated-command-behavior-move-required",
+            "front-door-dispatch-extraction-candidate"
+          ],
+          "description": "Issue #1357 minimization classification used to distinguish true primitive ownership from generated-command behavior that must move."
+        },
+        "minimization_route": {
+          "enum": [
+            "keep-as-hand-owned-primitive",
+            "candidate-extract-when-contract-stable",
+            "move-to-command-generation-or-ir"
+          ],
+          "description": "Implementation route for shrinking or retaining this exact runtime boundary."
+        },
+        "minimization_owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reviewable owner for the current boundary and the next minimization decision."
+        },
+        "minimization_tracking_issue": {
+          "type": "string",
+          "pattern": "^#\\d+$",
+          "description": "Issue that owns future extraction, migration, or acceptance of this boundary."
+        },
+        "direct_edit_reasons_allowed": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "existing-primitive-bugfix",
+              "new-primitive-implementation"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "description": "The only direct runtime-source edit reasons allowed for this boundary."
+        },
         "why_not_generic_deterministic": {
           "type": "string",
           "minLength": 1
@@ -295,6 +344,11 @@
         "generic_behavior_audit": {
           "type": "string",
           "minLength": 1
+        },
+        "stale_when": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Condition that makes this accepted runtime boundary stale or no longer acceptable."
         }
       },
       "allOf": [
