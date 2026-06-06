@@ -151,6 +151,32 @@ PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES = {
     "package-specific-judgment",
     "provider-integration",
 }
+PYTHON_RUNTIME_BOUNDARY_EXPECTED_MINIMIZATION = {
+    "front-door-dispatch": {
+        "minimization_category": "front-door-dispatch-extraction-candidate",
+        "minimization_route": "candidate-extract-when-contract-stable",
+    },
+    "live-workspace-inspection": {
+        "minimization_category": "live-workspace-inspection",
+        "minimization_route": "keep-as-hand-owned-primitive",
+    },
+    "mutation-orchestration": {
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+    },
+    "package-specific-judgment": {
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+    },
+    "provider-integration": {
+        "minimization_category": "provider-integration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+    },
+    "generic-deterministic-runtime-debt": {
+        "minimization_category": "generated-command-behavior-move-required",
+        "minimization_route": "move-to-command-generation-or-ir",
+    },
+}
 PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "generated-owned output coverage:",
     "accepted source fallback:",
@@ -1795,10 +1821,16 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             "operation_ids",
             "primitive_refs",
             "runtime_boundary_class",
+            "minimization_category",
+            "minimization_route",
+            "minimization_owner",
+            "minimization_tracking_issue",
+            "direct_edit_reasons_allowed",
             "why_not_generic_deterministic",
             "conformance_ref",
             "status",
             "generic_behavior_audit",
+            "stale_when",
         ):
             value = entry.get(field)
             if isinstance(value, list):
@@ -1808,6 +1840,19 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             if missing:
                 errors.append(f"{location} must include non-empty {field}")
         boundary_class = str(entry.get("runtime_boundary_class", ""))
+        expected_minimization = PYTHON_RUNTIME_BOUNDARY_EXPECTED_MINIMIZATION.get(boundary_class)
+        if expected_minimization is None:
+            errors.append(f"{location} has unsupported runtime_boundary_class {boundary_class!r}")
+        else:
+            for field, expected_value in expected_minimization.items():
+                if str(entry.get(field, "")) != expected_value:
+                    errors.append(f"{location} must declare {field}={expected_value!r} for {boundary_class!r}")
+        edit_reasons = entry.get("direct_edit_reasons_allowed", [])
+        if edit_reasons != list(RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS):
+            errors.append(
+                f"{location} direct_edit_reasons_allowed must be {list(RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS)!r} "
+                "so broad runtime edits cannot be justified by vague package-domain wording"
+            )
         if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
             errors.append(f"{location} cannot accept generic deterministic runtime debt")
         if str(entry.get("status", "")) != PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS:
@@ -1874,18 +1919,31 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     if not isinstance(entries, list):
         return {"status": "unavailable", "error": "accepted_runtime_boundaries.entries is not a list"}
     class_counts: dict[str, int] = {}
+    minimization_category_counts: dict[str, int] = {}
+    minimization_route_counts: dict[str, int] = {}
+    minimization_tracking_issue_counts: dict[str, int] = {}
     package_counts: dict[str, int] = {}
     binding_kind_counts: dict[str, int] = {}
     output_emission_symbols: list[dict[str, str]] = []
     python_bridge_symbols: list[dict[str, str]] = []
     generic_debt_symbols: list[dict[str, str]] = []
+    exact_minimization_inventory: list[dict[str, str]] = []
     current_symbol_ids: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             continue
-        current_symbol_ids.add(_accepted_runtime_symbol_id(entry))
+        symbol_id = _accepted_runtime_symbol_id(entry)
+        current_symbol_ids.add(symbol_id)
         boundary_class = str(entry.get("runtime_boundary_class", "unknown") or "unknown")
         class_counts[boundary_class] = class_counts.get(boundary_class, 0) + 1
+        minimization_category = str(entry.get("minimization_category", "unknown") or "unknown")
+        minimization_category_counts[minimization_category] = minimization_category_counts.get(minimization_category, 0) + 1
+        minimization_route = str(entry.get("minimization_route", "unknown") or "unknown")
+        minimization_route_counts[minimization_route] = minimization_route_counts.get(minimization_route, 0) + 1
+        minimization_tracking_issue = str(entry.get("minimization_tracking_issue", "unknown") or "unknown")
+        minimization_tracking_issue_counts[minimization_tracking_issue] = (
+            minimization_tracking_issue_counts.get(minimization_tracking_issue, 0) + 1
+        )
         owner_package = str(entry.get("owner_package", "unknown") or "unknown")
         package_counts[owner_package] = package_counts.get(owner_package, 0) + 1
         binding_kind = str(entry.get("binding_kind", "unknown") or "unknown")
@@ -1895,6 +1953,21 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
         source_module = str(entry.get("source_module", ""))
         primitive_refs = entry.get("primitive_refs", [])
         primitive_ref_strings = [str(ref) for ref in primitive_refs] if isinstance(primitive_refs, list) else []
+        exact_minimization_inventory.append(
+            {
+                "symbol_id": symbol_id,
+                "binding_kind": binding_kind,
+                "source_module": source_module,
+                "source_symbol": source_symbol,
+                "owner_package": owner_package,
+                "runtime_boundary_class": boundary_class,
+                "minimization_category": minimization_category,
+                "minimization_route": minimization_route,
+                "minimization_owner": str(entry.get("minimization_owner", "")),
+                "minimization_tracking_issue": minimization_tracking_issue,
+                "stale_when": str(entry.get("stale_when", "")),
+            }
+        )
         if "emit" in source_symbol:
             output_emission_symbols.append(
                 {
@@ -1931,6 +2004,9 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
         "accepted_runtime_symbol_count_by_package": dict(sorted(package_counts.items())),
         "accepted_runtime_symbol_count_by_class": dict(sorted(class_counts.items())),
         "accepted_runtime_symbol_count_by_binding_kind": dict(sorted(binding_kind_counts.items())),
+        "accepted_runtime_symbol_count_by_minimization_category": dict(sorted(minimization_category_counts.items())),
+        "accepted_runtime_symbol_count_by_minimization_route": dict(sorted(minimization_route_counts.items())),
+        "accepted_runtime_symbol_count_by_minimization_tracking_issue": dict(sorted(minimization_tracking_issue_counts.items())),
         "output_fallback_symbol_count": len(output_emission_symbols),
         "python_bridge_step_count": len(python_bridge_symbols),
         "generic_debt_symbol_count": len(generic_debt_symbols),
@@ -1941,6 +2017,7 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
         "accepted_output_emission_symbols": output_emission_symbols,
         "python_bridge_symbols": python_bridge_symbols,
         "generic_debt_symbols": generic_debt_symbols,
+        "exact_minimization_inventory": sorted(exact_minimization_inventory, key=lambda item: item["symbol_id"]),
     }
 
 
@@ -1958,8 +2035,22 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
     generic_debt_symbols = metrics.get("generic_debt_symbols", [])
     if not isinstance(generic_debt_symbols, list):
         generic_debt_symbols = []
+    category_counts_obj = metrics.get("accepted_runtime_symbol_count_by_minimization_category", {})
+    category_counts = {str(key): int(value) for key, value in category_counts_obj.items()} if isinstance(category_counts_obj, dict) else {}
+    route_counts_obj = metrics.get("accepted_runtime_symbol_count_by_minimization_route", {})
+    route_counts = {str(key): int(value) for key, value in route_counts_obj.items()} if isinstance(route_counts_obj, dict) else {}
+    tracking_issue_counts_obj = metrics.get("accepted_runtime_symbol_count_by_minimization_tracking_issue", {})
+    tracking_issue_counts = (
+        {str(key): int(value) for key, value in tracking_issue_counts_obj.items()}
+        if isinstance(tracking_issue_counts_obj, dict)
+        else {}
+    )
+    exact_inventory = metrics.get("exact_minimization_inventory", [])
+    if not isinstance(exact_inventory, list):
+        exact_inventory = []
     hand_owned_count = sum(class_counts.get(boundary_class, 0) for boundary_class in PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES)
     move_candidate_count = class_counts.get("generic-deterministic-runtime-debt", 0)
+    extraction_candidate_count = route_counts.get("candidate-extract-when-contract-stable", 0)
     minimization_claim_allowed = accepted_symbol_count == 0
     status = "minimized" if minimization_claim_allowed else "not-minimized-hand-owned-boundaries-remain"
     return {
@@ -1974,12 +2065,17 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
         "accepted_symbol_count": accepted_symbol_count,
         "remaining_hand_owned_symbol_count": hand_owned_count,
         "move_to_command_generation_candidate_count": move_candidate_count,
+        "contract_stable_extraction_candidate_count": extraction_candidate_count,
         "remaining_by_runtime_boundary_class": dict(sorted(class_counts.items())),
+        "remaining_by_minimization_category": dict(sorted(category_counts.items())),
+        "remaining_by_minimization_route": dict(sorted(route_counts.items())),
+        "remaining_by_minimization_tracking_issue": dict(sorted(tracking_issue_counts.items())),
         "route_by_runtime_boundary_class": {
             key: PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES[key]
             for key in sorted(PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES)
         },
         "move_to_command_generation_candidates": generic_debt_symbols,
+        "exact_runtime_boundary_inventory": exact_inventory,
         "required_evidence_for_remaining_boundaries": [
             "binding_kind",
             "source_module",
@@ -1988,9 +2084,15 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
             "primitive_refs",
             "owner_package",
             "runtime_boundary_class",
+            "minimization_category",
+            "minimization_route",
+            "minimization_owner",
+            "minimization_tracking_issue",
+            "direct_edit_reasons_allowed",
             "why_not_generic_deterministic",
             "conformance_ref",
             "generic_behavior_audit",
+            "stale_when",
         ],
         "shrink_next_when": [
             "a boundary's deterministic dataflow can be expressed as shared primitive IR",
