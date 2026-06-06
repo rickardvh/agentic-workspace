@@ -8,6 +8,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Maintainer commands](maintainer-commands.md): literal command index.
 - [Dogfooding feedback](dogfooding-feedback.md): friction classification and admission policy.
 - [Testing strategy](testing-strategy.md): inventory, consolidation, pruning, and contract-owned conformance guidance.
+- [Contract-owned test replacement plan](contract-test-replacement-plan.md): sequencing and inventory for replacing regression tests with contract-owned conformance cases.
 - [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
 

@@ -1,0 +1,93 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Grounding review for #1373 contract-owned test replacement sequencing",
+  "date": "2026-06-06",
+  "classification": "contract-owned-test-replacement-plan",
+  "goal": "Plan broad replacement of ordinary regression tests with contract-owned conformance cases without preserving transient migration boundaries.",
+  "scope": [
+    "AW generated command, conformance, proof, and command-facing test surfaces",
+    "command-generation primitive, public API, and conformance runner tests",
+    "#1374 AW-side implementation handoff",
+    "rickardvh/command-generation#9 package-side implementation handoff"
+  ],
+  "non_goals": [
+    "deleting or converting tests in this planning lane",
+    "changing primitive or operation contracts",
+    "changing generated Python or TypeScript targets",
+    "settling every remaining primitive migration boundary"
+  ],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1373",
+      "label": "Plan post-migration replacement of regression tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "issue",
+      "target": "#1374",
+      "label": "Replace AW generated-command behavior tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "issue",
+      "target": "rickardvh/command-generation#9",
+      "label": "Replace command-generation behavior tests with contract-owned conformance cases"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/maintainer/testing-strategy.md",
+      "label": "Testing strategy"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/maintainer/contract-test-replacement-plan.md",
+      "label": "Replacement plan"
+    }
+  ],
+  "summary": "The current suite already has 80 AW process conformance cases and a shared runner path, but ordinary tests still own many behavior examples. Replacement should be sequenced through owner-boundary readiness, command-generation primitive/composite cases, AW operation/process cases, then deletion or merge only where an equivalent contract case and adapter proof exist.",
+  "summary_counts": {
+    "aw_conformance_case_count": 80,
+    "aw_candidate_test_files_reviewed": 15,
+    "command_generation_candidate_test_files_reviewed": 3,
+    "aw_candidate_test_functions_sampled": 612,
+    "command_generation_candidate_test_functions_sampled": 34
+  },
+  "review_method": {
+    "issue_review": "#1373, #1374, and command-generation#9 were read to preserve scope and cross-repo ownership.",
+    "inventory": "AST inventory sampled relevant AW generated-command/proof/CLI files and command-generation test files.",
+    "contract_surface_review": "Existing AW conformance contracts and maintainer testing strategy were inspected before writing the replacement plan."
+  },
+  "findings": [
+    {
+      "id": "contract-cases-exist-but-do-not-own-all-behavior",
+      "finding": "AW already has 80 process-level conformance cases, but generated package proof, primitive executor, and command-facing tests still encode behavior directly in pytest.",
+      "suggested action": "Use #1374 to move stable command/process examples into AW conformance or operation cases and leave proof/checker mechanics ordinary."
+    },
+    {
+      "id": "portable-primitive-behavior-belongs-upstream",
+      "finding": "AW mirrors portable primitive behavior in tests/test_command_generation_primitive_executor.py while command-generation has matching primitive executor tests.",
+      "suggested action": "Use command-generation#9 to make primitive/composite behavior contract-owned upstream; keep AW tests only for dependency wiring and host integration."
+    },
+    {
+      "id": "high-risk-workflows-need-stable-owners-before-conversion",
+      "finding": "Start/preflight, implement, proof, report, and closeout surfaces include semantic risk that should not be moved into contract cases until primitive, fragment, operation, or command ownership is clear.",
+      "suggested action": "Convert stable command-facing examples first and keep assurance/intent/closeout trust regressions ordinary until owner contracts settle."
+    },
+    {
+      "id": "deletion-needs-equivalent-case-mapping",
+      "finding": "Pruning tests without a replacement map would repeat the failure mode #1366 warned about: either preserving accidental layout or deleting meaningful regression coverage.",
+      "suggested action": "Require old test name, replacement contract id/case id, target adapters, proof command, and remaining adapter test before deletion."
+    }
+  ],
+  "recommendation": {
+    "implementation_now": "Ship docs/maintainer/contract-test-replacement-plan.md, link it from testing strategy, and update #1374 and command-generation#9 with the handoff.",
+    "implementation_later": "Execute #1374 and command-generation#9 after owner-boundary readiness gates are true.",
+    "closeout_boundary": "#1373 is closed by a concrete sequencing and inventory plan, not by broad test conversion."
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_maintainer_surfaces.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make maintainer-surfaces",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ]
+}
