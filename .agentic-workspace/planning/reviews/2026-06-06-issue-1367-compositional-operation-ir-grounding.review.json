@@ -3,9 +3,33 @@
   "title": "Grounding review for #1367 compositional operation IR",
   "date": "2026-06-06",
   "classification": "compositional-operation-ir-grounding",
-  "issue_refs": ["#1367", "#1364", "#1366"],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1367",
+      "label": "Compositional operation IR"
+    },
+    {
+      "kind": "issue",
+      "target": "#1364",
+      "label": "Broader generated CLI runtime migration boundary"
+    },
+    {
+      "kind": "issue",
+      "target": "#1366",
+      "label": "Strategic test inventory context"
+    }
+  ],
+  "scope": "operation-local fragments with generated Python and TypeScript execution, one representative report operation migrated, and docs/tests/checks updated",
+  "non_goals": [
+    "global operation-to-operation calls",
+    "automatic business-logic classification",
+    "general-purpose expression language",
+    "broad primitive file split",
+    "full #1364 migration completion"
+  ],
   "summary": "The current operation model was flat operation -> ir_plan.steps -> primitive executor. The smallest implementation-ready composition slice is operation-local fragments executed by command-generation-owned Python and TypeScript runtimes, with one representative report operation migrated to the composed form.",
-  "current_state": {
+  "review_method": {
     "operation_schema": "src/agentic_workspace/contracts/schemas/operation.schema.json allowed ir_plan.steps but no reusable subflow or operation reference shape.",
     "generator_wrapper": "scripts/generate/workspace_command_generation.py harvested primitive usage only from top-level ir_plan.steps.",
     "executors": "command-generation rendered Python primitive_executor.py and TypeScript runtime.mjs with flat runSteps loops.",
@@ -38,18 +62,11 @@
       "implementation_route": "Add command-generation primitive executor tests, AW contract/schema tests, generated freshness proof, and representative config command proof."
     }
   ],
-  "accepted_slice": {
+  "recommendation": {
     "scope": "operation-local fragments with generated Python and TypeScript execution, one representative report operation migrated, and docs/tests/checks updated",
-    "non_goals": [
-      "global operation-to-operation calls",
-      "automatic business-logic classification",
-      "general-purpose expression language",
-      "broad primitive file split",
-      "full #1364 migration completion"
-    ],
     "why_honest_for_1367": "#1367 allows reusable fragments/subflows or operation references. This slice implements fragments/subflows with target parity and representative migration while explicitly leaving larger runtime migration work to #1364."
   },
-  "proof_plan": [
+  "validation_commands": [
     "command-generation#7 tests for Python fragment execution and cycle rejection",
     "AW operation schema and contract tooling validation",
     "generated package refresh/check proving Python and TypeScript targets are current",
