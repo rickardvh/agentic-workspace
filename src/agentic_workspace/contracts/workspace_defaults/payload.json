@@ -2082,7 +2082,7 @@
     },
     "capability_handoff_packets": {
       "common_required_fields": [
-        "task_shape: direct, bounded, lane, or epic",
+        "planning_context: observed scope/proof facts and the agent's selected execution frame",
         "route_reason: why this target or escalation route fits better than direct execution",
         "inspected_context: exact files, commands, or planning state already inspected",
         "allowed_write_scope: paths or surfaces the receiver may edit",
@@ -3465,12 +3465,12 @@
         {
           "fallback": "agentic-workspace summary --format json",
           "skill": "planning-reporting",
-          "task_shape": "active planning report, restart, or proof posture"
+          "fit_signal": "active planning report, restart, or proof posture"
         },
         {
           "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
           "skill": "bootstrap-upgrade",
-          "task_shape": "managed planning bootstrap upgrade"
+          "fit_signal": "managed planning bootstrap upgrade"
         }
       ],
       "query": "agentic-workspace skills --target ./repo --task \"<task>\" --format json",

@@ -1002,7 +1002,7 @@
       "required": [
         "status",
         "posture",
-        "work_shape_guidance",
+        "scope_evidence",
         "proof_factors",
         "risk_flags",
         "inspection_evidence_required",
@@ -1018,9 +1018,9 @@
           "type": "object",
           "description": "Human-readable posture details used for review."
         },
-        "work_shape_guidance": {
+        "scope_evidence": {
           "type": "object",
-          "description": "Structural work-shape guidance; the agent owns final work-shape judgment."
+          "description": "Observed scope evidence; the agent owns semantic task classification."
         },
         "proof_factors": {
           "type": "object",
@@ -1297,10 +1297,11 @@
         "kind",
         "packet_type",
         "mode",
-        "task_shape",
+        "scope_signal",
         "route_reason",
         "inspected_context",
         "proof_expectations",
+        "authority_boundary",
         "allowed_write_scope",
         "stop_conditions",
         "prompt"
@@ -1329,9 +1330,9 @@
           "type": "object",
           "description": "Template that shaped the packet."
         },
-        "task_shape": {
+        "scope_signal": {
           "type": "string",
-          "description": "Task shape being delegated or escalated."
+          "description": "Observed scope signal used as route evidence; not an AW-owned semantic task classification."
         },
         "route_reason": {
           "type": "string",
@@ -1348,6 +1349,10 @@
         "proof_expectations": {
           "type": "string",
           "description": "Proof burden or commands expected from the receiver."
+        },
+        "authority_boundary": {
+          "type": "object",
+          "description": "Boundary explaining that the packet carries route evidence while the agent owns semantic task classification."
         },
         "allowed_write_scope": {
           "type": "string",

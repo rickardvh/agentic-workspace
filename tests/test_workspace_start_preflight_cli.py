@@ -88,6 +88,20 @@ def _start_planning_safety_gate(payload: dict[str, object]) -> dict[str, object]
     raise KeyError("planning_safety_gate")
 
 
+def _json_keys(value: object) -> set[str]:
+    if isinstance(value, dict):
+        keys = set(value)
+        for child in value.values():
+            keys.update(_json_keys(child))
+        return keys
+    if isinstance(value, list):
+        keys: set[str] = set()
+        for child in value:
+            keys.update(_json_keys(child))
+        return keys
+    return set()
+
+
 def _start_workflow_sufficiency(payload: dict[str, object]) -> dict[str, object]:
     sufficiency = payload.get("workflow_sufficiency")
     if isinstance(sufficiency, dict):
@@ -459,6 +473,27 @@ force = "required-before-closeout"
     assert routine["categories"]["authority"]["signals"]["active_assurance_requirements"] == 1
     assert "owner_surface_inventory" not in routine
     assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+
+
+def test_start_keeps_task_classification_agent_owned_for_epic_like_request(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    task = (
+        "Implement the generated CLI runtime boundary end-to-end. This is likely epic-shaped, cross-repo work; "
+        "do not collapse it to a first slice."
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    keys = _json_keys(payload)
+    assert "task_shape" not in keys
+    assert "work_shape_hint" not in keys
+    assert "quality_factors" not in keys
+    assert "fit_signal" in keys
+    assert "choose direct, bounded, lane, or epic yourself" in payload["context"]["primary_action"]["summary"].lower()
+    sufficiency_boundary = payload["context"]["planning"]["workflow_sufficiency"]["authority_boundary"]
+    assert "semantic work shape" in sufficiency_boundary["agent_owned_decisions"]
+    assert payload["context"]["skill_routing"]["preferred_routes"][0]["fit_signal"]
 
 
 def test_start_keeps_routine_work_context_quiet_without_active_pressure(tmp_path: Path, capsys) -> None:
