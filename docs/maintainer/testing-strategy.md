@@ -1,0 +1,83 @@
+# Testing Strategy
+
+Use this guide before adding or pruning tests in this repository. The goal is to preserve behavior contracts with fewer one-off regressions and less implementation-shape lock-in.
+
+## Current Inventory
+
+The June 2026 inventory for #1366 found 64 Python test files and 1,577 test functions across the root workspace and package suites:
+
+- root workspace: 1,098 collected tests
+- planning package: 337 collected tests
+- memory package: 247 collected tests
+- verification package: 6 collected tests
+
+Collection is fast, so the immediate problem is not raw collection time. The pressure is readability, duplicate intent, and a growing pile of narrow regression tests around broad workflow surfaces.
+
+The largest clusters by test count are:
+
+- `tests/test_model_cli_harness.py`
+- `tests/test_workspace_report_cli.py`
+- `packages/planning/tests/test_summary.py`
+- `tests/test_workspace_start_preflight_cli.py`
+- `tests/test_generated_command_package_proof_runner.py`
+- `tests/test_workspace_lifecycle_cli.py`
+- `packages/planning/tests/test_archive.py`
+- `tests/test_workspace_implement_cli.py`
+- `tests/test_contract_tooling.py`
+- `tests/test_workspace_proof_cli.py`
+
+These clusters are not automatically bad. Treat them as the first places to look for scenario consolidation, table-driven structure, or contract-owned conformance cases when related work changes them.
+
+## Contract Ladder
+
+Prefer testing behavior at the lowest level that proves the intended contract without preserving accidental implementation shape:
+
+- Primitive conformance: deterministic execution units and target parity.
+- Fragment or subflow behavior: reusable workflow patterns such as lifecycle mutation, validation, report shaping, and output rendering.
+- Operation composition: command-facing contracts assembled from primitives and fragments.
+- Representative command black-box behavior: user-visible compatibility, high-risk workflows, and transport behavior.
+
+When a bug belongs to a reusable fragment, add or extend a fragment or operation case before adding several command-specific regressions. When the behavior is transport-specific, keep the target adapter test small and point behavior truth back to the operation contract.
+
+## Contract-Owned Cases
+
+The preferred long-term direction is contract-owned conformance:
+
+- Operational contracts own canonical input/output or input/error cases.
+- Python owns the single authoritative conformance runner.
+- CLI, generated package, MCP, and future targets provide thin adapters.
+- Adapters normalize invocation, result extraction, exit or error shape, and capability reporting.
+
+The runner should remain simple: load contract cases, select a target adapter, run the declared operation with declared input and fixtures, normalize the result, and compare it with expected output or expected error.
+
+## Add, Merge, Convert, Or Prune
+
+Add a new test when the behavior is new, the failure mode is not already represented, and the right contract surface does not yet have an equivalent case.
+
+Merge tests when several narrow regressions assert the same contract through slightly different fixtures. Prefer table-driven scenarios when the setup is shared and the expected behavior is easy to compare.
+
+Convert tests when a command-level regression really belongs to a primitive, fragment, operation, or contract-owned conformance case. Keep one representative command black-box test if user-visible behavior or transport compatibility is the risk.
+
+Prune only when stronger or equivalent coverage remains and the removed test preserves implementation detail, duplicate fixture shape, or obsolete behavior rather than a meaningful contract.
+
+Do not prune coverage for historically fragile lifecycle, planning, archive, proof, generated-package freshness, or report/closeout behavior until an equivalent contract-owned case or scenario matrix exists.
+
+## No-Prune Areas
+
+Treat these areas as high-risk until a stronger replacement exists:
+
+- Planning archive, closeout, and active-state mutation safety.
+- Startup, preflight, implementation, proof, and report routing.
+- Generated command package freshness, conformance, and target parity.
+- Schema/reference docs and structured inventory checks.
+- Package install and payload boundary behavior.
+
+High-risk does not mean "add another one-off test by default." It means the replacement must be explicit, equivalent or stronger, and easy to review.
+
+## Future Work
+
+#1373 owns the plan for replacing existing regressions with contract-owned conformance cases after the migration shape is stable.
+
+#1374 owns replacing AW generated-command behavior tests with contract-owned conformance cases.
+
+rickardvh/command-generation#9 owns the matching replacement work in the command-generation repository.

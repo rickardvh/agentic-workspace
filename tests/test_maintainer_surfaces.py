@@ -452,6 +452,22 @@ def test_contributor_playbook_requires_operational_affordance_review() -> None:
     assert "weak agents can proceed without learning package internals" in text
 
 
+def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
+    playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
+    strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
+
+    assert "docs/maintainer/testing-strategy.md" in playbook
+    assert "Primitive conformance" in strategy
+    assert "Fragment or subflow behavior" in strategy
+    assert "Operation composition" in strategy
+    assert "Representative command black-box behavior" in strategy
+    assert "Contract-Owned Cases" in strategy
+    assert "Prune only when stronger or equivalent coverage remains" in strategy
+    assert "#1373 owns the plan" in strategy
+    assert "#1374 owns replacing AW generated-command behavior tests" in strategy
+    assert "rickardvh/command-generation#9" in strategy
+
+
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_valid")
     _write_planning_surfaces(tmp_path)

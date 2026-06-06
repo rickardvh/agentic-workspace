@@ -11,6 +11,7 @@ This playbook is primarily for maintainers operating as coding agents. Human con
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
 Use `docs/maintainer/operational-affordance-design.md` when a change affects startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces that should carry agents to the next correct action.
 Use `docs/maintainer/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
+Use `docs/maintainer/testing-strategy.md` before adding or pruning tests, especially when a narrow regression could instead become a primitive, fragment, operation, or contract-owned conformance case.
 Use `agentic-workspace defaults --section improvement_intake --format json` when the question is how to route setup findings, dogfooding friction, review findings, validation friction, or Memory improvement signals through one shared decision model.
 Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
 Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
