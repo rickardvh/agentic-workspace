@@ -126,7 +126,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.capability_posture` | ref `#/$defs/capability_posture` | yes |  | Task capability posture inferred from changed paths and optional task text. |  |  |
 | `execution_posture.capability_posture.status` | string | yes |  | Whether capability posture was inferred, configured, or unavailable. |  |  |
 | `execution_posture.capability_posture.posture` | object | yes |  | Human-readable posture details used for review. |  |  |
-| `execution_posture.capability_posture.work_shape_guidance` | object | yes |  | Structural work-shape guidance; the agent owns final work-shape judgment. |  |  |
+| `execution_posture.capability_posture.scope_evidence` | object | yes |  | Observed scope evidence; the agent owns semantic task classification. |  |  |
 | `execution_posture.capability_posture.proof_factors` | object | yes |  | Structural proof factors; the agent owns proof proportionality judgment. |  |  |
 | `execution_posture.capability_posture.risk_flags` | array of string | yes |  | Risk signals inferred from paths or task text. |  |  |
 | `execution_posture.capability_posture.inspection_evidence_required` | array of string | yes |  | Context required before trusting the posture. |  |  |

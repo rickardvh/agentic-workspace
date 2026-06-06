@@ -130,9 +130,9 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
         if isinstance(recommendation, dict):
             print("Execution shape:")
             print(f"- default: {recommendation.get('summary', '')}")
-            task_shape = execution_shape.get("task_shape", {})
-            if isinstance(task_shape, dict) and task_shape.get("summary"):
-                print(f"  task shape: {task_shape['summary']}")
+            planning_context = execution_shape.get("planning_context", {})
+            if isinstance(planning_context, dict) and planning_context.get("summary"):
+                print(f"  planning context: {planning_context['summary']}")
             for reason in recommendation.get("why", [])[:2]:
                 print(f"  why: {reason}")
             deviation_visibility = recommendation.get("deviation_visibility")

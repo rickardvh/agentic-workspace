@@ -1104,7 +1104,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert enclave["boundary_leaks"] == []
     assert "AGENTS.md managed workflow pointer fence only" in enclave["removability"]["would_affect"]
     assert payload["execution_shape"]["status"] == "present"
-    assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
+    assert payload["execution_shape"]["planning_context"]["id"] == "direct-or-no-active-plan"
+    assert "agent owns classification" in payload["execution_shape"]["planning_context"]["authority"]
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
     assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
@@ -1341,7 +1342,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "closeout_report" in context["report_profile"]["decision_grade_fields"]
     assert context["operating_posture"]["surface"] == "report"
     assert context["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
-    assert context["execution_shape"]["task_shape_recommender"]["status"] == "available"
+    assert context["execution_shape"]["workflow_shape_guidance"]["status"] == "available"
     assert context["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     intake = context["improvement_intake"]
     assert intake["kind"] == "workspace-improvement-intake/v1"
@@ -2728,8 +2729,8 @@ def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tm
 
     payload = json.loads(capsys.readouterr().out)
     execution_shape = payload["execution_shape"]
-    assert execution_shape["task_shape"]["id"] == "roadmap-backed-no-active-plan"
-    assert [shape["id"] for shape in execution_shape["task_shape_recommender"]["shapes"]] == [
+    assert execution_shape["planning_context"]["id"] == "roadmap-backed-no-active-plan"
+    assert [shape["id"] for shape in execution_shape["workflow_shape_guidance"]["shapes"]] == [
         "direct",
         "light-plan",
         "checked-in-execplan",
@@ -6469,7 +6470,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     payload = json.loads(capsys.readouterr().out)
     execution_shape = payload["execution_shape"]
     assert execution_shape["status"] == "present"
-    assert execution_shape["task_shape"]["id"] == "planning-backed-broad-work"
+    assert execution_shape["planning_context"]["id"] == "planning-backed-broad-work"
     assert execution_shape["default_posture"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
     assert execution_shape["default_posture"]["handoff_preference"] == "prefer-internal-when-safe"
     assert execution_shape["capability_posture"]["execution class"] == "boundary-shaping"
@@ -6478,7 +6479,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     assert execution_shape["recommendation"]["best_target_fits"] == []
     assert execution_shape["current_slice"]["task_id"] == "execution-shape-slice"
     assert execution_shape["resolved_targets"] == []
-    assert "active execplan" in execution_shape["task_shape"]["summary"]
+    assert "active execplan" in execution_shape["planning_context"]["summary"]
 
 
 def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:

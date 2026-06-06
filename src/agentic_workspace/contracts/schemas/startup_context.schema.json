@@ -786,13 +786,13 @@
           "items": {
             "type": "object",
             "required": [
-              "task_shape",
+              "fit_signal",
               "skill"
             ],
             "properties": {
-              "task_shape": {
+              "fit_signal": {
                 "type": "string",
-                "description": "Task shape text value used by this contract."
+                "description": "Skill-fit signal text; not an AW-owned semantic task classification."
               },
               "skill": {
                 "type": "string",

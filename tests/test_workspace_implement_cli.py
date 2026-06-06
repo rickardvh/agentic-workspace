@@ -2204,8 +2204,9 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     payload = json.loads(capsys.readouterr().out)
     posture = payload["execution_posture"]
     assert posture["capability_posture"]["posture"]["execution class"] == "boundary-shaping"
-    assert posture["capability_posture"]["work_shape_guidance"]["structural_hint"] == "bounded"
-    assert posture["capability_posture"]["proof_factors"]["structural_hint"] == "high"
+    assert posture["capability_posture"]["scope_evidence"]["scope_signal"] == "bounded"
+    assert posture["capability_posture"]["scope_evidence"]["agent_decision_required"] is True
+    assert posture["capability_posture"]["proof_factors"]["proof_pressure"] == "high"
     assert "schema" in posture["capability_posture"]["risk_flags"]
     assert "proof route" in posture["capability_posture"]["inspection_evidence_required"]
     assert posture["capability_posture"]["self_assessment_authority"] == "advisory-only"
@@ -2239,6 +2240,10 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     ]
     assert "active execplan" in posture["delegation_decision"]["handoff_surface"]["fallback_when_unavailable"]
     assert payload["delegation_decision"] == posture["delegation_decision"]
+    assert "work_shape_hint" not in json.dumps(posture["delegation_decision"])
+    assert "quality_factors" not in posture["delegation_decision"]
+    assert posture["delegation_decision"]["route_evidence"]["scope_signal"] == "bounded"
+    assert "semantic task classification" in posture["delegation_decision"]["route_evidence"]["rule"]
 
 
 def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:
@@ -2293,6 +2298,8 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
     assert decision["token_savings_guidance"]["signal"] == "likely"
+    assert decision["route_evidence"]["scope_signal"] == "bounded"
+    assert decision["route_evidence"]["agent_judgment_required"] is True
     effort = decision["effort_guidance"]
     assert effort["cost_posture"] == "save-tokens-where-safe"
     assert effort["orchestrator"] == "medium"

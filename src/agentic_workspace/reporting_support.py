@@ -498,12 +498,12 @@ def report_router_payload(
         current_work = dict(effective_authority.get("current_work", {}) or {})
     execution_shape = payload.get("execution_shape", {})
     if not current_work and isinstance(execution_shape, dict):
-        task_shape = execution_shape.get("task_shape", {})
-        if isinstance(task_shape, dict):
+        planning_context = execution_shape.get("planning_context", execution_shape.get("task_shape", {}))
+        if isinstance(planning_context, dict):
             current_work = {
-                "status": str(task_shape.get("id", "unknown")),
-                "summary": str(task_shape.get("summary", "")),
-                "source": "execution_shape",
+                "status": str(planning_context.get("id", "unknown")),
+                "summary": str(planning_context.get("summary", "")),
+                "source": "execution_shape.planning_context",
             }
     section_hints = report_section_hints(payload, cli_invoke=cli_invoke, target_arg=target_arg)
     compact_section_hints = _compact_report_section_hints(section_hints)
@@ -969,8 +969,8 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
     recommendation = value.get("recommendation", {})
-    task_shape = value.get("task_shape", {})
-    recommender = value.get("task_shape_recommender", {})
+    planning_context = value.get("planning_context", value.get("task_shape", {}))
+    recommender = value.get("workflow_shape_guidance", value.get("task_shape_recommender", {}))
     if isinstance(recommender, dict):
         shapes = recommender.get("shapes", [])
         recommender = {
@@ -993,8 +993,8 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
         fast_path = {}
     return {
         "status": value.get("status", "unknown"),
-        "task_shape": task_shape if isinstance(task_shape, dict) else {},
-        "task_shape_recommender": recommender,
+        "planning_context": planning_context if isinstance(planning_context, dict) else {},
+        "workflow_shape_guidance": recommender,
         "narrow_work_fast_path": fast_path,
         "recommendation": recommendation if isinstance(recommendation, dict) else {},
         "deviation_rule": value.get("deviation_rule", ""),

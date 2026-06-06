@@ -10615,12 +10615,13 @@ def _run_report_router_command(
 def _report_router_execution_shape_fast(*, config: WorkspaceConfig) -> dict[str, Any]:
     return {
         "status": "present",
-        "task_shape": {
+        "planning_context": {
             "id": "direct-or-no-active-plan",
-            "summary": "No active planning record is present; direct work can proceed when the task is narrow and proof is obvious.",
+            "summary": "No active plan; direct work is agent-owned when narrow and proof is obvious.",
             "why": "The default report router does not load deep planning reports; run the execution_shape section for active-plan detail.",
+            "authority": "AW reports facts; agent owns classification.",
         },
-        "task_shape_recommender": {
+        "workflow_shape_guidance": {
             "status": "available",
             "rule": "Choose the cheapest workflow shape that preserves proof and continuation honesty.",
             "shapes": [{"id": "direct"}, {"id": "light-plan"}, {"id": "checked-in-execplan"}],
@@ -16566,7 +16567,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         immediate["next_proof"] = "select proof after changed paths are known"
     skill_routing = payload.get("skill_routing", {})
     preferred_routes = [
-        {"task_shape": str(item.get("task_shape", "")), "skill": str(item.get("skill", ""))}
+        {"fit_signal": str(item.get("fit_signal", item.get("task_shape", ""))), "skill": str(item.get("skill", ""))}
         for item in (skill_routing.get("preferred_routes", []) if isinstance(skill_routing, dict) else [])[:2]
         if isinstance(item, dict)
     ]
@@ -16884,7 +16885,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         "clarification_mode",
         "recommended_route",
         "authority_boundary",
-        "quality_factors",
+        "route_evidence",
         "token_savings_guidance",
         "required_next_action",
         "effort_guidance",
@@ -16893,11 +16894,11 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
     compact.setdefault("recommended_route", value.get("recommended_route") or value.get("decision"))
     if "authority_boundary" in compact:
         compact["authority_boundary"] = _compact_authority_boundary(compact["authority_boundary"])
-    if isinstance(compact.get("quality_factors"), dict):
-        factors = compact["quality_factors"]
-        compact["quality_factors"] = {
+    if isinstance(compact.get("route_evidence"), dict):
+        factors = compact["route_evidence"]
+        compact["route_evidence"] = {
             key: factors.get(key)
-            for key in ("tier", "proof_factor_hint", "work_shape_hint", "agent_judgment_required")
+            for key in ("proof_review_pressure", "proof_pressure", "scope_signal", "agent_judgment_required")
             if factors.get(key) not in (None, "")
         }
     if isinstance(compact.get("token_savings_guidance"), dict):
@@ -22819,10 +22820,11 @@ def _work_shape_guidance_payload(
             "issue_refs": issue_refs,
         },
         "proof_factors": [item for item in proof_factors if item],
-        "structural_signals": {
-            "work_shape_hint": work_shape or "unknown",
-            "proof_factor_hint": proof_burden or "unknown",
-            "authority": "structural path/task heuristic only",
+        "structural_evidence": {
+            "scope_signal": work_shape or "unknown",
+            "proof_pressure": proof_burden or "unknown",
+            "authority": "observed path/task signal only; not an AW-owned task classification",
+            "agent_owned_classification": True,
         },
         "authority_boundary": authority_boundary,
         "direct_work_is_reasonable_when": direct_reasons
@@ -22833,7 +22835,7 @@ def _work_shape_guidance_payload(
         "judgment_boundary": {
             "aw_owns": ["hard blockers", "changed-path facts", "active planning state", "proof candidates"],
             "agent_owns": ["user intent", "semantic work shape", "completion judgment when no hard blocker applies"],
-            "rule": "AW exposes factual affordances and blockers; the agent owns engineering judgment over those facts.",
+            "rule": "AW exposes factual affordances and blockers; the agent owns engineering judgment and semantic task classification over those facts.",
         },
         "stop_conditions": [
             "changed paths widen beyond the current bounded roots",
@@ -22848,7 +22850,7 @@ def _work_shape_guidance_payload(
         "status": status,
         "decision": decision,
         "required_next_action": required_next_action,
-        "rule": "AW reports hard blockers, facts, and decision guidelines; the agent owns soft semantic work-shape judgment when no hard blocker applies.",
+        "rule": "AW reports hard blockers, facts, and decision guidelines; the agent owns semantic task classification when no hard blocker applies.",
     }
 
 
@@ -22857,16 +22859,22 @@ def _capability_structural_hints(capability: Any) -> tuple[str, str]:
         return "", ""
     posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
     work_shape_guidance = capability.get("work_shape_guidance", {}) if isinstance(capability.get("work_shape_guidance"), dict) else {}
+    scope_evidence = capability.get("scope_evidence", {}) if isinstance(capability.get("scope_evidence"), dict) else {}
     proof_factors = capability.get("proof_factors", {}) if isinstance(capability.get("proof_factors"), dict) else {}
     work_shape = (
-        work_shape_guidance.get("structural_hint")
+        scope_evidence.get("scope_signal")
+        or work_shape_guidance.get("scope_signal")
+        or work_shape_guidance.get("structural_hint")
+        or posture.get("structural scope signal")
         or posture.get("structural work-shape hint")
         or posture.get("work shape")
         or capability.get("work_shape")
         or ""
     )
     proof_burden = (
-        proof_factors.get("structural_hint")
+        proof_factors.get("proof_pressure")
+        or proof_factors.get("structural_hint")
+        or posture.get("proof pressure")
         or posture.get("proof factor hint")
         or posture.get("proof burden")
         or capability.get("proof_burden")
@@ -23592,52 +23600,53 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
     if len(set((path.split("/")[0] for path in changed_paths if path))) >= 3:
         risk_flags.append("cross-surface breadth")
     if len(issue_refs) > 1 or "epic" in combined:
-        work_shape = "epic" if "epic" in combined else "lane"
+        scope_signal = "epic" if "epic" in combined else "lane"
     elif "lane" in combined or len(changed_paths) >= 4:
-        work_shape = "lane"
+        scope_signal = "lane"
     elif changed_paths or task_text:
-        work_shape = "bounded"
+        scope_signal = "bounded"
     else:
-        work_shape = "direct"
+        scope_signal = "direct"
 
     def enrich(posture: dict[str, Any], *, reason: str) -> dict[str, Any]:
         execution_class = posture["execution class"]
-        if execution_class in ("boundary-shaping", "reasoning-heavy") or risk_flags or work_shape in ("lane", "epic"):
+        if execution_class in ("boundary-shaping", "reasoning-heavy") or risk_flags or scope_signal in ("lane", "epic"):
             proof_burden = "high"
         elif execution_class == "mechanical-follow-through":
             proof_burden = "obvious"
         else:
             proof_burden = "non-obvious"
         inspection_evidence = ["changed paths", "task text", "runtime_resolution", "proof route"]
-        if work_shape in ("lane", "epic"):
+        if scope_signal in ("lane", "epic"):
             inspection_evidence.append("active planning state")
         enriched_posture = {
             **posture,
-            "structural work-shape hint": work_shape,
-            "proof factor hint": proof_burden,
+            "structural scope signal": scope_signal,
+            "proof pressure": proof_burden,
             "risk flags": risk_flags,
             "inspection evidence required": inspection_evidence,
-            "guidance authority": "structural task/path signals",
+            "guidance authority": "observed task/path signals only; agent owns semantic task classification",
             "self-assessment authority": "advisory-only",
         }
         return {
             "status": "inferred",
             "posture": enriched_posture,
-            "work_shape_guidance": {
-                "structural_hint": work_shape,
-                "authority": "path/task heuristic only",
+            "scope_evidence": {
+                "scope_signal": scope_signal,
+                "authority": "observed path/task signal only; not an AW-owned task classification",
                 "agent_decision_required": True,
             },
             "proof_factors": {
-                "structural_hint": proof_burden,
+                "proof_pressure": proof_burden,
                 "risk_flags": risk_flags,
                 "inspection_evidence_required": inspection_evidence,
-                "authority": "path/task heuristic only",
+                "authority": "observed path/task signal only; agent owns proof proportionality judgment",
             },
             "risk_flags": risk_flags,
             "inspection_evidence_required": inspection_evidence,
-            "guidance_authority": "structural task/path signals",
+            "guidance_authority": "observed task/path signals only",
             "self_assessment_authority": "advisory-only",
+            "agent_owned_decisions": ["semantic task classification", "route fit", "proof proportionality"],
             "reason": reason,
         }
 
@@ -23979,9 +23988,9 @@ def _delegation_next_action_decision(
     if decision != "delegate-bounded-slice":
         auto_skip_reasons.append(f"delegation decision is {decision}, not delegate-bounded-slice")
     if proof_burden == "high":
-        auto_skip_reasons.append("proof factor hint is high")
+        auto_skip_reasons.append("proof pressure signal is high")
     if work_shape not in {"direct", "bounded"}:
-        auto_skip_reasons.append(f"work-shape hint is {work_shape or 'unknown'}")
+        auto_skip_reasons.append(f"scope signal is {work_shape or 'unknown'}")
     auto_audit_applies = bool(
         configured_auto_targets
         and decision not in {"delegate-bounded-slice", "suggest-delegation"}
@@ -24027,8 +24036,8 @@ def _delegation_next_action_decision(
         observed_by_aw=[
             f"delegation_mode={mode}",
             f"clarification_mode={clarification_mode}",
-            f"work_shape_hint={work_shape or 'unknown'}",
-            f"proof_factor_hint={proof_burden or 'unknown'}",
+            f"scope_signal={work_shape or 'unknown'}",
+            f"proof_pressure={proof_burden or 'unknown'}",
         ],
         recommended_by_aw=[decision, required_next_action],
         candidate_routes=[
@@ -24046,8 +24055,8 @@ def _delegation_next_action_decision(
         if required_next_action in {"prepare-manual-handoff", "stop-and-ask-human"}
         else [],
         rule=(
-            "Delegation output is local posture and candidate routing support unless a human-control or auto-execution gate "
-            "explicitly forbids an action."
+            "Delegation output is local posture, observed evidence, and candidate routing support unless a human-control or auto-execution gate "
+            "explicitly forbids an action; the agent owns semantic route fit."
         ),
     )
     return {
@@ -24059,13 +24068,13 @@ def _delegation_next_action_decision(
         "decision": decision,
         "target": target_name if decision != "stay-local" else None,
         "authority_boundary": delegation_authority_boundary,
-        "quality_factors": {
-            "tier": quality_tier,
-            "proof_factor_hint": proof_burden or "unknown",
-            "work_shape_hint": work_shape or "unknown",
+        "route_evidence": {
+            "proof_review_pressure": quality_tier,
+            "proof_pressure": proof_burden or "unknown",
+            "scope_signal": work_shape or "unknown",
             "risk_flags": capability.get("risk_flags", []) if isinstance(capability, dict) else [],
             "agent_judgment_required": True,
-            "rule": "AW exposes structural factors for delegation posture; the agent owns whether the factors justify delegation.",
+            "rule": "AW exposes structural evidence for delegation posture; the agent owns semantic task classification and whether the evidence justifies delegation.",
         },
         "token_savings_guidance": {
             "signal": token_savings_signal,
@@ -24125,9 +24134,9 @@ def _effort_guidance_payload(
     cost_posture = "balanced"
     escalation_trigger = "escalate only if inspection reveals broader uncertainty, high risk, or proof gaps"
     rationale: list[str] = [
-        f"work_shape_hint={work_shape}",
-        f"proof_factor_hint={proof_burden}",
-        f"quality_factor_tier={quality_tier}",
+        f"scope_signal={work_shape}",
+        f"proof_pressure={proof_burden}",
+        f"proof_review_pressure={quality_tier}",
     ]
     if work_shape == "direct" and proof_burden == "obvious":
         implementer = "low"
@@ -24164,6 +24173,7 @@ def _effort_guidance_payload(
         "kind": "agentic-workspace/effort-guidance/v1",
         "status": "evaluated",
         "principle": "Start with cheap routing, then spend higher reasoning effort only where the agent judges it improves quality or safely saves tokens.",
+        "authority": "effort guidance from observed route evidence; agent owns task classification and final effort choice",
         "orchestrator": orchestrator,
         "planner": planner,
         "implementer": implementer,
@@ -24276,8 +24286,12 @@ def _manual_external_relay_payload(
             ],
             "return_to": "Paste the answer back into the current coding-agent session; the coding agent remains responsible for repo implementation and proof.",
             "source_reason": reason,
-            "proof_factors": {"structural_hint": proof_burden},
-            "work_shape_guidance": {"structural_hint": work_shape, "agent_decision_required": True},
+            "proof_factors": {"proof_pressure": proof_burden},
+            "scope_evidence": {
+                "scope_signal": work_shape,
+                "agent_decision_required": True,
+                "authority": "observed signal only; agent owns semantic classification",
+            },
         },
     }
 
@@ -25673,7 +25687,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
         "advisory_only": True,
         "status": "present",
         "sources": sources,
-        "task_shape_recommender": _task_shape_recommender_payload(),
+        "workflow_shape_guidance": _workflow_shape_guidance_payload(),
         "default_posture": {
             "planner_executor_pattern": mixed_agent["derived_mode"]["planner_executor_pattern"],
             "handoff_preference": mixed_agent["derived_mode"]["handoff_preference"],
@@ -25700,10 +25714,11 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
                     }
                 )
             resolution.sort(key=lambda item: (-int(item["score"]), str(item["name"])))
-        payload["task_shape"] = {
+        payload["planning_context"] = {
             "id": "planning-backed-broad-work",
             "summary": "The current slice is already planning-backed with an active execplan.",
             "why": "The work already needs checked-in planning continuity, so repeating broad direct rediscovery is usually more expensive than deriving a bounded handoff once.",
+            "authority": "AW reports facts; agent owns classification.",
         }
         payload["current_slice"] = {
             "task_id": planning_record.get("task", {}).get("id", ""),
@@ -25746,10 +25761,11 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
         )
         return payload
     if roadmap_candidate_count or roadmap_lane_count:
-        payload["task_shape"] = {
+        payload["planning_context"] = {
             "id": "roadmap-backed-no-active-plan",
             "summary": "Roadmap candidates exist, but no active planning-backed slice is present.",
             "why": "Roadmap candidates are not execution authority. Broad planned or autopilot work needs an active TODO item plus execplan before implementation; narrow direct tasks may still proceed.",
+            "authority": "AW reports facts; agent owns classification.",
         }
         payload["recommendation"] = {
             "id": "promote-before-broad-work",
@@ -25767,10 +25783,11 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "Do not implement roadmap or autopilot lanes from chat or issue context alone; promote active planning first."
         )
         return payload
-    payload["task_shape"] = {
+    payload["planning_context"] = {
         "id": "direct-or-no-active-plan",
         "summary": "No planning-backed broad slice is active right now.",
         "why": "Without roadmap-backed planned work or an active execplan, the cheapest honest default is direct execution.",
+        "authority": "AW reports facts; agent owns classification.",
     }
     payload["narrow_work_fast_path"] = {
         "status": "blessed",
@@ -25801,10 +25818,10 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     return payload
 
 
-def _task_shape_recommender_payload() -> dict[str, Any]:
+def _workflow_shape_guidance_payload() -> dict[str, Any]:
     return {
         "status": "available",
-        "rule": "Choose the cheapest workflow shape that preserves proof and continuation honesty.",
+        "rule": "Workflow shapes are guidance for agent-owned planning judgment; AW does not classify the semantic task shape.",
         "shapes": [
             {
                 "id": "direct",
@@ -27127,7 +27144,7 @@ def _startup_skill_routing_payload(
     if intent_discovery_route_first:
         core_routes.append(
             {
-                "task_shape": "vague, broad, high-stakes, or under-specified human intent before implementation or Planning",
+                "fit_signal": "vague, broad, high-stakes, or under-specified human intent before implementation or Planning",
                 "skill": "workspace-intent-discovery",
                 "fallback": "agentic-workspace start --task <task> --select intent_discovery_dialogue --format json",
             }
@@ -27135,12 +27152,12 @@ def _startup_skill_routing_payload(
     core_routes.extend(
         [
             {
-                "task_shape": "active planning report, restart, or proof posture",
+                "fit_signal": "active planning report, restart, or proof posture",
                 "skill": "planning-reporting",
                 "fallback": "agentic-workspace summary --format json",
             },
             {
-                "task_shape": "managed planning bootstrap upgrade",
+                "fit_signal": "managed planning bootstrap upgrade",
                 "skill": "bootstrap-upgrade",
                 "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
             },
@@ -27149,19 +27166,19 @@ def _startup_skill_routing_payload(
     configured_features = set(enabled_advanced_features)
     available_advanced_routes = [
         {
-            "task_shape": "active planned work or autopilot execution",
+            "fit_signal": "active planned work or autopilot execution",
             "skill": "planning-autopilot",
             "feature": "autopilot_loops",
             "fallback": "agentic-workspace summary --format json, then the active execplan",
         },
         {
-            "task_shape": "external issue or tracker intake",
+            "fit_signal": "external issue or tracker intake",
             "skill": "planning-intake-upstream-task",
             "feature": "external_adapters",
             "fallback": ".agentic-workspace/planning/upstream-task-intake.md plus checked-in planning state",
         },
         {
-            "task_shape": "bounded review or finding capture",
+            "fit_signal": "bounded review or finding capture",
             "skill": "planning-review-pass",
             "feature": "review_artifacts",
             "fallback": "agentic-workspace report --target ./repo --format json before selecting any review artifact",
@@ -27202,7 +27219,7 @@ def _startup_skill_routing_payload(
     if compact:
         fallback_items = payload.pop("fallback_when_skills_unavailable", [])
         payload["preferred_routes"] = [
-            {"task_shape": route["task_shape"], "skill": route["skill"]} for route in payload["preferred_routes"] if isinstance(route, dict)
+            {"fit_signal": route["fit_signal"], "skill": route["skill"]} for route in payload["preferred_routes"] if isinstance(route, dict)
         ]
         payload["fallback_when_skills_unavailable_count"] = len(fallback_items) if isinstance(fallback_items, list) else 0
         payload["fallback_detail"] = "Use AGENTS.md and compact CLI routers when skills are unavailable."
@@ -33367,7 +33384,9 @@ def _capability_resolution_for_profile(*, profile: DelegationTargetProfile, capa
         elif profile_reasoning_rank and required_rank and (profile_reasoning_rank > required_rank):
             score += 1
             reasons.append("target reasoning profile exceeds the recommended strength")
-    if profile.context_capacity == "small" and str(capability_posture.get("structural work-shape hint", "")).strip() in (
+    if profile.context_capacity == "small" and str(
+        capability_posture.get("structural scope signal", capability_posture.get("structural work-shape hint", ""))
+    ).strip() in (
         "lane",
         "epic",
     ):
@@ -33735,7 +33754,7 @@ def _downrouting_guardrail_payload(
 
 def _capability_handoff_packet_templates() -> dict[str, Any]:
     common_required = [
-        "task_shape: direct, bounded, lane, or epic",
+        "planning_context: observed scope/proof facts and the agent's selected execution frame",
         "route_reason: why this target or escalation route fits better than direct execution",
         "inspected_context: exact files, commands, or planning state already inspected",
         "allowed_write_scope: paths or surfaces the receiver may edit",
@@ -33788,6 +33807,7 @@ def _ready_capability_handoff_packet(
     packet_template = templates["packet_types"].get(packet_type, {})
     posture_detail = posture.get("posture", {}) if isinstance(posture.get("posture"), dict) else {}
     proof_factors = posture.get("proof_factors", {}) if isinstance(posture.get("proof_factors"), dict) else {}
+    scope_evidence = posture.get("scope_evidence", {}) if isinstance(posture.get("scope_evidence"), dict) else {}
     work_shape_guidance = posture.get("work_shape_guidance", {}) if isinstance(posture.get("work_shape_guidance"), dict) else {}
     return {
         "kind": "agentic-workspace/capability-handoff-packet/v1",
@@ -33795,10 +33815,24 @@ def _ready_capability_handoff_packet(
         "mode": mode,
         "target": target,
         "template": packet_template,
-        "task_shape": work_shape_guidance.get("structural_hint") or posture_detail.get("structural work-shape hint"),
+        "scope_signal": scope_evidence.get("scope_signal")
+        or work_shape_guidance.get("scope_signal")
+        or work_shape_guidance.get("structural_hint")
+        or posture_detail.get("structural scope signal")
+        or posture_detail.get("structural work-shape hint"),
         "route_reason": runtime_resolution.get("guidance"),
         "inspected_context": posture.get("inspection_evidence_required", []),
-        "proof_expectations": proof_factors.get("structural_hint") or posture_detail.get("proof factor hint"),
+        "proof_expectations": proof_factors.get("proof_pressure")
+        or proof_factors.get("structural_hint")
+        or posture_detail.get("proof pressure")
+        or posture_detail.get("proof factor hint"),
+        "authority_boundary": _authority_boundary_payload(
+            surface="capability_handoff_packet",
+            observed_by_aw=["scope_signal", "proof_pressure", "configured delegation posture"],
+            recommended_by_aw=["use packet only as bounded handoff guidance"],
+            agent_owned_decisions=["semantic task classification", "receiver fit", "completion judgment"],
+            rule="The handoff packet carries observed route evidence; AW does not classify the task shape.",
+        ),
         "allowed_write_scope": "Use the active plan or implementer-context path boundaries; do not infer broader ownership.",
         "stop_conditions": [
             "capability mismatch remains unresolved",
