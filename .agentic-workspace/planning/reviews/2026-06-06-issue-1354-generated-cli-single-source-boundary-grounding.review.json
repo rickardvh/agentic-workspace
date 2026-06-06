@@ -1,0 +1,233 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated CLI single-source runtime boundary grounding",
+  "date": "2026-06-06",
+  "scope": [
+    "#1354 generated CLI single-source-of-truth runtime boundary",
+    "Agentic Workspace generated command packages",
+    "sibling rickardvh/command-generation checkout at 5fdfcf6",
+    "current generated-package freshness, proof, primitive, and runtime-boundary checks"
+  ],
+  "classification": "generated-cli-runtime-boundary-investigation",
+  "goal": [
+    "Promote #1354 to implementation-ready without collapsing the full generated-CLI intent to a first slice.",
+    "Identify which work belongs in Agentic Workspace versus command-generation.",
+    "Create implementation issues for the required lanes and dogfooding gaps."
+  ],
+  "non_goals": [
+    "Do not implement the generated-CLI boundary changes in this review.",
+    "Do not declare the full intent satisfied because existing checks say the Python completion gate is satisfied.",
+    "Do not add new hand-owned runtime behavior as a shortcut around command generation.",
+    "Do not require every command behavior to become portable before the inventory is audited and decomposed."
+  ],
+  "review_mode": {
+    "mode": "grounding-review",
+    "promotion_decision": "implementation-ready after subissues are created and linked to #1354",
+    "authority_boundary": "AW can enforce declared generated-output freshness, exact inventories, and explicit proof/check gates. The agent and human own semantic judgment about whether a runtime implementation is a genuine primitive, a bugfix, generated-command behavior, or acceptable transitional debt.",
+    "issue_refs": [
+      "#1354"
+    ]
+  },
+  "review_method": {
+    "commands used": [
+      "uv run python scripts/run_agentic_workspace.py start --task \"Ground #1354 generated-CLI single-source-of-truth runtime boundary and create subissues where necessary\" --format json",
+      "gh issue view 1354 --json number,title,body,url,labels,state",
+      "git checkout master",
+      "git pull --ff-only",
+      "git checkout -b codex/generated-cli-single-source-boundary",
+      "rg --files packages scripts generated tests .agentic-workspace | rg \"command|generated|runtime|primitive|conformance|check_generated|generate_command|workspace_runtime|cli|IR|ir|schema\"",
+      "rg -n \"runtime primitive|runtime_primitives|GENERATED_COMMAND|generated command|single source|command-generation|command_generation|IR|generated package|TypeScript|typescript|Python\" ...",
+      "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "git -C ../command-generation status --short --branch",
+      "git -C ../command-generation log --oneline -5",
+      "rg --files ../command-generation",
+      "rg -n \"typescript|python|primitive|runtime|host_manifest|hash|fingerprint|check\" ../command-generation/src ../command-generation/tests ../command-generation/schemas/command_package_ir.schema.json",
+      "uv run python scripts/run_agentic_workspace.py planning create-review --slug issue-1354-generated-cli-single-source-boundary-grounding --title \"Generated CLI single-source runtime boundary grounding\" --scope \"#1354 generated CLI single-source-of-truth runtime boundary\" --classification generated-cli-runtime-boundary-investigation --target . --format json"
+    ],
+    "evidence sources": [
+      "https://github.com/rickardvh/agentic-workspace/issues/1354",
+      "pyproject.toml",
+      "scripts/generate/workspace_command_generation.py",
+      "scripts/check/check_generated_command_packages.py",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      ".agentic-workspace/verification/manifest.toml",
+      ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json",
+      "../command-generation/README.md",
+      "../command-generation/src/command_generation/generator.py",
+      "../command-generation/src/command_generation/primitive_executor.py",
+      "../command-generation/src/command_generation/primitive_registry.py",
+      "../command-generation/src/command_generation/host_manifest.py",
+      "../command-generation/tests/test_public_api.py",
+      "../command-generation/tests/test_primitive_executor.py"
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1354",
+      "label": "parent generated-CLI runtime boundary intent",
+      "role": "parent_intent",
+      "locator": "issue"
+    },
+    {
+      "kind": "local-check",
+      "target": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "label": "current Python completion blocker state",
+      "role": "evidence",
+      "locator": "command"
+    },
+    {
+      "kind": "external-repo",
+      "target": "../command-generation",
+      "label": "command-generation package checkout",
+      "role": "canonical_generic_generator_candidate",
+      "locator": "path"
+    }
+  ],
+  "findings": [
+    {
+      "title": "F1: Current proof says Python completion is satisfied while accepting a large runtime-boundary inventory.",
+      "summary": "The current blocker report has zero blockers and permits the full-generated-cli-complete claim, but the accepted runtime boundary inventory still contains 85 accepted source-symbol boundaries across workspace, planning, memory, and verification.",
+      "evidence": "check_generated_command_packages.py --python-completion-blockers reports completion_claim_allowed=true, blocker_count=0, accepted_runtime_symbol_count=85, operation-function-call=26, runtime-facade-call=59, and package-specific-judgment=46.",
+      "risk if unchanged": "Agents can truthfully cite the current check while still missing the stricter #1354 intent: minimize AW-owned runtime implementations and reject casual runtime edits outside primitive bugfix/new primitive work.",
+      "suggested action": "Create an implementation lane to audit, classify, shrink, and gate accepted runtime boundaries instead of treating exact-symbol inventory alone as sufficient.",
+      "confidence": "high",
+      "source": "#1354; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "promotion target": "implementation issue: audit and shrink accepted runtime primitive inventory",
+      "promotion trigger": "before any closeout that claims the full #1354 boundary is satisfied"
+    },
+    {
+      "title": "F2: The policy text is stricter than the active edit/proof boundary.",
+      "summary": "command_package_ir.json already says command/interface truth belongs in contracts and generated target files are derived, and that runtime primitives stay hand-owned only as explicit debt. The active workflow does not yet require a direct runtime-source edit reason of primitive bugfix or new primitive.",
+      "evidence": "The issue explicitly allows direct runtime edits only for existing primitive bugfix or genuinely new primitive. Current checks inventory accepted boundaries but do not make every edit to runtime primitive source prove one of those two reasons or fail as suspected generated-command behavior.",
+      "risk if unchanged": "Agents can keep editing runtime modules under the broad label of package-domain boundary, which is the recurring under-interpretation that #1354 is meant to prevent.",
+      "suggested action": "Add changed-path proof/review gating for runtime source paths that requires explicit primitive-edit classification, owner, evidence, and tests; broad phrases such as package-domain boundary should not satisfy the gate by themselves.",
+      "confidence": "high",
+      "source": "#1354; src/agentic_workspace/contracts/command_package_ir.json; scripts/check/check_generated_command_packages.py",
+      "promotion target": "implementation issue: tighten runtime-source edit gates",
+      "promotion trigger": "first implementation slice touching runtime primitive, generated command, generator, or proof surfaces"
+    },
+    {
+      "title": "F3: Generated-output freshness exists, but parity guarantees need to be explicit across Python and TypeScript source changes.",
+      "summary": "generate_command_packages.py --check and check_generated_command_packages.py currently pass and cover generated package freshness. Verification rules already name TypeScript proof lanes, but #1354 needs an explicit cheap hash/freshness workflow that agents cannot skip after relevant source changes, including external command-generation changes.",
+      "evidence": "AW has scripts/generate/workspace_command_generation.py, generated Python and TypeScript targets, .agentic-workspace/verification/manifest.toml generated TypeScript checks, and command-generation render/check APIs. The proof-selection boundary must still explicitly map IR/generator/operation primitive/runtime-support changes to both generated targets and stale-output failure.",
+      "risk if unchanged": "An agent can edit Python runtime primitives or host generation policy, run a local Python-focused check, and leave TypeScript generated targets stale or unproven.",
+      "suggested action": "Add a parity/freshness lane that records source-to-generated fingerprints or equivalent check evidence and makes changed-path proof require Python and TypeScript generated target freshness when command-generation, IR, primitive registry, operation contracts, or runtime support changes.",
+      "confidence": "medium-high",
+      "source": "scripts/generate/workspace_command_generation.py; .agentic-workspace/verification/manifest.toml; command-generation render_outputs/generate_command_packages",
+      "promotion target": "implementation issue: guarantee Python/TypeScript generated target parity and freshness",
+      "promotion trigger": "before generated CLI work can claim both targets are equally current"
+    },
+    {
+      "title": "F4: Some ownership belongs in the external command-generation package, but AW still has host-specific wrapper policy.",
+      "summary": "The command-generation package owns generic rendering, schema loading, primitive registry validation, and portable primitive execution helpers. AW owns product-specific contracts and host manifest assembly. Some #1354 work must land in command-generation if generic primitive execution, target rendering, or freshness/hash APIs are missing.",
+      "evidence": "command-generation README states hosts keep product-specific contracts and primitive implementations while the package owns generic generation and portable primitive execution. AW scripts/generate/workspace_command_generation.py still seeds AW-specific primitive ids and special-cases typescript.domain.execute in host manifest assembly.",
+      "risk if unchanged": "AW may keep growing product-local generator/check work that should be package-owned, weakening the single-source boundary and making cross-target parity depend on AW-specific scripts.",
+      "suggested action": "Create a command-generation issue for generic API/support needed by #1354, and keep AW implementation issues explicit about what remains host-specific.",
+      "confidence": "high",
+      "source": "../command-generation/README.md; ../command-generation/src/command_generation/*; scripts/generate/workspace_command_generation.py",
+      "promotion target": "external implementation issue in rickardvh/command-generation plus AW integration issue",
+      "promotion trigger": "before moving generic runtime, generator, fingerprint, or primitive-conformance behavior"
+    },
+    {
+      "title": "F5: The closed command-generation extraction decomposition is related but insufficient.",
+      "summary": "The existing closed extraction decomposition established command-generation as an independent package while leaving AW host command meaning, generated outputs, and domain primitives in AW. #1354 is stricter and asks whether runtime command behavior edits are still too relaxed.",
+      "evidence": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json is closed and centers on extraction readiness, no product imports, and package boundaries. #1354 adds runtime edit reasons, minimization of AW-owned primitives, equal Python/TypeScript freshness, and full-intent preservation.",
+      "risk if unchanged": "Implementation may reuse the old closed decomposition and accidentally treat extraction-complete as single-source-boundary-complete.",
+      "suggested action": "Create a fresh decomposition for #1354 with lanes for boundary inventory, edit gates, parity/freshness, command-generation ownership, and AW dogfooding/intent preservation.",
+      "confidence": "high",
+      "source": ".agentic-workspace/planning/decompositions/command-generation-extraction-epic.decomposition.json; #1354",
+      "promotion target": "implementation issue: decomposition and execplans for #1354",
+      "promotion trigger": "before broad implementation starts"
+    },
+    {
+      "title": "F6: Dogfooding found AW under-escalated explicit epic-shaped cross-repo work.",
+      "summary": "Despite #1354 saying the work is likely epic-shaped and may span command-generation, startup guidance still routed the task as bounded/downroute instead of requiring decomposition or a strong shaper escalation.",
+      "evidence": "The start call for grounding #1354 produced a low-tier/downroute shape even after the issue body said this should not be silently collapsed to a first slice and expected grounding review, decomposition, lanes, and execplans.",
+      "risk if unchanged": "AW continues to preserve narrow immediate action while failing the higher-level user intent satisfaction that motivated #1354.",
+      "suggested action": "Create a dogfooding issue to make explicit epic-shaped, cross-repo, or full-intent preservation signals prompt decomposition/shaper escalation instead of bounded implementation routing.",
+      "confidence": "medium-high",
+      "source": "dogfooding during this review lane; #1354 body",
+      "promotion target": "implementation issue: epic/cross-repo shaping escalation",
+      "promotion trigger": "before claiming AW dogfooding obligations were met for #1354"
+    }
+  ],
+  "recommendation": {
+    "promote": "Yes. Promote #1354 to implementation via subissues. The first implementation step should be decomposition/execplans, not code changes.",
+    "defer": "Do not defer the full lane as wording-only. Defer only exact primitive migrations that require command-generation API changes until the external package issue is shaped.",
+    "dismiss": "Do not dismiss the concern because existing generated-package checks pass; those checks prove current policy, not the stricter user intent."
+  },
+  "issue_classifications": [
+    {
+      "owner_repo": "rickardvh/agentic-workspace",
+      "title": "Decompose #1354 generated-CLI runtime boundary into lanes and execplan-backed slices",
+      "reason": "The parent is epic-shaped and must preserve full intent before implementation starts.",
+      "promoted_issue": "#1355"
+    },
+    {
+      "owner_repo": "rickardvh/agentic-workspace",
+      "title": "Gate direct runtime-source edits under the generated-CLI boundary",
+      "reason": "Runtime source edits need explicit primitive bugfix or new primitive evidence, not vague package-domain boundary wording.",
+      "promoted_issue": "#1356"
+    },
+    {
+      "owner_repo": "rickardvh/agentic-workspace",
+      "title": "Audit and shrink accepted runtime primitive inventory for generated CLI completion",
+      "reason": "The current completion proof accepts 85 boundaries and needs stricter classification, minimization, and reviewable residue.",
+      "promoted_issue": "#1357"
+    },
+    {
+      "owner_repo": "rickardvh/agentic-workspace",
+      "title": "Guarantee Python and TypeScript generated target parity and freshness",
+      "reason": "Relevant source changes must prove both generated targets are current through cheap freshness or hash checks.",
+      "promoted_issue": "#1358"
+    },
+    {
+      "owner_repo": "rickardvh/command-generation",
+      "title": "Support generated-CLI single-source boundary needs from AW #1354",
+      "reason": "Generic generator, primitive, conformance, or freshness capabilities should live in command-generation rather than AW host runtime.",
+      "promoted_issue": "rickardvh/command-generation#5"
+    },
+    {
+      "owner_repo": "rickardvh/agentic-workspace",
+      "title": "Escalate explicit epic-shaped or cross-repo work before bounded implementation routing",
+      "reason": "Dogfooding showed AW under-escalated #1354 even though the parent issue explicitly required epic/lane/slice preservation.",
+      "promoted_issue": "#1359"
+    },
+    {
+      "kind": "dogfooding-finding",
+      "finding": "AW did not force decomposition for #1354 despite explicit epic-shaped language.",
+      "action": "Promoted to #1359 for shaping escalation."
+    },
+    {
+      "kind": "dogfooding-finding",
+      "finding": "The phrase package-domain boundary remains too easy for an agent to cite without explaining whether the edit is a primitive bugfix, new primitive, generated-command behavior, or accepted transitional debt.",
+      "action": "Promoted to #1356 and #1357."
+    },
+    {
+      "kind": "dogfooding-finding",
+      "finding": "Current proof surfaces are good at freshness and exact-symbol checking, but the user-facing intent gap is whether accepted boundaries are still too broad.",
+      "action": "Promoted to #1357 and #1358."
+    }
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json (passed under current policy; important evidence is zero blockers plus 85 accepted runtime symbols)",
+    "uv run python scripts/generate/generate_command_packages.py --check (passed; generated outputs are fresh under current generator inputs)",
+    "uv run python scripts/check/check_generated_command_packages.py (passed; static generated command package checks pass under current policy)",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json (passed)",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json (initially reported schema drift; fixed by moving data into schema-allowed fields)"
+  ],
+  "retention": {
+    "closeout shape": "retain until subissues are implemented or superseded",
+    "trigger": "all promoted issues have implementation PRs or are explicitly rejected by the user",
+    "proof surface": "linked GitHub issues, PR closeout, generated-package checks, command-generation package issues"
+  },
+  "drift_log": [
+    "2026-06-06: Review record created by create-review.",
+    "2026-06-06: Grounding review filled after inspecting AW generated-package checks and sibling command-generation package."
+  ]
+}
