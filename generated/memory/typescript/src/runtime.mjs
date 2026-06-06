@@ -648,11 +648,53 @@ function executePrimitive(primitive, values, args, operationId) {
   return domainPrimitive(primitive, values, args, operationId);
 }
 
+function operationFragments(operation) {
+  const rawFragments = operation?.ir_plan?.fragments ?? [];
+  if (!Array.isArray(rawFragments)) throw new RuntimeError('operation ir_plan.fragments must be a list');
+  const fragments = new Map();
+  for (const fragment of rawFragments) {
+    if (!isObject(fragment)) throw new RuntimeError('operation ir_plan fragment must be an object');
+    const fragmentId = String(fragment.id ?? '').trim();
+    if (!fragmentId) throw new RuntimeError('operation ir_plan fragment id is required');
+    if (fragments.has(fragmentId)) throw new RuntimeError(`duplicate operation ir_plan fragment: ${fragmentId}`);
+    if (!Array.isArray(fragment.steps) || fragment.steps.length === 0) {
+      throw new RuntimeError(`operation ir_plan fragment ${fragmentId} must declare non-empty steps`);
+    }
+    fragments.set(fragmentId, fragment.steps);
+  }
+  return fragments;
+}
+
+function expandOperationSteps(steps, fragments, stack = []) {
+  const expanded = [];
+  for (const step of steps) {
+    if (!isObject(step)) throw new RuntimeError('operation ir_plan step must be an object');
+    const uses = String(step.uses ?? '').trim();
+    const usesFragment = String(step.uses_fragment ?? '').trim();
+    if (uses && usesFragment) throw new RuntimeError(`step ${String(step.id ?? uses)} cannot declare both uses and uses_fragment`);
+    if (usesFragment) {
+      if (step.arguments !== undefined && !(isObject(step.arguments) && Object.keys(step.arguments).length === 0)) {
+        throw new RuntimeError(`fragment step ${String(step.id ?? usesFragment)} cannot declare arguments`);
+      }
+      if (step.outputs !== undefined && !(Array.isArray(step.outputs) && step.outputs.length === 0)) {
+        throw new RuntimeError(`fragment step ${String(step.id ?? usesFragment)} cannot declare outputs`);
+      }
+      if (stack.includes(usesFragment)) throw new RuntimeError(`operation ir_plan fragment cycle: ${[...stack, usesFragment].join(' -> ')}`);
+      if (!fragments.has(usesFragment)) throw new RuntimeError(`unknown operation ir_plan fragment: ${usesFragment}`);
+      expanded.push(...expandOperationSteps(fragments.get(usesFragment), fragments, [...stack, usesFragment]));
+      continue;
+    }
+    if (!uses) throw new RuntimeError(`step ${String(step.id ?? '<unknown>')} must declare uses or uses_fragment`);
+    expanded.push(step);
+  }
+  return expanded;
+}
+
 function runSteps(operation, values) {
   const steps = operation?.ir_plan?.steps;
   if (!Array.isArray(steps)) throw new RuntimeError(`operation ${operation?.id ?? '<unknown>'} has no executable ir_plan.steps`);
-  for (const step of steps) {
-    if (!isObject(step)) throw new RuntimeError('operation ir_plan step must be an object');
+  const fragments = operationFragments(operation);
+  for (const step of expandOperationSteps(steps, fragments)) {
     if (!conditionMatches(step.when, values)) continue;
     const result = executePrimitive(String(step.uses ?? ''), values, isObject(step.arguments) ? step.arguments : {}, String(operation.id ?? ''));
     storeStepResult(values, step.outputs ?? [], result);

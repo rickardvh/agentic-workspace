@@ -1,0 +1,111 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Implement #1367 compositional operation IR",
+  "plan_id": "issue-1367-compositional-operation-ir",
+  "created_at": "2026-06-06T17:01:48.248652+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-1367-compositional-operation-ir.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-1367-compositional-operation-ir.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "issue-1367-compositional-operation-ir",
+    "status": "completed",
+    "scope": "#1367 compositional operation IR only.",
+    "ready": "ready",
+    "blocked": "none; proof passed",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1367 compositional operation IR and modular primitive architecture.",
+    "hard constraints": "Keep scope inside existing operation IR, generated command package, primitive runtime support, docs/tests, and the companion command-generation package; do not invent a new dashboard/state store.",
+    "agent may decide locally": "Choose the representative migrated operation, exact proof, and whether small generator support belongs in command-generation.",
+    "escalate when": "Escalate if closing #1367 requires a broader generated CLI migration or removing all remaining runtime primitive debt."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented operation-local fragments in the operation schema and config.report, added generated Python operation_composition helpers from command-generation, added TypeScript fragment expansion support, updated fragment-aware validators/checkers, documented the IR ladder, and added focused tests.",
+    "scope touched": "pyproject.toml; uv.lock; scripts/generate/workspace_command_generation.py; scripts/check/check_contract_tooling_surfaces.py; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/schemas/operation.schema.json; src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; src/agentic_workspace/contracts/operations/config.report.json; src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/typescript_runtime_support.mjs; generated/**/python/primitives/primitive_executor.py; generated/**/python/primitives/operation_composition.py; generated/**/typescript/src/runtime.mjs; generated/workspace/python/operations/config.report.json; generated/workspace/typescript/resources/operations/config.report.json; packages/planning/payload-surface-classification.json; docs/maintainer/contributor-playbook.md; docs/reference/operation.md; docs/reference/operation-primitives.md; tests/test_command_generation_artifacts.py; tests/test_command_generation_primitive_executor.py; tests/test_contract_tooling.py; .agentic-workspace/planning/reviews/2026-06-06-issue-1367-compositional-operation-ir-grounding.review.json",
+    "changed surfaces": "operation/schema contracts; command-generation dependency; generated Python/TypeScript targets; TypeScript runtime support; checkers; docs; tests; planning evidence",
+    "validations run": "command-generation: uv run pytest tests/test_public_api.py::test_generated_output_freshness_report_detects_family_drift -q -> passed; command-generation: uv run pytest -q -> 32 passed; command-generation: uv run ruff check src tests -> unavailable, ruff program not installed in that repo environment; AW: uv run pytest focused #1367 tests and generated-package report tests -q -> 6 passed; AW: uv run python scripts/check/check_generated_command_packages.py --require-node -> passed, including representative TypeScript native command proof; AW: uv run python scripts/generate/generate_command_packages.py --check -> passed; AW: uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> passed; AW: uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; AW: uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py tests/test_contract_tooling.py -> passed; AW: make schema-reference-docs -> passed; AW: make maintainer-surfaces -> passed; AW: make test-workspace -> passed; AW: make lint-workspace -> passed",
+    "result for continuation": "#1367 ready for PR; #1364 remains separate broader migration work.",
+    "next step": "Open PR and link companion command-generation PR #7."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; this closes #1367 without claiming full #1364 migration.",
+    "proof status": "passed",
+    "intent served": "yes; representative full path covers schema, operation, generated Python/TypeScript execution support, modular helper split, docs, and checks.",
+    "config compliance": "AW start, implement, planning delegation-decision, proof, summary, and required validation were used.",
+    "misinterpretation risk": "medium-low; PR body must call out companion command-generation PR and #1364 boundary.",
+    "follow-on decision": "#1364 remains open; no new follow-up issue found in this lane."
+  },
+  "proof_report": {
+    "validation proof": "command-generation: uv run pytest tests/test_public_api.py::test_generated_output_freshness_report_detects_family_drift -q -> passed; command-generation: uv run pytest -q -> 32 passed; command-generation: uv run ruff check src tests -> unavailable, ruff program not installed in that repo environment; AW: uv run pytest focused #1367 tests and generated-package report tests -q -> 6 passed; AW: uv run python scripts/check/check_generated_command_packages.py --require-node -> passed, including representative TypeScript native command proof; AW: uv run python scripts/generate/generate_command_packages.py --check -> passed; AW: uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> passed; AW: uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; AW: uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py tests/test_contract_tooling.py -> passed; AW: make schema-reference-docs -> passed; AW: make maintainer-surfaces -> passed; AW: make test-workspace -> passed; AW: make lint-workspace -> passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Generated package proof with Node, focused tests, contract tooling, structured inventory, schema docs, maintainer surfaces, workspace tests, and lint all passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1367 compositional operation IR and modular primitive architecture.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Operation schema has ir_step/ir_fragment, config.report uses select-and-emit-report, command-generation PR #7 provides generic fragment expansion and operation_composition module, AW generated Python/TypeScript targets are fresh, checkers expand fragments, docs describe the ladder, and focused/full proof passed.",
+    "unsolved intent passed to": "#1364 for broader generated CLI runtime migration only."
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "#1367 compositional IR is complete, but the broader #1364 generated CLI runtime migration remains open and is not claimed by this PR.",
+    "evidence carried forward": "Focused tests, generated-package proof with Node, generated freshness check, contract tooling, structured inventory, schema docs, maintainer surfaces, workspace tests, and lint.",
+    "reopen trigger": "A generated target cannot execute a uses_fragment plan, fragments bypass primitive support checks, or operation composition returns to a monolithic primitive executor only."
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Operation composition belongs in operation-local fragments before broadening primitive vocabulary.",
+    "motivation worth preserving": "Prevents broad hand-owned primitives from hiding ordinary reusable dataflow.",
+    "canonical owner now": "operation.schema.json, operation_primitives.json, command-generation operation_composition, and contributor playbook.",
+    "promotion trigger": "Promote to Memory only if future agents repeatedly miss the primitive/fragment/operation/command ladder.",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1367 compositional operation IR implemented.",
+    "validation confirmed": "command-generation: uv run pytest tests/test_public_api.py::test_generated_output_freshness_report_detects_family_drift -q -> passed; command-generation: uv run pytest -q -> 32 passed; command-generation: uv run ruff check src tests -> unavailable, ruff program not installed in that repo environment; AW: uv run pytest focused #1367 tests and generated-package report tests -q -> 6 passed; AW: uv run python scripts/check/check_generated_command_packages.py --require-node -> passed, including representative TypeScript native command proof; AW: uv run python scripts/generate/generate_command_packages.py --check -> passed; AW: uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success -> passed; AW: uv run python scripts/check/check_structured_file_inventory.py --quiet-success -> passed; AW: uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_command_generation_artifacts.py tests/test_command_generation_primitive_executor.py tests/test_contract_tooling.py -> passed; AW: make schema-reference-docs -> passed; AW: make maintainer-surfaces -> passed; AW: make test-workspace -> passed; AW: make lint-workspace -> passed",
+    "follow-on routed to": "#1364 broader generated CLI runtime migration remains open.",
+    "post-work posterity capture": "PR body, grounding review, this execplan, and tests.",
+    "knowledge promoted (Memory/Docs/Config)": "Docs: contributor playbook operation IR ladder. No Memory note needed; durable facts are in contracts/tests/docs.",
+    "resume from": "Review/merge #1367 PR, then continue #1364 if prioritized."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        {
+          "summary": "#1364 remains the broader generated CLI runtime migration owner.",
+          "source": "intent_continuity",
+          "owner": "#1364"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory note needed; durable guidance is in contracts/docs/tests.",
+          "source": "task_intent_promotion",
+          "owner": "Memory"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "Operation IR ladder documented in docs/maintainer/contributor-playbook.md.",
+          "source": "durable_residue",
+          "owner": "docs"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  }
+}

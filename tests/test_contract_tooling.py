@@ -44,6 +44,30 @@ def test_contract_tooling_check_passes() -> None:
     assert module.main([]) == 0
 
 
+def test_operation_contract_allows_fragments_and_config_report_uses_one() -> None:
+    root = Path(__file__).resolve().parents[1]
+    schema = json.loads(
+        (root / "src" / "agentic_workspace" / "contracts" / "schemas" / "operation.schema.json").read_text(encoding="utf-8")
+    )
+    operation = json.loads(
+        (root / "src" / "agentic_workspace" / "contracts" / "operations" / "config.report.json").read_text(encoding="utf-8")
+    )
+
+    assert "ir_step" in schema["$defs"]
+    assert "ir_fragment" in schema["$defs"]
+    assert schema["$defs"]["ir_step"]["oneOf"][1]["required"] == ["uses_fragment"]
+    assert list(Draft202012Validator(schema).iter_errors(operation)) == []
+
+    ir_plan = operation["ir_plan"]
+    fragments = {fragment["id"]: fragment for fragment in ir_plan["fragments"]}
+    assert "select-and-emit-report" in fragments
+    assert any(step.get("uses_fragment") == "select-and-emit-report" for step in ir_plan["steps"])
+    assert [step["uses"] for step in fragments["select-and-emit-report"]["steps"]] == [
+        "output.fields.select",
+        "workspace.config.emit",
+    ]
+
+
 def test_command_contracts_do_not_expose_profile_flags() -> None:
     def walk_options(value: object) -> list[dict[str, object]]:
         if isinstance(value, dict):

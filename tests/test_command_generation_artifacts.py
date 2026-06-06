@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import types
 from pathlib import Path
@@ -70,6 +71,24 @@ def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> 
     assert "agentic_workspace" not in text
     assert "repo_planning_bootstrap" not in text
     assert "repo_memory_bootstrap" not in text
+
+
+def test_generated_targets_include_operation_fragment_support() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    python_operation = json.loads((repo_root / "generated" / "workspace" / "python" / "operations" / "config.report.json").read_text())
+    typescript_operation = json.loads(
+        (repo_root / "generated" / "workspace" / "typescript" / "resources" / "operations" / "config.report.json").read_text()
+    )
+
+    assert python_operation["ir_plan"]["fragments"] == typescript_operation["ir_plan"]["fragments"]
+    assert any(step.get("uses_fragment") == "select-and-emit-report" for step in python_operation["ir_plan"]["steps"])
+    assert (repo_root / "generated" / "workspace" / "python" / "primitives" / "operation_composition.py").is_file()
+    assert "expand_operation_steps" in (
+        repo_root / "generated" / "workspace" / "python" / "primitives" / "primitive_executor.py"
+    ).read_text(encoding="utf-8")
+    assert "expandOperationSteps" in (repo_root / "generated" / "workspace" / "typescript" / "src" / "runtime.mjs").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_generated_local_runtime_facade_documents_and_preserves_patch_semantics() -> None:

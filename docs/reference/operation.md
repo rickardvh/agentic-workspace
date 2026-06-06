@@ -43,7 +43,8 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `ir_plan` | object | no |  | Optional lower-level operation IR plan suitable for thin target executors. |  |  |
 | `ir_plan.status` | enum `"not-modeled"`, `"partial"`, `"representative"`, `"complete"` | yes |  | How much of the operation behavior is expressed as target-executor IR. |  |  |
 | `ir_plan.summary` | string | no |  | Short explanation of what this IR plan proves. |  |  |
-| `ir_plan.steps` | array of object | yes |  | Target-executor primitive plan. |  |  |
+| `ir_plan.steps` | array of ref `#/$defs/ir_step` | yes |  | Target-executor primitive plan. |  |  |
+| `ir_plan.fragments` | array of ref `#/$defs/ir_fragment` | no |  | Reusable operation-local fragments that compose primitive steps into named subflows. |  |  |
 | `ir_plan.portability_notes` | array of string | no |  | Target portability constraints and bridge assumptions. |  |  |
 | `guards` | array of string | yes |  | Safety or escalation guards for using the operation. |  |  |
 | `proof` | array of string | yes |  | Validation expectations for the operation contract. |  |  |

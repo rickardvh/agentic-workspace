@@ -86,6 +86,30 @@ def _merge_effects(current: dict[str, object], incoming: dict[str, object]) -> d
     return merged
 
 
+def _operation_ir_steps(operation: dict[str, object]) -> list[tuple[dict[str, object], str]]:
+    ir_plan = operation.get("ir_plan", {})
+    if not isinstance(ir_plan, dict):
+        return []
+    collected: list[tuple[dict[str, object], str]] = []
+    top_steps = ir_plan.get("steps", [])
+    if isinstance(top_steps, list):
+        for index, step in enumerate(top_steps):
+            if isinstance(step, dict):
+                collected.append((step, f"steps/{index}"))
+    fragments = ir_plan.get("fragments", [])
+    if isinstance(fragments, list):
+        for fragment_index, fragment in enumerate(fragments):
+            if not isinstance(fragment, dict):
+                continue
+            fragment_steps = fragment.get("steps", [])
+            if not isinstance(fragment_steps, list):
+                continue
+            for step_index, step in enumerate(fragment_steps):
+                if isinstance(step, dict):
+                    collected.append((step, f"fragments/{fragment_index}/steps/{step_index}"))
+    return collected
+
+
 def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path) -> list[dict[str, object]]:
     builtin_ids = BUILTIN_PORTABLE_PRIMITIVES.ids()
     primitives_manifest = _operation_primitives_manifest(repo_root=repo_root)
@@ -123,43 +147,39 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
                 if not source.is_file():
                     continue
                 operation = json.loads(source.read_text(encoding="utf-8"))
-                steps = operation.get("ir_plan", {}).get("steps", [])
-                if not isinstance(steps, list):
-                    continue
-                for step_index, step in enumerate(steps):
-                    if isinstance(step, dict):
-                        primitive = str(step.get("uses", "")).strip()
-                        if primitive and primitive not in builtin_ids:
-                            primitive_ids.add(primitive)
-                            usage = primitive_usage.setdefault(
-                                primitive,
-                                {
-                                    "effects": {},
-                                    "conformance_refs": [],
-                                    "operation_refs": [],
-                                    "input_schema_ref": "",
-                                    "output_schema_ref": "",
-                                },
+                for step, step_pointer in _operation_ir_steps(operation):
+                    primitive = str(step.get("uses", "")).strip()
+                    if primitive and primitive not in builtin_ids:
+                        primitive_ids.add(primitive)
+                        usage = primitive_usage.setdefault(
+                            primitive,
+                            {
+                                "effects": {},
+                                "conformance_refs": [],
+                                "operation_refs": [],
+                                "input_schema_ref": "",
+                                "output_schema_ref": "",
+                            },
+                        )
+                        usage["effects"] = _merge_effects(dict(usage.get("effects", {})), effects)
+                        refs = usage.get("conformance_refs", [])
+                        if isinstance(refs, list):
+                            for ref in conformance_refs:
+                                if ref not in refs:
+                                    refs.append(ref)
+                        operation_refs = usage.get("operation_refs", [])
+                        if isinstance(operation_refs, list):
+                            operation_ref_path = f"{package.get('operation_contract_root')}/{operation_path}"
+                            if operation_ref_path not in operation_refs:
+                                operation_refs.append(operation_ref_path)
+                        if not usage.get("input_schema_ref"):
+                            usage["input_schema_ref"] = (
+                                f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/{step_pointer}/arguments"
                             )
-                            usage["effects"] = _merge_effects(dict(usage.get("effects", {})), effects)
-                            refs = usage.get("conformance_refs", [])
-                            if isinstance(refs, list):
-                                for ref in conformance_refs:
-                                    if ref not in refs:
-                                        refs.append(ref)
-                            operation_refs = usage.get("operation_refs", [])
-                            if isinstance(operation_refs, list):
-                                operation_ref_path = f"{package.get('operation_contract_root')}/{operation_path}"
-                                if operation_ref_path not in operation_refs:
-                                    operation_refs.append(operation_ref_path)
-                            if not usage.get("input_schema_ref"):
-                                usage["input_schema_ref"] = (
-                                    f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/steps/{step_index}/arguments"
-                                )
-                            if not usage.get("output_schema_ref"):
-                                usage["output_schema_ref"] = (
-                                    f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/steps/{step_index}/outputs"
-                                )
+                        if not usage.get("output_schema_ref"):
+                            usage["output_schema_ref"] = (
+                                f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/{step_pointer}/outputs"
+                            )
     definitions: list[dict[str, object]] = []
     for primitive_id in sorted(primitive_ids):
         primitive_index, primitive = primitive_entries.get(primitive_id, (-1, {}))

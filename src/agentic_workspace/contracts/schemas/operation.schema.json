@@ -337,77 +337,16 @@
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "uses",
-              "description"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^[a-z0-9][a-z0-9_-]*$",
-                "description": "Stable identifier for this IR step."
-              },
-              "uses": {
-                "type": "string",
-                "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-                "description": "Primitive id from operation_primitives.json."
-              },
-              "description": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Behavior described by this target-executor step."
-              },
-              "inputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Named inputs consumed by this step."
-              },
-              "arguments": {
-                "type": "object",
-                "description": "Primitive-specific JSON arguments validated by the primitive input schema."
-              },
-              "outputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Named outputs produced by this step."
-              },
-              "when": {
-                "$ref": "#/$defs/step_when_guard",
-                "description": "A named boolean fact or input-presence guard; arbitrary expressions are not allowed."
-              },
-              "on_error": {
-                "type": "string",
-                "enum": [
-                  "fail",
-                  "emit_usage_error",
-                  "continue_with_default"
-                ],
-                "description": "Limited error policy for this IR step."
-              },
-              "reads": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Logical surfaces read by this step."
-              },
-              "writes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Logical surfaces written by this step."
-              }
-            },
-            "additionalProperties": false
+            "$ref": "#/$defs/ir_step"
           },
           "description": "Target-executor primitive plan."
+        },
+        "fragments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ir_fragment"
+          },
+          "description": "Reusable operation-local fragments that compose primitive steps into named subflows."
         },
         "portability_notes": {
           "type": "array",
@@ -537,6 +476,162 @@
       },
       "additionalProperties": false,
       "description": "Surface access details used by this contract."
+    },
+    "ir_step": {
+      "type": "object",
+      "required": [
+        "id",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "description": "Stable identifier for this IR step."
+        },
+        "uses": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Primitive id from operation_primitives.json."
+        },
+        "uses_fragment": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Operation-local fragment id to inline at this point. Fragment calls cannot declare arguments or outputs."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Behavior described by this target-executor step."
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named inputs consumed by this step."
+        },
+        "arguments": {
+          "type": "object",
+          "description": "Primitive-specific JSON arguments validated by the primitive input schema."
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named outputs produced by this step."
+        },
+        "when": {
+          "$ref": "#/$defs/step_when_guard",
+          "description": "A named boolean fact or input-presence guard; arbitrary expressions are not allowed."
+        },
+        "on_error": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "emit_usage_error",
+            "continue_with_default"
+          ],
+          "description": "Limited error policy for this IR step."
+        },
+        "reads": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Logical surfaces read by this step."
+        },
+        "writes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Logical surfaces written by this step."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "uses"
+          ],
+          "not": {
+            "required": [
+              "uses_fragment"
+            ]
+          }
+        },
+        {
+          "required": [
+            "uses_fragment"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "uses"
+                ]
+              },
+              {
+                "required": [
+                  "arguments"
+                ]
+              },
+              {
+                "required": [
+                  "outputs"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "description": "Primitive step or operation-local fragment call. This composition model is not a general-purpose language."
+    },
+    "ir_fragment": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "steps"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Stable operation-local fragment id."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Purpose of this reusable subflow."
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named values the fragment expects to read."
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named values the fragment is expected to produce."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ir_step"
+          },
+          "description": "Primitive steps and nested fragment calls that make up this fragment."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Reusable operation-local subflow with explicit inputs and outputs."
     },
     "step_when_guard": {
       "oneOf": [

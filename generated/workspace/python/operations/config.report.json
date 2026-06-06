@@ -40,6 +40,41 @@
     }
   ],
   "ir_plan": {
+    "fragments": [
+      {
+        "description": "Reusable report tail that selects requested fields and emits the command output.",
+        "id": "select-and-emit-report",
+        "inputs": [
+          "config",
+          "select",
+          "format"
+        ],
+        "outputs": [
+          "result",
+          "emitted"
+        ],
+        "steps": [
+          {
+            "arguments": {},
+            "description": "Select the requested config profile or exact field projection.",
+            "id": "select_fields",
+            "outputs": [
+              "result"
+            ],
+            "uses": "output.fields.select"
+          },
+          {
+            "arguments": {},
+            "description": "Emit config output in the requested format.",
+            "id": "emit_config",
+            "outputs": [
+              "emitted"
+            ],
+            "uses": "workspace.config.emit"
+          }
+        ]
+      }
+    ],
     "status": "representative",
     "steps": [
       {
@@ -61,25 +96,12 @@
         "uses": "workspace.config.load"
       },
       {
-        "arguments": {},
-        "description": "Select the requested config profile or exact field projection.",
-        "id": "select_fields",
-        "outputs": [
-          "result"
-        ],
-        "uses": "output.fields.select"
-      },
-      {
-        "arguments": {},
-        "description": "Emit config output in the requested format.",
-        "id": "emit_config",
-        "outputs": [
-          "emitted"
-        ],
-        "uses": "workspace.config.emit"
+        "description": "Select and emit report output through a reusable operation-local fragment.",
+        "id": "select_and_emit",
+        "uses_fragment": "select-and-emit-report"
       }
     ],
-    "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow while workspace runtime supplies config loading and text compatibility formatting."
+    "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow, using an operation-local report emission fragment while workspace runtime supplies config loading and text compatibility formatting."
   },
   "locality": {
     "network": "forbidden",
@@ -110,7 +132,8 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "json output remains compatible with existing config command tests"
+    "json output remains compatible with existing config command tests",
+    "config.report uses an operation-local emit fragment executed by generated Python and TypeScript targets"
   ],
   "reads": [
     {

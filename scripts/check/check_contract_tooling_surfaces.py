@@ -493,9 +493,11 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 operation_step_primitives.add(step["uses"])
         ir_plan = operation.get("ir_plan", {})
         if isinstance(ir_plan, dict):
-            for step in ir_plan.get("steps", []):
+            fragment_errors: list[str] = []
+            for step in _expanded_ir_primitive_steps(ir_plan, operation_id=str(operation_ref.get("id", "")), errors=fragment_errors):
                 if isinstance(step, dict) and isinstance(step.get("uses"), str):
                     operation_step_primitives.add(step["uses"])
+            errors.extend(fragment_errors)
     missing_classification = sorted(primitive for primitive in operation_step_primitives if primitive not in seen_ids)
     if missing_classification:
         errors.append("operation steps reference primitives missing from operation_primitives.json: " + ", ".join(missing_classification))
@@ -527,6 +529,80 @@ def _module_ir_namespace_prefixes() -> list[str]:
         if isinstance(namespace, dict) and isinstance(namespace.get("operation_id_prefix"), str):
             prefixes.append(str(namespace["operation_id_prefix"]))
     return prefixes
+
+
+def _ir_plan_fragments(ir_plan: dict[str, object], *, operation_id: str, errors: list[str]) -> dict[str, list[object]]:
+    raw_fragments = ir_plan.get("fragments", [])
+    if raw_fragments in (None, []):
+        return {}
+    if not isinstance(raw_fragments, list):
+        errors.append(f"operation {operation_id} ir_plan.fragments must be a list")
+        return {}
+    fragments: dict[str, list[object]] = {}
+    for raw_fragment in raw_fragments:
+        if not isinstance(raw_fragment, dict):
+            errors.append(f"operation {operation_id} ir_plan fragment must be an object")
+            continue
+        fragment_id = str(raw_fragment.get("id", "")).strip()
+        if not fragment_id:
+            errors.append(f"operation {operation_id} ir_plan fragment id is required")
+            continue
+        if fragment_id in fragments:
+            errors.append(f"operation {operation_id} has duplicate ir_plan fragment {fragment_id}")
+            continue
+        fragment_steps = raw_fragment.get("steps", [])
+        if not isinstance(fragment_steps, list) or not fragment_steps:
+            errors.append(f"operation {operation_id} ir_plan fragment {fragment_id} must declare steps")
+            continue
+        fragments[fragment_id] = fragment_steps
+    return fragments
+
+
+def _expand_ir_steps(
+    steps: list[object],
+    *,
+    fragments: dict[str, list[object]],
+    operation_id: str,
+    errors: list[str],
+    stack: tuple[str, ...] = (),
+) -> list[dict[str, object]]:
+    expanded: list[dict[str, object]] = []
+    for step in steps:
+        if not isinstance(step, dict):
+            errors.append(f"operation {operation_id} ir_plan step must be an object")
+            continue
+        primitive_id = str(step.get("uses", "")).strip()
+        fragment_id = str(step.get("uses_fragment", "")).strip()
+        if primitive_id and fragment_id:
+            errors.append(f"operation {operation_id} ir_plan step {step.get('id', primitive_id)} cannot declare both uses and uses_fragment")
+            continue
+        if fragment_id:
+            if step.get("arguments") not in (None, {}):
+                errors.append(f"operation {operation_id} ir_plan fragment call {step.get('id', fragment_id)} cannot declare arguments")
+            if step.get("outputs") not in (None, []):
+                errors.append(f"operation {operation_id} ir_plan fragment call {step.get('id', fragment_id)} cannot declare outputs")
+            if fragment_id in stack:
+                errors.append(f"operation {operation_id} ir_plan fragment cycle: {' -> '.join((*stack, fragment_id))}")
+                continue
+            fragment_steps = fragments.get(fragment_id)
+            if fragment_steps is None:
+                errors.append(f"operation {operation_id} ir_plan uses unknown fragment {fragment_id}")
+                continue
+            expanded.extend(_expand_ir_steps(fragment_steps, fragments=fragments, operation_id=operation_id, errors=errors, stack=(*stack, fragment_id)))
+            continue
+        if not primitive_id:
+            errors.append(f"operation {operation_id} ir_plan step {step.get('id', '<unknown>')} must declare uses or uses_fragment")
+            continue
+        expanded.append(step)
+    return expanded
+
+
+def _expanded_ir_primitive_steps(ir_plan: dict[str, object], *, operation_id: str, errors: list[str]) -> list[dict[str, object]]:
+    steps = ir_plan.get("steps")
+    if not isinstance(steps, list):
+        return []
+    fragments = _ir_plan_fragments(ir_plan, operation_id=operation_id, errors=errors)
+    return _expand_ir_steps(steps, fragments=fragments, operation_id=operation_id, errors=errors)
 
 
 def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:
@@ -578,10 +654,7 @@ def _validate_operation_ir_plans() -> list[str]:
         if not isinstance(steps, list) or not steps:
             errors.append(f"operation {operation_id} ir_plan must declare steps")
             continue
-        for step in steps:
-            if not isinstance(step, dict):
-                errors.append(f"operation {operation_id} ir_plan step must be an object")
-                continue
+        for step in _expanded_ir_primitive_steps(ir_plan, operation_id=operation_id, errors=errors):
             primitive_id = step.get("uses")
             if primitive_id not in primitive_refs:
                 errors.append(f"operation {operation_id} ir_plan uses unknown primitive {primitive_id}")

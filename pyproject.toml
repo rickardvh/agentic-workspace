@@ -34,7 +34,7 @@ dev = [
 package = true
 
 [tool.uv.sources]
-command-generation = { git = "https://github.com/rickardvh/command-generation.git", rev = "ae8fd35cb867db9e69e6d728219a960e458d9139" }
+command-generation = { git = "https://github.com/rickardvh/command-generation.git", rev = "d4df174422e779eee945270a04ff3cd54a245461" }
 agentic-memory = { workspace = true }
 agentic-planning = { workspace = true }
 agentic-verification = { workspace = true }
