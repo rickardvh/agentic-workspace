@@ -1,0 +1,32 @@
+# AW Contract Test Replacement Inventory
+
+This inventory is the #1374 AW-side implementation record for replacing generated-command behavior assertions with contract-owned conformance cases.
+
+## Converted Or Merged
+
+| Old ordinary test | Replacement contract id and case id | Target adapters | Proof command | Remaining ordinary coverage |
+| --- | --- | --- | --- | --- |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script` | `modules.report.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script` | `defaults.root-cli-authority.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
+
+## Kept Ordinary
+
+| Surface | Keep reason | Future conversion condition |
+| --- | --- | --- |
+| `tests/test_generated_tool_conformance.py` | Conformance harness, registry, and forbidden-write mechanics. These tests validate the runner itself rather than generated command behavior. | Keep ordinary unless a runner contract format is introduced. |
+| `tests/test_generated_command_package_proof_runner.py` | Proof-step selection, crash classification, retry recovery, Docker routing, static drift checks, and checker internals. | Convert only stable command-output examples; keep proof/checker orchestration ordinary. |
+| `tests/test_workspace_proof_generated_packages_cli.py` | AW proof routing and verification-lane semantics for generated package proof. | Keep ordinary because it tests AW proof selection, not generated command behavior. |
+| `tests/test_command_generation_primitive_executor.py` | AW dependency wiring and temporary mirror coverage for command-generation primitive behavior. | Move portable primitive behavior upstream under `rickardvh/command-generation#9`; keep only AW integration wiring here. |
+| `tests/test_command_generation_artifacts.py` | Artifact ownership, freshness, and operation fragment support checks. | Keep ordinary as contract/generator integrity checks. |
+| `tests/test_workspace_cli_blackbox.py` | Remaining cases cover invalid target usage errors, near-miss command guidance, selector conflicts, and memory-route misuse. | Keep ordinary because these are adapter error classification and recovery-message surfaces. |
+| `tests/test_workspace_cli.py` | Mixed CLI compatibility, selectors, and orchestration behavior. | Convert stable command-output examples only after operation owners are explicit and the case can name a contract owner. |
+| `tests/test_workspace_config_cli.py` | Detailed config policy, local override, mixed-agent, and authority reporting semantics. Existing `config.report.process` owns the basic generated command behavior. | Convert stable compact-output examples when they can be expressed as operation-owned cases without preserving transient policy seams. |
+| `tests/test_workspace_defaults_cli.py` | Large defaults payload semantics and policy/authority regression checks. Existing `defaults.report.process` and `defaults.root-cli-authority.process` own stable generated command examples. | Convert additional stable section outputs only when they reduce duplicate assertions without hiding policy-review coverage. |
+| `tests/test_workspace_implement_cli.py` | Planning safety, intent, proof, delegation, and generated-conformance proof guidance semantics. | Keep high-risk workflow trust regressions ordinary until operation or fragment owners settle. |
+| `tests/test_workspace_proof_cli.py` | Proof-selection semantics, verification integration, and completion-claim safety. | Keep ordinary until stable proof/report contract owners can express the behavior. |
+| `tests/test_workspace_report_cli.py` | Report UX, closeout, authority boundary, and semantic caveat behavior. | Keep ordinary while report semantics are evolving; convert stable command-facing examples only. |
+| `tests/test_workspace_start_preflight_cli.py` | Startup/preflight routing, intent preservation, and generated-package proof recommendations. | Keep ordinary while startup safety and routing semantics are high-risk. |
+
+## Boundary
+
+This inventory does not claim every ordinary test should disappear. Ordinary tests remain legitimate when they prove runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or a narrow bug repro that cannot yet be expressed as a stable operational contract.

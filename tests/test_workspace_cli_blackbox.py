@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 
@@ -22,27 +21,6 @@ def _assert_usage_error_without_traceback(result: subprocess.CompletedProcess[st
     assert "Traceback" not in combined
     assert "usage: agentic-workspace" in result.stderr
     assert expected in result.stderr
-
-
-def test_blackbox_root_generated_command_executes_through_console_script() -> None:
-    result = _run_cli("modules", "--format", "json", cwd=Path.cwd())
-
-    assert result.returncode == 0, result.stderr
-    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
-    payload = json.loads(result.stdout)
-    assert payload["kind"] == "agentic-workspace/modules-router/v1"
-    assert "available_module_profiles" in payload
-
-
-def test_blackbox_root_generated_command_executes_primitive_ir_through_console_script() -> None:
-    result = _run_cli("defaults", "--section", "root_cli_authority", "--format", "json", cwd=Path.cwd())
-
-    assert result.returncode == 0, result.stderr
-    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
-    payload = json.loads(result.stdout)
-    assert payload["profile"] == "compact-contract-answer/v1"
-    assert payload["surface"] == "defaults"
-    assert payload["selector"] == {"section": "root_cli_authority"}
 
 
 def test_blackbox_invalid_targets_report_usage_errors_without_tracebacks(tmp_path: Path) -> None:

@@ -16,6 +16,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "defaults.root-cli-authority.process",
+      "operation_id": "defaults.report",
+      "path": "conformance/defaults.root-cli-authority.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "delegation-outcome.append.process",
       "operation_id": "delegation-outcome.append",
       "path": "conformance/delegation-outcome.append.process.json",

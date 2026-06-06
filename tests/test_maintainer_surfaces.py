@@ -456,6 +456,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
     replacement_plan = (WORKSPACE_ROOT / "docs" / "maintainer" / "contract-test-replacement-plan.md").read_text(encoding="utf-8")
+    aw_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "aw-contract-test-replacement-inventory.md").read_text(encoding="utf-8")
 
     assert "docs/maintainer/testing-strategy.md" in playbook
     assert "Primitive conformance" in strategy
@@ -468,11 +469,17 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "contract-test-replacement-plan.md" in strategy
     assert "#1374 owns replacing AW generated-command behavior tests" in strategy
     assert "rickardvh/command-generation#9" in strategy
+    assert "aw-contract-test-replacement-inventory.md" in strategy
     assert "Do not preserve the current test layout" in replacement_plan
     assert "Delete Or Merge Only With Equivalent Coverage" in replacement_plan
     assert "old test name" in replacement_plan
     assert "replacement contract id and case id" in replacement_plan
     assert "rickardvh/command-generation#9" in replacement_plan
+    assert "test_blackbox_root_generated_command_executes_through_console_script" in aw_inventory
+    assert "modules.report.process" in aw_inventory
+    assert "defaults.root-cli-authority.process" in aw_inventory
+    assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
+    assert "adapter error classification and recovery-message surfaces" in aw_inventory
 
 
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:

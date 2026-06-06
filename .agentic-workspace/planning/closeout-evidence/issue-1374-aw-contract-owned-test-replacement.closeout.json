@@ -1,0 +1,99 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Implement #1374 AW contract-owned test replacement",
+  "plan_id": "issue-1374-aw-contract-owned-test-replacement",
+  "created_at": "2026-06-06T21:00:35.083127+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-1374-aw-contract-owned-test-replacement.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-1374-aw-contract-owned-test-replacement.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "issue-1374-aw-contract-owned-test-replacement",
+    "status": "completed",
+    "scope": "AW-side generated-command behavior contract conversion and ordinary-test inventory.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1374 AW-side contract-owned test replacement.",
+    "hard constraints": "Convert only stable generated-command behavior with clear operation ownership; do not wrap pytest layout in contract-shaped names.",
+    "agent may decide locally": "The exact stable AW-side cases to convert and ordinary-test retention reasons.",
+    "escalate when": "The work requires command-generation source changes or broad primitive/composite migration."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Converted stable AW generated-command behavior assertions for modules and defaults root_cli_authority into contract-owned conformance coverage, refreshed generated Python/TypeScript package metadata, pruned duplicate black-box tests, and documented the AW-side keep/convert/merge/delete inventory.",
+    "scope touched": "AW conformance contracts and registry; command adapter/package IR; generated workspace Python/TypeScript package metadata; black-box tests; maintainer inventory docs; active Planning execplan.",
+    "changed surfaces": "src/agentic_workspace/contracts/conformance/defaults.root-cli-authority.process.json; src/agentic_workspace/contracts/conformance_contracts.json; src/agentic_workspace/contracts/command_adapter_generation.json; src/agentic_workspace/contracts/command_package_ir.json; generated/workspace/python/command_package.json; generated/workspace/python/generated_command_adapters.json; generated/workspace/typescript/resources/command_package.json; tests/test_workspace_cli_blackbox.py; tests/test_command_generation_artifacts.py; docs/maintainer/aw-contract-test-replacement-inventory.md",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed inside #1374 AW-side generated-command behavior replacement; command-generation #9 remains separate; high-risk workflow/proof/report tests remain ordinary with documented reasons.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement #1374 AW contract-owned test replacement.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "docs",
+    "learned constraint": "Closeout routed docs residue to docs/maintainer/aw-contract-test-replacement-inventory.md.",
+    "motivation worth preserving": "Future agents should continue from docs/maintainer/aw-contract-test-replacement-inventory.md rather than rediscover this closeout residue.",
+    "canonical owner now": "docs/maintainer/aw-contract-test-replacement-inventory.md",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1374 acceptance is satisfied for the AW-side replacement lane: converted behavior has contract-owned cases, duplicate ordinary assertions were pruned with equivalent evidence, remaining ordinary tests are inventoried, and generated Python/TypeScript conformance is green.",
+    "validation confirmed": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run pytest tests/test_generated_tool_conformance.py tests/test_workspace_cli_blackbox.py tests/test_maintainer_surfaces.py tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth tests/test_workspace_cli.py -q; uv run pytest tests/test_command_generation_artifacts.py::test_canonical_command_artifacts_expose_implementation_independent_truth -q; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

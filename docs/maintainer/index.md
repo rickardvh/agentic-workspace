@@ -9,6 +9,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Dogfooding feedback](dogfooding-feedback.md): friction classification and admission policy.
 - [Testing strategy](testing-strategy.md): inventory, consolidation, pruning, and contract-owned conformance guidance.
 - [Contract-owned test replacement plan](contract-test-replacement-plan.md): sequencing and inventory for replacing regression tests with contract-owned conformance cases.
+- [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md): #1374 conversion and keep/convert/merge/delete record for AW-side tests.
 - [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
 

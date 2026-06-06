@@ -2719,7 +2719,8 @@
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "defaults.report.process"
+            "defaults.report.process",
+            "defaults.root-cli-authority.process"
           ],
           "projection_boundary": {
             "universal": [

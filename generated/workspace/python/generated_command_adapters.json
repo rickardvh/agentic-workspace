@@ -44,7 +44,8 @@
         "program": "agentic-workspace"
       },
       "conformance_refs": [
-        "defaults.report.process"
+        "defaults.report.process",
+        "defaults.root-cli-authority.process"
       ],
       "effect_hints": {
         "destructive": false,
