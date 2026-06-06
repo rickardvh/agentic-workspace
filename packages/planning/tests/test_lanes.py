@@ -5,14 +5,30 @@ import tomllib
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import (
+    _build_execplan_record_from_todo_item,
+    _write_execplan_record,
     activate_lane_record,
     archive_lane_record,
     close_lane_record,
     create_lane_record,
+    doctor_bootstrap,
+    install_bootstrap,
     planning_report,
     planning_summary,
     promote_decomposition_lane_to_lane_record,
 )
+
+
+def _write_execplan_fixture(path: Path, *, item_id: str, status: str) -> None:
+    record = _build_execplan_record_from_todo_item(
+        title="Slice One",
+        item_id=item_id,
+        status=status,
+        why_now="lane activation needs a registered slice execplan.",
+        next_action="execute the slice.",
+        done_when="slice proof passes.",
+    )
+    _write_execplan_record(record_path=path, record=record)
 
 
 def _write_decomposition(path: Path) -> None:
@@ -105,6 +121,44 @@ def test_promote_decomposition_lane_creates_lane_owner_without_execplan(tmp_path
     candidate = decomposition["candidate_lanes"][0]
     assert candidate["readiness"] == "promoted"
     assert candidate["owner_surface"] == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
+
+
+def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "ready",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Prove activation projects the slice execplan.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(
+        tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json",
+        item_id="slice-one",
+        status="planned",
+    )
+
+    result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-one")
+
+    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_lane = state["roadmap"]["lanes"][0]
+    assert active_lane["current_slice"] == "slice-one"
+    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert not [warning for warning in warnings if warning["warning_class"] == "execplan_unregistered"]
+    assert not [warning for warning in warnings if warning["warning_class"] == "historical_work_in_live_planning_state"]
+    doctor = doctor_bootstrap(target=tmp_path)
+    assert doctor.warnings == []
 
 
 def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> None:

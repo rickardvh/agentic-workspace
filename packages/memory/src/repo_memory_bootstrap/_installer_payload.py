@@ -12,6 +12,7 @@ from repo_memory_bootstrap._installer_output import (
     _is_valid_upgrade_source_text,
     _patch_agents_workflow_block,
     _remove_memory_workflow_block,
+    render_upgrade_source_record,
 )
 from repo_memory_bootstrap._installer_shared import (
     AGENTS_PATH,
@@ -618,6 +619,9 @@ def _write_payload_file(
     dry_kind: str,
 ) -> None:
     rendered = _render_text(entry.source_path, substitutions)
+    legacy_upgrade_source_path = _target_relative_path(LEGACY_UPGRADE_SOURCE_PATH, target_layout="legacy")
+    if entry.relative_path == UPGRADE_SOURCE_PATH or entry.relative_path == legacy_upgrade_source_path:
+        rendered = render_upgrade_source_record()
     _write_text(
         destination,
         rendered,

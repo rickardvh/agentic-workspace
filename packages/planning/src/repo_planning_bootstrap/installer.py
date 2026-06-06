@@ -22,7 +22,13 @@ from repo_planning_bootstrap._render import (
     render_quickstart,
     render_routing,
 )
-from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
+from repo_planning_bootstrap._source import (
+    UPGRADE_SOURCE_PATH,
+    is_default_upgrade_source_text,
+    is_valid_upgrade_source_text,
+    render_upgrade_source,
+    resolve_upgrade_source,
+)
 
 PLANNING_MANAGED_ROOT = module_root("planning")
 WORKSPACE_WORKFLOW_PATH = Path(".agentic-workspace") / "WORKFLOW.md"
@@ -1879,9 +1885,9 @@ def planning_summary(
                 plan_files.append(path)
         for path in sorted(plan_files):
             status = _execplan_status(path)
-            if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
+            if status and status not in {"complete", "completed", "done", "closed", "planned", "pending", "not-started"}:
                 active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
-            elif status in {"completed", "done", "closed"}:
+            elif status in {"complete", "completed", "done", "closed"}:
                 completed_execplans.append(
                     {
                         "path": path.relative_to(target_root).as_posix(),
@@ -1898,6 +1904,7 @@ def planning_summary(
     warnings.extend(_unsupported_planning_state_activation_shape_warnings(target_root=target_root, state=state))
     warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state))
     warnings.extend(_completed_execplan_warnings(completed_execplans))
+    warnings.extend(_stale_completed_active_execplan_warnings(completed_execplans=completed_execplans, active_items=active_items))
     warnings.extend(
         _unregistered_execplan_warnings(
             target_root=target_root,
@@ -5344,6 +5351,44 @@ def _completed_execplan_warnings(completed_execplans: list[dict[str, Any]]) -> l
     return warnings
 
 
+def _stale_completed_active_execplan_warnings(
+    *, completed_execplans: list[dict[str, Any]], active_items: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    completed_by_ref: dict[str, dict[str, Any]] = {}
+    for plan in completed_execplans:
+        path = str(plan.get("path", "")).strip()
+        if not path:
+            continue
+        for ref in _execplan_equivalent_refs(path):
+            completed_by_ref[ref] = plan
+
+    warnings: list[dict[str, str]] = []
+    for item in active_items:
+        item_id = str(item.get("id", "")).strip()
+        item_ref = _active_execplan_reference(item)
+        plan = completed_by_ref.get(item_ref)
+        if plan is None:
+            continue
+        plan_path = str(plan.get("path", item_ref)).strip()
+        warnings.append(
+            {
+                "warning_class": "stale_completed_active_state",
+                "path": plan_path or PLANNING_STATE_PATH.as_posix(),
+                "message": (
+                    f"Active planning item '{item_id or '<unknown>'}' points to a completed execplan; "
+                    "future work may be routed through stale active state until closeout cleanup runs."
+                ),
+                "suggested_fix": (
+                    f"Run `agentic-planning close-item {item_id} --target . --format json` "
+                    "or `agentic-planning closeout <plan> ...` to remove the active state through a command-owned writer."
+                    if item_id
+                    else "Run `agentic-planning close-item <item-id> --target . --format json` after confirming the completed item id."
+                ),
+            }
+        )
+    return warnings
+
+
 def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | None) -> list[dict[str, str]]:
     del target_root
     if not isinstance(state, dict):
@@ -5895,7 +5940,7 @@ def _registered_execplan_refs(
             refs.update(_execplan_equivalent_refs(normalized))
 
     for item in planning_items:
-        for key in ("surface", "path"):
+        for key in ("surface", "path", "execplan"):
             add_ref(item.get(key))
         raw_refs = item.get("refs", [])
         if isinstance(raw_refs, list):
@@ -9170,7 +9215,19 @@ def _default_lane_record(
 
 def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dict[str, Any]:
     references = record.get("references", [])
-    return {
+    current_slice = str(record.get("current_slice", "")).strip()
+    current_slice_record = next(
+        (
+            slice_record
+            for slice_record in record.get("slice_sequence", [])
+            if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == current_slice
+        ),
+        {},
+    )
+    execplan_ref = ""
+    if isinstance(current_slice_record, dict):
+        execplan_ref = str(current_slice_record.get("execplan_ref") or current_slice_record.get("execplan") or "").strip()
+    projection = {
         "id": str(record.get("id", "")).strip(),
         "title": str(record.get("title", "")).strip(),
         "maturity": "active" if record.get("status") == "active" else "ready",
@@ -9186,6 +9243,11 @@ def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dic
             if isinstance(reference, dict) and str(reference.get("target", "")).strip()
         ],
     }
+    if current_slice:
+        projection["current_slice"] = current_slice
+    if execplan_ref:
+        projection["execplan"] = execplan_ref
+    return projection
 
 
 def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lane_relative: str) -> None:
@@ -13473,6 +13535,9 @@ def _copy_payload(
         if target_relative.name.endswith(".template.md"):
             target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
         destination = target_root / target_relative
+        if relative == UPGRADE_SOURCE_PATH:
+            _copy_upgrade_source_file(source=source, destination=destination, result=result, force=force)
+            continue
         existed = destination.exists()
         if existed and conservative:
             result.add("skipped", destination, "already present")
@@ -13523,6 +13588,9 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
     if not source.exists():
         result.add("manual review", destination, "payload source file is missing")
         return
+    if relative == UPGRADE_SOURCE_PATH:
+        _copy_upgrade_source_file(source=source, destination=destination, result=result, force=False)
+        return
 
     if destination.exists():
         if not overwrite:
@@ -13545,6 +13613,30 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
     result.add("copied", destination, source.as_posix())
+
+
+def _copy_upgrade_source_file(*, source: Path, destination: Path, result: InstallResult, force: bool) -> None:
+    if destination.exists():
+        existing = destination.read_text(encoding="utf-8")
+        if is_valid_upgrade_source_text(existing) and not force:
+            result.add("current", destination, "upgrade source metadata already recorded; preserving repo-local source selection")
+            return
+        action = "would overwrite" if result.dry_run else "overwritten"
+        detail = (
+            "refresh upgrade source metadata with current install date"
+            if is_valid_upgrade_source_text(existing)
+            else "upgrade source metadata missing or invalid; refreshing with packaged default"
+        )
+    else:
+        action = "would copy" if result.dry_run else "copied"
+        detail = f"{source.as_posix()} with current install date"
+
+    if result.dry_run:
+        result.add(action, destination, detail)
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(render_upgrade_source(), encoding="utf-8")
+    result.add(action, destination, detail)
 
 
 def _remove_bundled_skill_file(*, relative: Path, target_root: Path) -> bool:
@@ -13731,6 +13823,8 @@ def _can_remove_payload_file(*, relative: Path, target_root: Path) -> bool:
         if expected_text is None:
             return False
         return destination.read_text(encoding="utf-8") == expected_text
+    if relative == UPGRADE_SOURCE_PATH:
+        return is_default_upgrade_source_text(destination.read_text(encoding="utf-8"))
     expected = _expected_target_file_bytes(relative=relative, target_root=target_root)
     if expected is None:
         return False
@@ -14406,7 +14500,7 @@ def _normalize_status(status: str) -> str:
     lowered = status.strip().lower()
     if lowered in {"in-progress", "active", "ongoing", "current"}:
         return "in-progress"
-    if lowered in {"done", "completed", "closed"}:
+    if lowered in {"complete", "done", "completed", "closed"}:
         return "completed"
     return "planned"
 

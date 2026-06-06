@@ -352,6 +352,16 @@ def _is_valid_upgrade_source_text(text: str) -> bool:
     return source_type in {"git", "local"} and bool(source_ref)
 
 
+def render_upgrade_source_record(*, recorded_at: str | None = None) -> str:
+    return (
+        'source_type = "git"\n'
+        'source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"\n'
+        'source_label = "agentic-memory monorepo master"\n'
+        f'recorded_at = "{recorded_at or datetime.now(UTC).date().isoformat()}"\n'
+        "recommended_upgrade_after_days = 30\n"
+    )
+
+
 def _validate_upgrade_source_record(path: Path, result) -> None:
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))

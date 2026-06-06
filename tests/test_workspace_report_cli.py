@@ -1445,6 +1445,28 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[workflow_obligations.generic_closeout_obligation]
+summary = "Render a generic required closeout obligation."
+stage = "closeout"
+force = "required-before-closeout"
+scope_tags = ["planning"]
+commands = ["agentic-workspace report --target . --section workflow_obligations --format json"]
+review_hint = "Generic obligation must appear in the closeout report."
+
+[workflow_obligations.dogfooding_lane_closeout]
+summary = "Report dogfooding findings before lane closeout."
+stage = "closeout"
+force = "required-before-closeout"
+scope_tags = ["planning", "dogfooding"]
+commands = ["agentic-workspace report --target . --section workflow_obligations --format json"]
+review_hint = "Dogfooding is covered by the same generic closeout contract."
+""",
+    )
     plan = target / ".agentic-workspace" / "planning" / "execplans" / "planned-slice.plan.json"
     _write_json(
         plan,
@@ -1525,12 +1547,27 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
     assert "changed surfaces" in rendering["must_include"]
     assert "closure boundary" in rendering["must_include"]
     assert "residue or follow-up status" in rendering["must_include"]
+    assert "workflow obligation status" in rendering["must_include"]
     rendered = rendering["rendered_summary"]
     assert "Changed: workspace_runtime_primitives.py; tests/test_workspace_report_cli.py" in rendered["rendered_text"]
     assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in rendered["rendered_text"]
     assert "Closure boundary:" in rendered["rendered_text"]
     assert "Residue:" in rendered["rendered_text"]
+    assert "Workflow obligations:" in rendered["rendered_text"]
     assert rendered["required_fact_coverage"]["status"] == "complete"
+    obligation_contract = report["workflow_obligation_contract"]
+    assert obligation_contract["state_model"] == ["required", "satisfied", "not-applicable", "deferred", "blocked", "rendered"]
+    obligation_rows = {row["id"]: row for row in obligation_contract["items"]}
+    assert obligation_rows["generic_closeout_obligation"]["state"] == "required"
+    assert obligation_rows["generic_closeout_obligation"]["allowed_resolution_states"] == [
+        "satisfied",
+        "not-applicable",
+        "deferred",
+        "blocked",
+        "rendered",
+    ]
+    assert obligation_rows["dogfooding_lane_closeout"]["state"] == "required"
+    assert obligation_contract["authority_boundary"]["surface"] == "workflow_obligation_closeout_contract"
     chat_template = rendering["chat_report_template"]
     assert chat_template["kind"] == "agentic-workspace/final-chat-report-template/v1"
     assert chat_template["status"] == "ready"
@@ -1540,6 +1577,7 @@ def test_report_closeout_report_renders_planned_slice_first_inspection_contract(
     assert "Changed: workspace_runtime_primitives.py; tests/test_workspace_report_cli.py" in sections["user_visible_change"]["lines"]
     assert "Proof: uv run pytest tests/test_workspace_report_cli.py -q passed" in sections["proof"]["lines"]
     assert any(line.startswith("Closure boundary:") for line in sections["caveats"]["lines"])
+    assert any(line.startswith("Workflow obligations:") for line in sections["caveats"]["lines"])
     assert any("agent owns final wording" in line for line in sections["authority"]["lines"])
     language_guidance = chat_template["authority_language_guidance"]
     assert language_guidance["preferred_phrasing"]["observed_facts"].startswith("AW reports/observes")
@@ -1599,6 +1637,14 @@ def test_report_closeout_report_uses_recent_archived_closeout_evidence_without_a
     assert report["planning_evidence"]["source"]["path"] == (".agentic-workspace/planning/execplans/archive/archived-closeout.plan.json")
     assert report["work_completed"] == "Implemented the archived evidence closeout report."
     assert report["changes"]["source"] == "planning.archive.execplan.execution_run"
+    assert report["validation"]["proof_execution"]["status"] == "recorded"
+    assert report["validation"]["proof_execution"]["source_field"] == "planning.archive.execplan.proof_report.validation proof"
+    assert report["validation"]["proof_execution"]["claim_boundary"] == "proof execution only"
+    assert report["validation"]["proof_confidence"]["intent_proof_status"] == "not_recorded"
+    assert report["validation"]["proof_confidence"]["confidence"] == "low"
+    assert "intent_satisfaction.closure_scope.validation_proof" not in report["gaps_and_residual_risk"]["completion_blockers"]
+    rendered_text = report["final_response_rendering"]["rendered_summary"]["rendered_text"]
+    assert "blocked by: intent_satisfaction.closure_scope.validation_proof" not in rendered_text
 
 
 def test_report_closeout_report_prefers_retained_closeout_evidence_over_older_archive(tmp_path: Path, capsys) -> None:

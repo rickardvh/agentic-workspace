@@ -2047,6 +2047,62 @@ def test_planning_summary_does_not_treat_historical_followups_as_current_work(tm
     assert contract["recommended_next_action"] == "No dangling larger intent or lower-trust closeout signals detected."
 
 
+def test_planning_summary_warns_when_active_state_points_to_completed_execplan(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "completed-active", status = "active", surface = ".agentic-workspace/planning/execplans/completed-active.plan.json", why_now = "already done." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace/planning/execplans/completed-active.plan.json",
+        item_id="completed-active",
+        status="completed",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    warning = next(
+        warning for warning in summary["planning_surface_health"]["warnings"] if warning["warning_class"] == "stale_completed_active_state"
+    )
+    assert warning["path"] == ".agentic-workspace/planning/execplans/completed-active.plan.json"
+    assert "close-item completed-active" in warning["suggested_fix"]
+    assert "completed execplan" in warning["message"]
+
+
+def test_close_item_accepts_complete_status_for_state_cleanup(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "complete-active", status = "complete", surface = ".agentic-workspace/planning/execplans/complete-active.plan.json", why_now = "cleanup after closeout." }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = close_planning_item("complete-active", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["updated"]
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    assert state["todo"]["active_items"] == []
+
+
 def test_planning_summary_prioritizes_current_execution_over_historical_audit_backlog(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

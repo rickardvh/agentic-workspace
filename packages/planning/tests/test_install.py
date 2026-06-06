@@ -7,6 +7,7 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
+from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, current_recorded_at, resolve_upgrade_source
 
 
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
@@ -64,6 +65,39 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert not (tmp_path / "tools").exists()
     assert not (tmp_path / "scripts").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
+
+
+def test_install_bootstrap_writes_fresh_upgrade_source_record(tmp_path: Path) -> None:
+    result = install_bootstrap(target=tmp_path)
+
+    source_path = tmp_path / UPGRADE_SOURCE_PATH
+    text = source_path.read_text(encoding="utf-8")
+    resolved = resolve_upgrade_source(tmp_path)
+
+    assert 'source_type = "git"' in text
+    assert 'source_label = "agentic-planning monorepo master"' in text
+    assert f'recorded_at = "{current_recorded_at()}"' in text
+    assert resolved.age_days() == 0
+    assert any(
+        action.kind == "copied" and action.path == source_path and "current install date" in action.detail for action in result.actions
+    )
+
+
+def test_upgrade_bootstrap_preserves_existing_upgrade_source_metadata(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    source_path = tmp_path / UPGRADE_SOURCE_PATH
+    source_path.write_text(
+        'source_type = "local"\nsource_ref = "./vendor/agentic-planning"\nrecorded_at = "2026-01-15"\n',
+        encoding="utf-8",
+    )
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert source_path.read_text(encoding="utf-8").startswith('source_type = "local"\n')
+    assert any(
+        action.kind == "current" and action.path == source_path and "preserving repo-local source selection" in action.detail
+        for action in result.actions
+    )
 
 
 def test_direct_planning_install_warns_without_workspace_orchestrator(tmp_path: Path) -> None:

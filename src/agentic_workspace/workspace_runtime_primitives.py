@@ -2286,6 +2286,8 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
     argv = [command]
     if command == "promote-to-plan":
         argv.append(str(args.item_id))
+    elif command in {"lane-promote", "lane-activate", "lane-close", "lane-archive"} and getattr(args, "lane", None):
+        argv.append(str(args.lane))
     elif command in {"archive-plan", "closeout"} and getattr(args, "plan", None):
         argv.append(str(args.plan))
     elif command == "close-item" and getattr(args, "item", None):
@@ -2302,6 +2304,12 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--scope", "scope"),
         ("--classification", "classification"),
         ("--route", "route"),
+        ("--current-slice", "current_slice"),
+        ("--proof", "proof"),
+        ("--residual-work", "residual_work"),
+        ("--parent-contribution", "parent_contribution"),
+        ("--parent-close-permission", "parent_close_permission"),
+        ("--next-owner", "next_owner"),
         ("--skipped-reason", "skipped_reason"),
         ("--expected-savings", "expected_savings"),
         ("--actual-friction", "actual_friction"),
@@ -9060,6 +9068,7 @@ def _closeout_report_final_response_rendering_payload(
     behavior_preservation: dict[str, Any] | None = None,
     parent_intent_status: dict[str, Any] | None = None,
     applicable_intent_status: dict[str, Any] | None = None,
+    workflow_obligation_contract: dict[str, Any] | None = None,
     review_mode: str = "",
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
@@ -9076,7 +9085,16 @@ def _closeout_report_final_response_rendering_payload(
     behavior_preservation = _as_dict(behavior_preservation)
     parent_intent_status = _as_dict(parent_intent_status)
     applicable_intent_status = _as_dict(applicable_intent_status)
+    workflow_obligation_contract = _as_dict(workflow_obligation_contract)
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
+    obligation_items = [item for item in _list_payload(workflow_obligation_contract.get("items")) if isinstance(item, dict)]
+    required_obligations = [
+        item
+        for item in obligation_items
+        if str(item.get("state") or "") in {"required", "blocked"}
+        and str(item.get("force") or "") in {"required-before-closeout", "blocking"}
+    ]
+    workflow_obligations_block_done = bool(required_obligations)
 
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
@@ -9114,6 +9132,7 @@ def _closeout_report_final_response_rendering_payload(
             "review focus": ("review focus:",),
             "parent intent status": ("parent intent:",),
             "applicable intent status": ("applicable intent:",),
+            "workflow obligation status": ("workflow obligations:",),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -9180,6 +9199,7 @@ def _closeout_report_final_response_rendering_payload(
                     "Behavior caveat:",
                     "Parent intent:",
                     "Applicable intent:",
+                    "Workflow obligations:",
                 )
             ):
                 caveat_lines.append(line)
@@ -9269,7 +9289,9 @@ def _closeout_report_final_response_rendering_payload(
         and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
         and item.get("owner")
     ]
-    has_material_guidance_signal = bool(guidance_only and (lower_trust or profile_requires_detail or owners))
+    has_material_guidance_signal = bool(
+        guidance_only and (lower_trust or profile_requires_detail or owners or workflow_obligations_block_done)
+    )
 
     if guidance_only and not has_material_guidance_signal:
         rendering_mode = "terse"
@@ -9418,6 +9440,20 @@ def _closeout_report_final_response_rendering_payload(
             "Applicable intent outcome: " + "; ".join(fragment for fragment in fragments if fragment and fragment != "owner: None")
         )
 
+    if required_obligations:
+        must_include.append("workflow obligation status")
+        state_summary = ", ".join(
+            f"{item.get('id')}: {item.get('state')}" for item in required_obligations[:4] if str(item.get("id") or "")
+        )
+        summary_lines.append(
+            "Workflow obligations: "
+            + (state_summary or f"{len(required_obligations)} required before closeout")
+            + "; render satisfied, not-applicable, deferred, or blocked evidence before claiming completion."
+        )
+        must_not_claim.append(
+            "Do not claim completion while required workflow obligations remain unrendered, unsatisfied, undeferred, or unblocked."
+        )
+
     boundary_text = present(completion_decision)
     completion_boundary_text = present(
         str(
@@ -9468,6 +9504,7 @@ def _closeout_report_final_response_rendering_payload(
             or has_material_guidance_signal
             or parent_status_blocks_done
             or applicable_intent_status.get("closeout_blocked")
+            or workflow_obligations_block_done
         )
         else "available"
     )
@@ -9477,6 +9514,7 @@ def _closeout_report_final_response_rendering_payload(
         or has_material_guidance_signal
         or parent_status_blocks_done
         or applicable_intent_status.get("closeout_blocked")
+        or workflow_obligations_block_done
     )
     summary_lines = summary_lines[:8]
     unique_must_include = list(dict.fromkeys(must_include))
@@ -9516,6 +9554,79 @@ def _closeout_report_final_response_rendering_payload(
         "plain_done_allowed": plain_done_allowed,
         "raw_json_allowed": False,
         "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+    }
+
+
+def _workflow_obligation_closeout_contract_payload(*, config: WorkspaceConfig, active_planning_record: dict[str, Any]) -> dict[str, Any]:
+    workflow_obligations = _workflow_obligations_report_payload(
+        config=config,
+        active_planning_record=active_planning_record,
+    )
+    closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
+    required = [item for item in _list_payload(closeout_obligations.get("required_before_lane_closeout")) if isinstance(item, dict)]
+    recommended = [item for item in _list_payload(closeout_obligations.get("recommended_before_lane_closeout")) if isinstance(item, dict)]
+    state_model = ["required", "satisfied", "not-applicable", "deferred", "blocked", "rendered"]
+
+    def row(obligation: dict[str, Any], *, required_item: bool) -> dict[str, Any]:
+        force = str(obligation.get("force") or "recommended")
+        state = "required" if required_item else "not-applicable"
+        if force == "blocking" and required_item:
+            state = "blocked"
+        commands = [str(command) for command in _list_payload(obligation.get("commands")) if str(command).strip()]
+        return {
+            "id": str(obligation.get("id") or "").strip(),
+            "summary": str(obligation.get("summary") or "").strip(),
+            "stage": str(obligation.get("stage") or "").strip(),
+            "force": force,
+            "state": state,
+            "rendered": False,
+            "commands": commands,
+            "review_hint": str(obligation.get("review_hint") or "").strip(),
+            "allowed_resolution_states": state_model[1:],
+            "evidence_expected": (
+                "Record satisfaction evidence, not-applicable rationale, deferral owner, blocked reason, and render it in final response."
+                if required_item
+                else "Optional or non-current obligation; mention only if material to closeout."
+            ),
+        }
+
+    items = [row(item, required_item=True) for item in required] + [row(item, required_item=False) for item in recommended]
+    required_count = len(required)
+    blocking_count = sum(1 for item in items if item["state"] == "blocked")
+    return {
+        "kind": "agentic-workspace/workflow-obligation-closeout-contract/v1",
+        "status": "required" if required_count else "recommended" if items else "none",
+        "state_model": state_model,
+        "required_count": required_count,
+        "blocking_count": blocking_count,
+        "items": items,
+        "checklist": [
+            "satisfied",
+            "not-applicable",
+            "deferred",
+            "blocked",
+            "rendered",
+        ],
+        "authority_boundary": {
+            "kind": "agentic-workspace/authority-boundary/v1",
+            "surface": "workflow_obligation_closeout_contract",
+            "authority_class": "hard-gate" if required_count else "advisory-support",
+            "enforced_by_aw": ["required configured closeout obligations"] if required_count else [],
+            "observed_by_aw": ["workspace config workflow_obligations", "current scope tags"],
+            "recommended_by_aw": ["render required obligation status before completion claim"] if required_count else [],
+            "agent_owned_decisions": [
+                "semantic satisfaction evidence",
+                "not-applicable rationale",
+                "deferred owner choice",
+                "blocked explanation",
+                "human-facing wording",
+            ],
+            "human_owned_decisions": ["accepting deferral, waiver, or blocked closeout when applicable"],
+        },
+        "rule": (
+            "Configured required closeout obligations must resolve to satisfied, not-applicable, deferred, blocked, and rendered "
+            "before a completion claim; AW exposes the contract, while the agent owns the semantic evidence."
+        ),
     }
 
 
@@ -9571,8 +9682,8 @@ def _closeout_report_payload(
     trust = str(closeout_trust.get("trust", "unknown"))
     if profile_policy["selected_profile"] == "audit" and completeness["status"] != "complete":
         trust = "lower-trust"
-    options = {str(item.get("id", "")): item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)}
-    first_blocking_option = next((item for item in options.values() if item.get("allowed") is False and item.get("blocking_fields")), {})
+    raw_completion_options = [item for item in _list_payload(closeout_trust.get("completion_options")) if isinstance(item, dict)]
+    options = {str(item.get("id", "")): item for item in raw_completion_options}
     next_action = (
         closeout_trust.get("recommended_next_action")
         or _as_dict(closeout_trust.get("terminal_action")).get("recommended_next_action")
@@ -9598,13 +9709,75 @@ def _closeout_report_payload(
         verification=verification,
         assurance_requirements=_as_dict(closeout_trust.get("assurance_requirements")),
     )
+
+    def meaningful_closeout_text(value: Any) -> str:
+        text = str(value or "").strip()
+        return "" if text.lower() in {"", "none", "null", "unknown", "pending", "not-run-yet"} else text
+
     changed_surfaces = str(execution.get("changed surfaces") or "").strip()
-    validation_proof = str(proof_report.get("validation proof") or execution.get("validations run") or "").strip()
+    raw_proof_report_validation = str(proof_report.get("validation proof") or "").strip()
+    raw_execution_validation = str(execution.get("validations run") or "").strip()
+    proof_report_validation = meaningful_closeout_text(raw_proof_report_validation)
+    validation_proof = str(
+        proof_report_validation or meaningful_closeout_text(raw_execution_validation) or raw_proof_report_validation
+    ).strip()
+    proof_achieved_now = str(proof_report.get("proof achieved now") or "").strip()
+    proof_execution_recorded = bool(proof_report_validation) or meaningful_closeout_text(proof_achieved_now).lower().startswith(
+        ("yes", "passed", "satisfied", "complete")
+    )
+    validation_proof_blocker = "intent_satisfaction.closure_scope.validation_proof"
+    proof_execution = {
+        "kind": "agentic-workspace/closeout-proof-execution/v1",
+        "status": "recorded" if proof_execution_recorded else "missing",
+        "proof": validation_proof,
+        "proof_achieved_now": proof_achieved_now,
+        "source_field": (
+            "planning.closeout_evidence.proof_report.validation proof"
+            if evidence_is_retained
+            else "planning.archive.execplan.proof_report.validation proof"
+            if evidence_is_archived
+            else "planning.active.planning_record.proof_report.validation proof"
+        ),
+        "claim_boundary": "proof execution only",
+        "confidence_boundary": (
+            "Recorded proof execution satisfies the validation-proof reporting blocker, but structured intent-proof "
+            "confidence remains separate and must not be inferred from free-form proof text."
+        ),
+        "rule": "Proof execution records that validation was reported; proof_confidence reports structured claim support.",
+    }
+    completion_options = copy.deepcopy(raw_completion_options)
+    option_blockers: dict[str, list[str]] = {}
+    parent_status_value = str(parent_intent_status.get("status") or "").strip()
+    if parent_status_value and parent_status_value not in {"satisfied", "guidance-only", "not-recorded"}:
+        option_blockers.setdefault("claim-work-complete", []).append("parent_intent_status")
+        option_blockers.setdefault("close-parent-lane", []).append("parent_intent_status")
+    if applicable_intent_status.get("closeout_blocked"):
+        blocked_claims = [
+            str(item).strip() for item in _list_payload(applicable_intent_status.get("blocked_claims")) if str(item).strip()
+        ] or ["claim-work-complete", "close-parent-lane"]
+        for claim in blocked_claims:
+            option_blockers.setdefault(claim, []).append("applicable_intent_status")
+    for option in completion_options:
+        blockers_for_option = _dedupe([*(_list_payload(option.get("blocking_fields"))), *option_blockers.get(str(option.get("id")), [])])
+        if proof_execution_recorded:
+            blockers_for_option = [blocker for blocker in blockers_for_option if str(blocker) != validation_proof_blocker]
+        if not blockers_for_option:
+            option.pop("blocking_fields", None)
+            continue
+        option["blocking_fields"] = blockers_for_option
+        if str(option.get("id")) in option_blockers:
+            option["allowed"] = False
+            option["why"] = "completion claim is blocked until parent/applicable intent evidence is reconciled"
     completion_decision = str(completion_contract.get("completion_decision", "unknown"))
     proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
     behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     residual_risk = str(proof_confidence.get("residual_risk", ""))
+    first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
+    workflow_obligation_contract = _workflow_obligation_closeout_contract_payload(
+        config=config,
+        active_planning_record=active_planning_record,
+    )
     decision_review = _closeout_report_decision_review_payload(
         active_planning_record=active_planning_record,
         proof_report=proof_report,
@@ -9626,7 +9799,7 @@ def _closeout_report_payload(
         validation_proof=validation_proof,
         completion_decision=completion_decision,
         completion_boundary=completion_boundary,
-        completion_options=closeout_trust.get("completion_options", []),
+        completion_options=completion_options,
         completeness=completeness,
         residual_risk=residual_risk,
         blockers=blockers if isinstance(blockers, list) else [],
@@ -9635,6 +9808,7 @@ def _closeout_report_payload(
         behavior_preservation=behavior_preservation,
         parent_intent_status=parent_intent_status,
         applicable_intent_status=applicable_intent_status,
+        workflow_obligation_contract=workflow_obligation_contract,
         review_mode=selected_review_mode,
     )
     detail_commands = {
@@ -9679,6 +9853,7 @@ def _closeout_report_payload(
             f"selected_profile={profile_policy['selected_profile']}",
             f"trust={trust}",
             f"completion_decision={completion_decision}",
+            f"workflow_obligation_required_count={workflow_obligation_contract['required_count']}",
         ],
         recommended_by_aw=[str(next_action), profile_policy["next_command"]],
         proof_hints=[validation_proof],
@@ -9732,7 +9907,8 @@ def _closeout_report_payload(
         },
         "validation": {
             "proof": validation_proof,
-            "proof_achieved_now": str(proof_report.get("proof achieved now") or "").strip(),
+            "proof_achieved_now": proof_achieved_now,
+            "proof_execution": proof_execution,
             "proof_confidence": closeout_trust.get("proof_confidence", {}),
             "behavior_preservation": behavior_preservation,
         },
@@ -9744,12 +9920,13 @@ def _closeout_report_payload(
             if isinstance(workflow_compliance_summary, dict)
             else "unknown",
         },
+        "workflow_obligation_contract": workflow_obligation_contract,
         "closure_boundary": {
             "completion_decision": completion_contract.get("completion_decision", "unknown"),
             "decision_reasons": completion_contract.get("decision_reasons", []),
             "completion_boundary": completion_boundary,
             "terminal_action": closeout_trust.get("terminal_action", {}),
-            "completion_options": closeout_trust.get("completion_options", []),
+            "completion_options": completion_options,
         },
         "traceability": {
             "status": "present",
@@ -12831,6 +13008,7 @@ def _closeout_completion_options(
     intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
     intent_proof_status = str(intent_proof_check.get("status", "not_recorded")).strip().lower() or "not_recorded"
     intent_proof_supports_work = intent_proof_status in {"representative", "sufficient_for_claim"}
+    intent_proof_records_execution = intent_proof_status in {"regression_only", "representative", "sufficient_for_claim"}
     intent_proof_needs_review = intent_proof_status == "needs_review"
     behavior_preservation = _behavior_preservation_confidence_payload(intent_proof_check)
     unsupported_preservation = behavior_preservation.get("status") == "claim-needs-evidence"
@@ -12859,12 +13037,18 @@ def _closeout_completion_options(
         }
     )
     acceptance_ok = acceptance_trust in {"normal", "not-applicable", ""}
-    intent_satisfied = intent_trust in {"satisfied", "normal"}
-    close_evidence = larger_status in {"closed", "complete", "completed", "done"} or closure_decision in {
-        "archive-and-close",
-        "close",
-        "closed",
-    }
+    intent_satisfied = intent_trust in {"satisfied", "normal"} or (intent_trust in {"", "not-applicable"} and intent_proof_supports_work)
+    close_evidence = (
+        larger_status in {"closed", "complete", "completed", "done"}
+        or closure_decision
+        in {
+            "archive-and-close",
+            "close",
+            "closed",
+        }
+        or (intent_trust in {"", "not-applicable"} and intent_proof_supports_work)
+    )
+    proof_achieved = proof_achieved or intent_proof_records_execution
     completion_blockers: list[str] = []
     if not proof_achieved:
         completion_blockers.append("intent_satisfaction.closure_scope.validation_proof")

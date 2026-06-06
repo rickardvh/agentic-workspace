@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys as _sys
+from datetime import UTC, datetime
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -10,6 +11,10 @@ from jsonschema import Draft202012Validator
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+
+
+def _today() -> str:
+    return datetime.now(UTC).date().isoformat()
 
 
 def test_ownership_module_root_matches_workspace_ledger() -> None:
@@ -466,7 +471,7 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     assert 'source_type = "git"' in text
     assert MEMORY_GIT_SOURCE_REF in text
     assert 'source_label = "agentic-memory monorepo master"' in text
-    assert 'recorded_at = "2026-05-06"' in text
+    assert f'recorded_at = "{_today()}"' in text
 
 
 def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
@@ -514,7 +519,7 @@ def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
     assert any(
         action.path == target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml"
         and action.kind == "current"
-        and "recorded_at=2026-05-06" in action.detail
+        and f"recorded_at={_today()}" in action.detail
         for action in result.actions
     )
 
