@@ -8113,9 +8113,10 @@ def _closeout_report_profile_policy_payload(
         high_risk_reasons.append(f"verification status is {verification_status}")
     if external_closeout_safe is False:
         high_risk_reasons.append("external evidence blocks closeout")
-    if request_review:
+    material_closeout_claim = active_planning or completeness_status not in {"guidance-only", "not-applicable", ""}
+    if request_review and material_closeout_claim:
         high_risk_reasons.append("closeout options require review")
-    if route_residue:
+    if route_residue and material_closeout_claim:
         high_risk_reasons.append("durable residue route is available")
     if high_risk_reasons:
         selected = "audit"
@@ -9069,6 +9070,7 @@ def _closeout_report_final_response_rendering_payload(
     parent_intent_status: dict[str, Any] | None = None,
     applicable_intent_status: dict[str, Any] | None = None,
     workflow_obligation_contract: dict[str, Any] | None = None,
+    completion_gate: dict[str, Any] | None = None,
     review_mode: str = "",
 ) -> dict[str, Any]:
     profile = str(profile_policy.get("selected_profile") or "minimal")
@@ -9086,6 +9088,8 @@ def _closeout_report_final_response_rendering_payload(
     parent_intent_status = _as_dict(parent_intent_status)
     applicable_intent_status = _as_dict(applicable_intent_status)
     workflow_obligation_contract = _as_dict(workflow_obligation_contract)
+    completion_gate = _as_dict(completion_gate)
+    gate_claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
     obligation_items = [item for item in _list_payload(workflow_obligation_contract.get("items")) if isinstance(item, dict)]
     required_obligations = [
@@ -9099,6 +9103,11 @@ def _closeout_report_final_response_rendering_payload(
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
 
+    def claim_authorized(claim_class: str) -> bool:
+        return claim_class in {
+            str(item).strip() for item in _list_payload(gate_claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+        }
+
     def rendered_summary_payload(
         *,
         status: str,
@@ -9109,7 +9118,7 @@ def _closeout_report_final_response_rendering_payload(
         plain_done_allowed: bool,
     ) -> dict[str, Any]:
         template_id = f"builtin/{rendering_mode}"
-        rendered_lines = summary_lines[:8]
+        rendered_lines = summary_lines[:10]
         if rendering_mode == "terse" and not rendered_lines:
             rendered_lines = ["Done."]
         required_checks: list[dict[str, str]] = []
@@ -9133,6 +9142,7 @@ def _closeout_report_final_response_rendering_payload(
             "parent intent status": ("parent intent:",),
             "applicable intent status": ("applicable intent:",),
             "workflow obligation status": ("workflow obligations:",),
+            "completion gate": ("completion gate:",),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -9163,6 +9173,14 @@ def _closeout_report_final_response_rendering_payload(
                 "must_not_claim": must_not_claim,
                 "plain_done_allowed": plain_done_allowed,
                 "raw_json_allowed": False,
+                "claim_authorization": {
+                    "allowed_claim_classes": _list_payload(gate_claim_authorization.get("allowed_claim_classes")),
+                    "blocked_claim_classes": _list_payload(gate_claim_authorization.get("blocked_claim_classes")),
+                    "closure_actions": _list_payload(gate_claim_authorization.get("closure_actions")),
+                    "renderer_rule": gate_claim_authorization.get("renderer_rule", ""),
+                }
+                if gate_claim_authorization
+                else {},
             },
             "warnings": warnings,
             "boundary": "Derived final-response presentation; canonical truth remains in closeout_report and its source fields.",
@@ -9239,10 +9257,18 @@ def _closeout_report_final_response_rendering_payload(
                         "residue or follow-up status",
                         "missing or partial evidence caveat",
                         "profile reason or caveat",
+                        "completion gate",
                     )
                 ),
                 "lines": caveat_lines,
-                "source_fields": ["completion_boundary", "residual_risk", "completion_options", "blockers", "next_action"],
+                "source_fields": [
+                    "completion_boundary",
+                    "completion_gate",
+                    "residual_risk",
+                    "completion_options",
+                    "blockers",
+                    "next_action",
+                ],
             },
             {
                 "id": "authority",
@@ -9276,6 +9302,13 @@ def _closeout_report_final_response_rendering_payload(
                 "omit empty optional sections",
                 "terse vs evidence-backed wording density",
             ],
+            "claim_authorization": {
+                "allowed_claim_classes": _list_payload(gate_claim_authorization.get("allowed_claim_classes")),
+                "blocked_claim_classes": _list_payload(gate_claim_authorization.get("blocked_claim_classes")),
+                "closure_actions": _list_payload(gate_claim_authorization.get("closure_actions")),
+            }
+            if gate_claim_authorization
+            else {},
             "rule": (
                 "Use this as the final chat-response scaffold when closeout details matter; keep canonical truth in "
                 "closeout_report fields and do not paste raw JSON."
@@ -9291,6 +9324,13 @@ def _closeout_report_final_response_rendering_payload(
     ]
     has_material_guidance_signal = bool(
         guidance_only and (lower_trust or profile_requires_detail or owners or workflow_obligations_block_done)
+    )
+    gate_status = present(str(completion_gate.get("status") or ""))
+    gate_blocks_full = gate_status in {"blocked", "continue-required", "clarification-required"}
+    gate_partial = gate_status == "human-accepted-partial"
+    gate_blocks_full_claim_class = bool(gate_claim_authorization) and not claim_authorized("full_intent_complete")
+    gate_blocks_issue_closure = bool(_list_payload(gate_claim_authorization.get("closure_actions"))) and not claim_authorized(
+        "issue_closure"
     )
 
     if guidance_only and not has_material_guidance_signal:
@@ -9424,6 +9464,29 @@ def _closeout_report_final_response_rendering_payload(
         summary_lines.append("Applicable intent: " + ("; ".join(fragments) if fragments else "unresolved applicable-intent obligation"))
         must_not_claim.extend(str(item) for item in _list_payload(applicable_intent_status.get("must_not_claim")) if str(item).strip())
 
+    if gate_blocks_full or gate_partial:
+        must_include.append("completion gate")
+        diagnostics = _as_dict(gate_claim_authorization.get("diagnostics"))
+        unsafe_examples = [str(item).strip() for item in _list_payload(diagnostics.get("unsafe_claim_examples")) if str(item).strip()]
+        if unsafe_examples:
+            must_not_claim.extend(f"Diagnostic unsafe claim example only, not enforcement rule: {item}" for item in unsafe_examples)
+        self_review = _as_dict(completion_gate.get("self_review"))
+        gate_reason = present(str(self_review.get("reason") or completion_gate.get("residual_intent") or ""))
+        allowed_claim_classes = [
+            str(item) for item in _list_payload(gate_claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+        ]
+        blocked_claim_classes = [
+            str(item) for item in _list_payload(gate_claim_authorization.get("blocked_claim_classes")) if str(item).strip()
+        ]
+        summary_lines.append(
+            "Completion gate: "
+            + gate_status
+            + f"; allowed claim classes: {', '.join(allowed_claim_classes) or 'none'}"
+            + f"; blocked claim classes: {', '.join(blocked_claim_classes) or 'none'}"
+            + f"; next: {completion_gate.get('required_next_action') or 'continue'}"
+            + (f"; reason: {gate_reason}" if gate_reason else "")
+        )
+
     durable_outcomes = [item for item in _list_payload(applicable_intent_status.get("durable_outcomes")) if isinstance(item, dict)]
     if durable_outcomes:
         must_include.append("applicable intent outcome")
@@ -9505,6 +9568,10 @@ def _closeout_report_final_response_rendering_payload(
             or parent_status_blocks_done
             or applicable_intent_status.get("closeout_blocked")
             or workflow_obligations_block_done
+            or gate_blocks_full
+            or gate_partial
+            or gate_blocks_full_claim_class
+            or gate_blocks_issue_closure
         )
         else "available"
     )
@@ -9515,8 +9582,12 @@ def _closeout_report_final_response_rendering_payload(
         or parent_status_blocks_done
         or applicable_intent_status.get("closeout_blocked")
         or workflow_obligations_block_done
+        or gate_blocks_full
+        or gate_partial
+        or gate_blocks_full_claim_class
+        or gate_blocks_issue_closure
     )
-    summary_lines = summary_lines[:8]
+    summary_lines = summary_lines[:10]
     unique_must_include = list(dict.fromkeys(must_include))
     chat_report_template = chat_report_template_payload(
         rendering_status=status_value,
@@ -9772,6 +9843,17 @@ def _closeout_report_payload(
     proof_confidence = _as_dict(closeout_trust.get("proof_confidence"))
     behavior_preservation = _as_dict(proof_confidence.get("behavior_preservation"))
     residual_risk = str(proof_confidence.get("residual_risk", ""))
+    completion_gate = _as_dict(closeout_trust.get("completion_gate"))
+    if not completion_gate:
+        completion_gate = _completion_gate_payload(
+            active_planning_record=active_planning_record,
+            intent_check=intent_check,
+            acceptance_reconciliation=_as_dict(closeout_trust.get("acceptance_criteria_reconciliation")),
+            intent_proof_check=_as_dict(closeout_trust.get("intent_proof_check")),
+            parent_intent_status=parent_intent_status,
+            applicable_intent_status=applicable_intent_status,
+            durable_residue_action=_as_dict(closeout_trust.get("durable_residue_action")),
+        )
     first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
     workflow_obligation_contract = _workflow_obligation_closeout_contract_payload(
@@ -9809,6 +9891,7 @@ def _closeout_report_payload(
         parent_intent_status=parent_intent_status,
         applicable_intent_status=applicable_intent_status,
         workflow_obligation_contract=workflow_obligation_contract,
+        completion_gate=completion_gate,
         review_mode=selected_review_mode,
     )
     detail_commands = {
@@ -9914,6 +9997,7 @@ def _closeout_report_payload(
         },
         "gaps_and_residual_risk": {
             "completion_blockers": blockers,
+            "completion_gate": completion_gate,
             "residual_risk": residual_risk,
             "durable_residue_action": closeout_trust.get("durable_residue_action", {}),
             "workflow_trust_impact": workflow_compliance_summary.get("trust_impact", "unknown")
@@ -9921,6 +10005,7 @@ def _closeout_report_payload(
             else "unknown",
         },
         "workflow_obligation_contract": workflow_obligation_contract,
+        "completion_gate": completion_gate,
         "closure_boundary": {
             "completion_decision": completion_contract.get("completion_decision", "unknown"),
             "decision_reasons": completion_contract.get("decision_reasons", []),
@@ -12962,6 +13047,7 @@ def _completion_option(
     command: str | None = None,
     owner: str | None = None,
     blocking_fields: list[str] | None = None,
+    required_claim_class: str | None = None,
 ) -> dict[str, Any]:
     if option_id not in _COMPLETION_OPTION_IDS:
         raise ValueError(f"unknown completion option id: {option_id}")
@@ -12972,6 +13058,8 @@ def _completion_option(
         item["owner"] = owner
     if blocking_fields:
         item["blocking_fields"] = blocking_fields
+    if required_claim_class:
+        item["required_claim_class"] = required_claim_class
     return item
 
 
@@ -12980,6 +13068,7 @@ def _closeout_completion_options(
     status: str,
     trust: str,
     strict_gate: dict[str, Any],
+    completion_gate: dict[str, Any] | None = None,
     intent_check: dict[str, Any],
     acceptance_reconciliation: dict[str, Any],
     intent_proof_check: dict[str, Any] | None = None,
@@ -13007,6 +13096,22 @@ def _closeout_completion_options(
     intent_trust = str(intent_check.get("trust", "")).strip().lower()
     acceptance_trust = str(acceptance_reconciliation.get("trust", "")).strip().lower()
     intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
+    completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
+    completion_gate_status = str(completion_gate.get("status", "")).strip()
+    claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    allowed_claim_classes = {
+        str(item).strip() for item in _list_payload(claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+    }
+
+    def structured_claim_authorized(claim_class: str) -> bool:
+        return not claim_authorization or claim_class in allowed_claim_classes
+
+    completion_gate_blocks_full = completion_gate_status in {
+        "blocked",
+        "continue-required",
+        "clarification-required",
+        "human-accepted-partial",
+    }
     intent_proof_status = str(intent_proof_check.get("status", "not_recorded")).strip().lower() or "not_recorded"
     intent_proof_supports_work = intent_proof_status in {"representative", "sufficient_for_claim"}
     intent_proof_records_execution = intent_proof_status in {"regression_only", "representative", "sufficient_for_claim"}
@@ -13067,6 +13172,8 @@ def _closeout_completion_options(
         completion_blockers.append("intent_proof")
     if unsupported_preservation:
         completion_blockers.append("behavior_preservation")
+    if completion_gate_blocks_full:
+        completion_blockers.append("completion_gate")
     assurance_claim_blockers = _assurance_claim_blockers(assurance_requirements)
 
     slice_blockers = [
@@ -13085,15 +13192,23 @@ def _closeout_completion_options(
         and not intent_proof_needs_review
         and not unsupported_preservation
         and not assurance_claim_blockers.get("claim-slice-complete")
+        and structured_claim_authorized("slice_complete")
     )
     claim_work_allowed = (
         claim_slice_allowed
         and intent_satisfied
         and (not larger_intent_open)
         and intent_proof_supports_work
+        and not completion_gate_blocks_full
         and not assurance_claim_blockers.get("claim-work-complete")
+        and structured_claim_authorized("full_intent_complete")
     )
-    close_parent_allowed = claim_work_allowed and close_evidence and not assurance_claim_blockers.get("close-parent-lane")
+    close_parent_allowed = (
+        claim_work_allowed
+        and close_evidence
+        and not assurance_claim_blockers.get("close-parent-lane")
+        and structured_claim_authorized("parent_complete")
+    )
     route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
     )
@@ -13103,6 +13218,7 @@ def _closeout_completion_options(
         or intent_trust == "needs-review"
         or intent_proof_needs_review
         or unsupported_preservation
+        or completion_gate_status in {"blocked", "clarification-required"}
         or str(strict_gate.get("status", "")) == "requires-review"
         or assurance_review_required
     )
@@ -13121,6 +13237,7 @@ def _closeout_completion_options(
             if claim_slice_allowed
             else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
             blocking_fields=slice_blockers or None,
+            required_claim_class="slice_complete",
         ),
         _completion_option(
             "claim-work-complete",
@@ -13130,6 +13247,7 @@ def _closeout_completion_options(
             else "work completion is blocked until proof, intent, residue, continuation, and closeout evidence support it",
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=work_blockers or None,
+            required_claim_class="full_intent_complete",
         ),
         _completion_option(
             "keep-parent-open",
@@ -13148,6 +13266,7 @@ def _closeout_completion_options(
             else "parent lane closure requires satisfied larger intent and explicit closure evidence",
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=parent_blockers if parent_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+            required_claim_class="parent_complete",
         ),
         _completion_option(
             "route-residue",
@@ -13167,6 +13286,8 @@ def _closeout_completion_options(
             if intent_trust == "needs-review"
             else ["behavior_preservation"]
             if unsupported_preservation
+            else ["completion_gate"]
+            if completion_gate_status in {"blocked", "clarification-required"}
             else ["assurance_requirements"]
             if assurance_review_required
             else None,
@@ -13180,6 +13301,287 @@ def _closeout_completion_options(
             ),
         ),
     ]
+
+
+def _completion_gate_claim_authorization(
+    *,
+    status: str,
+    active_intent_satisfied: bool,
+    human_accepted_partial: bool,
+    claim_level_requested: str,
+    proof_status: str = "",
+    issue_refs: set[str],
+) -> dict[str, Any]:
+    all_claim_classes = [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure",
+    ]
+    rank = {
+        "partial_progress": 0,
+        "slice_complete": 1,
+        "slice": 1,
+        "lane_complete": 2,
+        "lane": 2,
+        "parent_complete": 3,
+        "parent": 3,
+        "full_intent_complete": 4,
+        "work_complete": 4,
+        "full": 4,
+    }
+    requested = str(claim_level_requested or "full-intent-complete").strip().lower().replace("-", "_")
+    requested_rank = rank.get(requested, 4)
+    proof_records_slice = proof_status in {
+        "regression_only",
+        "regression-only",
+        "representative",
+        "sufficient_for_claim",
+        "sufficient-for-claim",
+    }
+    if active_intent_satisfied:
+        allowed_claim_classes = [claim for claim in all_claim_classes if claim != "issue_closure" and rank.get(claim, 5) <= requested_rank]
+        if requested_rank >= rank["full_intent_complete"] and issue_refs:
+            allowed_claim_classes.append("issue_closure")
+    elif proof_records_slice and status in {"blocked", "continue-required"} and not human_accepted_partial:
+        allowed_claim_classes = ["partial_progress", "slice_complete"]
+    elif human_accepted_partial or status == "continue-required":
+        allowed_claim_classes = ["partial_progress"]
+    else:
+        allowed_claim_classes = []
+    blocked_claim_classes = [claim for claim in all_claim_classes if claim not in allowed_claim_classes]
+    closure_actions = [
+        {
+            "kind": "issue_closure",
+            "target": ref,
+            "authorized": "issue_closure" in allowed_claim_classes,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        }
+        for ref in sorted(issue_refs)
+    ]
+    unsafe_examples = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
+    if not active_intent_satisfied:
+        unsafe_examples.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+    return {
+        "kind": "agentic-workspace/claim-authorization/v1",
+        "allowed_claim_classes": allowed_claim_classes,
+        "blocked_claim_classes": blocked_claim_classes,
+        "closure_actions": closure_actions,
+        "renderer_rule": (
+            "Renderers must choose only templates whose required claim class and closure action are authorized here; "
+            "unsafe prose examples are diagnostics, not the enforcement model."
+        ),
+        "diagnostics": {
+            "unsafe_claim_examples": _dedupe(unsafe_examples),
+            "diagnostic_only": True,
+        },
+    }
+
+
+def _completion_gate_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    intent_check: dict[str, Any],
+    acceptance_reconciliation: dict[str, Any],
+    intent_proof_check: dict[str, Any] | None = None,
+    parent_intent_status: dict[str, Any] | None = None,
+    applicable_intent_status: dict[str, Any] | None = None,
+    durable_residue_action: dict[str, Any] | None = None,
+    claim_level_requested: str = "full-intent-complete",
+) -> dict[str, Any]:
+    active_planning_record = _as_dict(active_planning_record)
+    intent_check = _as_dict(intent_check)
+    acceptance_reconciliation = _as_dict(acceptance_reconciliation)
+    intent_proof_check = _as_dict(intent_proof_check)
+    parent_intent_status = _as_dict(parent_intent_status)
+    applicable_intent_status = _as_dict(applicable_intent_status)
+    durable_residue_action = _as_dict(durable_residue_action)
+    intent_satisfaction = _as_dict(active_planning_record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(active_planning_record.get("intent_continuity"))
+    required_continuation = _as_dict(active_planning_record.get("required_continuation"))
+    closure_check = _as_dict(active_planning_record.get("closure_check"))
+    parent_acceptance = _as_dict(active_planning_record.get("parent_acceptance"))
+
+    def truthy(value: Any) -> bool:
+        return str(value or "").strip().lower() in {"yes", "true", "accepted", "approved", "explicit", "human-accepted"}
+
+    def present(*values: Any) -> str:
+        for value in values:
+            if isinstance(value, (list, tuple)):
+                text = "; ".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                text = str(value or "").strip()
+            if text and text.lower() not in {"none", "no", "false", "null", "unknown", "pending", "not-recorded", "not recorded"}:
+                return text
+        return ""
+
+    parent_status = str(parent_intent_status.get("status") or "").strip()
+    intent_trust = str(intent_check.get("trust") or "").strip()
+    acceptance_trust = str(acceptance_reconciliation.get("trust") or "").strip()
+    proof_status = str(intent_proof_check.get("status") or "").strip()
+    required_follow_on = str(
+        required_continuation.get("required follow-on for the larger intended outcome") or intent_check.get("required_follow_on") or ""
+    ).strip()
+    continuation_owner = present(
+        parent_intent_status.get("continuation_owner"),
+        required_continuation.get("owner surface"),
+        intent_check.get("continuation_surface"),
+        durable_residue_action.get("owner"),
+    )
+    residual_intent = present(
+        parent_intent_status.get("residual_parent_intent"),
+        required_continuation.get("required follow-on for the larger intended outcome"),
+        intent_satisfaction.get("unsolved intent passed to"),
+        intent_check.get("residual_intent"),
+    )
+    human_accepted_partial = any(
+        truthy(value)
+        for value in (
+            closure_check.get("human accepted partial"),
+            closure_check.get("human_accepted_partial"),
+            closure_check.get("human accepted narrower scope"),
+            closure_check.get("human_accepted_narrower_scope"),
+            parent_acceptance.get("human accepted partial"),
+            parent_acceptance.get("human_accepted_partial"),
+            parent_acceptance.get("human accepted narrower scope"),
+            parent_acceptance.get("human_accepted_narrower_scope"),
+        )
+    )
+    proof_supports_full = proof_status in {"representative", "sufficient_for_claim", "sufficient-for-claim"}
+    parent_satisfied = parent_status in {"satisfied", "guidance-only", ""}
+    intent_satisfied_field = truthy(intent_satisfaction.get("was original intent fully satisfied?")) or truthy(
+        intent_continuity.get("this slice completes the larger intended outcome")
+    )
+    no_required_follow_on = required_follow_on.lower() in {"", "no", "false", "none"}
+    active_intent_satisfied = bool(
+        active_planning_record
+        and (intent_satisfied_field or intent_trust in {"satisfied", "normal"})
+        and no_required_follow_on
+        and parent_satisfied
+        and acceptance_trust in {"", "normal", "not-applicable"}
+        and proof_supports_full
+        and not applicable_intent_status.get("closeout_blocked")
+    )
+    continuation_possible = bool(
+        continuation_owner or residual_intent or required_follow_on.lower() in {"yes", "true", "required", "follow-up-required"}
+    )
+    ambiguous_or_blocked = (
+        intent_trust == "needs-review"
+        or applicable_intent_status.get("closeout_blocked")
+        or required_follow_on.lower() in {"unknown", "ambiguous"}
+        or str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+        in {"requires-review", "blocked"}
+    )
+    if active_intent_satisfied:
+        status = "allowed"
+        claim_level_allowed = claim_level_requested
+        required_next_action = "close-complete"
+    elif not active_planning_record and intent_check.get("status") == "unavailable":
+        status = "blocked"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "ask-human"
+    elif human_accepted_partial:
+        status = "human-accepted-partial"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "close-human-accepted-partial"
+    elif ambiguous_or_blocked:
+        status = "clarification-required"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "ask-human"
+    elif continuation_possible:
+        status = "continue-required"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "create-follow-on-plan" if continuation_owner else "continue-current-work"
+    else:
+        status = "blocked"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "ask-human"
+
+    issue_refs: set[str] = set()
+    for reference in _list_payload(active_planning_record.get("references")):
+        if isinstance(reference, dict):
+            issue_refs.update(_issue_refs_from_text(str(reference.get("target") or "")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("url") or "")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("role") or "")))
+        else:
+            issue_refs.update(_issue_refs_from_text(str(reference or "")))
+    for value in (
+        active_planning_record.get("title"),
+        present(intent_satisfaction.get("original intent"), parent_intent_status.get("original_intent")),
+        present(closure_check.get("closure target"), closure_check.get("closure_target")),
+    ):
+        issue_refs.update(_issue_refs_from_text(str(value or "")))
+    claim_authorization = _completion_gate_claim_authorization(
+        status=status,
+        active_intent_satisfied=active_intent_satisfied,
+        human_accepted_partial=human_accepted_partial,
+        claim_level_requested=claim_level_requested,
+        proof_status=proof_status,
+        issue_refs=issue_refs,
+    )
+    self_review_answer = "yes" if active_intent_satisfied else "no"
+    if active_intent_satisfied:
+        reason = "Recorded intent, parent status, proof, acceptance, and continuation fields support the requested completion claim."
+    else:
+        reason = present(
+            residual_intent,
+            parent_intent_status.get("residual_parent_intent"),
+            intent_check.get("summary"),
+            "The delivered work does not yet satisfy the active human intent at the requested claim level.",
+        )
+    return {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": status,
+        "active_intent_satisfied": active_intent_satisfied,
+        "human_accepted_partial": human_accepted_partial,
+        "claim_level_requested": claim_level_requested,
+        "claim_level_allowed": claim_level_allowed,
+        "required_next_action": required_next_action,
+        "claim_authorization": claim_authorization,
+        "residual_intent": "" if active_intent_satisfied else residual_intent,
+        "self_review": {
+            "question": "Does the delivered work satisfy the active human intent?",
+            "answer": self_review_answer,
+            "reason": reason,
+        },
+        "continuation": {
+            "owner_surface": continuation_owner,
+            "created_or_required": bool(
+                (not active_intent_satisfied) and (continuation_possible or status in {"blocked", "clarification-required"})
+            ),
+            "reason": ""
+            if active_intent_satisfied
+            else present(
+                residual_intent,
+                "Intent remains unsatisfied and must continue, route durably, or be clarified before full closeout.",
+            ),
+        },
+        "authority_boundary": {
+            "kind": "agentic-workspace/authority-boundary/v1",
+            "surface": "completion_gate",
+            "aw_owns": [
+                "forcing the transition rule",
+                "blocking unsupported structured claim classes and closure actions",
+                "routing continuation",
+            ],
+            "agent_owns": [
+                "semantic satisfaction judgment",
+                "evidence interpretation",
+                "next implementation decisions",
+            ],
+            "human_owns": [
+                "accepting narrower scope",
+                "changing intent",
+                "accepting unresolved residual intent",
+            ],
+        },
+        "rule": (
+            "If the agent records that active_intent_satisfied=false and human_accepted_partial=false, the workflow must "
+            "not terminate as done/full-complete; it must continue, route durable follow-on planning, or ask."
+        ),
+    }
 
 
 def _assurance_claim_blockers(assurance_requirements: dict[str, Any] | None) -> dict[str, list[str]]:
@@ -13311,6 +13713,14 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
+        active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
+        intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+            active_intent_contract=active_intent_contract,
+            acceptance={},
+            proof={},
+            intent_check=intent_check,
+            parent_intent_status={},
+        )
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
         assurance_requirements = _assurance_requirements_report_payload(config=config)
@@ -13320,13 +13730,25 @@ def _report_closeout_trust_payload(
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
         residue_action = durable_residue_action(trust="unavailable")
+        completion_gate = _completion_gate_payload(
+            active_planning_record={},
+            intent_check=intent_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
+            parent_intent_status={},
+            applicable_intent_status={},
+            durable_residue_action=residue_action,
+        )
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
             "strict_closeout_gate": gate,
+            "completion_gate": completion_gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "active_intent_contract": active_intent_contract,
+            "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
@@ -13344,6 +13766,7 @@ def _report_closeout_trust_payload(
                 status="unavailable",
                 trust="unavailable",
                 strict_gate=gate,
+                completion_gate=completion_gate,
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
                 intent_proof_check=intent_proof_check,
@@ -13358,6 +13781,14 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+        active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
+        intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+            active_intent_contract=active_intent_contract,
+            acceptance={},
+            proof={},
+            intent_check=intent_check,
+            parent_intent_status={},
+        )
         intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(
             planning_report=planning_report, target_root=target_root, config=config
@@ -13369,13 +13800,25 @@ def _report_closeout_trust_payload(
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
         residue_action = durable_residue_action(trust="unavailable")
+        completion_gate = _completion_gate_payload(
+            active_planning_record={},
+            intent_check=intent_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
+            parent_intent_status={},
+            applicable_intent_status={},
+            durable_residue_action=residue_action,
+        )
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
             "strict_closeout_gate": gate,
+            "completion_gate": completion_gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "active_intent_contract": active_intent_contract,
+            "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
@@ -13393,6 +13836,7 @@ def _report_closeout_trust_payload(
                 status="unavailable",
                 trust="unavailable",
                 strict_gate=gate,
+                completion_gate=completion_gate,
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
                 intent_proof_check=intent_proof_check,
@@ -13425,6 +13869,25 @@ def _report_closeout_trust_payload(
         if isinstance(planning_report.get("active"), dict)
         else {},
         target_root=target_root,
+    )
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=None,
+        acceptance={},
+        active_planning_record=raw_active_planning_record
+        or (planning_report.get("active", {}).get("planning_record", {}) if isinstance(planning_report.get("active"), dict) else {}),
+    )
+    parent_intent_status = _parent_intent_status_payload(
+        active_planning_record=raw_active_planning_record
+        or (planning_report.get("active", {}).get("planning_record", {}) if isinstance(planning_report.get("active"), dict) else {}),
+        intent_check=intent_satisfaction_check,
+        completion_boundary=intent_satisfaction_check.get("completion_boundary", {}),
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance={},
+        proof={"intent_proof": intent_proof_check},
+        intent_check=intent_satisfaction_check,
+        parent_intent_status=parent_intent_status,
     )
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
@@ -13473,10 +13936,25 @@ def _report_closeout_trust_payload(
         active_planning_record=active_planning_record,
     )
     residue_action = durable_residue_action(trust=trust)
+    applicable_intent_status = _applicable_intent_status_payload(
+        active_planning_record=raw_active_planning_record,
+        verification=verification,
+        assurance_requirements=assurance_requirements,
+    )
+    completion_gate = _completion_gate_payload(
+        active_planning_record=raw_active_planning_record,
+        intent_check=intent_satisfaction_check,
+        acceptance_reconciliation=acceptance_reconciliation,
+        intent_proof_check=intent_proof_check,
+        parent_intent_status=parent_intent_status,
+        applicable_intent_status=applicable_intent_status,
+        durable_residue_action=residue_action,
+    )
     return {
         "status": "present",
         "trust": trust,
         "strict_closeout_gate": gate,
+        "completion_gate": completion_gate,
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
@@ -13488,6 +13966,8 @@ def _report_closeout_trust_payload(
         "package_workflow_evidence": package_workflow_evidence,
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
+        "active_intent_contract": active_intent_contract,
+        "intent_satisfaction_matrix": intent_satisfaction_matrix,
         "intent_proof_check": intent_proof_check,
         "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "assurance_requirements": assurance_requirements,
@@ -13503,6 +13983,7 @@ def _report_closeout_trust_payload(
             status="present",
             trust=trust,
             strict_gate=gate,
+            completion_gate=completion_gate,
             intent_check=intent_satisfaction_check,
             acceptance_reconciliation=acceptance_reconciliation,
             intent_proof_check=intent_proof_check,
@@ -17528,6 +18009,22 @@ def _start_payload(
         and not _is_prep_only_handoff_task(task_text)
     ):
         payload["intent_evidence"] = intent_evidence
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        active_planning_record=active_parent_record,
+        issue_reference_intent=issue_reference_intent,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        proof=payload.get("proof", {}),
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
+    if active_intent_contract["status"] == "present":
+        payload["active_intent_contract"] = active_intent_contract
+        payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -17849,6 +18346,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "intent_discovery_dialogue",
         "intent_acknowledgement",
         "intent_evidence",
+        "active_intent_contract",
+        "intent_satisfaction_matrix",
         "issue_reference_intent",
         "workflow_sufficiency",
         "next_safe_action",
@@ -17881,6 +18380,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.intent_discovery_dialogue",
         "context.intent_acknowledgement",
         "context.intent_evidence",
+        "context.active_intent_contract",
+        "context.intent_satisfaction_matrix",
         "context.issue_reference_intent",
         "context.workflow_sufficiency",
         "context.guidance",
@@ -18540,6 +19041,21 @@ def _start_tiny_payload_fast(
         and not _is_prep_only_handoff_task(task_text)
     ):
         payload["intent_evidence"] = intent_evidence
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        active_planning_record=active_parent_record,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=task_intent.get("acceptance", {}) if isinstance(task_intent, dict) else {},
+        proof=payload.get("proof", {}),
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
+    if active_intent_contract["status"] == "present":
+        payload["active_intent_contract"] = active_intent_contract
+        payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -19524,6 +20040,211 @@ def _task_acceptance_payload(*, task_text: str | None, requested_outcomes: list[
         else "Provide task intent before closeout if acceptance is not obvious from the changed scope.",
         "proof_rule": "Proof should demonstrate acceptance satisfaction, not only command success.",
         "unresolved_questions": [],
+    }
+
+
+def _active_intent_contract_payload(
+    *,
+    task_text: str | None,
+    acceptance: dict[str, Any] | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+    issue_reference_intent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    task = " ".join(str(task_text or "").split())
+    acceptance = _as_dict(acceptance)
+    active_planning_record = _as_dict(active_planning_record)
+    issue_reference_intent = _as_dict(issue_reference_intent)
+    sources: list[dict[str, Any]] = []
+    if task:
+        sources.append(
+            {
+                "kind": "chat-task",
+                "authority": "current-user-instruction",
+                "summary": _task_excerpt(task, limit=220),
+            }
+        )
+    planning_intent = _as_dict(active_planning_record.get("intent_satisfaction"))
+    planning_original_intent = str(planning_intent.get("original intent", "")).strip()
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    delegated_outcome = str(delegated.get("requested outcome") or delegated.get("requested_outcome") or "").strip()
+    if planning_original_intent or delegated_outcome:
+        sources.append(
+            {
+                "kind": "planning-record",
+                "authority": "checked-in-planning",
+                "summary": planning_original_intent or delegated_outcome,
+            }
+        )
+    issue_refs = issue_reference_intent.get("issue_refs", [])
+    if not issue_refs:
+        issue_refs = re.findall(r"#\d+\b", task)
+    if issue_refs:
+        sources.append(
+            {
+                "kind": "external-reference",
+                "authority": "requires-refresh-or-cited-evidence",
+                "refs": [str(item) for item in _list_payload(issue_refs)],
+                "summary": "External references may carry intent; cite refreshed evidence before closing issue-backed scope.",
+            }
+        )
+    requested_outcomes = [str(item).strip() for item in _list_payload(acceptance.get("requested_outcomes")) if str(item).strip()]
+    acceptance_items = [item for item in _list_payload(acceptance.get("items")) if isinstance(item, dict)]
+    if not requested_outcomes and task:
+        requested_outcomes = [_task_excerpt(task, limit=180)]
+    return {
+        "kind": "agentic-workspace/active-intent-contract/v1",
+        "status": "present" if sources else "absent",
+        "controlling_sources": sources,
+        "source_count": len(sources),
+        "requested_outcomes": requested_outcomes[:8],
+        "acceptance_item_count": len(acceptance_items),
+        "update_relationship_options": [
+            "supersede",
+            "refine",
+            "constrain",
+            "narrow",
+            "reopen",
+            "branch",
+        ],
+        "later_instruction_rule": (
+            "When a later chat instruction changes the work, the agent must state whether it supersedes, refines, "
+            "constrains, narrows, reopens, or branches the active intent before claiming completion."
+        ),
+        "artifact_agnostic_rule": "Intent may come from chat, issue, PR/review comment, file, plan, or mixed sources; GitHub is optional evidence, not the owner model.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="active_intent_contract",
+            observed_by_aw=[
+                f"task_text_available={bool(task)}",
+                f"planning_record_available={bool(active_planning_record)}",
+                f"source_count={len(sources)}",
+            ],
+            recommended_by_aw=["carry this contract into implement/proof/closeout before completion claims"],
+            agent_owned_decisions=[
+                "semantic interpretation of the controlling intent",
+                "relationship between later chat instructions and existing intent",
+                "claim level supported by delivered evidence",
+            ],
+            human_owned_decisions=["acceptance of narrowed, deferred, or branched intent"],
+            rule="AW preserves intent sources and required claim-boundary structure; it does not decide semantic satisfaction.",
+        ),
+    }
+
+
+def _intent_satisfaction_matrix_payload(
+    *,
+    active_intent_contract: dict[str, Any],
+    acceptance: dict[str, Any] | None = None,
+    proof: dict[str, Any] | None = None,
+    intent_check: dict[str, Any] | None = None,
+    parent_intent_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = _as_dict(active_intent_contract)
+    acceptance = _as_dict(acceptance)
+    proof = _as_dict(proof)
+    intent_check = _as_dict(intent_check)
+    parent_intent_status = _as_dict(parent_intent_status)
+    items: list[dict[str, Any]] = []
+    for source in _list_payload(contract.get("controlling_sources")):
+        if not isinstance(source, dict):
+            continue
+        summary = str(source.get("summary") or "").strip()
+        if summary:
+            items.append(
+                {
+                    "intent_item": summary,
+                    "source": str(source.get("kind") or "intent-source"),
+                    "status": "needs-agent-evidence",
+                    "evidence_required": "Map delivered behavior or explicit deferral to this source before claiming completion.",
+                }
+            )
+    for item in _list_payload(acceptance.get("items")):
+        if not isinstance(item, dict):
+            continue
+        expectation = str(item.get("expectation") or "").strip()
+        if expectation:
+            items.append(
+                {
+                    "intent_item": expectation,
+                    "source": str(item.get("source") or "acceptance"),
+                    "status": str(item.get("status") or "unchecked"),
+                    "evidence_required": str(item.get("proof_hint") or "Name delivered behavior, proof, and any gap."),
+                }
+            )
+    if not items and contract.get("status") == "absent":
+        items.append(
+            {
+                "intent_item": "No active task intent was supplied to this AW surface.",
+                "source": "none",
+                "status": "not-applicable",
+                "evidence_required": "Pass --task or cite planning evidence before making task-satisfaction claims.",
+            }
+        )
+    intent_trust = str(intent_check.get("trust") or "").strip()
+    parent_status = str(parent_intent_status.get("status") or "").strip()
+    proof_claim_boundary = str(_as_dict(proof.get("intent_proof")).get("claim_boundary") or "").strip()
+    blocked_by = []
+    if any(str(item.get("status") or "").strip() in {"unchecked", "needs-agent-evidence"} for item in items):
+        blocked_by.append("satisfaction_matrix.items")
+    if intent_trust in {"follow-up-required", "needs-review"}:
+        blocked_by.append("closeout_trust.intent_satisfaction_check")
+    if parent_status in {"open", "needs-planning", "needs-review"}:
+        blocked_by.append("parent_intent_status")
+    if proof_claim_boundary and proof_claim_boundary not in {"work", "broad-work", "parent", "full-intent"}:
+        blocked_by.append("proof.intent_proof.claim_boundary")
+    full_completion_allowed = not blocked_by and bool(items)
+    return {
+        "kind": "agentic-workspace/intent-satisfaction-matrix/v1",
+        "status": "required-before-completion-claim" if contract.get("status") == "present" else "available-when-intent-known",
+        "claim_levels": [
+            "partial-progress",
+            "slice-complete",
+            "lane-complete",
+            "parent-complete",
+            "full-intent-complete",
+        ],
+        "items": items[:12],
+        "full_completion_claim": {
+            "allowed": full_completion_allowed,
+            "blocked_by": _dedupe(blocked_by),
+            "rule": (
+                "Do not say done, finished, complete, closes, or all unless the stated claim level matches matrix evidence; "
+                "use partial/slice/deferred wording when any item is unproven or explicitly deferred."
+            ),
+        },
+        "matrix_closeout_shape": [
+            "intent item",
+            "delivered behavior or explicit deferral",
+            "proof/evidence",
+            "gap or intentional deviation",
+            "claim level supported",
+        ],
+        "self_review_before_final_claim": {
+            "status": "required",
+            "rule": (
+                "Before final response, review your own result as if a delegated subagent returned it: compare the "
+                "original intent, delivered behavior, evidence, gaps, and claim level before saying done."
+            ),
+            "questions": [
+                "Did the result satisfy the original intent rather than a convenient slice?",
+                "Is every completion claim supported by evidence or explicitly caveated?",
+                "Would a reviewer reject the final wording as overclaiming?",
+            ],
+        },
+        "authority_boundary": _authority_boundary_payload(
+            surface="intent_satisfaction_matrix",
+            observed_by_aw=[
+                f"intent_item_count={len(items)}",
+                f"blocked_by_count={len(_dedupe(blocked_by))}",
+            ],
+            recommended_by_aw=["render a compact satisfaction matrix before broad completion claims"],
+            agent_owned_decisions=[
+                "whether evidence satisfies each semantic intent item",
+                "which completion claim level is honest",
+                "whether a gap is acceptable, deferred, or blocking",
+            ],
+            human_owned_decisions=["acceptance of partial completion, deferral, or parent/full closure"],
+            rule="AW exposes the matrix shape and mechanical blockers; the agent owns semantic satisfaction judgments.",
+        ),
     }
 
 
@@ -21792,6 +22513,18 @@ def _implement_payload(
         generated_surface_trust=generated_surface_trust,
     )
     applicable_intent_status = _applicable_intent_status_payload(active_planning_record=active_planning_record_for_intent)
+    active_intent_contract = _active_intent_contract_payload(
+        task_text=task_text,
+        acceptance=acceptance,
+        active_planning_record=active_planning_record_for_intent,
+    )
+    intent_satisfaction_matrix = _intent_satisfaction_matrix_payload(
+        active_intent_contract=active_intent_contract,
+        acceptance=acceptance,
+        proof=proof,
+        intent_check={},
+        parent_intent_status=parent_intent_status,
+    )
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -21878,6 +22611,8 @@ def _implement_payload(
         "acceptance_reconciliation": _acceptance_reconciliation_prompt_payload(task_text=task_text, acceptance=acceptance),
         "intent_acknowledgement": intent_acknowledgement,
         "intent_evidence": intent_evidence,
+        "active_intent_contract": active_intent_contract,
+        "intent_satisfaction_matrix": intent_satisfaction_matrix,
         "parent_intent_status": parent_intent_status,
         "applicable_intent_status": applicable_intent_status,
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
@@ -22241,6 +22976,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.workflow_sufficiency",
                 "context.acceptance",
                 "context.intent_evidence",
+                "active_intent_contract",
+                "intent_satisfaction_matrix",
                 "context.parent_intent_status",
                 "context.applicable_intent_status",
                 "context.acceptance_reconciliation",
@@ -22259,6 +22996,16 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+    if isinstance(payload.get("generated_surface_trust"), dict) and payload["generated_surface_trust"].get("status") == "present":
+        tiny_context = projected.get("context", {})
+        if isinstance(tiny_context, dict):
+            tiny_context.pop("active_intent_contract", None)
+            tiny_context.pop("intent_satisfaction_matrix", None)
+        selectors = projected.get("drill_down", {}).get("available_selectors", [])
+        if isinstance(selectors, list):
+            projected["drill_down"]["available_selectors"] = [
+                item for item in selectors if item not in {"context.active_intent_contract", "context.intent_satisfaction_matrix"}
+            ]
     tiny_context = projected.get("context", {})
     if isinstance(tiny_context, dict):
         parent_packet = tiny_context.get("parent_intent_status", {})
@@ -28326,6 +29073,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["verification"] = full_payload["verification"]
         if routine_work_context_selected:
             payload["routine_work_context"] = full_payload["routine_work_context"]
+        if _selector_requests(getattr(args, "select", None), "active_intent_contract"):
+            payload["active_intent_contract"] = full_payload["active_intent_contract"]
+        if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
+            payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,

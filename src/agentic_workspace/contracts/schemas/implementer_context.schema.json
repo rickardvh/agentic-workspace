@@ -162,6 +162,16 @@
       "description": "Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture.",
       "additionalProperties": true
     },
+    "active_intent_contract": {
+      "type": "object",
+      "description": "Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims.",
+      "additionalProperties": true
+    },
+    "intent_satisfaction_matrix": {
+      "type": "object",
+      "description": "Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level.",
+      "additionalProperties": true
+    },
     "parent_intent_status": {
       "$ref": "#/$defs/parent_intent_status",
       "description": "Compact parent/original-intent status preserving larger intent across bounded implementation slices."

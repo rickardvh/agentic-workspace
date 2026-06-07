@@ -145,6 +145,34 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behavior-preserving refactor semantic-risk focus, detail routes, and human-owned decisions. |  |  |
 | `closeout_report.validation` | object | no |  | Closeout validation projection, including proof confidence and behavior_preservation facts when preservation claims, proof classes, unsupported claims, or caveats were recorded. |  |  |
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |
+| `closeout_report.completion_gate` | ref `#/$defs/completion_gate` | no |  | Closeout transition gate that blocks full completion or closure-language claims when active human intent is unsatisfied and no explicit human-accepted partial scope exists. |  |  |
+| `closeout_report.completion_gate.kind` | const `"agentic-workspace/completion-gate/v1"` | yes |  | Discriminator for the closeout completion gate. |  |  |
+| `closeout_report.completion_gate.status` | enum `"allowed"`, `"blocked"`, `"continue-required"`, `"clarification-required"`, `"human-accepted-partial"` | yes |  | State-machine result for the requested completion claim. |  |  |
+| `closeout_report.completion_gate.active_intent_satisfied` | boolean | yes |  | Agent-recorded answer to whether delivered work satisfies the active human intent. |  |  |
+| `closeout_report.completion_gate.human_accepted_partial` | boolean | yes |  | Whether the human explicitly accepted a partial or narrower completion claim. |  |  |
+| `closeout_report.completion_gate.claim_level_requested` | string | yes |  | Requested claim level being evaluated. |  |  |
+| `closeout_report.completion_gate.claim_level_allowed` | string | yes |  | Highest claim level supported by the gate. |  |  |
+| `closeout_report.completion_gate.required_next_action` | enum `"continue-current-work"`, `"create-follow-on-plan"`, `"activate-next-slice"`, `"ask-human"`, `"close-complete"`, `"close-human-accepted-partial"` | yes |  | Required transition before the workflow can stop or claim completion. |  |  |
+| `closeout_report.completion_gate.claim_authorization` | ref `#/$defs/claim_authorization` | yes |  | Structured claim classes and closure actions authorized or blocked by the gate. |  |  |
+| `closeout_report.completion_gate.claim_authorization.kind` | const `"agentic-workspace/claim-authorization/v1"` | yes |  | Discriminator for structured completion claim authorization. |  |  |
+| `closeout_report.completion_gate.claim_authorization.allowed_claim_classes` | array of enum `"partial_progress"`, `"slice_complete"`, `"lane_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"issue_closure"` | yes |  | Claim classes renderers may use. |  |  |
+| `closeout_report.completion_gate.claim_authorization.blocked_claim_classes` | array of enum `"partial_progress"`, `"slice_complete"`, `"lane_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"issue_closure"` | yes |  | Claim classes renderers must not use. |  |  |
+| `closeout_report.completion_gate.claim_authorization.closure_actions` | array of object | yes |  | Structured closure actions such as issue closure for concrete targets. |  |  |
+| `closeout_report.completion_gate.claim_authorization.renderer_rule` | string | yes |  | Renderer rule requiring templates to be selected only from authorized claim classes/actions. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics` | object | yes |  | Human-readable examples for explanation only; not the enforcement model. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics.unsafe_claim_examples` | array of string | yes |  | Human-readable examples of unsafe completion prose for explanation only. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics.diagnostic_only` | const `true` | yes |  | Marker that unsafe_claim_examples are diagnostics, not enforcement rules. |  |  |
+| `closeout_report.completion_gate.residual_intent` | string | no |  | Remaining active human intent when the requested full claim is unsupported. |  |  |
+| `closeout_report.completion_gate.self_review` | object | yes |  | Mandatory agent self-review before final completion claims. |  |  |
+| `closeout_report.completion_gate.self_review.question` | string | yes |  | Self-review question the agent must answer before making a completion claim. |  |  |
+| `closeout_report.completion_gate.self_review.answer` | enum `"yes"`, `"no"` | yes |  | Agent-owned self-review answer for active human intent satisfaction. |  |  |
+| `closeout_report.completion_gate.self_review.reason` | string | yes |  | Reason the self-review answer supports or blocks the requested completion claim. |  |  |
+| `closeout_report.completion_gate.continuation` | object | yes |  | Durable follow-on route or required continuation state. |  |  |
+| `closeout_report.completion_gate.continuation.owner_surface` | string | no |  | Planning, lane, decomposition, or other durable surface that owns the residual intent. |  |  |
+| `closeout_report.completion_gate.continuation.created_or_required` | boolean | no |  | Whether follow-on work has been created or is required before full completion can be claimed. |  |  |
+| `closeout_report.completion_gate.continuation.reason` | string | no |  | Why continuation or follow-on routing is required. |  |  |
+| `closeout_report.completion_gate.authority_boundary` | object | yes |  | Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgment and the human owns accepted narrowing. |  |  |
+| `closeout_report.completion_gate.rule` | string | no |  | Invariant enforced by the completion gate. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |
 | `compact_output_criteria` | object | yes |  | Criteria for compact CLI outputs to remain sufficient for cheap continuation. |  |  |

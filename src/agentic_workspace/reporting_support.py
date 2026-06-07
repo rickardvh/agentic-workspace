@@ -351,6 +351,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         completion_options = completion_options if isinstance(completion_options, list) else []
         strict_gate = answer.get("strict_closeout_gate", {})
         strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
+        completion_gate = answer.get("completion_gate", {})
+        completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
         detail_command = _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
@@ -360,6 +362,24 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "status": answer.get("status", ""),
             "trust": answer.get("trust", ""),
             "strict_closeout_gate": strict_gate,
+            "completion_gate": {
+                key: completion_gate.get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "active_intent_satisfied",
+                    "human_accepted_partial",
+                    "claim_level_requested",
+                    "claim_level_allowed",
+                    "required_next_action",
+                    "claim_authorization",
+                    "residual_intent",
+                    "self_review",
+                    "continuation",
+                    "authority_boundary",
+                )
+                if key in completion_gate
+            },
             "lower_trust_closeout_count": answer.get("lower_trust_closeout_count", 0),
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,

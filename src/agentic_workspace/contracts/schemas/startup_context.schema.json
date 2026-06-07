@@ -366,6 +366,16 @@
       "description": "Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture.",
       "additionalProperties": true
     },
+    "active_intent_contract": {
+      "type": "object",
+      "description": "Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims.",
+      "additionalProperties": true
+    },
+    "intent_satisfaction_matrix": {
+      "type": "object",
+      "description": "Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level.",
+      "additionalProperties": true
+    },
     "durable_intent": {
       "type": "object",
       "description": "Compact durable task, subsystem, and system intent pressure to consider before implementation."

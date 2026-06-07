@@ -183,6 +183,13 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert lane["proof_aggregation"]["status"] == "satisfied"
     assert lane["lane_to_epic_contribution"] == "lane artifacts now own strategy and proof aggregation"
     assert lane["parent_close_permission"] == "may-advance-parent"
+    raw_lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/closeable-lane.lane.json").read_text(encoding="utf-8"))
+    assert raw_lane["completion_gate"]["kind"] == "agentic-workspace/completion-gate/v1"
+    assert raw_lane["completion_gate"]["status"] == "allowed"
+    assert raw_lane["completion_gate"]["claim_level_requested"] == "lane-complete"
+    assert raw_lane["completion_gate"]["claim_level_allowed"] == "lane-complete"
+    assert "lane_complete" in raw_lane["completion_gate"]["claim_authorization"]["allowed_claim_classes"]
+    assert "full_intent_complete" in raw_lane["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
 
     archive_result = archive_lane_record("closeable-lane", target=tmp_path)
     assert [action.kind for action in archive_result.actions] == ["archived", "updated", "proof", "proof"]

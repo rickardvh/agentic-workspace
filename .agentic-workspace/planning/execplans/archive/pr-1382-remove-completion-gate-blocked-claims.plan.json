@@ -1,0 +1,303 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Remove completion-gate blocked_claims",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Remove completion_gate.blocked_claims from canonical runtime, schemas, generated payloads, docs, tests, and current archives.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Archive this completed execplan.",
+    "proof_expectations": [
+      "Focused completion-gate tests pass.",
+      "Workspace/planning full validation passes.",
+      "Schema, generated payload, and structured inventory checks pass."
+    ],
+    "touched_scope": [
+      "completion_gate runtime, report projection, schemas, generated payload schemas, docs, tests, and closeout archive records"
+    ],
+    "completion_criteria": [
+      "Remove completion-gate blocked_claims is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Remove completion_gate.blocked_claims now that claim_authorization is the single canonical enforcement surface."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Remove completion_gate.blocked_claims from canonical surfaces.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "pr-1382-remove-completion-gate-blocked-claims",
+      "status": "completed",
+      "next_step": "Archive this completed execplan.",
+      "proof": "Focused gate tests plus workspace/planning validation passed."
+    },
+    "scope": {
+      "touched": [
+        "completion_gate runtime, report projection, schemas, generated payload schemas, docs, tests, and closeout archive records"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep completion_gate centered on claim_authorization without legacy prose-fragment compatibility fields.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "completion_gate now has one clean claim-safety abstraction: claim_authorization.",
+    "intentionally deferred": "none",
+    "discovered implications": "Other blocked_claims fields remain on applicable-intent and verification surfaces and are intentionally outside this cleanup.",
+    "proof achieved now": "yes; focused and full validation passed.",
+    "validation still needed": "none for this slice.",
+    "next likely slice": "No required continuation remains for this PR-comment slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Remove blocked_claims from the canonical completion_gate surface.",
+    "inferred intended outcome": "Make claim_authorization the only completion-gate claim safety surface.",
+    "chosen concrete what": "Remove completion_gate.blocked_claims from runtime output, compact projection, schemas, generated payloads, docs, tests, and current archives.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "completion-gate runtime/projection, workspace and planning schemas, generated planning payload schemas, focused tests, current closeout archives, PR body.",
+    "max changed files": "about 20 including generated payloads and closeout archive",
+    "required validation commands": "Focused gate tests, make test-workspace, make lint-workspace, make test-planning, make lint-planning, make typecheck-planning, contract tooling, structured inventory, schema docs, maintainer surfaces.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove completion_gate.blocked_claims from canonical surfaces.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-keep-local",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "pr-1382-remove-completion-gate-blocked-claims",
+    "status": "completed",
+    "scope": "Remove completion_gate.blocked_claims from canonical surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed execplan."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+    "generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+    "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
+    "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+    "tests/test_workspace_report_cli.py",
+    "packages/planning/tests/test_archive.py",
+    "docs/reference/workspace-report.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "focused completion-gate tests",
+    "make test-workspace",
+    "make lint-workspace",
+    "make test-planning",
+    "make lint-planning",
+    "make typecheck-planning",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "rg -n 'completion_gate.*blocked_claims|blocked_claims.*completion_gate|closeout_report\\.completion_gate\\.blocked_claims|\"blocked_claims\"' <completion gate/runtime/schema/test/docs surfaces>",
+    "make schema-reference-docs",
+    "make maintainer-surfaces"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Remove completion-gate blocked_claims is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Removed completion_gate.blocked_claims from canonical runtime output, compact projection, schemas, generated payloads, docs, tests, and current closeout archives.",
+    "scope touched": "completion gate only; unrelated applicable-intent and verification blocked_claims fields remain.",
+    "changed surfaces": "runtime, report projection, workspace/planning schemas, generated planning payload schemas, tests, reference docs, closeout archives, PR body.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "close",
+    "next step": "archive this execplan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "passed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "focused gate tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; contract tooling; structured inventory; schema-reference-docs; maintainer-surfaces; AW summary; AW planning doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All listed validation commands passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Remove completion_gate.blocked_claims from canonical completion-gate surfaces.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Runtime payloads, compact projection, schemas, generated payloads, docs, tests, and current archived completion gates no longer carry completion_gate.blocked_claims.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "completion_gate.blocked_claims removed from canonical surfaces.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "PR body updated.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "archive"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The requested cleanup is complete and validated.",
+    "evidence carried forward": "proof_report.validation proof and PR body closure matrix.",
+    "reopen trigger": "completion_gate.blocked_claims reappears in canonical runtime, schema, generated payload, docs, or tests."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-07: Scaffolded by agentic-planning new-plan."
+  ]
+}

@@ -87,6 +87,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `intent_evidence` | object | yes |  | Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture. |  |  |
+| `active_intent_contract` | object | no |  | Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims. |  |  |
+| `intent_satisfaction_matrix` | object | no |  | Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level. |  |  |
 | `parent_intent_status` | object | no |  | Parent/original-intent status preserving larger intent across bounded slices. |  |  |
 | `parent_intent_status.kind` | const `"agentic-workspace/parent-intent-status/v1"` | yes |  | Discriminator for the parent/original-intent status packet. |  |  |
 | `parent_intent_status.status` | string | yes |  | Whether the recorded parent/original intent is satisfied, open, or only guidance. |  |  |

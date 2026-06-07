@@ -141,6 +141,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
 | `intent_evidence` | object | no |  | Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture. |  |  |
+| `active_intent_contract` | object | no |  | Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims. |  |  |
+| `intent_satisfaction_matrix` | object | no |  | Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
