@@ -1,0 +1,61 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "config.selected-text.process",
+  "operation_id": "config.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "config",
+      "--target",
+      ".",
+      "--select",
+      "workspace.optimization_bias",
+      "--format",
+      "text"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "agent-efficiency-config",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/config.toml": "schema_version = 1\n\n[workspace]\noptimization_bias = \"agent-efficiency\"\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "text",
+      "field_assertions": [],
+      "contains": [
+        "Kind: agentic-workspace/selected-output/v1",
+        "Source command: config",
+        "\"workspace.optimization_bias\": \"agent-efficiency\""
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/config.toml"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

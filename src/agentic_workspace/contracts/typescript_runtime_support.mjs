@@ -315,6 +315,50 @@ function emitPlanningReportText(result) {
   return `${lines.join('\n').trimEnd()}\n`;
 }
 
+function emitTinySectionedText(result) {
+  const lines = [String(result.summary ?? '')];
+  if (Array.isArray(result.common_sections) && result.common_sections.length) {
+    lines.push('Common sections:');
+    for (const section of result.common_sections) lines.push(`- ${section}`);
+  }
+  if (isObject(result.detail_commands)) {
+    lines.push('Detail commands:');
+    for (const [key, value] of Object.entries(result.detail_commands)) lines.push(`- ${key}: ${value}`);
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
+function emitSelectedOutputText(result) {
+  const lines = [
+    `Kind: ${result.kind ?? ''}`,
+    `Source command: ${result.source_command ?? ''}`,
+    'Values:',
+    JSON.stringify(result.values ?? {}, null, 2),
+  ];
+  if (Array.isArray(result.missing) && result.missing.length) {
+    lines.push('Missing:');
+    for (const item of result.missing) lines.push(`- ${item}`);
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
+function emitDelegationOutcomesText(result) {
+  const recorded = isObject(result.recorded) ? result.recorded : {};
+  const lines = [
+    `Kind: ${result.kind ?? ''}`,
+    `Path: ${result.path ?? '.agentic-workspace/delegation-outcomes.json'}`,
+    `Record count: ${result.record_count ?? 1}`,
+    `Rule: ${result.rule ?? 'local-only delegation outcome evidence'}`,
+  ];
+  if (Object.keys(recorded).length) {
+    lines.push('Recorded:');
+    for (const key of ['recorded_at', 'delegation_target', 'task_class', 'outcome', 'handoff_sufficiency', 'review_burden', 'escalation_required']) {
+      if (Object.prototype.hasOwnProperty.call(recorded, key)) lines.push(`- ${key}: ${recorded[key]}`);
+    }
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
 function emitOutput(values, args = {}) {
   const result = values.result;
   if (String(values.format ?? 'text') === 'json') return `${JSON.stringify(result, null, 2)}\n`;
@@ -322,6 +366,9 @@ function emitOutput(values, args = {}) {
   if (args.text_style === 'current-memory' && isObject(result)) return emitCurrentMemoryText(result);
   if (isObject(result) && result.kind === 'memory-module-report/v1') return emitMemoryReportText(result);
   if (isObject(result) && result.kind === 'planning-module-report/v1' && result.profile === 'tiny') return emitPlanningReportText(result);
+  if (isObject(result) && result.kind === 'agentic-workspace/default-route-sections/v1') return emitTinySectionedText(result);
+  if (isObject(result) && result.kind === 'agentic-workspace/selected-output/v1') return emitSelectedOutputText(result);
+  if (isObject(result) && result.kind === 'agentic-workspace/delegation-outcomes/v1') return emitDelegationOutcomesText(result);
   if (!isObject(result)) return `${result}\n`;
   if (Array.isArray(result.files) && result.files.every((item) => typeof item === 'string')) return `${result.files.join('\n')}\n`;
   const lines = [String(result.message ?? result.kind ?? '')];
@@ -416,7 +463,18 @@ function verifyPayload(values, args) {
 }
 
 function workspaceDefaultsSelect(payload, values) {
-  let result = payload;
+  let result = {
+    kind: 'agentic-workspace/default-route-sections/v1',
+    profile: 'tiny',
+    summary: 'Default-route contract sections are available on demand; request one section or full detail instead of loading the whole contract.',
+    available_sections: Object.keys(payload).sort(),
+    common_sections: ['startup', 'validation', 'proof_selection', 'combined_install'],
+    detail_commands: {
+      section: 'agentic-workspace defaults --section <section> --format json',
+      full: 'agentic-workspace defaults --verbose --format json',
+    },
+  };
+  if (values.verbose) result = payload;
   const section = values.section ? String(values.section) : '';
   if (section) {
     const answer = payload[section];
@@ -427,7 +485,12 @@ function workspaceDefaultsSelect(payload, values) {
   if (values.select) {
     let current = result;
     for (const part of String(values.select).split('.').filter(Boolean)) current = isObject(current) ? current[part] : undefined;
-    result = current === undefined ? { error: `unknown selector: ${values.select}` } : current;
+    const valuesBySelector = {};
+    const missing = [];
+    if (current === undefined) missing.push(String(values.select));
+    else valuesBySelector[String(values.select)] = current;
+    result = { kind: 'agentic-workspace/selected-output/v1', source_command: 'defaults', values: valuesBySelector };
+    if (missing.length) result.missing = missing;
   }
   return result;
 }
@@ -436,21 +499,34 @@ function selectFields(value, values) {
   if (!values.select) return value;
   let current = value;
   for (const part of String(values.select).split('.').filter(Boolean)) current = isObject(current) ? current[part] : undefined;
-  return current === undefined ? { error: `unknown selector: ${values.select}` } : current;
+  const valuesBySelector = {};
+  const missing = [];
+  if (current === undefined) missing.push(String(values.select));
+  else valuesBySelector[String(values.select)] = current;
+  const selected = { kind: 'agentic-workspace/selected-output/v1', source_command: 'config', values: valuesBySelector };
+  if (missing.length) selected.missing = missing;
+  return selected;
 }
 
 function workspaceConfig(values) {
   const targetRoot = resolve(String(values.target ?? '.'));
+  const configPath = join(targetRoot, '.agentic-workspace/config.toml');
+  const config = existsSync(configPath) ? parseTomlTables(readText(configPath), 'workspace') : {};
   return {
     kind: 'agentic-workspace/config/v1',
     profile: 'tiny',
     exists: false,
     target_root: targetRoot,
-    config_path: join(targetRoot, '.agentic-workspace/config.toml').replace(/\\/g, '/'),
+    config_path: configPath.replace(/\\/g, '/'),
     local_config_path: join(targetRoot, '.agentic-workspace/config.local.toml').replace(/\\/g, '/'),
-    config_present: existsSync(join(targetRoot, '.agentic-workspace/config.toml')),
+    config_present: existsSync(configPath),
     local_config_present: existsSync(join(targetRoot, '.agentic-workspace/config.local.toml')),
-    workspace: { cli_invoke: 'uv run agentic-workspace', default_preset: 'memory', agent_instructions_file: 'AGENTS.md' },
+    workspace: {
+      cli_invoke: String(config.cli_invoke ?? 'uv run agentic-workspace'),
+      default_preset: String(config.default_preset ?? 'memory'),
+      agent_instructions_file: String(config.agent_instructions_file ?? 'AGENTS.md'),
+      optimization_bias: String(config.optimization_bias ?? 'balanced'),
+    },
   };
 }
 
@@ -581,7 +657,21 @@ function domainPrimitive(primitive, values, args, operationId) {
     const promptCommand = Array.isArray(values._command_path) ? values._command_path.at(-1) : operationId.split('.').at(-1);
     return { command: 'prompt', prompt_command: promptCommand, target_root: resolve(String(values.target ?? '.')), modules: values.modules ?? values.module ?? [] };
   }
-  if (primitive === 'delegation.outcome.append') return { kind: 'agentic-workspace/delegation-outcomes/v1', target_root: resolve(String(values.target ?? '.')), recorded: { outcome: values.outcome ?? '' } };
+  if (primitive === 'delegation.outcome.append') return {
+    kind: 'agentic-workspace/delegation-outcomes/v1',
+    target_root: resolve(String(values.target ?? '.')),
+    path: '.agentic-workspace/delegation-outcomes.json',
+    record_count: 1,
+    rule: 'local-only delegation outcome evidence',
+    recorded: {
+      delegation_target: values.delegation_target ?? '',
+      task_class: values.task_class ?? '',
+      outcome: values.outcome ?? '',
+      handoff_sufficiency: values.handoff_sufficiency ?? '',
+      review_burden: values.review_burden ?? '',
+      escalation_required: Boolean(values.escalation_required ?? false),
+    },
+  };
   if (primitive.startsWith('system_intent.')) return { kind: 'workspace-system-intent/v1', command: 'system-intent', target_root: resolve(String(values.target ?? '.')), dry_run: values.dry_run !== false, message: 'System intent sync', actions: [] };
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);

@@ -148,6 +148,9 @@ def _assert_process_result(*, result: subprocess.CompletedProcess[str], expectat
             _assert_field(payload=payload, assertion=_mapping(assertion))
     elif not result.stdout.strip() and stdout_expectations.get("allow_empty") is not True:
         raise AssertionError("expected non-empty stdout")
+    for expected_text in stdout_expectations.get("contains", []):
+        if str(expected_text) not in result.stdout:
+            raise AssertionError(f"expected stdout to contain {expected_text!r}, got {result.stdout!r}")
 
 
 def _assert_field(*, payload: Any, assertion: Mapping[str, Any]) -> None:

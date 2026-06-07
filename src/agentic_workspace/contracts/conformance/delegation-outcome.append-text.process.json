@@ -1,0 +1,65 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "delegation-outcome.append-text.process",
+  "operation_id": "delegation-outcome.append",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "note-delegation-outcome",
+      "--target",
+      ".",
+      "--delegation-target",
+      "gpt_5_4_mini",
+      "--task-class",
+      "bounded-docs",
+      "--outcome",
+      "success",
+      "--format",
+      "text"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "text",
+      "field_assertions": [],
+      "contains": [
+        "Kind: agentic-workspace/delegation-outcomes/v1",
+        "Path: .agentic-workspace/delegation-outcomes.json",
+        "- delegation_target: gpt_5_4_mini"
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/delegation-outcomes.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

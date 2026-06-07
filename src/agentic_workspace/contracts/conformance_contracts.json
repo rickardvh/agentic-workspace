@@ -10,6 +10,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "config.selected-text.process",
+      "operation_id": "config.report",
+      "path": "conformance/config.selected-text.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "defaults.report.process",
       "operation_id": "defaults.report",
       "path": "conformance/defaults.report.process.json",
@@ -22,9 +28,27 @@
       "adapter_kind": "process"
     },
     {
+      "id": "defaults.selected-text.process",
+      "operation_id": "defaults.report",
+      "path": "conformance/defaults.selected-text.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "defaults.tiny-text.process",
+      "operation_id": "defaults.report",
+      "path": "conformance/defaults.tiny-text.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "delegation-outcome.append.process",
       "operation_id": "delegation-outcome.append",
       "path": "conformance/delegation-outcome.append.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "delegation-outcome.append-text.process",
+      "operation_id": "delegation-outcome.append",
+      "path": "conformance/delegation-outcome.append-text.process.json",
       "adapter_kind": "process"
     },
     {

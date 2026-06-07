@@ -8,7 +8,8 @@
         "program": "agentic-workspace"
       },
       "conformance_refs": [
-        "config.report.process"
+        "config.report.process",
+        "config.selected-text.process"
       ],
       "effect_hints": {
         "destructive": false,
@@ -45,7 +46,9 @@
       },
       "conformance_refs": [
         "defaults.report.process",
-        "defaults.root-cli-authority.process"
+        "defaults.root-cli-authority.process",
+        "defaults.selected-text.process",
+        "defaults.tiny-text.process"
       ],
       "effect_hints": {
         "destructive": false,
@@ -326,7 +329,8 @@
         "program": "agentic-workspace"
       },
       "conformance_refs": [
-        "delegation-outcome.append.process"
+        "delegation-outcome.append.process",
+        "delegation-outcome.append-text.process"
       ],
       "effect_hints": {
         "destructive": false,

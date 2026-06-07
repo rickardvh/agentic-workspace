@@ -2720,7 +2720,9 @@
           },
           "conformance_refs": [
             "defaults.report.process",
-            "defaults.root-cli-authority.process"
+            "defaults.root-cli-authority.process",
+            "defaults.selected-text.process",
+            "defaults.tiny-text.process"
           ],
           "projection_boundary": {
             "universal": [
@@ -3186,7 +3188,8 @@
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "config.report.process"
+            "config.report.process",
+            "config.selected-text.process"
           ],
           "projection_boundary": {
             "universal": [
@@ -3422,7 +3425,8 @@
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "delegation-outcome.append.process"
+            "delegation-outcome.append.process",
+            "delegation-outcome.append-text.process"
           ],
           "projection_boundary": {
             "universal": [
