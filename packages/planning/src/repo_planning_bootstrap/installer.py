@@ -9301,7 +9301,7 @@ def _planning_continuation_view_payload(
         {
             "rank": 3,
             "owner": "Closeout/completion gate",
-            "uses": ["authorized claim class", "blocked completion language"],
+            "uses": ["authorized claim class", "blocked claim classes"],
             "source": "planning_record.completion_gate",
             "freshness": "current when recorded in active execplan",
         },
