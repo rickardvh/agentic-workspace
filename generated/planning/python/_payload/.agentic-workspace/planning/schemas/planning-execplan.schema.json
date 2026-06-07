@@ -237,7 +237,6 @@
         "claim_level_allowed",
         "required_next_action",
         "claim_authorization",
-        "blocked_claims",
         "self_review",
         "continuation",
         "authority_boundary"
@@ -253,7 +252,6 @@
         "claim_level_allowed": { "type": "string" },
         "required_next_action": { "type": "string" },
         "claim_authorization": { "$ref": "#/$defs/claim_authorization" },
-        "blocked_claims": { "$ref": "#/$defs/string_array" },
         "residual_intent": { "type": "string" },
         "self_review": { "type": "object" },
         "continuation": { "type": "object" },

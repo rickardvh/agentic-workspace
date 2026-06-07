@@ -608,6 +608,7 @@ candidates = []
     assert archived["completion_gate"]["status"] == "allowed"
     assert archived["completion_gate"]["active_intent_satisfied"] is True
     assert archived["completion_gate"]["claim_level_allowed"] == "full-intent-complete"
+    assert "blocked_claims" not in archived["completion_gate"]
     assert "full_intent_complete" in archived["completion_gate"]["claim_authorization"]["allowed_claim_classes"]
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
     assert archived["iterative_follow_through"]["validation still needed"] == (
@@ -738,6 +739,7 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
     assert archived["completion_gate"]["status"] == "continue-required"
     assert archived["completion_gate"]["claim_level_allowed"] == "partial-progress"
+    assert "blocked_claims" not in archived["completion_gate"]
     assert archived["completion_gate"]["claim_authorization"]["allowed_claim_classes"] == ["partial_progress", "slice_complete"]
     assert "full_intent_complete" in archived["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
     assert archived["completion_gate"]["claim_authorization"]["diagnostics"]["diagnostic_only"] is True

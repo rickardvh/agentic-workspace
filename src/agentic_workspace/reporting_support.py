@@ -373,7 +373,6 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "claim_level_allowed",
                     "required_next_action",
                     "claim_authorization",
-                    "blocked_claims",
                     "residual_intent",
                     "self_review",
                     "continuation",

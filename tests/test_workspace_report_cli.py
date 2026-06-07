@@ -3384,6 +3384,7 @@ def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, ca
     assert gate["claim_level_requested"] == "full-intent-complete"
     assert gate["claim_level_allowed"] == "partial-progress"
     assert gate["required_next_action"] == "create-follow-on-plan"
+    assert "blocked_claims" not in gate
     claim_authorization = gate["claim_authorization"]
     assert claim_authorization["kind"] == "agentic-workspace/claim-authorization/v1"
     assert claim_authorization["allowed_claim_classes"] == ["partial_progress", "slice_complete"]
@@ -3548,7 +3549,6 @@ def test_report_completion_gate_allows_satisfied_intent_full_closeout(tmp_path: 
     assert gate["active_intent_satisfied"] is True
     assert gate["claim_level_allowed"] == "full-intent-complete"
     assert gate["required_next_action"] == "close-complete"
-    assert gate["blocked_claims"] == []
     assert "full_intent_complete" in gate["claim_authorization"]["allowed_claim_classes"]
     assert "issue_closure" in gate["claim_authorization"]["allowed_claim_classes"]
     assert gate["claim_authorization"]["blocked_claim_classes"] == []
@@ -3585,6 +3585,7 @@ def test_report_completion_gate_blocks_full_closeout_when_proof_missing(tmp_path
     assert gate["active_intent_satisfied"] is False
     assert gate["status"] == "blocked"
     assert gate["claim_level_allowed"] == "partial-progress"
+    assert "blocked_claims" not in gate
     assert gate["claim_authorization"]["allowed_claim_classes"] == []
     assert "full_intent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
     assert gate["claim_authorization"]["diagnostics"]["diagnostic_only"] is True

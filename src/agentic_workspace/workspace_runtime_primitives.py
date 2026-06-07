@@ -13521,8 +13521,6 @@ def _completion_gate_payload(
         proof_status=proof_status,
         issue_refs=issue_refs,
     )
-    diagnostic_unsafe_claims = _list_payload(claim_authorization.get("diagnostics", {}).get("unsafe_claim_examples"))
-    blocked_claims = [] if active_intent_satisfied else [str(item) for item in diagnostic_unsafe_claims if str(item).strip()]
     self_review_answer = "yes" if active_intent_satisfied else "no"
     if active_intent_satisfied:
         reason = "Recorded intent, parent status, proof, acceptance, and continuation fields support the requested completion claim."
@@ -13542,7 +13540,6 @@ def _completion_gate_payload(
         "claim_level_allowed": claim_level_allowed,
         "required_next_action": required_next_action,
         "claim_authorization": claim_authorization,
-        "blocked_claims": _dedupe(blocked_claims),
         "residual_intent": "" if active_intent_satisfied else residual_intent,
         "self_review": {
             "question": "Does the delivered work satisfy the active human intent?",

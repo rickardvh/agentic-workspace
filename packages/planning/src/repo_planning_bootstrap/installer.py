@@ -11031,11 +11031,6 @@ def _planning_completion_gate_payload(
         proof_status="representative" if proof_supports_full else "",
         issue_refs=issue_refs,
     )
-    diagnostics = claim_authorization.get("diagnostics", {})
-    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
-    diagnostic_unsafe_claims = diagnostics.get("unsafe_claim_examples", [])
-    diagnostic_unsafe_claims = diagnostic_unsafe_claims if isinstance(diagnostic_unsafe_claims, list) else []
-    blocked_claims = [] if active_intent_satisfied else [str(item) for item in diagnostic_unsafe_claims if str(item).strip()]
     reason = (
         "Planning closeout evidence supports the requested completion claim."
         if active_intent_satisfied
@@ -11053,7 +11048,6 @@ def _planning_completion_gate_payload(
         "claim_level_allowed": claim_level_allowed,
         "required_next_action": required_next_action,
         "claim_authorization": claim_authorization,
-        "blocked_claims": _dedupe(blocked_claims),
         "residual_intent": "" if active_intent_satisfied else residual_intent,
         "self_review": {
             "question": "Does the delivered work satisfy the active human intent?",

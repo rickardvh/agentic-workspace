@@ -357,7 +357,6 @@
         "diagnostic_only": true
       }
     },
-    "blocked_claims": [],
     "residual_intent": "",
     "self_review": {
       "question": "Does the delivered work satisfy the active human intent?",

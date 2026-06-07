@@ -602,7 +602,6 @@
         "claim_level_allowed",
         "required_next_action",
         "claim_authorization",
-        "blocked_claims",
         "self_review",
         "continuation",
         "authority_boundary"
@@ -648,13 +647,6 @@
             "close-human-accepted-partial"
           ],
           "description": "Required transition before the workflow can stop or claim completion."
-        },
-        "blocked_claims": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Compatibility diagnostics listing human-readable unsafe claim examples. Enforcement uses claim_authorization."
         },
         "claim_authorization": {
           "$ref": "#/$defs/claim_authorization",
