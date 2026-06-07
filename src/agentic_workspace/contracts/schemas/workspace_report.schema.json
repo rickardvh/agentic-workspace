@@ -331,6 +331,10 @@
         "closeout_adoption": {
           "type": "object",
           "description": "Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports."
+        },
+        "completion_gate": {
+          "$ref": "#/$defs/completion_gate",
+          "description": "Closeout transition gate that blocks full completion or closure-language claims when active human intent is unsatisfied and no explicit human-accepted partial scope exists."
         }
       },
       "description": "Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behavior-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
@@ -586,6 +590,132 @@
       },
       "additionalProperties": true,
       "description": "Applicable-intent source projection across existing AW surfaces without semantic conflict resolution."
+    },
+    "completion_gate": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "active_intent_satisfied",
+        "human_accepted_partial",
+        "claim_level_requested",
+        "claim_level_allowed",
+        "required_next_action",
+        "blocked_claims",
+        "self_review",
+        "continuation",
+        "authority_boundary"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/completion-gate/v1",
+          "description": "Discriminator for the closeout completion gate."
+        },
+        "status": {
+          "enum": [
+            "allowed",
+            "blocked",
+            "continue-required",
+            "clarification-required",
+            "human-accepted-partial"
+          ],
+          "description": "State-machine result for the requested completion claim."
+        },
+        "active_intent_satisfied": {
+          "type": "boolean",
+          "description": "Agent-recorded answer to whether delivered work satisfies the active human intent."
+        },
+        "human_accepted_partial": {
+          "type": "boolean",
+          "description": "Whether the human explicitly accepted a partial or narrower completion claim."
+        },
+        "claim_level_requested": {
+          "type": "string",
+          "description": "Requested claim level being evaluated."
+        },
+        "claim_level_allowed": {
+          "type": "string",
+          "description": "Highest claim level supported by the gate."
+        },
+        "required_next_action": {
+          "enum": [
+            "continue-current-work",
+            "create-follow-on-plan",
+            "activate-next-slice",
+            "ask-human",
+            "close-complete",
+            "close-human-accepted-partial"
+          ],
+          "description": "Required transition before the workflow can stop or claim completion."
+        },
+        "blocked_claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Completion, done, or close-keyword claims blocked by the gate."
+        },
+        "residual_intent": {
+          "type": "string",
+          "description": "Remaining active human intent when the requested full claim is unsupported."
+        },
+        "self_review": {
+          "type": "object",
+          "required": [
+            "question",
+            "answer",
+            "reason"
+          ],
+          "properties": {
+            "question": {
+              "type": "string",
+              "description": "Self-review question the agent must answer before making a completion claim."
+            },
+            "answer": {
+              "enum": [
+                "yes",
+                "no"
+              ],
+              "description": "Agent-owned self-review answer for active human intent satisfaction."
+            },
+            "reason": {
+              "type": "string",
+              "description": "Reason the self-review answer supports or blocks the requested completion claim."
+            }
+          },
+          "additionalProperties": true,
+          "description": "Mandatory agent self-review before final completion claims."
+        },
+        "continuation": {
+          "type": "object",
+          "properties": {
+            "owner_surface": {
+              "type": "string",
+              "description": "Planning, lane, decomposition, or other durable surface that owns the residual intent."
+            },
+            "created_or_required": {
+              "type": "boolean",
+              "description": "Whether follow-on work has been created or is required before full completion can be claimed."
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why continuation or follow-on routing is required."
+            }
+          },
+          "additionalProperties": true,
+          "description": "Durable follow-on route or required continuation state."
+        },
+        "authority_boundary": {
+          "type": "object",
+          "description": "Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgment and the human owns accepted narrowing."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Invariant enforced by the completion gate."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Closeout transition gate derived from existing intent, proof, Planning, and closeout fields."
     },
     "authority_boundary": {
       "type": "object",

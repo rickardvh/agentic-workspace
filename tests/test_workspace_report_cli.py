@@ -3254,6 +3254,281 @@ def test_report_closeout_trust_allows_work_claim_for_sufficient_intent_proof(tmp
     assert options["claim-work-complete"]["allowed"] is True
 
 
+def _write_completion_gate_fixture(
+    target: Path,
+    *,
+    plan_id: str,
+    original_intent: str,
+    delivered_work: str,
+    slice_completes: str,
+    required_follow_on: str,
+    continuation_owner: str,
+    closure_status: str,
+    closure_decision: str,
+    proof_status: str,
+    claim_boundary: str,
+    human_accepted_partial: bool = False,
+    references: list[dict[str, object]] | None = None,
+) -> None:
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / f"{plan_id}.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": original_intent,
+            "references": references or [],
+            "active_milestone": {"id": plan_id, "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": original_intent,
+                "hard constraints": "Do not claim broader completion than the delivered evidence supports.",
+                "agent may decide locally": "Exact implementation details.",
+                "escalate when": "Intent satisfaction is ambiguous or blocked.",
+            },
+            "completion_criteria": ["Requested intent is reconciled against delivered behavior and proof."],
+            "proof_expectations": ["Intent proof must support the requested claim level."],
+            "intent_satisfaction": {
+                "original intent": original_intent,
+                "was original intent fully satisfied?": "yes" if slice_completes == "yes" else "no",
+                "unsolved intent passed to": "" if slice_completes == "yes" else "remaining intent from the original request",
+            },
+            "intent_continuity": {
+                "larger intended outcome": original_intent,
+                "this slice completes the larger intended outcome": slice_completes,
+                "continuation surface": continuation_owner,
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": required_follow_on,
+                "owner surface": continuation_owner,
+                "activation trigger": "after this slice",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": delivered_work,
+                "scope touched": "tests",
+                "changed surfaces": "tests",
+                "validations run": (
+                    "uv run agentic-workspace summary --format json; "
+                    "uv run agentic-workspace report --format json; "
+                    "uv run agentic-workspace proof --format json; "
+                    "uv run agentic-workspace reconcile --format json"
+                ),
+                "result for continuation": "close" if slice_completes == "yes" else "continue",
+                "next step": "close" if slice_completes == "yes" else "continue or route follow-on",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest selected tests passed",
+                "acceptance reconciliation": f"requested {original_intent} -> delivered {delivered_work} -> proof recorded",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "completion gate fixture",
+                "intent_proof": {
+                    "status": proof_status,
+                    "claim_boundary": claim_boundary,
+                    "intended_behavior": [original_intent],
+                    "proof_dimensions": ["selected regression evidence"],
+                    "unproven_after_tests": [] if proof_status == "sufficient_for_claim" else ["broader replacement/pruning intent"],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": closure_status,
+                "closure decision": closure_decision,
+                "why this decision is honest": "The gate fixture records whether the original intent is fully satisfied.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "completion gate blocks the requested claim",
+                "human accepted partial": "yes" if human_accepted_partial else "no",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        f"  {{ id = '{plan_id}', title = 'Completion gate', surface = '.agentic-workspace/planning/execplans/{plan_id}.plan.json' }},\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+
+def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="issue-1374-test-replacement",
+        original_intent="Replace, prune, and simplify most existing tests through contract-owned conformance tests for #1374.",
+        delivered_work="Removed two ordinary pytest functions, added one conformance contract, and merged one removed test.",
+        slice_completes="no",
+        required_follow_on="yes",
+        continuation_owner=".agentic-workspace/planning/execplans/issue-1374-follow-up.plan.json",
+        closure_status="open",
+        closure_decision="archive-but-keep-lane-open",
+        proof_status="regression_only",
+        claim_boundary="slice",
+        references=[{"target": "#1374", "role": "controlling issue"}],
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["kind"] == "agentic-workspace/completion-gate/v1"
+    assert gate["active_intent_satisfied"] is False
+    assert gate["human_accepted_partial"] is False
+    assert gate["status"] == "continue-required"
+    assert gate["claim_level_requested"] == "full-intent-complete"
+    assert gate["claim_level_allowed"] == "partial-progress"
+    assert gate["required_next_action"] == "create-follow-on-plan"
+    assert "Closes #1374" in gate["blocked_claims"]
+    assert gate["self_review"]["answer"] == "no"
+    assert gate["continuation"]["owner_surface"] == ".agentic-workspace/planning/execplans/issue-1374-follow-up.plan.json"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "completion_gate" in options["claim-work-complete"]["blocking_fields"]
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
+    report = json.loads(capsys.readouterr().out)["answer"]
+    assert report["completion_gate"]["status"] == "continue-required"
+    rendering = report["final_response_rendering"]
+    assert rendering["plain_done_allowed"] is False
+    assert "completion gate" in rendering["must_include"]
+    assert "Closes #1374" in rendering["must_not_claim"]
+    assert "Completion gate: continue-required" in rendering["rendered_summary"]["rendered_text"]
+
+
+def test_report_completion_gate_continuation_possible_requires_follow_on_not_caveat(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="continuation-required",
+        original_intent="Finish the multi-slice migration.",
+        delivered_work="Finished the current bounded migration slice.",
+        slice_completes="no",
+        required_follow_on="yes",
+        continuation_owner=".agentic-workspace/planning/execplans/next-slice.plan.json",
+        closure_status="open",
+        closure_decision="archive-but-keep-lane-open",
+        proof_status="representative",
+        claim_boundary="slice",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    gate = json.loads(capsys.readouterr().out)["answer"]["completion_gate"]
+    assert gate["status"] == "continue-required"
+    assert gate["required_next_action"] == "create-follow-on-plan"
+    assert gate["continuation"]["created_or_required"] is True
+    assert gate["claim_level_allowed"] == "partial-progress"
+
+
+def test_report_completion_gate_ambiguous_intent_requires_clarification(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="ambiguous-gate",
+        original_intent="Finish the work if the larger intent is actually satisfied.",
+        delivered_work="Finished a local implementation slice.",
+        slice_completes="unknown",
+        required_follow_on="unknown",
+        continuation_owner="",
+        closure_status="unknown",
+        closure_decision="requires-review",
+        proof_status="needs_review",
+        claim_boundary="unknown",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["status"] == "clarification-required"
+    assert gate["required_next_action"] == "ask-human"
+    assert gate["active_intent_satisfied"] is False
+    assert "done" in gate["blocked_claims"]
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["request-review"]["allowed"] is True
+
+
+def test_report_completion_gate_allows_explicit_human_partial_only_as_partial(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="human-partial",
+        original_intent="Complete the full migration, unless the human accepts this bounded slice as partial.",
+        delivered_work="Completed the bounded slice the human accepted.",
+        slice_completes="no",
+        required_follow_on="yes",
+        continuation_owner=".agentic-workspace/planning/execplans/remaining-migration.plan.json",
+        closure_status="partial",
+        closure_decision="human-accepted-partial",
+        proof_status="representative",
+        claim_boundary="slice",
+        human_accepted_partial=True,
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["status"] == "human-accepted-partial"
+    assert gate["human_accepted_partial"] is True
+    assert gate["claim_level_allowed"] == "partial-progress"
+    assert gate["required_next_action"] == "close-human-accepted-partial"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+
+
+def test_report_completion_gate_allows_satisfied_intent_full_closeout(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="satisfied-gate",
+        original_intent="Complete the direct contract migration.",
+        delivered_work="Completed the direct contract migration.",
+        slice_completes="yes",
+        required_follow_on="no",
+        continuation_owner="none",
+        closure_status="closed",
+        closure_decision="archive-and-close",
+        proof_status="sufficient_for_claim",
+        claim_boundary="work",
+        references=[{"target": "#1383", "role": "satisfied issue"}],
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["status"] == "allowed"
+    assert gate["active_intent_satisfied"] is True
+    assert gate["claim_level_allowed"] == "full-intent-complete"
+    assert gate["required_next_action"] == "close-complete"
+    assert gate["blocked_claims"] == []
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is True
+
+
 def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
