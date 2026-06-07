@@ -207,7 +207,8 @@
         ]
       },
       "conformance_refs": [
-        "config.report.process"
+        "config.report.process",
+        "config.selected-text.process"
       ]
     },
     {
@@ -290,7 +291,10 @@
         ]
       },
       "conformance_refs": [
-        "defaults.report.process"
+        "defaults.report.process",
+        "defaults.root-cli-authority.process",
+        "defaults.selected-text.process",
+        "defaults.tiny-text.process"
       ]
     },
     {
@@ -368,7 +372,8 @@
         ]
       },
       "conformance_refs": [
-        "delegation-outcome.append.process"
+        "delegation-outcome.append.process",
+        "delegation-outcome.append-text.process"
       ]
     },
     {

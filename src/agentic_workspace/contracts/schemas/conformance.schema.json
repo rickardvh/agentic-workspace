@@ -180,6 +180,15 @@
               "type": "boolean",
               "description": "Whether empty stdout is acceptable for text-mode refusal cases."
             },
+            "contains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Text that must appear in stdout."
+              },
+              "description": "Required stdout substrings for text fixtures."
+            },
             "field_assertions": {
               "type": "array",
               "items": {

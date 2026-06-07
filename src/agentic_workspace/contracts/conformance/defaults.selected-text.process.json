@@ -1,0 +1,61 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "defaults.selected-text.process",
+  "operation_id": "defaults.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "defaults",
+      "--section",
+      "root_cli_authority",
+      "--select",
+      "answer.command",
+      "--format",
+      "text"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "text",
+      "field_assertions": [],
+      "contains": [
+        "Kind: agentic-workspace/selected-output/v1",
+        "Source command: defaults",
+        "\"answer.command\": \"agentic-workspace defaults --section root_cli_authority --format json\""
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

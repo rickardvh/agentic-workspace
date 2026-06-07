@@ -26,6 +26,7 @@ Conformance fixture contract for proving an operation adapter behaves as expecte
 | `expectations.stdout.format` | enum `"json"`, `"text"` | yes |  | Expected stdout format. |  |  |
 | `expectations.stdout.schema` | string | no |  | Schema that should validate stdout when the output is JSON. |  |  |
 | `expectations.stdout.allow_empty` | boolean | no |  | Whether empty stdout is acceptable for text-mode refusal cases. |  |  |
+| `expectations.stdout.contains` | array of string | no |  | Required stdout substrings for text fixtures. |  |  |
 | `expectations.stdout.field_assertions` | array of ref `#/$defs/field_assertion` | yes |  | Field-level stdout assertions evaluated after parsing. |  |  |
 | `expectations.stderr` | object | yes |  | Policy for stderr emitted by the adapter command. |  |  |
 | `expectations.stderr.allow_non_empty` | boolean | yes |  | Whether non-empty stderr is acceptable for this fixture. |  |  |

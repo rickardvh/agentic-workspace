@@ -30,7 +30,12 @@ def test_canonical_command_artifacts_expose_implementation_independent_truth() -
         "workspace.defaults.select",
         "output.emit",
     ]
-    assert defaults.conformance_refs == ("defaults.report.process",)
+    assert defaults.conformance_refs == (
+        "defaults.report.process",
+        "defaults.root-cli-authority.process",
+        "defaults.selected-text.process",
+        "defaults.tiny-text.process",
+    )
     assert "command identity" in defaults.projection_boundary["universal"]
     assert "parser library" in defaults.projection_boundary["target_specific"]
     assert "defaults payload assembly" in defaults.projection_boundary["runtime_owned"]

@@ -78,6 +78,6 @@ High-risk does not mean "add another one-off test by default." It means the repl
 
 #1373 owns the plan for replacing existing regressions with contract-owned conformance cases after the migration shape is stable. Use [Contract-owned test replacement plan](contract-test-replacement-plan.md) for the current sequencing, inventory, and handoff rules.
 
-#1374 owns replacing AW generated-command behavior tests with contract-owned conformance cases.
+#1374 owns replacing AW generated-command behavior tests with contract-owned conformance cases. Use [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md) for the current AW-side conversion and ordinary-test retention record.
 
 rickardvh/command-generation#9 owns the matching replacement work in the command-generation repository.

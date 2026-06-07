@@ -456,6 +456,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
     replacement_plan = (WORKSPACE_ROOT / "docs" / "maintainer" / "contract-test-replacement-plan.md").read_text(encoding="utf-8")
+    aw_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "aw-contract-test-replacement-inventory.md").read_text(encoding="utf-8")
 
     assert "docs/maintainer/testing-strategy.md" in playbook
     assert "Primitive conformance" in strategy
@@ -468,11 +469,42 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "contract-test-replacement-plan.md" in strategy
     assert "#1374 owns replacing AW generated-command behavior tests" in strategy
     assert "rickardvh/command-generation#9" in strategy
+    assert "aw-contract-test-replacement-inventory.md" in strategy
     assert "Do not preserve the current test layout" in replacement_plan
     assert "Delete Or Merge Only With Equivalent Coverage" in replacement_plan
     assert "old test name" in replacement_plan
     assert "replacement contract id and case id" in replacement_plan
     assert "rickardvh/command-generation#9" in replacement_plan
+    assert "#1374 is complete for the AW repository" in aw_inventory
+    assert "This inventory does not close `rickardvh/command-generation#9`" in aw_inventory
+    assert "test_blackbox_root_generated_command_executes_through_console_script" in aw_inventory
+    assert "test_blackbox_root_generated_command_executes_primitive_ir_through_console_script" in aw_inventory
+    assert "test_defaults_tiny_text_uses_generated_output" in aw_inventory
+    assert "test_defaults_selected_section_text_uses_generated_output" in aw_inventory
+    assert "test_config_selected_text_uses_generated_output" in aw_inventory
+    assert "test_note_delegation_outcome_text_uses_generated_output" in aw_inventory
+    assert "modules.report.process" in aw_inventory
+    assert "defaults.root-cli-authority.process" in aw_inventory
+    assert "defaults.tiny-text.process" in aw_inventory
+    assert "defaults.selected-text.process" in aw_inventory
+    assert "config.selected-text.process" in aw_inventory
+    assert "delegation-outcome.append-text.process" in aw_inventory
+    assert "stdout.contains" in aw_inventory
+    assert "rickardvh/command-generation#10" in aw_inventory
+    assert "Deleted Ordinary Regressions" in aw_inventory
+    assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
+    assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory
+    assert "tests/test_command_generation_primitive_executor.py" in aw_inventory
+    assert "tests/test_workspace_cli.py" in aw_inventory
+    assert "tests/test_workspace_config_cli.py" in aw_inventory
+    assert "tests/test_workspace_defaults_cli.py" in aw_inventory
+    assert "tests/test_workspace_implement_cli.py" in aw_inventory
+    assert "tests/test_workspace_proof_cli.py" in aw_inventory
+    assert "tests/test_workspace_report_cli.py" in aw_inventory
+    assert "tests/test_workspace_start_preflight_cli.py" in aw_inventory
+    assert "adapter error classification and recovery-message surfaces" in aw_inventory
+    assert "proof/checker orchestration" in aw_inventory
+    assert "high-risk workflow semantics" in aw_inventory
 
 
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
