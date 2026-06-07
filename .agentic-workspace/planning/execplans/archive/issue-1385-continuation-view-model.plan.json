@@ -51,16 +51,16 @@
     "closeout_decision": "archive-and-close"
   },
   "goal": [
-    "Create a bounded plan for Implement #1385 continuation re-grounding view model."
+    "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces."
   ],
   "non_goals": [
     "Leave adjacent backlog or follow-on work out of this plan."
   ],
   "machine_readable_contract": {
     "intent": {
-      "outcome": "Create a bounded plan for Implement #1385 continuation re-grounding view model.",
-      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
-      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "outcome": "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.",
+      "constraints": "Do not add a durable regrounding state owner, transcript store, universal intent ledger, or prose-claim policy surface.",
+      "latitude": "Field naming, compact projection shape, and selector placement were local implementation decisions.",
       "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
       "proof": "See proof_report.validation proof."
     },
@@ -80,7 +80,7 @@
     }
   },
   "intent_continuity": {
-    "larger intended outcome": "Create a bounded plan for Implement #1385 continuation re-grounding view model.",
+    "larger intended outcome": "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.",
     "this slice completes the larger intended outcome": "yes",
     "continuation surface": "none"
   },
@@ -99,10 +99,10 @@
   },
   "intent_interpretation": {
     "literal request": "Implement #1385 continuation re-grounding view model",
-    "inferred intended outcome": "Create a bounded plan for Implement #1385 continuation re-grounding view model.",
+    "inferred intended outcome": "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.",
     "chosen concrete what": "Low-context agents can cheaply answer preserved intent, allowed claim, next safe action, and trust basis without transcript material or a new durable regrounding owner.",
     "interpretation distance": "low",
-    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+    "review guidance": "Confirm the archived evidence matches the implemented continuation-view behavior before relying on it."
   },
   "execution_bounds": {
     "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
@@ -127,9 +127,9 @@
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
-    "requested outcome": "Create a bounded plan for Implement #1385 continuation re-grounding view model.",
-    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
-    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "requested outcome": "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.",
+    "hard constraints": "Do not add a durable regrounding state owner, transcript store, universal intent ledger, or prose-claim policy surface.",
+    "agent may decide locally": "Field naming, compact projection shape, and selector placement.",
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
   },
   "post_decomposition_delegation": {
@@ -148,7 +148,7 @@
   "active_milestone": {
     "id": "issue-1385-continuation-view-model",
     "status": "completed",
-    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "scope": "Keep this execution thread bounded to the #1385 continuation-view implementation lane.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
@@ -209,7 +209,7 @@
     "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
   "intent_satisfaction": {
-    "original intent": "Create a bounded plan for Implement #1385 continuation re-grounding view model.",
+    "original intent": "Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.",
     "was original intent fully satisfied?": "yes",
     "evidence of intent satisfaction": "See proof_report.validation proof.",
     "unsolved intent passed to": "none"
@@ -286,7 +286,8 @@
     }
   },
   "drift_log": [
-    "2026-06-07: Scaffolded by agentic-planning new-plan."
+    "2026-06-07: Created active execplan for #1385.",
+    "2026-06-07: Implemented and archived continuation-view slice after proof."
   ],
   "memory_learning_capture": {
     "status": "reviewed",
@@ -363,6 +364,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement #1385 continuation re-grounding view model.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: focused continuation-view tests; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; ruff selected surfaces; make schema-reference-docs; make maintainer-surfaces; AW summary; AW doctor planning.\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_promote.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; docs/reference/startup-context.md; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_summary_cli.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1385 as a continuation re-grounding view model over existing AW owner surfaces.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: focused continuation-view tests; make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; check_contract_tooling_surfaces; check_structured_file_inventory; ruff selected surfaces; make schema-reference-docs; make maintainer-surfaces; AW summary; AW doctor planning.\nChanged surfaces: packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_promote.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; docs/reference/startup-context.md; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_summary_cli.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
   }
 }

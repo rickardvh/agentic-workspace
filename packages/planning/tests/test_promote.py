@@ -1282,7 +1282,6 @@ def test_planning_summary_continuation_view_prefers_fresh_execplan_over_stale_to
         "claim_level_requested": "full-intent-complete",
         "claim_level_allowed": "full-intent-complete",
         "required_next_action": "close-complete",
-        "blocked_claims": [],
         "claim_authorization": {
             "allowed_claim_classes": ["full_intent_complete"],
             "blocked_claim_classes": [],
@@ -1360,7 +1359,6 @@ def test_planning_summary_continuation_view_routes_unsatisfied_intent_to_continu
         "claim_level_requested": "full-intent-complete",
         "claim_level_allowed": "partial-progress",
         "required_next_action": "continue-current-work",
-        "blocked_claims": ["done", "implemented", "complete", "finished", "all", "full intent complete"],
         "claim_authorization": {
             "allowed_claim_classes": ["partial_progress"],
             "blocked_claim_classes": ["full_intent_complete", "issue_closure"],
@@ -1394,7 +1392,7 @@ candidates = []
     assert view["claim_boundary"]["status"] == "continue-required"
     assert view["claim_boundary"]["active_intent_satisfied"] is False
     assert "full_intent_complete" in view["claim_boundary"]["blocked_claim_classes"]
-    assert "complete" in view["claim_boundary"]["blocked_claims"]
+    assert "blocked_claims" not in view["claim_boundary"]
     assert view["answers"]["next_safe_action"] == "Continue replacing the remaining tests."
 
 

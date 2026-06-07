@@ -738,7 +738,6 @@ def test_start_surfaces_continuation_view_for_active_planning(tmp_path: Path, ca
         "claim_level_requested": "full-intent-complete",
         "claim_level_allowed": "partial-progress",
         "required_next_action": "continue-current-work",
-        "blocked_claims": ["done", "implemented", "complete", "finished", "all", "full intent complete"],
         "claim_authorization": {
             "allowed_claim_classes": ["partial_progress"],
             "blocked_claim_classes": ["full_intent_complete", "issue_closure"],

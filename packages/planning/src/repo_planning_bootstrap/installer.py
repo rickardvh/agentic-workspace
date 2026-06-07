@@ -9171,7 +9171,6 @@ def _claim_boundary_for_continuation_view(planning_record: dict[str, Any]) -> di
         if isinstance(authorization, dict):
             blocked_classes = [str(item) for item in authorization.get("blocked_claim_classes", []) if str(item).strip()]
             allowed_classes = [str(item) for item in authorization.get("allowed_claim_classes", []) if str(item).strip()]
-        blocked_claims = [str(item) for item in completion_gate.get("blocked_claims", []) if str(item).strip()]
         return {
             "status": completion_gate.get("status", "unknown"),
             "source": "planning_record.completion_gate",
@@ -9181,7 +9180,6 @@ def _claim_boundary_for_continuation_view(planning_record: dict[str, Any]) -> di
             "human_accepted_partial": bool(completion_gate.get("human_accepted_partial", False)),
             "allowed_claim_classes": allowed_classes,
             "blocked_claim_classes": blocked_classes,
-            "blocked_claims": blocked_claims,
             "rule": "completion_gate owns closeout claim authorization; continuation_view only projects it.",
         }
     satisfied = _truthy_status(intent_satisfaction.get("was original intent fully satisfied?"))
@@ -9192,19 +9190,16 @@ def _claim_boundary_for_continuation_view(planning_record: dict[str, Any]) -> di
         claim_level_allowed = "full-intent-complete"
         required_next_action = "close-complete"
         active_intent_satisfied = True
-        blocked_claims: list[str] = []
     elif unsatisfied or continuation_required:
         status = "continue-required"
         claim_level_allowed = "partial-progress"
         required_next_action = "continue-current-work"
         active_intent_satisfied = False
-        blocked_claims = ["done", "implemented", "complete", "finished", "all", "full intent complete"]
     else:
         status = "unknown"
         claim_level_allowed = "partial-progress"
         required_next_action = "reconcile-claim-boundary"
         active_intent_satisfied = False
-        blocked_claims = ["done", "implemented", "complete", "finished", "all", "full intent complete"]
     return {
         "status": status,
         "source": "planning_record.intent_satisfaction + required_continuation + closure_check",
@@ -9214,7 +9209,6 @@ def _claim_boundary_for_continuation_view(planning_record: dict[str, Any]) -> di
         "human_accepted_partial": False,
         "allowed_claim_classes": ["partial_progress"] if claim_level_allowed == "partial-progress" else ["full_intent_complete"],
         "blocked_claim_classes": ["full_intent_complete", "issue_closure"] if claim_level_allowed == "partial-progress" else [],
-        "blocked_claims": blocked_claims,
         "closure_decision": closure_check.get("closure decision", ""),
         "rule": "When completion_gate is absent, this is a conservative projection from existing Planning closeout fields.",
     }
