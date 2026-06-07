@@ -54,7 +54,7 @@
       "Final response rendering obeys the gate and includes the gate when full completion is blocked."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "Create a bounded plan for Implement #1380 active intent satisfaction guard."
@@ -64,16 +64,17 @@
   ],
   "machine_readable_contract": {
     "intent": {
-    "outcome": "Implement the #1383 completion gate pivot for PR #1382.",
-    "constraints": "Reuse existing closeout and Planning fields; do not make AW the semantic judge.",
-    "latitude": "Derived gate shape, compact rendering, schema/reference docs, and focused tests.",
-    "escalation": "Escalate if enforcement requires a new universal intent ledger or PR-specific closure engine."
+      "outcome": "Implement the #1383 completion gate pivot for PR #1382.",
+      "constraints": "Reuse existing closeout and Planning fields; do not make AW the semantic judge.",
+      "latitude": "Derived gate shape, compact rendering, schema/reference docs, and focused tests.",
+      "escalation": "Escalate if enforcement requires a new universal intent ledger or PR-specific closure engine.",
+      "proof": "See proof_report.validation proof."
     },
     "execution": {
       "milestone": "issue-1380-active-intent-satisfaction-guard",
-      "status": "active",
-      "next_step": "Update PR body and push.",
-      "proof": "Focused gate tests plus full workspace validation passed."
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
     },
     "scope": {
       "touched": [
@@ -142,10 +143,15 @@
     "escalate when": "The gate cannot be made strict without broad new state or PR-specific issue closure machinery."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "recorded",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
-    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "PR #1382 review fixes are tightly coupled across workspace report, Planning closeout, schemas, and focused regressions; keep-local preserves context and does not reduce required proof.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "16b8fd9f7a72e885",
+    "recorded at": "2026-06-07T13:31:46+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -156,7 +162,7 @@
   "references": [],
   "active_milestone": {
     "id": "issue-1380-active-intent-satisfaction-guard",
-    "status": "active",
+    "status": "completed",
     "scope": "Pivot PR #1382 to the #1383 completion gate design.",
     "ready": "ready",
     "blocked": "none",
@@ -191,76 +197,76 @@
     "run status": "completed",
     "executor": "Codex",
     "handoff source": "uv run python scripts/run_agentic_workspace.py start --task ... --format json; implement --changed ... --format json",
-    "what happened": "Created #1383, marked #1380/#1382 as superseded, and pivoted PR #1382 around a derived completion_gate that blocks unsupported full closeout claims and routes continuation, clarification, explicit partial, or complete closeout.",
-    "scope touched": "workspace closeout/report runtime projection, compact reporting support, workspace_report schema/reference docs, and report CLI regression tests",
-    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; docs/reference/workspace-report.md; tests/test_workspace_report_cli.py",
-    "validations run": "focused completion_gate tests; adjacent closeout tests; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make schema-reference-docs; make maintainer-surfaces; uv run python scripts/run_agentic_workspace.py summary --target . --format json",
-    "result for continuation": "implementation ready for PR review",
-    "next step": "Update PR #1382 body, commit, and push."
+    "what happened": "Addressed PR #1382 review by expanding completion_gate coverage to Planning closeout and lane closeout surfaces, broadening blocked claim language, requiring proof for full closeout, demoting active-intent packets to explicit selectors, and refreshing generated Python/TypeScript payloads.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; packages/planning/src/repo_planning_bootstrap/installer.py; planning schemas; generated planning payloads; focused workspace and planning tests; PR body",
+    "changed surfaces": "completion_gate runtime; Planning closeout records; lane closeout records; start/implement compact contexts; generated Python/TypeScript planning payloads",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
   },
   "finished_run_review": {
-    "review status": "completed",
-    "scope respected": "yes; no new module, universal ledger, semantic classifier, or PR-specific closure engine was added",
+    "review status": "complete",
+    "scope respected": "yes; the review's material findings are addressed with runtime behavior, Planning closeout coverage, schema-backed records, generated target refresh, and focused regressions.",
     "proof status": "passed",
-    "intent served": "yes; closeout cannot honestly expose full completion when completion_gate records active_intent_satisfied=false without human_accepted_partial",
+    "intent served": "yes",
     "config compliance": "used repo-local AW invocation and selected proof from implement --changed",
     "misinterpretation risk": "low; remaining limitation is that PR/issue closure language is blocked through closeout/final-response claim surfaces rather than a provider-specific PR body generator",
-    "follow-on decision": "dogfooding issue #1381 already covers stale state.toml active-item summary metadata; proof --current manual fallback noted in PR dogfooding"
+    "follow-on decision": "none"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "keep-local",
+    "route skipped reason": "PR #1382 review fixes are tightly coupled across workspace report, Planning closeout, schemas, and focused regressions; keep-local preserves context and does not reduce required proof.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "focused completion_gate tests; adjacent closeout tests; make test-workspace; make lint-workspace; contract tooling; structured inventory; contract/check ruff; schema-reference docs; maintainer surfaces; AW summary",
-    "proof achieved now": "yes",
-    "evidence for \"proof achieved\" state": "All required validation commands selected by implement --changed passed after adding schema descriptions and preserving guidance-only closeout profile behavior."
+    "validation proof": "Focused completion-gate, selector, Planning closeout, and lane tests passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; AW summary; AW planning doctor.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
   "intent_satisfaction": {
     "original intent": "Implement #1383 so if the agent knows the active human intent is not satisfied, AW must not let the workflow terminate as done/full-complete.",
     "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "completion_gate is derived from existing closeout/Planning/proof fields, appears in closeout_trust and closeout_report, blocks done/implemented/Closes/full-complete claims when active_intent_satisfied=false without human_accepted_partial, renders required final-response caveats, and is covered by #1379-style overclosure plus continuation, clarification, explicit partial, and satisfied-intent tests.",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
     "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "completion_gate closeout transition enforcement for #1383",
-    "validation confirmed": "focused and full workspace validation passed",
-    "follow-on routed to": "none yet",
+    "outcome delivered": "PR #1382 now supports honest closure of #1383 across workspace report/final-response and Planning closeout/lane surfaces.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
     "post-work posterity capture": "PR body update pending",
-    "knowledge promoted (Memory/Docs/Config)": "workspace_report schema/reference docs",
-    "resume from": "PR #1382 body update and push"
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "workspace_report schema/reference docs"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "archive"
   },
   "closure_check": {
-    "slice status": "complete",
+    "closeout scope": "slice",
+    "slice status": "completed",
     "larger-intent status": "closed",
-    "closure decision": "archive-and-close-after-pr",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "The PR demonstrates the stricter transition rule: completion_gate blocks full closeout claims when the agent self-review says active human intent is unsatisfied and no human-accepted partial exists.",
-    "evidence carried forward": "Focused completion_gate tests, closeout_report rendering regression, full workspace validation, schema/reference docs, and dogfooding notes.",
-    "reopen trigger": "Reopen if a closeout/final-response completion claim can still say done/implemented/Closes/full-complete while completion_gate.active_intent_satisfied=false and human_accepted_partial=false."
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
     "status": "signals_routed",
@@ -292,15 +298,81 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "GitHub #1381",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
       "continuation": [],
       "memory": [],
       "config_check": [],
-      "docs": [],
+      "docs": [
+        {
+          "summary": "workspace_report schema/reference docs",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
       "issue_follow_up": []
     }
   },
   "drift_log": [
-    "2026-06-06: Scaffolded by agentic-planning new-plan."
-  ]
+    "2026-06-06: Scaffolded by agentic-planning new-plan.",
+    "2026-06-07: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "blocked_claims": [],
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported claim language",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement #1383 so if the agent knows the active human intent is not satisfied, AW must not let the workflow terminate as done/full-complete.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused completion-gate, selector, Planning closeout, and lane tests passed; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make typecheck-planning; maintainer-surfaces; schema-reference-docs; contract tooling; structured inventory; AW summary; AW planning doctor.\nChanged surfaces: completion_gate runtime; Planning closeout records; lane closeout records; start/implement compact contexts; generated Python/TypeScript planning payloads\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
 }

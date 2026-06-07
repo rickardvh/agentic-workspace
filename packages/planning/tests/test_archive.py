@@ -429,6 +429,8 @@ def test_archive_plan_prepare_closeout_dry_run_returns_valid_patch(tmp_path: Pat
     assert "intent_satisfaction" in text
     assert "task_intent_promotion" in text
     assert "do-not-promote" in text
+    assert "completion_gate" in text
+    assert "Completion gate: allowed" in text
     assert "generated_closeout" in text
     assert "Generated closeout adapter; structured execplan fields are authoritative." in text
     assert "closeout_distillation" in text
@@ -602,6 +604,10 @@ candidates = []
     assert archived["machine_readable_contract"]["execution"]["next_step"] == ("No required continuation remains for this archived slice.")
     assert archived["machine_readable_contract"]["execution"]["proof"] == "uv run pytest tests/test_check_planning_surfaces.py"
     assert archived["task_intent_promotion"]["needs review"] is True
+    assert archived["completion_gate"]["kind"] == "agentic-workspace/completion-gate/v1"
+    assert archived["completion_gate"]["status"] == "allowed"
+    assert archived["completion_gate"]["active_intent_satisfied"] is True
+    assert archived["completion_gate"]["claim_level_allowed"] == "full-intent-complete"
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
     assert archived["iterative_follow_through"]["validation still needed"] == (
         "None for this archived slice; reopen only if new evidence invalidates the proof."
@@ -729,7 +735,12 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
     assert archived["closure_check"]["larger-intent status"] == "open"
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["completion_gate"]["status"] == "continue-required"
+    assert archived["completion_gate"]["claim_level_allowed"] == "partial-progress"
+    for blocked in ("done", "implemented", "complete", "finished", "all"):
+        assert blocked in archived["completion_gate"]["blocked_claims"]
     assert "Archive decision: archive-but-keep-lane-open" in archived["generated_closeout"]["text"]
+    assert "Completion gate: continue-required" in archived["generated_closeout"]["text"]
     assert "Follow-up: .agentic-workspace/planning/state.toml" in archived["generated_closeout"]["text"]
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
 
@@ -769,6 +780,8 @@ candidates = []
     assert not record_path.exists()
     assert archived["closure_check"]["closure decision"] == "archive-and-close"
     assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["completion_gate"]["status"] == "allowed"
+    assert archived["completion_gate"]["active_intent_satisfied"] is True
     assert archived["durable_residue"]["status"] == "none"
 
 

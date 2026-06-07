@@ -13278,7 +13278,7 @@ def _completion_gate_payload(
                 text = "; ".join(str(item).strip() for item in value if str(item).strip())
             else:
                 text = str(value or "").strip()
-            if text and text.lower() not in {"none", "null", "unknown", "pending", "not-recorded", "not recorded"}:
+            if text and text.lower() not in {"none", "no", "false", "null", "unknown", "pending", "not-recorded", "not recorded"}:
                 return text
         return ""
 
@@ -13315,7 +13315,6 @@ def _completion_gate_payload(
         )
     )
     proof_supports_full = proof_status in {"representative", "sufficient_for_claim", "sufficient-for-claim"}
-    proof_not_required = proof_status in {"not_recorded", "not-recorded", ""}
     parent_satisfied = parent_status in {"satisfied", "guidance-only", ""}
     intent_satisfied_field = truthy(intent_satisfaction.get("was original intent fully satisfied?")) or truthy(
         intent_continuity.get("this slice completes the larger intended outcome")
@@ -13327,7 +13326,7 @@ def _completion_gate_payload(
         and no_required_follow_on
         and parent_satisfied
         and acceptance_trust in {"", "normal", "not-applicable"}
-        and (proof_supports_full or proof_not_required)
+        and proof_supports_full
         and not applicable_intent_status.get("closeout_blocked")
     )
     continuation_possible = bool(
@@ -13379,7 +13378,7 @@ def _completion_gate_payload(
         present(closure_check.get("closure target"), closure_check.get("closure_target")),
     ):
         issue_refs.update(_issue_refs_from_text(value))
-    blocked_claims = [] if active_intent_satisfied else ["done", "implemented", "full intent complete"]
+    blocked_claims = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
     if not active_intent_satisfied:
         blocked_claims.extend(f"Closes {ref}" for ref in sorted(issue_refs))
     self_review_answer = "yes" if active_intent_satisfied else "no"
@@ -17039,25 +17038,6 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             )
             if key in payload["applicable_intent_status"]
         }
-    if isinstance(payload.get("active_intent_contract"), dict) and not (
-        isinstance(task_intent, dict) and task_intent.get("task_argument_mode") == "task-file"
-    ):
-        projected["active_intent_contract"] = {
-            "status": payload["active_intent_contract"].get("status"),
-            "source_count": payload["active_intent_contract"].get("source_count"),
-            "update_relationship_options": payload["active_intent_contract"].get("update_relationship_options", []),
-        }
-    if isinstance(payload.get("intent_satisfaction_matrix"), dict):
-        matrix = payload["intent_satisfaction_matrix"]
-        full_claim = _as_dict(matrix.get("full_completion_claim"))
-        projected["intent_satisfaction_matrix"] = {
-            "status": matrix.get("status"),
-            "full_completion_claim": {
-                "allowed": bool(full_claim.get("allowed")),
-                "blocked_by": full_claim.get("blocked_by", []),
-                "rule": "Self-review first; claim only the proven level.",
-            },
-        }
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -18546,25 +18526,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "closeout_blocked",
             )
             if key in payload["applicable_intent_status"]
-        }
-    if isinstance(payload.get("active_intent_contract"), dict) and not (
-        isinstance(payload.get("task_intent"), dict) and payload["task_intent"].get("task_argument_mode") == "task-file"
-    ):
-        context["active_intent_contract"] = {
-            "status": payload["active_intent_contract"].get("status"),
-            "source_count": payload["active_intent_contract"].get("source_count"),
-            "update_relationship_options": payload["active_intent_contract"].get("update_relationship_options", []),
-        }
-    if isinstance(payload.get("intent_satisfaction_matrix"), dict):
-        matrix = payload["intent_satisfaction_matrix"]
-        full_claim = _as_dict(matrix.get("full_completion_claim"))
-        context["intent_satisfaction_matrix"] = {
-            "status": matrix.get("status"),
-            "full_completion_claim": {
-                "allowed": bool(full_claim.get("allowed")),
-                "blocked_by": full_claim.get("blocked_by", []),
-                "rule": "Self-review first; claim only the proven level.",
-            },
         }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
@@ -22812,21 +22773,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 else [],
             },
             "intent_evidence": _compact_intent_evidence(payload.get("intent_evidence", {})),
-            "active_intent_contract": {
-                "status": payload.get("active_intent_contract", {}).get("status"),
-                "source_count": payload.get("active_intent_contract", {}).get("source_count"),
-                "update_relationship_options": payload.get("active_intent_contract", {}).get("update_relationship_options", []),
-            },
-            "intent_satisfaction_matrix": {
-                "status": payload.get("intent_satisfaction_matrix", {}).get("status"),
-                "full_completion_claim": {
-                    "allowed": bool(_as_dict(payload.get("intent_satisfaction_matrix", {}).get("full_completion_claim")).get("allowed")),
-                    "blocked_by": _as_dict(payload.get("intent_satisfaction_matrix", {}).get("full_completion_claim")).get(
-                        "blocked_by", []
-                    ),
-                    "rule": "Self-review first; claim only the proven level.",
-                },
-            },
             "parent_intent_status": {
                 key: payload.get("parent_intent_status", {}).get(key)
                 for key in (
@@ -22890,8 +22836,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.workflow_sufficiency",
                 "context.acceptance",
                 "context.intent_evidence",
-                "context.active_intent_contract",
-                "context.intent_satisfaction_matrix",
+                "active_intent_contract",
+                "intent_satisfaction_matrix",
                 "context.parent_intent_status",
                 "context.applicable_intent_status",
                 "context.acceptance_reconciliation",
@@ -28987,6 +28933,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["verification"] = full_payload["verification"]
         if routine_work_context_selected:
             payload["routine_work_context"] = full_payload["routine_work_context"]
+        if _selector_requests(getattr(args, "select", None), "active_intent_contract"):
+            payload["active_intent_contract"] = full_payload["active_intent_contract"]
+        if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
+            payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,

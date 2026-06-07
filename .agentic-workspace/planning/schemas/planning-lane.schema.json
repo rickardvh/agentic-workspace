@@ -98,6 +98,9 @@
     "closeout_state": {
       "$ref": "#/$defs/closeout_state"
     },
+    "completion_gate": {
+      "$ref": "#/$defs/completion_gate"
+    },
     "references": {
       "type": "array",
       "items": {
@@ -211,6 +214,67 @@
         },
         "next_owner": {
           "type": "string"
+        }
+      }
+    },
+    "completion_gate": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "kind",
+        "status",
+        "active_intent_satisfied",
+        "human_accepted_partial",
+        "claim_level_requested",
+        "claim_level_allowed",
+        "required_next_action",
+        "blocked_claims",
+        "self_review",
+        "continuation",
+        "authority_boundary"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/completion-gate/v1"
+        },
+        "status": {
+          "enum": [
+            "allowed",
+            "blocked",
+            "continue-required",
+            "clarification-required",
+            "human-accepted-partial"
+          ]
+        },
+        "active_intent_satisfied": {
+          "type": "boolean"
+        },
+        "human_accepted_partial": {
+          "type": "boolean"
+        },
+        "claim_level_requested": {
+          "type": "string"
+        },
+        "claim_level_allowed": {
+          "type": "string"
+        },
+        "required_next_action": {
+          "type": "string"
+        },
+        "blocked_claims": {
+          "$ref": "#/$defs/string_array"
+        },
+        "residual_intent": {
+          "type": "string"
+        },
+        "self_review": {
+          "type": "object"
+        },
+        "continuation": {
+          "type": "object"
+        },
+        "authority_boundary": {
+          "type": "object"
         }
       }
     },

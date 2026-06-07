@@ -3422,6 +3422,13 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
                         "residual_work": str(closeout.get("residual_work", "")).strip(),
                         "next_owner": str(closeout.get("next_owner", "")).strip(),
                     },
+                    "completion_gate": {
+                        "status": str(record.get("completion_gate", {}).get("status", "")).strip(),
+                        "claim_level_allowed": str(record.get("completion_gate", {}).get("claim_level_allowed", "")).strip(),
+                        "active_intent_satisfied": bool(record.get("completion_gate", {}).get("active_intent_satisfied", False)),
+                    }
+                    if isinstance(record.get("completion_gate"), dict)
+                    else {},
                 }
             )
     archived_count = 0
@@ -9588,6 +9595,38 @@ def close_lane_record(
         "residual_work": residual_work.strip() or "none",
         "next_owner": next_owner.strip() or ("parent decomposition" if known_gaps else "none"),
     }
+    lane_gate_patch = {
+        "intent_satisfaction": {
+            "original intent": str(record.get("lane_outcome") or record.get("title") or slug).strip(),
+            "was original intent fully satisfied?": "yes" if evidence and not known_gaps else "no",
+            "evidence of intent satisfaction": "; ".join(evidence),
+            "unsolved intent passed to": record["closeout_state"]["next_owner"] if known_gaps else "none",
+        },
+        "closure_check": {
+            "slice status": "completed",
+            "larger-intent status": "closed" if not known_gaps else "open",
+            "closure decision": "archive-and-close" if not known_gaps else "archive-but-keep-lane-open",
+            "why this decision is honest": record["closeout_state"]["summary"],
+            "evidence carried forward": "; ".join(evidence) or "not recorded",
+            "reopen trigger": "None unless new evidence shows the lane closeout was incomplete."
+            if not known_gaps
+            else "Reopen when residual lane work resumes.",
+        },
+        "proof_report": {
+            "validation proof": "; ".join(evidence),
+            "proof achieved now": "lane proof aggregation satisfied"
+            if evidence and not known_gaps
+            else "lane proof aggregation has known gaps",
+            'evidence for "proof achieved" state': "; ".join(evidence),
+        },
+        "required_continuation": {
+            "required follow-on for the larger intended outcome": "no" if not known_gaps else "yes",
+            "owner surface": record["closeout_state"]["next_owner"] if known_gaps else "none",
+        },
+    }
+    record["completion_gate"] = _planning_completion_gate_payload(
+        record=record, patch=lane_gate_patch, claim_level_requested="lane-complete"
+    )
     lane_relative = record_path.relative_to(target_root).as_posix()
     if dry_run:
         result.add("would update", record_path, "record lane proof aggregation, parent contribution, and closeout state")
@@ -10768,6 +10807,7 @@ def _generated_closeout_adapter(
     memory_learning = _record_section_dict(patch, "memory_learning_capture") or {}
     execution_run = _record_section_dict(record, "execution_run") or {}
     execution_summary = _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {})
+    completion_gate = patch.get("completion_gate") if isinstance(patch.get("completion_gate"), dict) else {}
 
     changed_surfaces = execution_run.get("changed surfaces", "").strip() or execution_run.get("scope touched", "").strip() or "not recorded"
     unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
@@ -10790,11 +10830,158 @@ def _generated_closeout_adapter(
         f"Memory learning: {memory_learning.get('decision', 'not recorded').strip() or 'not recorded'}",
         f"Follow-up: {follow_up}",
     ]
+    if completion_gate:
+        lines.extend(
+            [
+                f"Completion gate: {completion_gate.get('status', 'not recorded')}",
+                f"Completion claim allowed: {completion_gate.get('claim_level_allowed', 'not recorded')}",
+            ]
+        )
     return {
         "status": "generated",
         "source": "archive-plan --prepare-closeout",
         "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
         "text": "\n".join(lines),
+    }
+
+
+def _planning_completion_gate_payload(
+    *,
+    record: dict[str, Any],
+    patch: dict[str, Any],
+    claim_level_requested: str = "full-intent-complete",
+) -> dict[str, Any]:
+    intent_satisfaction = _record_section_dict(patch, "intent_satisfaction") or {}
+    closure_check = _record_section_dict(patch, "closure_check") or {}
+    proof_report = _record_section_dict(patch, "proof_report") or _record_section_dict(record, "proof_report") or {}
+    required_continuation = (
+        _record_section_dict(patch, "required_continuation") or _record_section_dict(record, "required_continuation") or {}
+    )
+    intent_continuity = _record_section_dict(patch, "intent_continuity") or _record_section_dict(record, "intent_continuity") or {}
+    parent_acceptance = _record_section_dict(patch, "parent_acceptance") or _record_section_dict(record, "parent_acceptance") or {}
+
+    def truthy(value: Any) -> bool:
+        return str(value or "").strip().lower() in {"yes", "true", "accepted", "approved", "explicit", "human-accepted"}
+
+    def present(*values: Any) -> str:
+        for value in values:
+            text = str(value or "").strip()
+            if text and text.lower() not in {"none", "no", "false", "null", "unknown", "pending", "not-recorded", "not recorded"}:
+                return text
+        return ""
+
+    proof_text = present(
+        proof_report.get("validation proof"),
+        proof_report.get("proof achieved now"),
+        proof_report.get('evidence for "proof achieved" state'),
+    )
+    proof_supports_full = bool(proof_text)
+    intent_satisfied = truthy(intent_satisfaction.get("was original intent fully satisfied?"))
+    closure_decision = str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+    larger_status = str(closure_check.get("larger-intent status") or "").strip().lower()
+    required_follow_on = str(required_continuation.get("required follow-on for the larger intended outcome") or "").strip().lower()
+    residual_intent = present(
+        intent_satisfaction.get("unsolved intent passed to"),
+        required_continuation.get("required follow-on for the larger intended outcome"),
+        intent_continuity.get("continuation surface"),
+    )
+    continuation_owner = present(
+        required_continuation.get("owner surface"),
+        intent_continuity.get("continuation surface"),
+        intent_satisfaction.get("unsolved intent passed to"),
+    )
+    human_accepted_partial = any(
+        truthy(value)
+        for value in (
+            closure_check.get("human accepted partial"),
+            closure_check.get("human_accepted_partial"),
+            parent_acceptance.get("human accepted partial"),
+            parent_acceptance.get("human_accepted_partial"),
+        )
+    )
+    active_intent_satisfied = bool(
+        intent_satisfied
+        and closure_decision == "archive-and-close"
+        and larger_status in {"", "closed"}
+        and required_follow_on in {"", "no", "false", "none"}
+        and proof_supports_full
+    )
+    continuation_possible = bool(
+        continuation_owner
+        or residual_intent
+        or closure_decision == "archive-but-keep-lane-open"
+        or required_follow_on in {"yes", "true", "required", "follow-up-required"}
+    )
+    ambiguous_or_blocked = (
+        closure_decision in {"requires-review", "blocked"}
+        or required_follow_on in {"unknown", "ambiguous"}
+        or (intent_satisfied and not proof_supports_full)
+    )
+    if active_intent_satisfied:
+        status = "allowed"
+        claim_level_allowed = claim_level_requested
+        required_next_action = "close-complete"
+    elif human_accepted_partial:
+        status = "human-accepted-partial"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "close-human-accepted-partial"
+    elif ambiguous_or_blocked:
+        status = "clarification-required"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "ask-human"
+    elif continuation_possible:
+        status = "continue-required"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "create-follow-on-plan" if continuation_owner else "continue-current-work"
+    else:
+        status = "blocked"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "ask-human"
+
+    issue_refs: set[str] = set()
+    for reference in record.get("references", []):
+        if isinstance(reference, dict):
+            issue_refs.update(_issue_refs_from_text(str(reference.get("target") or "")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("url") or "")))
+        else:
+            issue_refs.update(_issue_refs_from_text(str(reference or "")))
+    issue_refs.update(_issue_refs_from_text(str(record.get("title") or "")))
+    blocked_claims = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
+    if not active_intent_satisfied:
+        blocked_claims.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+    reason = (
+        "Planning closeout evidence supports the requested completion claim."
+        if active_intent_satisfied
+        else present(
+            residual_intent,
+            "Planning closeout evidence does not yet support the requested completion claim.",
+        )
+    )
+    return {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": status,
+        "active_intent_satisfied": active_intent_satisfied,
+        "human_accepted_partial": human_accepted_partial,
+        "claim_level_requested": claim_level_requested,
+        "claim_level_allowed": claim_level_allowed,
+        "required_next_action": required_next_action,
+        "blocked_claims": _dedupe(blocked_claims),
+        "residual_intent": "" if active_intent_satisfied else residual_intent,
+        "self_review": {
+            "question": "Does the delivered work satisfy the active human intent?",
+            "answer": "yes" if active_intent_satisfied else "no",
+            "reason": reason,
+        },
+        "continuation": {
+            "owner_surface": continuation_owner,
+            "created_or_required": bool(not active_intent_satisfied and (continuation_possible or status != "allowed")),
+            "reason": "" if active_intent_satisfied else reason,
+        },
+        "authority_boundary": {
+            "aw_owns": ["forcing the transition rule", "blocking unsupported claim language", "routing continuation"],
+            "agent_owns": ["semantic satisfaction judgment", "evidence interpretation", "next implementation decisions"],
+            "human_owns": ["accepting narrower scope", "changing intent", "accepting unresolved residual intent"],
+        },
     }
 
 
@@ -11506,6 +11693,7 @@ def _prepare_execplan_closeout(
             }
         )
     patch["closeout_distillation"] = {"buckets": buckets}
+    patch["completion_gate"] = _planning_completion_gate_payload(record=record, patch=patch)
     patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)
 
     detail = json.dumps(patch, ensure_ascii=False, sort_keys=True)
@@ -11743,6 +11931,7 @@ def archive_parent_lane_closeout(
             }
         )
     record["closeout_distillation"] = {"buckets": buckets}
+    record["completion_gate"] = _planning_completion_gate_payload(record=record, patch=record, claim_level_requested="lane-complete")
     record["generated_closeout"] = _generated_closeout_adapter(record=record, patch=record)
 
     if dry_run:

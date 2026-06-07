@@ -3384,6 +3384,8 @@ def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, ca
     assert gate["claim_level_requested"] == "full-intent-complete"
     assert gate["claim_level_allowed"] == "partial-progress"
     assert gate["required_next_action"] == "create-follow-on-plan"
+    for blocked in ("done", "implemented", "complete", "finished", "all", "full intent complete"):
+        assert blocked in gate["blocked_claims"]
     assert "Closes #1374" in gate["blocked_claims"]
     assert gate["self_review"]["answer"] == "no"
     assert gate["continuation"]["owner_surface"] == ".agentic-workspace/planning/execplans/issue-1374-follow-up.plan.json"
@@ -3398,6 +3400,8 @@ def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, ca
     assert rendering["plain_done_allowed"] is False
     assert "completion gate" in rendering["must_include"]
     assert "Closes #1374" in rendering["must_not_claim"]
+    for blocked in ("complete", "finished", "all"):
+        assert blocked in rendering["must_not_claim"]
     assert "Completion gate: continue-required" in rendering["rendered_summary"]["rendered_text"]
 
 
@@ -3527,6 +3531,39 @@ def test_report_completion_gate_allows_satisfied_intent_full_closeout(tmp_path: 
     assert gate["blocked_claims"] == []
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-work-complete"]["allowed"] is True
+
+
+def test_report_completion_gate_blocks_full_closeout_when_proof_missing(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="missing-proof-gate",
+        original_intent="Complete the direct contract migration.",
+        delivered_work="Completed the direct contract migration.",
+        slice_completes="yes",
+        required_follow_on="no",
+        continuation_owner="none",
+        closure_status="closed",
+        closure_decision="archive-and-close",
+        proof_status="not_recorded",
+        claim_boundary="work",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["active_intent_satisfied"] is False
+    assert gate["status"] == "blocked"
+    assert gate["claim_level_allowed"] == "partial-progress"
+    for blocked in ("done", "implemented", "complete", "finished", "all", "full intent complete"):
+        assert blocked in gate["blocked_claims"]
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
 
 
 def test_report_closeout_report_uses_audit_profile_for_strict_closeout(tmp_path: Path, capsys) -> None:

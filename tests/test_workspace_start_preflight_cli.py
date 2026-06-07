@@ -889,7 +889,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
 
 
-def test_start_surfaces_chat_task_active_intent_contract_and_satisfaction_matrix(tmp_path: Path, capsys) -> None:
+def test_start_keeps_active_intent_packets_selector_only(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -901,17 +901,8 @@ def test_start_surfaces_chat_task_active_intent_contract_and_satisfaction_matrix
 
     payload = json.loads(capsys.readouterr().out)
     context = _start_context(payload)
-    contract = context["active_intent_contract"]
-    assert contract["status"] == "present"
-    assert contract["source_count"] >= 1
-    assert "supersede" in contract["update_relationship_options"]
-    matrix = context["intent_satisfaction_matrix"]
-    assert matrix["status"] == "required-before-completion-claim"
-    assert matrix["full_completion_claim"]["allowed"] is False
-    assert "satisfaction_matrix.items" in matrix["full_completion_claim"]["blocked_by"]
-    assert "Self-review first" in matrix["full_completion_claim"]["rule"]
-    assert "active_intent_contract" in payload["drill_down"]["available_selectors"]
-    assert "intent_satisfaction_matrix" in payload["drill_down"]["available_selectors"]
+    assert "active_intent_contract" not in context
+    assert "intent_satisfaction_matrix" not in context
 
     assert (
         cli.main(
