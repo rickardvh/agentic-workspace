@@ -1252,6 +1252,152 @@ candidates = [
     )
 
 
+def test_planning_summary_continuation_view_prefers_fresh_execplan_over_stale_todo(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/resume-lane.plan.json"
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Resume Lane",
+        item_id="resume-lane",
+        status="active",
+        why_now="Preserve the active intent.",
+        next_action="Use the fresher execplan action.",
+        done_when="The active intent is fully satisfied.",
+    )
+    record["proof_report"] = {
+        "validation proof": "Passed current characterization proof.",
+        "proof achieved now": "yes",
+        'evidence for "proof achieved" state': "Current proof receipt.",
+    }
+    record["intent_satisfaction"] = {
+        "original intent": "Preserve the active intent.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "Current proof receipt.",
+        "unsolved intent passed to": "none",
+    }
+    record["completion_gate"] = {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": "allowed",
+        "active_intent_satisfied": True,
+        "human_accepted_partial": False,
+        "claim_level_requested": "full-intent-complete",
+        "claim_level_allowed": "full-intent-complete",
+        "required_next_action": "close-complete",
+        "blocked_claims": [],
+        "claim_authorization": {
+            "allowed_claim_classes": ["full_intent_complete"],
+            "blocked_claim_classes": [],
+        },
+    }
+    _write(plan_path, json.dumps(record, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "resume-lane", title = "Resume Lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/resume-lane.plan.json", why_now = "Old todo projection.", next_action = "Stale todo action.", done_when = "Old todo done text.", proof = "Old todo proof." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="tiny")
+    view = summary["continuation_view"]
+
+    assert view["answers"]["preserved_intent"] == "Preserve the active intent."
+    assert view["answers"]["next_safe_action"] == "Use the fresher execplan action."
+    assert view["resume_predicate"]["status"] == "pass"
+    assert view["claim_boundary"]["claim_level_allowed"] == "full-intent-complete"
+    assert view["proof_state"]["status"] == "present"
+    assert view["stale_projections"][0]["field"] == "todo.active_items[0].next_action"
+    assert view["stale_projections"][0]["stale_value"] == "Stale todo action."
+    assert view["stale_projections"][0]["chosen_value"] == "Use the fresher execplan action."
+    assert any(
+        item["claim"] == "planning state projection" and item["freshness"] == "stale-projection" for item in view["source_freshness"]
+    )
+    assert "raw transcript material" in view["omitted_detail"]
+    assert view["write_responsibility"]["summary_start"].startswith("summary/start render")
+
+
+def test_planning_summary_continuation_view_routes_unsatisfied_intent_to_continuation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/unfinished-lane.plan.json"
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Unfinished Lane",
+        item_id="unfinished-lane",
+        status="active",
+        why_now="Replace broad test structure.",
+        next_action="Continue replacing the remaining tests.",
+        done_when="Most existing tests are replaced by contract-owned conformance tests.",
+    )
+    record["proof_report"] = {
+        "validation proof": "Partial proof only.",
+        "proof achieved now": "yes",
+        'evidence for "proof achieved" state': "One contract fixture.",
+    }
+    record["intent_satisfaction"] = {
+        "original intent": "Replace broad test structure.",
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": "Only one conversion landed.",
+        "unsolved intent passed to": "#follow-up",
+    }
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/execplans/unfinished-lane.plan.json",
+        "activation trigger": "Continue current work.",
+    }
+    record["completion_gate"] = {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": "continue-required",
+        "active_intent_satisfied": False,
+        "human_accepted_partial": False,
+        "claim_level_requested": "full-intent-complete",
+        "claim_level_allowed": "partial-progress",
+        "required_next_action": "continue-current-work",
+        "blocked_claims": ["done", "implemented", "complete", "finished", "all", "full intent complete"],
+        "claim_authorization": {
+            "allowed_claim_classes": ["partial_progress"],
+            "blocked_claim_classes": ["full_intent_complete", "issue_closure"],
+        },
+    }
+    _write(plan_path, json.dumps(record, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "unfinished-lane", title = "Unfinished Lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/unfinished-lane.plan.json", next_action = "Continue replacing the remaining tests.", done_when = "Replace tests.", proof = "Partial proof." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    view = summary["continuation_view"]
+
+    assert view["answers"]["claim_allowed"] == "partial-progress"
+    assert view["resume_predicate"]["status"] == "continue-with-boundary"
+    assert view["resume_predicate"]["required_next_action"] == "continue-current-work"
+    assert view["claim_boundary"]["status"] == "continue-required"
+    assert view["claim_boundary"]["active_intent_satisfied"] is False
+    assert "full_intent_complete" in view["claim_boundary"]["blocked_claim_classes"]
+    assert "complete" in view["claim_boundary"]["blocked_claims"]
+    assert view["answers"]["next_safe_action"] == "Continue replacing the remaining tests."
+
+
 def test_finished_work_inspection_treats_state_roadmap_owner_as_routed_continuation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

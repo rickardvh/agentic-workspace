@@ -706,6 +706,76 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     ]
 
 
+def test_start_surfaces_continuation_view_for_active_planning(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    plan_path = target / ".agentic-workspace/planning/execplans/resume.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Resume",
+        item_id="resume",
+        status="active",
+        why_now="Preserve the active user intent.",
+        next_action="Continue from the execplan next action.",
+        done_when="The active user intent is satisfied.",
+    )
+    record["proof_report"] = {
+        "validation proof": "Passed focused proof.",
+        "proof achieved now": "yes",
+        'evidence for "proof achieved" state': "Focused proof receipt.",
+    }
+    record["completion_gate"] = {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": "continue-required",
+        "active_intent_satisfied": False,
+        "human_accepted_partial": False,
+        "claim_level_requested": "full-intent-complete",
+        "claim_level_allowed": "partial-progress",
+        "required_next_action": "continue-current-work",
+        "blocked_claims": ["done", "implemented", "complete", "finished", "all", "full intent complete"],
+        "claim_authorization": {
+            "allowed_claim_classes": ["partial_progress"],
+            "blocked_claim_classes": ["full_intent_complete", "issue_closure"],
+        },
+    }
+    _write_json(plan_path, record)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "resume", title = "Resume", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/resume.plan.json", next_action = "Stale todo action.", done_when = "Done.", proof = "Proof." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    view = payload["continuation_view"]
+    assert view["kind"] == "agentic-planning/continuation-view/v1"
+    assert view["answers"]["preserved_intent"] == "Preserve the active user intent."
+    assert view["answers"]["next_safe_action"] == "Continue from the execplan next action."
+    assert view["answers"]["claim_allowed"] == "partial-progress"
+    assert view["resume_predicate"]["required_next_action"] == "continue-current-work"
+    assert view["stale_projections"][0]["field"] == "todo.active_items[0].next_action"
+    assert "continuation_view" in payload["drill_down"]["available_selectors"]
+
+
 def test_start_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
