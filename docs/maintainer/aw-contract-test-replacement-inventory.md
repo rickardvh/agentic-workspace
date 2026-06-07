@@ -2,12 +2,25 @@
 
 This inventory is the #1374 AW-side implementation record for replacing generated-command behavior assertions with contract-owned conformance cases.
 
+## Closure Decision
+
+#1374 is complete for the AW repository when this inventory is current: stable generated-command success behavior has a contract-owned conformance owner, duplicate ordinary success-path regressions have been merged or deleted, and the remaining ordinary tests are explicitly retained because they cover runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or command-generation-owned primitive behavior.
+
+This inventory does not close `rickardvh/command-generation#9`; portable primitive and command-generation package test replacement remains owned by that repository.
+
 ## Converted Or Merged
 
 | Old ordinary test | Replacement contract id and case id | Target adapters | Proof command | Remaining ordinary coverage |
 | --- | --- | --- | --- | --- |
-| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script` | `modules.report.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
-| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script` | `defaults.root-cli-authority.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script` | `modules.report.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | Deleted from ordinary black-box tests; `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script` | `defaults.root-cli-authority.process` / `minimal-repo` | generated workspace Python and TypeScript command packages | `uv run python scripts/check/check_generated_command_packages.py --python-conformance`; `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node` | Deleted from ordinary black-box tests; `tests/test_workspace_cli_blackbox.py` keeps usage-error and recovery-message adapter mechanics. |
+
+## Deleted Ordinary Regressions
+
+| Old ordinary test | Delete reason | Equivalent or stronger coverage |
+| --- | --- | --- |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script` | Duplicate generated-command success-path black-box coverage. | Existing `modules.report.process` conformance runs through generated workspace Python and TypeScript command packages. |
+| `tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script` | Stable generated-command behavior belonged in a contract-owned defaults case. | New `defaults.root-cli-authority.process` conformance runs through generated workspace Python and TypeScript command packages. |
 
 ## Kept Ordinary
 
@@ -30,3 +43,7 @@ This inventory is the #1374 AW-side implementation record for replacing generate
 ## Boundary
 
 This inventory does not claim every ordinary test should disappear. Ordinary tests remain legitimate when they prove runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or a narrow bug repro that cannot yet be expressed as a stable operational contract.
+
+## Drift Guard
+
+`tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl` keeps this inventory visible from the maintainer test strategy. It asserts the converted old test names, replacement contract ids, and retained generated-command proof surfaces so a future PR cannot silently remove the #1374 implementation record while keeping ordinary regressions.

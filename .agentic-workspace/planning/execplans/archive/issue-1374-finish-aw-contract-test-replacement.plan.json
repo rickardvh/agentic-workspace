@@ -1,0 +1,384 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Finish #1374 AW contract-owned test replacement",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Finish #1374 on PR #1379 by making the AW-side contract-owned generated-command test replacement complete, explicit, and test-backed after rebasing onto master.",
+    "hard_constraints": "Do not silently leave #1374 as a partial PR. Convert stable generated-command behavior where a stable owner exists; keep ordinary tests only under the issue's explicit keep criteria. Do not claim command-generation#9 is complete.",
+    "agent_may_decide": "Exact inventory wording, maintainer-surface assertions, PR-body closure framing, and proof breadth.",
+    "escalate_when": "A remaining ordinary AW test has stable generated-command behavior that can be converted now but lacks a clear contract owner, or finishing would require command-generation repository work.",
+    "next_action": "Validate the strengthened inventory and update PR #1379 to honestly close #1374.",
+    "proof_expectations": [
+      "uv run pytest tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+      "make maintainer-surfaces",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "docs/maintainer/aw-contract-test-replacement-inventory.md",
+      "tests/test_maintainer_surfaces.py",
+      ".agentic-workspace/planning/execplans/issue-1374-finish-aw-contract-test-replacement.plan.json"
+    ],
+    "completion_criteria": [
+      "The #1374 inventory explicitly states AW-side closure, lists converted/merged/deleted rows with replacement contract ids, and separates command-generation#9 residue.",
+      "Maintainer tests enforce the #1374 inventory surfaces and replacement mappings.",
+      "Generated Python and TypeScript conformance remains green.",
+      "PR #1379 body claims closure honestly and no longer frames the work as a partial initial slice."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.",
+      "constraints": "Do not leave #1374 as a partial PR; do not claim command-generation#9 is complete.",
+      "latitude": "Inventory wording, maintainer-surface assertions, PR-body closure framing, and proof breadth.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-1374-finish-aw-contract-test-replacement",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "closeout scope recorded in closure_check and generated_closeout."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Finish #1374 AW contract-owned test replacement",
+    "inferred intended outcome": "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.",
+    "chosen concrete what": "PR #1379 can honestly close #1374 for AW-side generated-command behavior test replacement; command-generation#9 remains separate upstream work.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the archive evidence and PR body preserve the AW-side closure boundary without claiming command-generation#9."
+  },
+  "execution_bounds": {
+    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "See proof_report.validation proof.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.",
+    "hard constraints": "Do not leave #1374 as a partial PR; do not claim command-generation#9 is complete.",
+    "agent may decide locally": "Inventory wording, maintainer-surface assertions, PR-body closure framing, and proof breadth.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1374-finish-aw-contract-test-replacement",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to PR #1379 and #1374 AW-side closure evidence.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No required continuation remains for this archived slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "closeout scope recorded in closure_check and generated_closeout."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "See proof_report.validation proof."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Finish #1374 AW contract-owned test replacement is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Rebased PR #1379 onto master, strengthened the #1374 AW-side inventory so closure is explicit and test-backed, separated command-generation#9 residue, and filed dogfooding findings #1387 and #1388.",
+    "scope touched": "AW-side contract test replacement inventory, maintainer-surface guard test, and planning closeout evidence.",
+    "changed surfaces": "docs/maintainer/aw-contract-test-replacement-inventory.md; tests/test_maintainer_surfaces.py; .agentic-workspace/planning/execplans/issue-1374-finish-aw-contract-test-replacement.plan.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The remaining ordinary AW tests are retained only under #1374's explicit keep criteria: runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or command-generation-owned primitive behavior. Stable generated-command success behavior is converted or merged into contract-owned conformance cases.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: focused maintainer inventory assertion; generated Python conformance; generated TypeScript conformance; make maintainer-surfaces; make test-workspace; make lint-workspace; AW summary; AW doctor planning.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1379 can honestly close #1374 for AW-side generated-command behavior test replacement; command-generation#9 remains separate upstream work.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #1387; #1388.",
+    "motivation worth preserving": "Future agents should continue from #1387; #1388 rather than rediscover this closeout residue.",
+    "canonical owner now": "#1387; #1388",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "#1387; #1388",
+    "proposed durable intent": "Future agents should continue from #1387; #1388 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "#1387; #1388"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to #1387; #1388.",
+        "owner": "#1387; #1388",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to #1387; #1388.",
+        "owner": "#1387; #1388",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-07: Created active execplan for PR #1379/#1374 finish work.",
+    "2026-06-07: Closed after inventory, proof, PR body, and dogfooding issues were completed."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "#1387; #1388",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1374",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Finish #1374 on PR #1379 by making AW-side contract-owned generated-command test replacement complete, explicit, and test-backed.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: focused maintainer inventory assertion; generated Python conformance; generated TypeScript conformance; make maintainer-surfaces; make test-workspace; make lint-workspace; AW summary; AW doctor planning.\nChanged surfaces: docs/maintainer/aw-contract-test-replacement-inventory.md; tests/test_maintainer_surfaces.py; .agentic-workspace/planning/execplans/issue-1374-finish-aw-contract-test-replacement.plan.json\nDurable residue: planning (#1387; #1388)\nMemory learning: route_to_planning\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}
