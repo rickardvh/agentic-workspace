@@ -181,6 +181,11 @@
       "additionalProperties": false,
       "description": "Small active-work projection used to decide whether raw planning state needs to be opened."
     },
+    "continuation_view": {
+      "type": "object",
+      "description": "Lossy continuation/re-grounding view projected from existing owner surfaces so a low-context agent can identify preserved intent, allowed claim class, next safe action, source freshness, omissions, and drill-down routes without treating startup as a durable state owner.",
+      "additionalProperties": true
+    },
     "package_boundary": {
       "$ref": "#/$defs/package_boundary",
       "description": "Current package/root boundary information for the command invocation."

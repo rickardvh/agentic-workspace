@@ -17040,6 +17040,85 @@ def _startup_closeout_report_route(closeout_inspection: dict[str, Any]) -> dict[
     }
 
 
+def _startup_continuation_view_payload(*, target_root: Path) -> dict[str, Any]:
+    try:
+        from repo_planning_bootstrap.installer import planning_summary
+
+        summary = planning_summary(target=target_root, profile="tiny")
+    except Exception:
+        return {
+            "kind": "agentic-planning/continuation-view/v1",
+            "status": "unavailable",
+            "reason": "Planning summary continuation view could not be loaded.",
+            "detail_command": "agentic-workspace summary --format json",
+        }
+    if not isinstance(summary, dict):
+        return {
+            "kind": "agentic-planning/continuation-view/v1",
+            "status": "unavailable",
+            "reason": "Planning summary did not return a structured payload.",
+            "detail_command": "agentic-workspace summary --format json",
+        }
+    view = summary.get("continuation_view")
+    if isinstance(view, dict):
+        return _compact_start_continuation_view(view)
+    return {
+        "kind": "agentic-planning/continuation-view/v1",
+        "status": "quiet",
+        "reason": "Planning summary did not report active continuation pressure.",
+        "detail_command": "agentic-workspace summary --format json",
+    }
+
+
+def _compact_start_continuation_view(view: dict[str, Any]) -> dict[str, Any]:
+    def _clip(value: Any, *, limit: int = 180) -> Any:
+        if not isinstance(value, str) or len(value) <= limit:
+            return value
+        return value[: limit - 1].rstrip() + "..."
+
+    answers = view.get("answers", {}) if isinstance(view.get("answers"), dict) else {}
+    compact_answers = {
+        key: _clip(answers.get(key))
+        for key in ("preserved_intent", "claim_allowed", "next_safe_action", "trust_basis")
+        if answers.get(key) not in ("", None)
+    }
+    claim_boundary = view.get("claim_boundary", {}) if isinstance(view.get("claim_boundary"), dict) else {}
+    resume_predicate = view.get("resume_predicate", {}) if isinstance(view.get("resume_predicate"), dict) else {}
+    stale_projections = view.get("stale_projections", []) if isinstance(view.get("stale_projections"), list) else []
+    compact_stale = [
+        {
+            key: _clip(item.get(key), limit=120)
+            for key in ("field", "stale_value", "chosen_value", "reason")
+            if isinstance(item, dict) and key in item
+        }
+        for item in stale_projections[:2]
+        if isinstance(item, dict)
+    ]
+    compact = {
+        "kind": view.get("kind", "agentic-planning/continuation-view/v1"),
+        "status": view.get("status", "unknown"),
+        "answers": compact_answers,
+        "claim_boundary": {
+            key: claim_boundary.get(key)
+            for key in (
+                "status",
+                "claim_level_allowed",
+                "required_next_action",
+                "active_intent_satisfied",
+            )
+            if key in claim_boundary
+        },
+        "resume_predicate": {
+            key: resume_predicate.get(key) for key in ("status", "failed", "required_next_action") if key in resume_predicate
+        },
+        "stale_projections": compact_stale,
+        "drill_down": {
+            "full_view": "agentic-workspace summary --select continuation_view --format json",
+        },
+    }
+    return {key: value for key, value in compact.items() if value not in ({}, [], "", None)}
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -17135,6 +17214,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "read_first": payload.get("memory_consult", {}).get("read_first", []),
             "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
         },
+        **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
         "routine_work_context": payload.get("routine_work_context", {}),
         "operating_posture": {
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
@@ -17889,6 +17969,8 @@ def _start_payload(
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
         payload["applicable_intent_status"] = applicable_intent_status
+    if active_planning_present:
+        payload["continuation_view"] = _startup_continuation_view_payload(target_root=target_root)
     if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
         payload["assurance_requirements"] = assurance_requirements
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
@@ -18367,6 +18449,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "routine_work_context",
+        "continuation_view",
         "read_only_response",
         "proof",
         "repair_plan_profile",
@@ -18773,6 +18856,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "available_selectors": available_selectors,
         },
     }
+    if isinstance(payload.get("continuation_view"), dict):
+        selected["continuation_view"] = payload["continuation_view"]
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
         if (
@@ -18969,6 +19054,8 @@ def _start_tiny_payload_fast(
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
         payload["applicable_intent_status"] = applicable_intent_status
+    if active_planning_present:
+        payload["continuation_view"] = _startup_continuation_view_payload(target_root=target_root)
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
     if startup_review["status"] == "attention":
         payload["startup_review"] = startup_review

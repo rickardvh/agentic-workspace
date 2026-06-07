@@ -2019,6 +2019,13 @@ def planning_summary(
         context_budget_contract=context_budget_contract,
         intent_interpretation_contract=intent_interpretation_contract,
     )
+    continuation_view = _planning_continuation_view_payload(
+        target_root=target_root,
+        active_items=active_items,
+        active_execplans=active_execplans,
+        planning_record=planning_record,
+        summary_profile="full",
+    )
     full_summary = {
         "kind": "planning-summary/v1",
         "profile": "full",
@@ -2055,6 +2062,7 @@ def planning_summary(
             roadmap_candidates=roadmap_candidates,
         ),
         "planning_record": planning_record,
+        "continuation_view": continuation_view,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
@@ -2730,6 +2738,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "autopilot_loop",
             "ownership_review",
             "planning_surface_health",
+            "continuation_view",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -3676,6 +3685,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "planning_surface_health",
             "projection_state",
             "planning_revision",
+            "continuation_view",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -3717,6 +3727,7 @@ def _planning_summary_tiny_schema() -> dict[str, Any]:
             "execution_readiness",
             "current_execution_pressure",
             "residue_governance",
+            "continuation_view",
             "decomposition",
             "lanes",
             "detail_commands",
@@ -3809,6 +3820,13 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             changed_paths=[],
         )
     )
+    continuation_view = _planning_continuation_view_payload(
+        target_root=target_root,
+        active_items=active_items,
+        active_execplans=active_execplans,
+        planning_record=None,
+        summary_profile="tiny",
+    )
     return _drop_empty_compact_fields(
         {
             "kind": "planning-summary/v1",
@@ -3843,6 +3861,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "recommended_next_action": recommendation,
                 "active_plan_required": bool(active_items or active_execplans),
             },
+            "continuation_view": continuation_view,
             "decomposition": {"status": "not-evaluated", "detail": "Use compact or full summary for decomposition detail."},
             "lanes": {
                 "status": lane_projection.get("status", "none"),
@@ -3870,6 +3889,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "execution_readiness",
                 "current_execution_pressure",
                 "residue_governance",
+                "continuation_view",
                 "roadmap",
                 "lanes",
             ],
@@ -4130,6 +4150,7 @@ def _planning_summary_task_scoped_projection(
         },
         "planning_surface_health": compact_summary.get("planning_surface_health", {}),
         "residue_governance": compact_summary.get("residue_governance", {}),
+        "continuation_view": compact_summary.get("continuation_view", {}),
         "planning_record": compact_summary.get("planning_record", {}),
         "handoff_contract": compact_summary.get("handoff_contract", {}),
         "current_execution_pressure": compact_summary.get("current_execution_pressure", {}),
@@ -4168,6 +4189,7 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
     residue_governance = (
         compact_summary.get("residue_governance", {}) if isinstance(compact_summary.get("residue_governance"), dict) else {}
     )
+    continuation_view = compact_summary.get("continuation_view", {}) if isinstance(compact_summary.get("continuation_view"), dict) else {}
     tiny: dict[str, Any] = {
         "kind": compact_summary.get("kind", "planning-summary/v1"),
         "profile": "tiny",
@@ -4214,6 +4236,26 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
             for key in ("status", "review_count", "archived_execplan_count", "matrix_class_count", "review_routing", "rule")
             if key in residue_governance
         },
+        "continuation_view": {
+            key: continuation_view[key]
+            for key in (
+                "status",
+                "view_role",
+                "answers",
+                "next_action",
+                "proof_state",
+                "claim_boundary",
+                "resume_predicate",
+                "source_freshness",
+                "stale_projections",
+                "uncertainty",
+                "omitted_detail",
+                "drill_down",
+                "write_responsibility",
+                "authority_boundary",
+            )
+            if key in continuation_view
+        },
         "detail_commands": {
             "compact": "agentic-workspace summary --verbose --format json",
             "full": "agentic-workspace summary --verbose --format json",
@@ -4243,6 +4285,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     residue_governance = dict(summary.get("residue_governance", {}))
+    continuation_view = dict(summary.get("continuation_view", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
     intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
     if "historical_audit_references" in intent_validation_contract:
@@ -4499,6 +4542,27 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "continuation_owner",
                 "execution_bounds",
                 "minimal_refs",
+            ),
+            idle_unavailable_reason=idle_unavailable_reason,
+        ),
+        "continuation_view": _compact_projection(
+            continuation_view,
+            fields=(
+                "view_role",
+                "answers",
+                "active_intent",
+                "next_action",
+                "proof_state",
+                "claim_boundary",
+                "resume_predicate",
+                "source_precedence",
+                "source_freshness",
+                "stale_projections",
+                "uncertainty",
+                "omitted_detail",
+                "drill_down",
+                "write_responsibility",
+                "authority_boundary",
             ),
             idle_unavailable_reason=idle_unavailable_reason,
         ),
@@ -8020,6 +8084,7 @@ def _canonical_planning_record(
     threat_failure_aids: list[Any] = []
     review_residue: list[dict[str, Any]] = []
     prep_only_contract: dict[str, Any] = {}
+    completion_gate: dict[str, Any] = {}
     canonical_core: dict[str, Any] = {}
     execplan_profile: dict[str, Any] = {}
     if plan_path is not None:
@@ -8048,6 +8113,7 @@ def _canonical_planning_record(
         architecture_decision_promotion = _execplan_raw_dict(plan_path, "architecture_decision_promotion")
         threat_failure_aids = _execplan_raw_list(plan_path, "threat_failure_aids")
         prep_only_contract = _execplan_prep_only_contract(plan_path)
+        completion_gate = _execplan_raw_dict(plan_path, "completion_gate")
         review_residue = _review_residue_from_references(
             target_root=target_root,
             references=list(active_contract.get("references", [])),
@@ -8100,6 +8166,7 @@ def _canonical_planning_record(
         "architecture_decision_promotion": architecture_decision_promotion,
         "threat_failure_aids": threat_failure_aids,
         "prep_only_contract": prep_only_contract,
+        "completion_gate": completion_gate,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -9068,6 +9135,364 @@ def _active_handoff_contract(
             worker_contract=worker_contract,
         ),
     }
+
+
+def _truthy_status(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in {"yes", "true", "satisfied", "complete", "completed", "closed", "passed", "allowed"}
+
+
+def _negative_status(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in {"no", "false", "unsatisfied", "incomplete", "open", "partial", "blocked", "failed"}
+
+
+def _first_nonempty(*values: Any) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _claim_boundary_for_continuation_view(planning_record: dict[str, Any]) -> dict[str, Any]:
+    completion_gate = dict(planning_record.get("completion_gate", {})) if isinstance(planning_record.get("completion_gate"), dict) else {}
+    intent_satisfaction = (
+        dict(planning_record.get("intent_satisfaction", {})) if isinstance(planning_record.get("intent_satisfaction"), dict) else {}
+    )
+    required_continuation = (
+        dict(planning_record.get("required_continuation", {})) if isinstance(planning_record.get("required_continuation"), dict) else {}
+    )
+    closure_check = dict(planning_record.get("closure_check", {})) if isinstance(planning_record.get("closure_check"), dict) else {}
+    if completion_gate:
+        authorization = completion_gate.get("claim_authorization", {})
+        blocked_classes = []
+        allowed_classes = []
+        if isinstance(authorization, dict):
+            blocked_classes = [str(item) for item in authorization.get("blocked_claim_classes", []) if str(item).strip()]
+            allowed_classes = [str(item) for item in authorization.get("allowed_claim_classes", []) if str(item).strip()]
+        return {
+            "status": completion_gate.get("status", "unknown"),
+            "source": "planning_record.completion_gate",
+            "claim_level_allowed": completion_gate.get("claim_level_allowed", ""),
+            "required_next_action": completion_gate.get("required_next_action", ""),
+            "active_intent_satisfied": bool(completion_gate.get("active_intent_satisfied", False)),
+            "human_accepted_partial": bool(completion_gate.get("human_accepted_partial", False)),
+            "allowed_claim_classes": allowed_classes,
+            "blocked_claim_classes": blocked_classes,
+            "rule": "completion_gate owns closeout claim authorization; continuation_view only projects it.",
+        }
+    satisfied = _truthy_status(intent_satisfaction.get("was original intent fully satisfied?"))
+    unsatisfied = _negative_status(intent_satisfaction.get("was original intent fully satisfied?"))
+    continuation_required = _truthy_status(required_continuation.get("required follow-on for the larger intended outcome"))
+    if satisfied and not continuation_required:
+        status = "allowed"
+        claim_level_allowed = "full-intent-complete"
+        required_next_action = "close-complete"
+        active_intent_satisfied = True
+    elif unsatisfied or continuation_required:
+        status = "continue-required"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "continue-current-work"
+        active_intent_satisfied = False
+    else:
+        status = "unknown"
+        claim_level_allowed = "partial-progress"
+        required_next_action = "reconcile-claim-boundary"
+        active_intent_satisfied = False
+    return {
+        "status": status,
+        "source": "planning_record.intent_satisfaction + required_continuation + closure_check",
+        "claim_level_allowed": claim_level_allowed,
+        "required_next_action": required_next_action,
+        "active_intent_satisfied": active_intent_satisfied,
+        "human_accepted_partial": False,
+        "allowed_claim_classes": ["partial_progress"] if claim_level_allowed == "partial-progress" else ["full_intent_complete"],
+        "blocked_claim_classes": ["full_intent_complete", "issue_closure"] if claim_level_allowed == "partial-progress" else [],
+        "closure_decision": closure_check.get("closure decision", ""),
+        "rule": "When completion_gate is absent, this is a conservative projection from existing Planning closeout fields.",
+    }
+
+
+def _proof_state_for_continuation_view(planning_record: dict[str, Any]) -> dict[str, Any]:
+    proof_report = dict(planning_record.get("proof_report", {})) if isinstance(planning_record.get("proof_report"), dict) else {}
+    achieved = _first_nonempty(proof_report.get("proof achieved now"), proof_report.get("validation proof"))
+    lower = achieved.lower()
+    if not achieved or lower in {"pending", "not-recorded", "not recorded", "none", "unknown"}:
+        status = "missing-or-pending"
+    elif "pending" in lower or "not recorded" in lower:
+        status = "missing-or-pending"
+    else:
+        status = "present"
+    return {
+        "status": status,
+        "summary": achieved,
+        "source": "planning_record.proof_report",
+        "freshness": "current-owner" if status == "present" else "unknown-or-pending",
+        "known_gap": "" if status == "present" else "Proof is not recorded as current in the active planning record.",
+    }
+
+
+def _compact_source_entry(
+    *, claim: str, owner: str, source: str, source_hash: str = "", freshness: str = "current-owner"
+) -> dict[str, str]:
+    entry = {
+        "claim": claim,
+        "owner": owner,
+        "source": source,
+        "freshness": freshness,
+    }
+    if source_hash:
+        entry["source_hash"] = source_hash
+    return entry
+
+
+def _planning_continuation_view_payload(
+    *,
+    target_root: Path,
+    active_items: list[dict[str, Any]],
+    active_execplans: list[dict[str, str]],
+    planning_record: dict[str, Any] | None,
+    summary_profile: str,
+) -> dict[str, Any]:
+    revision = planning_revision(target_root)
+    if not active_items and not active_execplans:
+        return {
+            "kind": "agentic-planning/continuation-view/v1",
+            "status": "quiet",
+            "view_role": "lossy-continuation-projection",
+            "reason": "no active Planning owner is present",
+            "detail_command": "agentic-workspace summary --verbose --format json",
+        }
+
+    active_item = active_items[0] if active_items else {}
+    if planning_record is None:
+        active_contract = _active_intent_contract(target_root=target_root, active_items=active_items, active_execplans=active_execplans)
+        resumable_contract = _active_resumable_contract(
+            target_root=target_root,
+            active_contract=active_contract,
+            active_execplans=active_execplans,
+        )
+        planning_record = _canonical_planning_record(
+            target_root=target_root,
+            active_contract=active_contract,
+            resumable_contract=resumable_contract,
+        )
+
+    plan_source = str(revision.get("active_execplan") or "").strip()
+    state_source = str(revision.get("state_path") or PLANNING_STATE_PATH.as_posix()).strip()
+    stale_projections: list[dict[str, str]] = []
+    uncertainty: list[dict[str, str]] = []
+    source_precedence = [
+        {
+            "rank": 1,
+            "owner": "Planning active execplan",
+            "uses": ["active intent", "next action", "proof state", "claim boundary"],
+            "source": plan_source,
+            "freshness": "current" if str(revision.get("active_execplan_hash", "")) not in {"", "missing"} else "missing",
+        },
+        {
+            "rank": 2,
+            "owner": "Planning state todo row",
+            "uses": ["active item identity", "surface pointer", "legacy projection"],
+            "source": state_source,
+            "freshness": "current unless a more canonical execplan field disagrees",
+        },
+        {
+            "rank": 3,
+            "owner": "Closeout/completion gate",
+            "uses": ["authorized claim class", "blocked claim classes"],
+            "source": "planning_record.completion_gate",
+            "freshness": "current when recorded in active execplan",
+        },
+        {
+            "rank": 4,
+            "owner": "Verification and Memory",
+            "uses": ["proof summaries and durable anti-rediscovery facts only when referenced"],
+            "source": "Verification/Memory owner surfaces",
+            "freshness": "not loaded by this compact Planning view",
+        },
+    ]
+
+    if planning_record.get("status") != "present":
+        uncertainty.append(
+            {
+                "kind": "missing-owner",
+                "summary": str(planning_record.get("reason") or "active Planning owner could not be resolved"),
+                "route": "agentic-workspace summary --verbose --format json",
+            }
+        )
+        return {
+            "kind": "agentic-planning/continuation-view/v1",
+            "status": "needs-reconcile",
+            "view_role": "lossy-continuation-projection",
+            "summary_profile": summary_profile,
+            "source_precedence": source_precedence,
+            "resume_predicate": {
+                "status": "blocked",
+                "must_be_true": [
+                    "active owner exists",
+                    "revision matches",
+                    "next action is current",
+                    "claim boundary is known",
+                    "proof state is not stale when proof is required",
+                ],
+                "failed": ["active owner exists"],
+                "required_next_action": "reconcile-active-planning-owner",
+            },
+            "uncertainty": uncertainty,
+            "drill_down": {
+                "summary_verbose": "agentic-workspace summary --verbose --format json",
+                "planning_record": "agentic-workspace summary --select planning_record --format json",
+            },
+        }
+
+    todo_next_action = str(active_item.get("next_action", "")).strip() if isinstance(active_item, dict) else ""
+    plan_next_action = str(planning_record.get("next_action", "")).strip()
+    if todo_next_action and plan_next_action and todo_next_action != plan_next_action:
+        stale_projections.append(
+            {
+                "field": "todo.active_items[0].next_action",
+                "stale_value": todo_next_action,
+                "chosen_value": plan_next_action,
+                "chosen_source": plan_source,
+                "reason": "active execplan next action has higher source precedence than todo metadata",
+            }
+        )
+    if todo_next_action and not plan_next_action:
+        uncertainty.append(
+            {
+                "kind": "ambiguous-next-action",
+                "summary": "Only todo metadata provides a next action; active execplan next action is unavailable.",
+                "route": "agentic-workspace summary --select planning_record,resumable_contract --format json",
+            }
+        )
+
+    proof_state = _proof_state_for_continuation_view(planning_record)
+    claim_boundary = _claim_boundary_for_continuation_view(planning_record)
+    failed_predicates: list[str] = []
+    if not plan_source:
+        failed_predicates.append("active owner exists")
+    if not revision.get("revision_id"):
+        failed_predicates.append("revision matches")
+    if not plan_next_action:
+        failed_predicates.append("next action is current")
+    if claim_boundary.get("status") == "unknown":
+        failed_predicates.append("claim boundary is known")
+    if proof_state.get("status") == "missing-or-pending" and claim_boundary.get("claim_level_allowed") == "full-intent-complete":
+        failed_predicates.append("proof state is not stale when proof is required")
+
+    required_next_action = str(claim_boundary.get("required_next_action") or "continue-current-work")
+    if failed_predicates:
+        predicate_status = "needs-reconcile"
+        required_next_action = "drill-down-or-reconcile"
+    elif claim_boundary.get("claim_level_allowed") == "partial-progress":
+        predicate_status = "continue-with-boundary"
+    else:
+        predicate_status = "pass"
+
+    source_freshness = [
+        _compact_source_entry(
+            claim="active intent",
+            owner="Planning active execplan",
+            source=plan_source,
+            source_hash=str(revision.get("active_execplan_hash", "")),
+        ),
+        _compact_source_entry(
+            claim="planning state projection",
+            owner="Planning state",
+            source=state_source,
+            source_hash=str(revision.get("state_hash", "")),
+            freshness="stale-projection" if stale_projections else "current",
+        ),
+        _compact_source_entry(
+            claim="proof state",
+            owner="Planning proof_report",
+            source=f"{plan_source}#proof_report" if plan_source else "planning_record.proof_report",
+            source_hash=str(revision.get("active_execplan_hash", "")),
+            freshness=str(proof_state.get("freshness", "unknown")),
+        ),
+        _compact_source_entry(
+            claim="claim boundary",
+            owner="completion_gate" if planning_record.get("completion_gate") else "Planning closeout fields",
+            source=f"{plan_source}#completion_gate"
+            if planning_record.get("completion_gate") and plan_source
+            else claim_boundary.get("source", ""),
+            source_hash=str(revision.get("active_execplan_hash", "")) if planning_record.get("completion_gate") else "",
+            freshness="current-owner" if claim_boundary.get("status") != "unknown" else "unknown",
+        ),
+    ]
+    return _drop_empty_compact_fields(
+        {
+            "kind": "agentic-planning/continuation-view/v1",
+            "status": "present",
+            "view_role": "lossy-continuation-projection",
+            "summary_profile": summary_profile,
+            "answers": {
+                "preserved_intent": str(planning_record.get("requested_outcome", "")).strip(),
+                "claim_allowed": str(claim_boundary.get("claim_level_allowed", "")).strip(),
+                "next_safe_action": plan_next_action or todo_next_action,
+                "trust_basis": "source_freshness + resume_predicate + claim_boundary",
+            },
+            "active_intent": {
+                "summary": str(planning_record.get("requested_outcome", "")).strip(),
+                "owner": "Planning active execplan",
+                "source": plan_source,
+                "freshness": "current-owner",
+            },
+            "next_action": {
+                "summary": plan_next_action or todo_next_action,
+                "owner": "Planning active execplan" if plan_next_action else "Planning state todo row",
+                "source": plan_source if plan_next_action else state_source,
+                "freshness": "current-owner" if plan_next_action else "lower-precedence-fallback",
+            },
+            "proof_state": proof_state,
+            "claim_boundary": claim_boundary,
+            "resume_predicate": {
+                "status": predicate_status,
+                "must_be_true": [
+                    "active owner exists",
+                    "revision matches",
+                    "next action is current",
+                    "claim boundary is known",
+                    "proof state is not stale when proof is required",
+                ],
+                "failed": failed_predicates,
+                "required_next_action": required_next_action,
+                "rule": "A passing predicate allows continuation from this compact packet; failures route to drill-down or reconciliation before broad claims.",
+            },
+            "source_precedence": source_precedence,
+            "source_freshness": source_freshness,
+            "stale_projections": stale_projections,
+            "uncertainty": uncertainty,
+            "omitted_detail": [
+                "raw transcript material",
+                "full execplan prose",
+                "historical review archives",
+                "Memory notes not selected by owner surfaces",
+                "Verification detail not referenced by current proof state",
+            ],
+            "drill_down": {
+                "summary_verbose": "agentic-workspace summary --verbose --format json",
+                "planning_record": "agentic-workspace summary --select planning_record --format json",
+                "proof": "agentic-workspace summary --select continuation_view.proof_state,planning_record.proof_report --format json",
+                "claim_boundary": "agentic-workspace summary --select continuation_view.claim_boundary,planning_record.completion_gate --format json",
+                "owner_sources": "agentic-workspace summary --select continuation_view.source_freshness,planning_revision --format json",
+            },
+            "write_responsibility": {
+                "active_work": "Planning execplan/lane/decomposition commands write active continuation state.",
+                "proof": "Verification or Planning proof_report owns proof summaries.",
+                "claim_residue": "closeout/completion_gate owns closure and residual intent routing.",
+                "memory": "Memory owns reusable anti-rediscovery facts only, not current task state.",
+                "summary_start": "summary/start render this lossy projection and must not become durable owners.",
+            },
+            "authority_boundary": {
+                "aw_owns": ["assembling source precedence", "exposing freshness", "surfacing blocked claim classes"],
+                "agent_owns": ["semantic intent satisfaction judgment", "whether compact evidence is sufficient for the next step"],
+                "human_owns": ["intent changes", "accepted narrowing", "accepting unresolved residual intent"],
+            },
+        }
+    )
 
 
 def _system_intent_contract_payload() -> dict[str, Any]:
