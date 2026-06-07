@@ -236,6 +236,7 @@
         "claim_level_requested",
         "claim_level_allowed",
         "required_next_action",
+        "claim_authorization",
         "blocked_claims",
         "self_review",
         "continuation",
@@ -251,11 +252,56 @@
         "claim_level_requested": { "type": "string" },
         "claim_level_allowed": { "type": "string" },
         "required_next_action": { "type": "string" },
+        "claim_authorization": { "$ref": "#/$defs/claim_authorization" },
         "blocked_claims": { "$ref": "#/$defs/string_array" },
         "residual_intent": { "type": "string" },
         "self_review": { "type": "object" },
         "continuation": { "type": "object" },
         "authority_boundary": { "type": "object" }
+      }
+    },
+    "claim_authorization": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind", "allowed_claim_classes", "blocked_claim_classes", "closure_actions", "renderer_rule", "diagnostics"],
+      "properties": {
+        "kind": { "const": "agentic-workspace/claim-authorization/v1" },
+        "allowed_claim_classes": {
+          "type": "array",
+          "items": {
+            "enum": ["partial_progress", "slice_complete", "lane_complete", "parent_complete", "full_intent_complete", "issue_closure"]
+          }
+        },
+        "blocked_claim_classes": {
+          "type": "array",
+          "items": {
+            "enum": ["partial_progress", "slice_complete", "lane_complete", "parent_complete", "full_intent_complete", "issue_closure"]
+          }
+        },
+        "closure_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["kind", "target", "authorized", "reason"],
+            "properties": {
+              "kind": { "const": "issue_closure" },
+              "target": { "type": "string" },
+              "authorized": { "type": "boolean" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "renderer_rule": { "type": "string" },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["unsafe_claim_examples", "diagnostic_only"],
+          "properties": {
+            "unsafe_claim_examples": { "$ref": "#/$defs/string_array" },
+            "diagnostic_only": { "const": true }
+          }
+        }
       }
     },
     "reference": {

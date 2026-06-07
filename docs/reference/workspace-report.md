@@ -153,7 +153,16 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.completion_gate.claim_level_requested` | string | yes |  | Requested claim level being evaluated. |  |  |
 | `closeout_report.completion_gate.claim_level_allowed` | string | yes |  | Highest claim level supported by the gate. |  |  |
 | `closeout_report.completion_gate.required_next_action` | enum `"continue-current-work"`, `"create-follow-on-plan"`, `"activate-next-slice"`, `"ask-human"`, `"close-complete"`, `"close-human-accepted-partial"` | yes |  | Required transition before the workflow can stop or claim completion. |  |  |
-| `closeout_report.completion_gate.blocked_claims` | array of string | yes |  | Completion, done, or close-keyword claims blocked by the gate. |  |  |
+| `closeout_report.completion_gate.blocked_claims` | array of string | yes |  | Compatibility diagnostics listing human-readable unsafe claim examples. Enforcement uses claim_authorization. |  |  |
+| `closeout_report.completion_gate.claim_authorization` | ref `#/$defs/claim_authorization` | yes |  | Structured claim classes and closure actions authorized or blocked by the gate. |  |  |
+| `closeout_report.completion_gate.claim_authorization.kind` | const `"agentic-workspace/claim-authorization/v1"` | yes |  | Discriminator for structured completion claim authorization. |  |  |
+| `closeout_report.completion_gate.claim_authorization.allowed_claim_classes` | array of enum `"partial_progress"`, `"slice_complete"`, `"lane_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"issue_closure"` | yes |  | Claim classes renderers may use. |  |  |
+| `closeout_report.completion_gate.claim_authorization.blocked_claim_classes` | array of enum `"partial_progress"`, `"slice_complete"`, `"lane_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"issue_closure"` | yes |  | Claim classes renderers must not use. |  |  |
+| `closeout_report.completion_gate.claim_authorization.closure_actions` | array of object | yes |  | Structured closure actions such as issue closure for concrete targets. |  |  |
+| `closeout_report.completion_gate.claim_authorization.renderer_rule` | string | yes |  | Renderer rule requiring templates to be selected only from authorized claim classes/actions. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics` | object | yes |  | Human-readable examples for explanation only; not the enforcement model. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics.unsafe_claim_examples` | array of string | yes |  | Human-readable examples of unsafe completion prose for explanation only. |  |  |
+| `closeout_report.completion_gate.claim_authorization.diagnostics.diagnostic_only` | const `true` | yes |  | Marker that unsafe_claim_examples are diagnostics, not enforcement rules. |  |  |
 | `closeout_report.completion_gate.residual_intent` | string | no |  | Remaining active human intent when the requested full claim is unsupported. |  |  |
 | `closeout_report.completion_gate.self_review` | object | yes |  | Mandatory agent self-review before final completion claims. |  |  |
 | `closeout_report.completion_gate.self_review.question` | string | yes |  | Self-review question the agent must answer before making a completion claim. |  |  |

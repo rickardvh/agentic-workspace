@@ -188,6 +188,8 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert raw_lane["completion_gate"]["status"] == "allowed"
     assert raw_lane["completion_gate"]["claim_level_requested"] == "lane-complete"
     assert raw_lane["completion_gate"]["claim_level_allowed"] == "lane-complete"
+    assert "lane_complete" in raw_lane["completion_gate"]["claim_authorization"]["allowed_claim_classes"]
+    assert "full_intent_complete" in raw_lane["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
 
     archive_result = archive_lane_record("closeable-lane", target=tmp_path)
     assert [action.kind for action in archive_result.actions] == ["archived", "updated", "proof", "proof"]

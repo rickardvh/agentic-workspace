@@ -10845,6 +10845,83 @@ def _generated_closeout_adapter(
     }
 
 
+def _planning_completion_gate_claim_authorization(
+    *,
+    status: str,
+    active_intent_satisfied: bool,
+    human_accepted_partial: bool,
+    claim_level_requested: str,
+    proof_status: str = "",
+    issue_refs: set[str],
+) -> dict[str, Any]:
+    all_claim_classes = [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure",
+    ]
+    rank = {
+        "partial_progress": 0,
+        "slice_complete": 1,
+        "slice": 1,
+        "lane_complete": 2,
+        "lane": 2,
+        "parent_complete": 3,
+        "parent": 3,
+        "full_intent_complete": 4,
+        "work_complete": 4,
+        "full": 4,
+    }
+    requested = str(claim_level_requested or "full-intent-complete").strip().lower().replace("-", "_")
+    requested_rank = rank.get(requested, 4)
+    proof_records_slice = proof_status in {
+        "regression_only",
+        "regression-only",
+        "representative",
+        "sufficient_for_claim",
+        "sufficient-for-claim",
+    }
+    if active_intent_satisfied:
+        allowed_claim_classes = [claim for claim in all_claim_classes if claim != "issue_closure" and rank.get(claim, 5) <= requested_rank]
+        if requested_rank >= rank["full_intent_complete"] and issue_refs:
+            allowed_claim_classes.append("issue_closure")
+    elif proof_records_slice and status in {"blocked", "continue-required"} and not human_accepted_partial:
+        allowed_claim_classes = ["partial_progress", "slice_complete"]
+    elif human_accepted_partial or status == "continue-required":
+        allowed_claim_classes = ["partial_progress"]
+    else:
+        allowed_claim_classes = []
+    blocked_claim_classes = [claim for claim in all_claim_classes if claim not in allowed_claim_classes]
+    closure_actions = [
+        {
+            "kind": "issue_closure",
+            "target": ref,
+            "authorized": "issue_closure" in allowed_claim_classes,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        }
+        for ref in sorted(issue_refs)
+    ]
+    unsafe_examples = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
+    if not active_intent_satisfied:
+        unsafe_examples.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+    return {
+        "kind": "agentic-workspace/claim-authorization/v1",
+        "allowed_claim_classes": allowed_claim_classes,
+        "blocked_claim_classes": blocked_claim_classes,
+        "closure_actions": closure_actions,
+        "renderer_rule": (
+            "Renderers must choose only templates whose required claim class and closure action are authorized here; "
+            "unsafe prose examples are diagnostics, not the enforcement model."
+        ),
+        "diagnostics": {
+            "unsafe_claim_examples": _dedupe(unsafe_examples),
+            "diagnostic_only": True,
+        },
+    }
+
+
 def _planning_completion_gate_payload(
     *,
     record: dict[str, Any],
@@ -10946,9 +11023,19 @@ def _planning_completion_gate_payload(
         else:
             issue_refs.update(_issue_refs_from_text(str(reference or "")))
     issue_refs.update(_issue_refs_from_text(str(record.get("title") or "")))
-    blocked_claims = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
-    if not active_intent_satisfied:
-        blocked_claims.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+    claim_authorization = _planning_completion_gate_claim_authorization(
+        status=status,
+        active_intent_satisfied=active_intent_satisfied,
+        human_accepted_partial=human_accepted_partial,
+        claim_level_requested=claim_level_requested,
+        proof_status="representative" if proof_supports_full else "",
+        issue_refs=issue_refs,
+    )
+    diagnostics = claim_authorization.get("diagnostics", {})
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    diagnostic_unsafe_claims = diagnostics.get("unsafe_claim_examples", [])
+    diagnostic_unsafe_claims = diagnostic_unsafe_claims if isinstance(diagnostic_unsafe_claims, list) else []
+    blocked_claims = [] if active_intent_satisfied else [str(item) for item in diagnostic_unsafe_claims if str(item).strip()]
     reason = (
         "Planning closeout evidence supports the requested completion claim."
         if active_intent_satisfied
@@ -10965,6 +11052,7 @@ def _planning_completion_gate_payload(
         "claim_level_requested": claim_level_requested,
         "claim_level_allowed": claim_level_allowed,
         "required_next_action": required_next_action,
+        "claim_authorization": claim_authorization,
         "blocked_claims": _dedupe(blocked_claims),
         "residual_intent": "" if active_intent_satisfied else residual_intent,
         "self_review": {
@@ -10978,7 +11066,11 @@ def _planning_completion_gate_payload(
             "reason": "" if active_intent_satisfied else reason,
         },
         "authority_boundary": {
-            "aw_owns": ["forcing the transition rule", "blocking unsupported claim language", "routing continuation"],
+            "aw_owns": [
+                "forcing the transition rule",
+                "blocking unsupported structured claim classes and closure actions",
+                "routing continuation",
+            ],
             "agent_owns": ["semantic satisfaction judgment", "evidence interpretation", "next implementation decisions"],
             "human_owns": ["accepting narrower scope", "changing intent", "accepting unresolved residual intent"],
         },

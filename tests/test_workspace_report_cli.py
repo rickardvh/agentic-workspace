@@ -3384,13 +3384,26 @@ def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, ca
     assert gate["claim_level_requested"] == "full-intent-complete"
     assert gate["claim_level_allowed"] == "partial-progress"
     assert gate["required_next_action"] == "create-follow-on-plan"
-    for blocked in ("done", "implemented", "complete", "finished", "all", "full intent complete"):
-        assert blocked in gate["blocked_claims"]
-    assert "Closes #1374" in gate["blocked_claims"]
+    claim_authorization = gate["claim_authorization"]
+    assert claim_authorization["kind"] == "agentic-workspace/claim-authorization/v1"
+    assert claim_authorization["allowed_claim_classes"] == ["partial_progress", "slice_complete"]
+    for blocked_class in ("lane_complete", "parent_complete", "full_intent_complete", "issue_closure"):
+        assert blocked_class in claim_authorization["blocked_claim_classes"]
+    assert claim_authorization["closure_actions"] == [
+        {
+            "kind": "issue_closure",
+            "target": "#1374",
+            "authorized": False,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        }
+    ]
+    assert claim_authorization["diagnostics"]["diagnostic_only"] is True
+    assert "Closes #1374" in claim_authorization["diagnostics"]["unsafe_claim_examples"]
     assert gate["self_review"]["answer"] == "no"
     assert gate["continuation"]["owner_surface"] == ".agentic-workspace/planning/execplans/issue-1374-follow-up.plan.json"
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-work-complete"]["allowed"] is False
+    assert options["claim-work-complete"]["required_claim_class"] == "full_intent_complete"
     assert "completion_gate" in options["claim-work-complete"]["blocking_fields"]
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_report", "--format", "json"]) == 0
@@ -3399,10 +3412,14 @@ def test_report_completion_gate_blocks_1379_style_overclosure(tmp_path: Path, ca
     rendering = report["final_response_rendering"]
     assert rendering["plain_done_allowed"] is False
     assert "completion gate" in rendering["must_include"]
-    assert "Closes #1374" in rendering["must_not_claim"]
-    for blocked in ("complete", "finished", "all"):
-        assert blocked in rendering["must_not_claim"]
-    assert "Completion gate: continue-required" in rendering["rendered_summary"]["rendered_text"]
+    assert any(item == "Diagnostic unsafe claim example only, not enforcement rule: Closes #1374" for item in rendering["must_not_claim"])
+    rendered_authorization = rendering["rendered_summary"]["constraints"]["claim_authorization"]
+    assert "full_intent_complete" in rendered_authorization["blocked_claim_classes"]
+    assert rendered_authorization["closure_actions"][0]["authorized"] is False
+    assert (
+        "blocked claim classes: lane_complete, parent_complete, full_intent_complete, issue_closure"
+        in rendering["rendered_summary"]["rendered_text"]
+    )
 
 
 def test_report_completion_gate_continuation_possible_requires_follow_on_not_caveat(tmp_path: Path, capsys) -> None:
@@ -3461,7 +3478,8 @@ def test_report_completion_gate_ambiguous_intent_requires_clarification(tmp_path
     assert gate["status"] == "clarification-required"
     assert gate["required_next_action"] == "ask-human"
     assert gate["active_intent_satisfied"] is False
-    assert "done" in gate["blocked_claims"]
+    assert gate["claim_authorization"]["allowed_claim_classes"] == []
+    assert "full_intent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["request-review"]["allowed"] is True
 
@@ -3495,6 +3513,8 @@ def test_report_completion_gate_allows_explicit_human_partial_only_as_partial(tm
     assert gate["human_accepted_partial"] is True
     assert gate["claim_level_allowed"] == "partial-progress"
     assert gate["required_next_action"] == "close-human-accepted-partial"
+    assert gate["claim_authorization"]["allowed_claim_classes"] == ["partial_progress"]
+    assert "full_intent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-work-complete"]["allowed"] is False
 
@@ -3529,6 +3549,11 @@ def test_report_completion_gate_allows_satisfied_intent_full_closeout(tmp_path: 
     assert gate["claim_level_allowed"] == "full-intent-complete"
     assert gate["required_next_action"] == "close-complete"
     assert gate["blocked_claims"] == []
+    assert "full_intent_complete" in gate["claim_authorization"]["allowed_claim_classes"]
+    assert "issue_closure" in gate["claim_authorization"]["allowed_claim_classes"]
+    assert gate["claim_authorization"]["blocked_claim_classes"] == []
+    assert gate["claim_authorization"]["closure_actions"][0]["target"] == "#1383"
+    assert gate["claim_authorization"]["closure_actions"][0]["authorized"] is True
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-work-complete"]["allowed"] is True
 
@@ -3560,8 +3585,9 @@ def test_report_completion_gate_blocks_full_closeout_when_proof_missing(tmp_path
     assert gate["active_intent_satisfied"] is False
     assert gate["status"] == "blocked"
     assert gate["claim_level_allowed"] == "partial-progress"
-    for blocked in ("done", "implemented", "complete", "finished", "all", "full intent complete"):
-        assert blocked in gate["blocked_claims"]
+    assert gate["claim_authorization"]["allowed_claim_classes"] == []
+    assert "full_intent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
+    assert gate["claim_authorization"]["diagnostics"]["diagnostic_only"] is True
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-work-complete"]["allowed"] is False
 

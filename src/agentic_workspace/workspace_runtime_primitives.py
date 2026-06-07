@@ -9089,6 +9089,7 @@ def _closeout_report_final_response_rendering_payload(
     applicable_intent_status = _as_dict(applicable_intent_status)
     workflow_obligation_contract = _as_dict(workflow_obligation_contract)
     completion_gate = _as_dict(completion_gate)
+    gate_claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
     obligation_items = [item for item in _list_payload(workflow_obligation_contract.get("items")) if isinstance(item, dict)]
     required_obligations = [
@@ -9101,6 +9102,11 @@ def _closeout_report_final_response_rendering_payload(
 
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
+
+    def claim_authorized(claim_class: str) -> bool:
+        return claim_class in {
+            str(item).strip() for item in _list_payload(gate_claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+        }
 
     def rendered_summary_payload(
         *,
@@ -9167,6 +9173,14 @@ def _closeout_report_final_response_rendering_payload(
                 "must_not_claim": must_not_claim,
                 "plain_done_allowed": plain_done_allowed,
                 "raw_json_allowed": False,
+                "claim_authorization": {
+                    "allowed_claim_classes": _list_payload(gate_claim_authorization.get("allowed_claim_classes")),
+                    "blocked_claim_classes": _list_payload(gate_claim_authorization.get("blocked_claim_classes")),
+                    "closure_actions": _list_payload(gate_claim_authorization.get("closure_actions")),
+                    "renderer_rule": gate_claim_authorization.get("renderer_rule", ""),
+                }
+                if gate_claim_authorization
+                else {},
             },
             "warnings": warnings,
             "boundary": "Derived final-response presentation; canonical truth remains in closeout_report and its source fields.",
@@ -9288,6 +9302,13 @@ def _closeout_report_final_response_rendering_payload(
                 "omit empty optional sections",
                 "terse vs evidence-backed wording density",
             ],
+            "claim_authorization": {
+                "allowed_claim_classes": _list_payload(gate_claim_authorization.get("allowed_claim_classes")),
+                "blocked_claim_classes": _list_payload(gate_claim_authorization.get("blocked_claim_classes")),
+                "closure_actions": _list_payload(gate_claim_authorization.get("closure_actions")),
+            }
+            if gate_claim_authorization
+            else {},
             "rule": (
                 "Use this as the final chat-response scaffold when closeout details matter; keep canonical truth in "
                 "closeout_report fields and do not paste raw JSON."
@@ -9307,6 +9328,10 @@ def _closeout_report_final_response_rendering_payload(
     gate_status = present(str(completion_gate.get("status") or ""))
     gate_blocks_full = gate_status in {"blocked", "continue-required", "clarification-required"}
     gate_partial = gate_status == "human-accepted-partial"
+    gate_blocks_full_claim_class = bool(gate_claim_authorization) and not claim_authorized("full_intent_complete")
+    gate_blocks_issue_closure = bool(_list_payload(gate_claim_authorization.get("closure_actions"))) and not claim_authorized(
+        "issue_closure"
+    )
 
     if guidance_only and not has_material_guidance_signal:
         rendering_mode = "terse"
@@ -9441,15 +9466,23 @@ def _closeout_report_final_response_rendering_payload(
 
     if gate_blocks_full or gate_partial:
         must_include.append("completion gate")
-        blocked_claims = [str(item).strip() for item in _list_payload(completion_gate.get("blocked_claims")) if str(item).strip()]
-        if blocked_claims:
-            must_not_claim.extend(blocked_claims)
+        diagnostics = _as_dict(gate_claim_authorization.get("diagnostics"))
+        unsafe_examples = [str(item).strip() for item in _list_payload(diagnostics.get("unsafe_claim_examples")) if str(item).strip()]
+        if unsafe_examples:
+            must_not_claim.extend(f"Diagnostic unsafe claim example only, not enforcement rule: {item}" for item in unsafe_examples)
         self_review = _as_dict(completion_gate.get("self_review"))
         gate_reason = present(str(self_review.get("reason") or completion_gate.get("residual_intent") or ""))
+        allowed_claim_classes = [
+            str(item) for item in _list_payload(gate_claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+        ]
+        blocked_claim_classes = [
+            str(item) for item in _list_payload(gate_claim_authorization.get("blocked_claim_classes")) if str(item).strip()
+        ]
         summary_lines.append(
             "Completion gate: "
             + gate_status
-            + f"; allowed claim: {completion_gate.get('claim_level_allowed') or 'partial-progress'}"
+            + f"; allowed claim classes: {', '.join(allowed_claim_classes) or 'none'}"
+            + f"; blocked claim classes: {', '.join(blocked_claim_classes) or 'none'}"
             + f"; next: {completion_gate.get('required_next_action') or 'continue'}"
             + (f"; reason: {gate_reason}" if gate_reason else "")
         )
@@ -9537,6 +9570,8 @@ def _closeout_report_final_response_rendering_payload(
             or workflow_obligations_block_done
             or gate_blocks_full
             or gate_partial
+            or gate_blocks_full_claim_class
+            or gate_blocks_issue_closure
         )
         else "available"
     )
@@ -9549,6 +9584,8 @@ def _closeout_report_final_response_rendering_payload(
         or workflow_obligations_block_done
         or gate_blocks_full
         or gate_partial
+        or gate_blocks_full_claim_class
+        or gate_blocks_issue_closure
     )
     summary_lines = summary_lines[:10]
     unique_must_include = list(dict.fromkeys(must_include))
@@ -13010,6 +13047,7 @@ def _completion_option(
     command: str | None = None,
     owner: str | None = None,
     blocking_fields: list[str] | None = None,
+    required_claim_class: str | None = None,
 ) -> dict[str, Any]:
     if option_id not in _COMPLETION_OPTION_IDS:
         raise ValueError(f"unknown completion option id: {option_id}")
@@ -13020,6 +13058,8 @@ def _completion_option(
         item["owner"] = owner
     if blocking_fields:
         item["blocking_fields"] = blocking_fields
+    if required_claim_class:
+        item["required_claim_class"] = required_claim_class
     return item
 
 
@@ -13058,6 +13098,14 @@ def _closeout_completion_options(
     intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
     completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
     completion_gate_status = str(completion_gate.get("status", "")).strip()
+    claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    allowed_claim_classes = {
+        str(item).strip() for item in _list_payload(claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+    }
+
+    def structured_claim_authorized(claim_class: str) -> bool:
+        return not claim_authorization or claim_class in allowed_claim_classes
+
     completion_gate_blocks_full = completion_gate_status in {
         "blocked",
         "continue-required",
@@ -13144,6 +13192,7 @@ def _closeout_completion_options(
         and not intent_proof_needs_review
         and not unsupported_preservation
         and not assurance_claim_blockers.get("claim-slice-complete")
+        and structured_claim_authorized("slice_complete")
     )
     claim_work_allowed = (
         claim_slice_allowed
@@ -13152,8 +13201,14 @@ def _closeout_completion_options(
         and intent_proof_supports_work
         and not completion_gate_blocks_full
         and not assurance_claim_blockers.get("claim-work-complete")
+        and structured_claim_authorized("full_intent_complete")
     )
-    close_parent_allowed = claim_work_allowed and close_evidence and not assurance_claim_blockers.get("close-parent-lane")
+    close_parent_allowed = (
+        claim_work_allowed
+        and close_evidence
+        and not assurance_claim_blockers.get("close-parent-lane")
+        and structured_claim_authorized("parent_complete")
+    )
     route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
     )
@@ -13182,6 +13237,7 @@ def _closeout_completion_options(
             if claim_slice_allowed
             else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
             blocking_fields=slice_blockers or None,
+            required_claim_class="slice_complete",
         ),
         _completion_option(
             "claim-work-complete",
@@ -13191,6 +13247,7 @@ def _closeout_completion_options(
             else "work completion is blocked until proof, intent, residue, continuation, and closeout evidence support it",
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=work_blockers or None,
+            required_claim_class="full_intent_complete",
         ),
         _completion_option(
             "keep-parent-open",
@@ -13209,6 +13266,7 @@ def _closeout_completion_options(
             else "parent lane closure requires satisfied larger intent and explicit closure evidence",
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=parent_blockers if parent_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+            required_claim_class="parent_complete",
         ),
         _completion_option(
             "route-residue",
@@ -13243,6 +13301,83 @@ def _closeout_completion_options(
             ),
         ),
     ]
+
+
+def _completion_gate_claim_authorization(
+    *,
+    status: str,
+    active_intent_satisfied: bool,
+    human_accepted_partial: bool,
+    claim_level_requested: str,
+    proof_status: str = "",
+    issue_refs: set[str],
+) -> dict[str, Any]:
+    all_claim_classes = [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure",
+    ]
+    rank = {
+        "partial_progress": 0,
+        "slice_complete": 1,
+        "slice": 1,
+        "lane_complete": 2,
+        "lane": 2,
+        "parent_complete": 3,
+        "parent": 3,
+        "full_intent_complete": 4,
+        "work_complete": 4,
+        "full": 4,
+    }
+    requested = str(claim_level_requested or "full-intent-complete").strip().lower().replace("-", "_")
+    requested_rank = rank.get(requested, 4)
+    proof_records_slice = proof_status in {
+        "regression_only",
+        "regression-only",
+        "representative",
+        "sufficient_for_claim",
+        "sufficient-for-claim",
+    }
+    if active_intent_satisfied:
+        allowed_claim_classes = [claim for claim in all_claim_classes if claim != "issue_closure" and rank.get(claim, 5) <= requested_rank]
+        if requested_rank >= rank["full_intent_complete"] and issue_refs:
+            allowed_claim_classes.append("issue_closure")
+    elif proof_records_slice and status in {"blocked", "continue-required"} and not human_accepted_partial:
+        allowed_claim_classes = ["partial_progress", "slice_complete"]
+    elif human_accepted_partial or status == "continue-required":
+        allowed_claim_classes = ["partial_progress"]
+    else:
+        allowed_claim_classes = []
+    blocked_claim_classes = [claim for claim in all_claim_classes if claim not in allowed_claim_classes]
+    closure_actions = [
+        {
+            "kind": "issue_closure",
+            "target": ref,
+            "authorized": "issue_closure" in allowed_claim_classes,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        }
+        for ref in sorted(issue_refs)
+    ]
+    unsafe_examples = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
+    if not active_intent_satisfied:
+        unsafe_examples.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+    return {
+        "kind": "agentic-workspace/claim-authorization/v1",
+        "allowed_claim_classes": allowed_claim_classes,
+        "blocked_claim_classes": blocked_claim_classes,
+        "closure_actions": closure_actions,
+        "renderer_rule": (
+            "Renderers must choose only templates whose required claim class and closure action are authorized here; "
+            "unsafe prose examples are diagnostics, not the enforcement model."
+        ),
+        "diagnostics": {
+            "unsafe_claim_examples": _dedupe(unsafe_examples),
+            "diagnostic_only": True,
+        },
+    }
 
 
 def _completion_gate_payload(
@@ -13367,20 +13502,27 @@ def _completion_gate_payload(
     issue_refs: set[str] = set()
     for reference in _list_payload(active_planning_record.get("references")):
         if isinstance(reference, dict):
-            issue_refs.update(_issue_refs_from_text(reference.get("target")))
-            issue_refs.update(_issue_refs_from_text(reference.get("url")))
-            issue_refs.update(_issue_refs_from_text(reference.get("role")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("target") or "")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("url") or "")))
+            issue_refs.update(_issue_refs_from_text(str(reference.get("role") or "")))
         else:
-            issue_refs.update(_issue_refs_from_text(reference))
+            issue_refs.update(_issue_refs_from_text(str(reference or "")))
     for value in (
         active_planning_record.get("title"),
         present(intent_satisfaction.get("original intent"), parent_intent_status.get("original_intent")),
         present(closure_check.get("closure target"), closure_check.get("closure_target")),
     ):
-        issue_refs.update(_issue_refs_from_text(value))
-    blocked_claims = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
-    if not active_intent_satisfied:
-        blocked_claims.extend(f"Closes {ref}" for ref in sorted(issue_refs))
+        issue_refs.update(_issue_refs_from_text(str(value or "")))
+    claim_authorization = _completion_gate_claim_authorization(
+        status=status,
+        active_intent_satisfied=active_intent_satisfied,
+        human_accepted_partial=human_accepted_partial,
+        claim_level_requested=claim_level_requested,
+        proof_status=proof_status,
+        issue_refs=issue_refs,
+    )
+    diagnostic_unsafe_claims = _list_payload(claim_authorization.get("diagnostics", {}).get("unsafe_claim_examples"))
+    blocked_claims = [] if active_intent_satisfied else [str(item) for item in diagnostic_unsafe_claims if str(item).strip()]
     self_review_answer = "yes" if active_intent_satisfied else "no"
     if active_intent_satisfied:
         reason = "Recorded intent, parent status, proof, acceptance, and continuation fields support the requested completion claim."
@@ -13399,6 +13541,7 @@ def _completion_gate_payload(
         "claim_level_requested": claim_level_requested,
         "claim_level_allowed": claim_level_allowed,
         "required_next_action": required_next_action,
+        "claim_authorization": claim_authorization,
         "blocked_claims": _dedupe(blocked_claims),
         "residual_intent": "" if active_intent_satisfied else residual_intent,
         "self_review": {
@@ -13423,7 +13566,7 @@ def _completion_gate_payload(
             "surface": "completion_gate",
             "aw_owns": [
                 "forcing the transition rule",
-                "blocking unsupported claim language",
+                "blocking unsupported structured claim classes and closure actions",
                 "routing continuation",
             ],
             "agent_owns": [

@@ -608,6 +608,7 @@ candidates = []
     assert archived["completion_gate"]["status"] == "allowed"
     assert archived["completion_gate"]["active_intent_satisfied"] is True
     assert archived["completion_gate"]["claim_level_allowed"] == "full-intent-complete"
+    assert "full_intent_complete" in archived["completion_gate"]["claim_authorization"]["allowed_claim_classes"]
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
     assert archived["iterative_follow_through"]["validation still needed"] == (
         "None for this archived slice; reopen only if new evidence invalidates the proof."
@@ -737,8 +738,9 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
     assert archived["completion_gate"]["status"] == "continue-required"
     assert archived["completion_gate"]["claim_level_allowed"] == "partial-progress"
-    for blocked in ("done", "implemented", "complete", "finished", "all"):
-        assert blocked in archived["completion_gate"]["blocked_claims"]
+    assert archived["completion_gate"]["claim_authorization"]["allowed_claim_classes"] == ["partial_progress", "slice_complete"]
+    assert "full_intent_complete" in archived["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
+    assert archived["completion_gate"]["claim_authorization"]["diagnostics"]["diagnostic_only"] is True
     assert "Archive decision: archive-but-keep-lane-open" in archived["generated_closeout"]["text"]
     assert "Completion gate: continue-required" in archived["generated_closeout"]["text"]
     assert "Follow-up: .agentic-workspace/planning/state.toml" in archived["generated_closeout"]["text"]
@@ -782,6 +784,7 @@ candidates = []
     assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
     assert archived["completion_gate"]["status"] == "allowed"
     assert archived["completion_gate"]["active_intent_satisfied"] is True
+    assert "full_intent_complete" in archived["completion_gate"]["claim_authorization"]["allowed_claim_classes"]
     assert archived["durable_residue"]["status"] == "none"
 
 

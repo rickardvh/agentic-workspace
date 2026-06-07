@@ -601,6 +601,7 @@
         "claim_level_requested",
         "claim_level_allowed",
         "required_next_action",
+        "claim_authorization",
         "blocked_claims",
         "self_review",
         "continuation",
@@ -653,7 +654,11 @@
           "items": {
             "type": "string"
           },
-          "description": "Completion, done, or close-keyword claims blocked by the gate."
+          "description": "Compatibility diagnostics listing human-readable unsafe claim examples. Enforcement uses claim_authorization."
+        },
+        "claim_authorization": {
+          "$ref": "#/$defs/claim_authorization",
+          "description": "Structured claim classes and closure actions authorized or blocked by the gate."
         },
         "residual_intent": {
           "type": "string",
@@ -716,6 +721,107 @@
       },
       "additionalProperties": true,
       "description": "Closeout transition gate derived from existing intent, proof, Planning, and closeout fields."
+    },
+    "claim_authorization": {
+      "type": "object",
+      "required": [
+        "kind",
+        "allowed_claim_classes",
+        "blocked_claim_classes",
+        "closure_actions",
+        "renderer_rule",
+        "diagnostics"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/claim-authorization/v1",
+          "description": "Discriminator for structured completion claim authorization."
+        },
+        "allowed_claim_classes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "partial_progress",
+              "slice_complete",
+              "lane_complete",
+              "parent_complete",
+              "full_intent_complete",
+              "issue_closure"
+            ]
+          },
+          "description": "Claim classes renderers may use."
+        },
+        "blocked_claim_classes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "partial_progress",
+              "slice_complete",
+              "lane_complete",
+              "parent_complete",
+              "full_intent_complete",
+              "issue_closure"
+            ]
+          },
+          "description": "Claim classes renderers must not use."
+        },
+        "closure_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "target",
+              "authorized",
+              "reason"
+            ],
+            "properties": {
+              "kind": {
+                "const": "issue_closure"
+              },
+              "target": {
+                "type": "string"
+              },
+              "authorized": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "description": "Structured closure actions such as issue closure for concrete targets."
+        },
+        "renderer_rule": {
+          "type": "string",
+          "description": "Renderer rule requiring templates to be selected only from authorized claim classes/actions."
+        },
+        "diagnostics": {
+          "type": "object",
+          "required": [
+            "unsafe_claim_examples",
+            "diagnostic_only"
+          ],
+          "properties": {
+            "unsafe_claim_examples": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Human-readable examples of unsafe completion prose for explanation only."
+            },
+            "diagnostic_only": {
+              "const": true,
+              "description": "Marker that unsafe_claim_examples are diagnostics, not enforcement rules."
+            }
+          },
+          "additionalProperties": true,
+          "description": "Human-readable examples for explanation only; not the enforcement model."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Structured authorization for completion claim classes and closure actions."
     },
     "authority_boundary": {
       "type": "object",

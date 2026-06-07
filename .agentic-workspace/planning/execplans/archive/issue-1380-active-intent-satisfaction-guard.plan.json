@@ -339,6 +339,25 @@
     "claim_level_requested": "full-intent-complete",
     "claim_level_allowed": "full-intent-complete",
     "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
     "blocked_claims": [],
     "residual_intent": "",
     "self_review": {
@@ -354,7 +373,7 @@
     "authority_boundary": {
       "aw_owns": [
         "forcing the transition rule",
-        "blocking unsupported claim language",
+        "blocking unsupported structured claim classes and closure actions",
         "routing continuation"
       ],
       "agent_owns": [
