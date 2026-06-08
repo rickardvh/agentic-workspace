@@ -8307,7 +8307,10 @@ def _closeout_report_traceability_rows(
             "evidence_surface": "planning.active.planning_record.intent_satisfaction + parent_acceptance",
             "evidence": text_from(parent_intent.get("original_intent"), fallback=text_from(parent_intent.get("parent_acceptance_target"))),
             "status": "present" if parent_intent.get("original_intent") or parent_intent.get("parent_acceptance_target") else "missing",
-            "residual_risk_or_follow_up": text_from(parent_intent.get("residual_parent_intent"), fallback=parent_intent.get("status")),
+            "residual_risk_or_follow_up": text_from(
+                parent_intent.get("residual_parent_intent"),
+                fallback=text_from(parent_intent.get("status")),
+            ),
         },
         {
             "id": "applicable-intents",
@@ -9232,7 +9235,7 @@ def _closeout_report_final_response_rendering_payload(
                 "Decision authority: AW renders recorded decision facts or their absence; the agent owns the semantic decision."
             )
 
-        sections = [
+        sections: list[dict[str, Any]] = [
             {
                 "id": "user_visible_change",
                 "title": "Changed",
@@ -9284,7 +9287,9 @@ def _closeout_report_final_response_rendering_payload(
             if not section["lines"] and not section["required"]:
                 continue
             rendered_markdown_lines.append(f"**{section['title']}**")
-            rendered_markdown_lines.extend(f"- {line}" for line in section["lines"])
+            lines = section.get("lines", [])
+            if isinstance(lines, list):
+                rendered_markdown_lines.extend(f"- {line}" for line in lines)
         return {
             "kind": "agentic-workspace/final-chat-report-template/v1",
             "status": "ready-with-missing-required-sections" if missing_required_sections else "ready",
@@ -23083,32 +23088,35 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+
+    def remove_available_selector(selector: str) -> None:
+        drill_down = projected.get("drill_down", {})
+        if not isinstance(drill_down, dict):
+            return
+        drill_down = cast(dict[str, Any], drill_down)
+        selectors = drill_down.get("available_selectors", [])
+        if isinstance(selectors, list):
+            drill_down["available_selectors"] = [item for item in selectors if item != selector]
+
     if isinstance(payload.get("generated_surface_trust"), dict) and payload["generated_surface_trust"].get("status") == "present":
         tiny_context = projected.get("context", {})
         if isinstance(tiny_context, dict):
             tiny_context.pop("active_intent_contract", None)
             tiny_context.pop("intent_satisfaction_matrix", None)
-        selectors = projected.get("drill_down", {}).get("available_selectors", [])
-        if isinstance(selectors, list):
-            projected["drill_down"]["available_selectors"] = [
-                item for item in selectors if item not in {"context.active_intent_contract", "context.intent_satisfaction_matrix"}
-            ]
+        remove_available_selector("context.active_intent_contract")
+        remove_available_selector("context.intent_satisfaction_matrix")
     tiny_context = projected.get("context", {})
     if isinstance(tiny_context, dict):
         parent_packet = tiny_context.get("parent_intent_status", {})
         parent_status = str(parent_packet.get("status") or "").strip() if isinstance(parent_packet, dict) else ""
         if parent_status in {"", "guidance-only", "not-recorded", "needs-planning"}:
             tiny_context.pop("parent_intent_status", None)
-            selectors = projected.get("drill_down", {}).get("available_selectors", [])
-            if isinstance(selectors, list):
-                projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "context.parent_intent_status"]
+            remove_available_selector("context.parent_intent_status")
         applicable_packet = tiny_context.get("applicable_intent_status", {})
         applicable_status = str(applicable_packet.get("status") or "").strip() if isinstance(applicable_packet, dict) else ""
         if applicable_status in {"", "guidance-only", "not-recorded"}:
             tiny_context.pop("applicable_intent_status", None)
-            selectors = projected.get("drill_down", {}).get("available_selectors", [])
-            if isinstance(selectors, list):
-                projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "context.applicable_intent_status"]
+            remove_available_selector("context.applicable_intent_status")
     generated_surface_trust = payload.get("generated_surface_trust", {})
     if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
         projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)
@@ -23128,9 +23136,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         and runtime_source_review.get("status") != "not-applicable"
     ):
         projected["proof"].pop("runtime_source_edit_review", None)
-        selectors = projected.get("drill_down", {}).get("available_selectors", [])
-        if isinstance(selectors, list):
-            projected["drill_down"]["available_selectors"] = [item for item in selectors if item != "proof.runtime_source_edit_review"]
+        remove_available_selector("proof.runtime_source_edit_review")
     task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
     intent_proof = payload.get("proof", {}).get("intent_proof") if isinstance(payload.get("proof"), dict) else None
     acceptance_reconciliation = payload.get("acceptance_reconciliation", {})
@@ -29977,7 +29983,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
     }
 
 
-def _normalize_changed_paths(paths: list[str]) -> list[str]:
+def _normalize_changed_paths(paths: Sequence[str]) -> list[str]:
     normalized: list[str] = []
     for path_text in paths:
         stripped = str(path_text).strip()
@@ -31149,6 +31155,7 @@ def _host_repo_learning_posture_payload(
         }
         for item in _confirmed_proof_lesson_items(selected_commands)
     ]
+    capture_actions = [capture for item in [*confirmed_items, *negative_items] if isinstance(capture := item.get("capture"), dict)]
     return {
         "kind": "host-repo-learning-posture/v1",
         "status": "active",
@@ -31202,14 +31209,8 @@ def _host_repo_learning_posture_payload(
         },
         "actionable_next_steps": {
             "status": "present" if confirmed_items or negative_items else "none",
-            "commands": [
-                item["capture"]["command_to_run"] for item in [*confirmed_items, *negative_items] if isinstance(item.get("capture"), dict)
-            ],
-            "memory_note_entries": [
-                item["capture"]["memory_note_entry"]
-                for item in [*confirmed_items, *negative_items]
-                if isinstance(item.get("capture"), dict)
-            ],
+            "commands": [capture["command_to_run"] for capture in capture_actions],
+            "memory_note_entries": [capture["memory_note_entry"] for capture in capture_actions],
         },
         "host_policy_blocked_count": len(host_policy_blocked_commands),
     }
@@ -32160,6 +32161,7 @@ def _proof_obligations_payload(
     manual_verification: dict[str, Any] | None,
 ) -> dict[str, Any]:
     manual_required = manual_verification is not None
+    manual_status = manual_verification.get("status") if manual_verification is not None else "not-needed"
     return {
         "kind": "agentic-workspace/proof-obligations/v1",
         "status": "required-proof-selected" if required_commands else "manual-proof-required" if manual_required else "no-required-proof",
@@ -32168,7 +32170,7 @@ def _proof_obligations_payload(
             "status": "required" if required_commands or manual_required else "not-selected",
             "commands": required_commands,
             "manual_verification_required": manual_required,
-            "manual_verification_status": manual_verification.get("status") if manual_required else "not-needed",
+            "manual_verification_status": manual_status,
             "source_field": "required_commands",
             "rule": (
                 "These commands, or required manual verification when commands are unavailable, are the proof gate for completion claims."
