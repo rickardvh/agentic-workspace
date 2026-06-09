@@ -1964,6 +1964,9 @@ def test_start_blocks_broad_work_when_decomposition_lane_needs_promotion(tmp_pat
     assert gate["implementation_allowed"] is False
     assert gate["candidate_pressure"]["status"] == "promotion-required"
     assert gate["candidate_pressure"]["candidate_ids"] == ["safety-slice"]
+    assert gate["candidate_pressure"]["matched_decomposition_candidate_count"] == 1
+    assert gate["candidate_pressure"]["relevance"]["status"] == "matched"
+    assert gate["candidate_pressure"]["route_options"][0]["relevance_evidence"]
     assert "promote-to-plan --item-id safety-slice" in gate["promotion_command"]
     assert _start_workflow_sufficiency(payload)["sufficiency_result"] == "candidate-lane-promotion-required"
     assert _start_primary_action(payload)["action"] == "select-or-promote-candidate-lane"
@@ -2634,6 +2637,7 @@ def test_implement_does_not_promote_unmatched_decomposition_candidate(tmp_path: 
                 "src/changed.py",
                 "--task",
                 "Implement planning revision guards for active-plan mutations",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -2642,6 +2646,10 @@ def test_implement_does_not_promote_unmatched_decomposition_candidate(tmp_path: 
     )
 
     gate = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    assert gate["gate_result"] != "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is True
+    assert gate["candidate_pressure"]["status"] == "observed"
+    assert gate["candidate_pressure"]["relevance"]["status"] == "unmatched"
     assert "planning new-plan" in gate["promotion_command"]
     assert "promote-to-plan --item-id unrelated-lane" not in gate["promotion_command"]
 

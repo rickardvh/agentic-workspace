@@ -18660,7 +18660,9 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "work_shape",
                 "candidate_count",
                 "roadmap_candidate_count",
+                "matched_decomposition_candidate_count",
                 "candidate_ids",
+                "relevance",
                 "reasons",
                 "required_before_implementation",
                 "route_options",
@@ -19701,11 +19703,67 @@ def _candidate_promotion_command(*, candidate_id: str, config: WorkspaceConfig, 
     )
 
 
+_CANDIDATE_RELEVANCE_STOPWORDS = {
+    "active",
+    "agent",
+    "candidate",
+    "continue",
+    "current",
+    "different",
+    "epic",
+    "future",
+    "implement",
+    "implementation",
+    "issue",
+    "lane",
+    "planning",
+    "task",
+    "work",
+}
+
+
+def _candidate_relevance_evidence(candidate: dict[str, Any], *, issue_refs: list[str], task_text: str | None) -> list[str]:
+    candidate_text = " ".join(
+        str(candidate.get(field, ""))
+        for field in (
+            "id",
+            "lane_id",
+            "title",
+            "refs",
+            "outcome",
+            "owner_surface",
+            "proof",
+            "promotion_signal",
+            "suggested_first_slice",
+        )
+    ).lower()
+    evidence: list[str] = []
+    for issue_ref in issue_refs:
+        if issue_ref.lower() in candidate_text:
+            evidence.append(f"issue_ref:{issue_ref}")
+    normalized_task = str(task_text or "").lower()
+    for field in ("id", "lane_id"):
+        value = str(candidate.get(field, "")).strip().lower()
+        if value and value in normalized_task:
+            evidence.append(f"task_mentions_{field}:{value}")
+    task_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", normalized_task) if len(token) >= 4 and token not in _CANDIDATE_RELEVANCE_STOPWORDS
+    }
+    candidate_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", candidate_text) if len(token) >= 4 and token not in _CANDIDATE_RELEVANCE_STOPWORDS
+    }
+    shared = sorted(task_tokens & candidate_tokens)
+    if shared:
+        evidence.append("shared_task_terms:" + ",".join(shared[:5]))
+    return evidence
+
+
 def _planning_candidate_pressure_payload(
     *,
     target_root: Path,
     config: WorkspaceConfig,
     issue_refs: list[str],
+    task_text: str | None,
     work_shape: str | None,
     decomposition_delegation: dict[str, Any],
     planning_revision: dict[str, Any],
@@ -19720,12 +19778,23 @@ def _planning_candidate_pressure_payload(
     matched_roadmap = [
         candidate for candidate in roadmap_candidates if issue_ref_set and issue_ref_set.intersection(_candidate_refs(candidate))
     ]
+    decomposition_relevance = {
+        str(candidate.get("lane_id", "")).strip(): _candidate_relevance_evidence(
+            candidate,
+            issue_refs=issue_refs,
+            task_text=task_text,
+        )
+        for candidate in decomposition_candidates
+    }
+    matched_decomposition = [
+        candidate for candidate in decomposition_candidates if decomposition_relevance.get(str(candidate.get("lane_id", "")).strip())
+    ]
     broad_shape = work_shape in {"lane", "epic"}
     promotion_required = False
     reasons: list[str] = []
-    if broad_shape and decomposition_candidates:
+    if broad_shape and matched_decomposition:
         promotion_required = True
-        reasons.append("open decomposition lane candidates exist for broad or lane-shaped work")
+        reasons.append("relevant open decomposition lane candidates exist for broad or lane-shaped work")
     if broad_shape and len(roadmap_candidates) >= 2:
         promotion_required = True
         reasons.append("multiple roadmap candidates exist while the requested work is broad or lane-shaped")
@@ -19753,7 +19822,8 @@ def _planning_candidate_pressure_payload(
                 ),
             }
         )
-    for candidate in decomposition_candidates[:3]:
+    top_decomposition = matched_decomposition if promotion_required else []
+    for candidate in top_decomposition[:3]:
         lane_id = str(candidate.get("lane_id", "")).strip()
         if not lane_id:
             continue
@@ -19763,6 +19833,7 @@ def _planning_candidate_pressure_payload(
                 "id": lane_id,
                 "title": candidate.get("title", ""),
                 "decomposition": candidate.get("decomposition", ""),
+                "relevance_evidence": decomposition_relevance.get(lane_id, []),
                 "command": _candidate_promotion_command(candidate_id=lane_id, config=config, planning_revision=planning_revision),
             }
         )
@@ -19775,13 +19846,30 @@ def _planning_candidate_pressure_payload(
         "roadmap_candidate_count": len(roadmap_candidates),
         "matched_roadmap_candidate_count": len(matched_roadmap),
         "decomposition_candidate_count": len(decomposition_candidates),
+        "matched_decomposition_candidate_count": len(matched_decomposition),
         "candidate_count": len(roadmap_candidates) + len(decomposition_candidates),
         "candidate_ids": [
             *[str(candidate.get("id", "")) for candidate in (matched_roadmap or roadmap_candidates)[:5] if candidate.get("id")],
-            *[str(candidate.get("lane_id", "")) for candidate in decomposition_candidates[:5] if str(candidate.get("lane_id", "")).strip()],
+            *[str(candidate.get("lane_id", "")) for candidate in matched_decomposition[:5] if str(candidate.get("lane_id", "")).strip()],
         ]
         if include_candidate_detail
         else [],
+        "relevance": {
+            "status": "matched"
+            if matched_roadmap or matched_decomposition
+            else "unmatched"
+            if roadmap_candidates or decomposition_candidates
+            else "none",
+            "rule": "Candidate pressure blocks only when candidates are relevant to task refs or task text; unrelated deferred lanes remain advisory.",
+            "decomposition": [
+                {
+                    "id": str(candidate.get("lane_id", "")).strip(),
+                    "title": str(candidate.get("title", "")),
+                    "evidence": decomposition_relevance.get(str(candidate.get("lane_id", "")).strip(), []),
+                }
+                for candidate in decomposition_candidates[:5]
+            ],
+        },
         "reasons": reasons,
         "route_options": route_options,
         "required_before_implementation": [
@@ -24209,6 +24297,7 @@ def _planning_safety_gate_payload(
         target_root=target_root,
         config=config,
         issue_refs=issue_refs,
+        task_text=task_text,
         work_shape=work_shape,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
         planning_revision=planning_revision,
@@ -31747,6 +31836,16 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
         "blocked" if strict_closeout and (missing_required_refs or pending_blocking_gates or do_not_implement_blockers) else "open"
     )
     proof_execution_evidence = planning_record.get("proof_execution_evidence", planning_record.get("proof_execution", []))
+    task = planning_record.get("task", {})
+    surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+    record_path = target_root / surface if surface else None
+    raw_record: dict[str, Any] = {}
+    if record_path is not None and record_path.exists() and (record_path.suffix == ".json"):
+        try:
+            loaded_record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded_record = {}
+        raw_record = loaded_record if isinstance(loaded_record, dict) else {}
     if not proof_execution_evidence:
         proof_report = planning_record.get("proof_report", {})
         if isinstance(proof_report, dict):
@@ -31757,14 +31856,7 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
                 except json.JSONDecodeError:
                     proof_execution_evidence = []
     if not proof_execution_evidence:
-        task = planning_record.get("task", {})
-        surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
-        record_path = target_root / surface if surface else None
-        if record_path is not None and record_path.exists() and (record_path.suffix == ".json"):
-            try:
-                raw_record = json.loads(record_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                raw_record = {}
+        if raw_record:
             raw_proof_report = raw_record.get("proof_report", {}) if isinstance(raw_record, dict) else {}
             if isinstance(raw_proof_report, dict):
                 raw_proof_execution = raw_proof_report.get("proof execution evidence", raw_proof_report.get("proof_execution_evidence", ""))
@@ -31776,6 +31868,19 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
     return {
         "status": "present",
         "task": planning_record.get("task", {}),
+        "validation_commands": _dedupe(
+            [
+                str(command).strip()
+                for command in [
+                    *_list_payload(planning_record.get("validation_commands")),
+                    *_list_payload(raw_record.get("validation_commands")),
+                ]
+                if str(command).strip()
+            ]
+        ),
+        "proof_expectations": _dedupe(
+            [str(command).strip() for command in _list_payload(planning_record.get("proof_expectations")) if str(command).strip()]
+        ),
         "adaptive_assurance": adaptive_assurance if isinstance(adaptive_assurance, dict) else {},
         "traceability_refs": traceability_refs if isinstance(traceability_refs, dict) else {},
         "control_gates": control_gates,
@@ -32546,6 +32651,23 @@ def _proof_selection_for_changed_paths(
     selected_lanes.extend(subsystem_lanes)
     selected_lanes.extend(_supplemental_proof_lanes_for_changed_paths(changed_paths=changed_paths))
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
+    active_plan_lanes: list[dict[str, Any]] = []
+    active_plan_commands = _dedupe(
+        [str(command).strip() for command in _list_payload(planning_assurance.get("validation_commands")) if str(command).strip()]
+    )
+    if (not changed_paths) and planning_assurance.get("status") == "present" and active_plan_commands:
+        active_plan_lanes.append(
+            {
+                "id": "planning:active_validation",
+                "when": "proof --current selected active planning validation commands",
+                "enough_proof": active_plan_commands,
+                "recovery_signal": "missing or failing active plan validation should block closeout until resolved or explicitly routed",
+                "proof_kind": "targeted-test",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "planning_source": str(_as_dict(planning_assurance.get("task")).get("surface") or ""),
+            }
+        )
     configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
     concern_lanes: list[dict[str, Any]] = []
     missing_concern_profiles: list[str] = []
@@ -32660,6 +32782,7 @@ def _proof_selection_for_changed_paths(
                 "applies_because": _list_payload(protocol.get("applies_because")),
             }
         )
+    selected_lanes.extend(active_plan_lanes)
     selected_lanes.extend(concern_lanes)
     selected_lanes.extend(requirement_lanes)
     selected_lanes.extend(verification_lanes)

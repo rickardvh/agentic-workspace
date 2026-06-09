@@ -1356,6 +1356,46 @@ candidates = []
     assert lane["applies_because"] == ["planning ref matched privacy_data"]
 
 
+def test_proof_current_selects_active_plan_validation_commands(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "validation-plan", status = "in-progress", surface = ".agentic-workspace/planning/execplans/validation-plan.plan.json", why_now = "prove current validation routing." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Validation Plan",
+        item_id="validation-plan",
+        status="in-progress",
+        why_now="prove current validation routing.",
+        next_action="run proof selection.",
+        done_when="current proof names the active validation commands.",
+    )
+    record["validation_commands"] = [
+        "uv run pytest tests/test_workspace_proof_cli.py::test_proof_current_selects_active_plan_validation_commands -q"
+    ]
+    _write_json(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "validation-plan.plan.json", record)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--current", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["required_commands"] == [
+        "uv run pytest tests/test_workspace_proof_cli.py::test_proof_current_selects_active_plan_validation_commands -q"
+    ]
+    assert answer["selected_lanes"][0]["id"] == "planning:active_validation"
+    assert "manual_verification" not in answer
+
+
 def test_proof_changed_reports_compact_proof_execution_evidence_states(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

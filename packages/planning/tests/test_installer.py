@@ -283,6 +283,55 @@ candidates = [
     assert state["roadmap"]["candidates"] == []
 
 
+def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/resume-lane.plan.json"
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Resume Lane",
+        item_id="resume-lane",
+        status="active",
+        why_now="Preserve the active intent.",
+        next_action="Use the fresher execplan action.",
+        done_when="The active intent is fully satisfied.",
+    )
+    _write(plan_path, json.dumps(record, indent=2))
+    _write(
+        state_path,
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "resume-lane", title = "Resume Lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/resume-lane.plan.json", why_now = "Old todo projection.", next_action = "Stale todo action.", done_when = "Old todo done text." },
+]
+queued_items = []
+""",
+    )
+
+    reconcile = planning_reconcile(target=tmp_path)
+
+    projection = reconcile["active_projection_reconciliation"]
+    assert reconcile["status"] == "attention-needed"
+    assert projection["status"] == "stale-projections"
+    assert projection["safe_sync_count"] == 1
+    assert projection["sync_targets"][0]["sync_action"] == "sync-active-todo-projection"
+    assert projection["sync_targets"][0]["updated_fields"] == {"next_action": "Use the fresher execplan action."}
+
+    preview = planning_reconcile(target=tmp_path, apply_safe_prune=True, dry_run=True)
+
+    assert preview["apply_result"]["synced_count"] == 1
+    assert tomllib.loads(state_path.read_text(encoding="utf-8"))["todo"]["active_items"][0]["next_action"] == "Stale todo action."
+
+    applied = planning_reconcile(target=tmp_path, apply_safe_prune=True)
+
+    assert applied["apply_result"]["synced_count"] == 1
+    assert applied["active_projection_reconciliation"]["status"] == "clean"
+    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    assert state["todo"]["active_items"][0]["next_action"] == "Use the fresher execplan action."
+
+
 def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

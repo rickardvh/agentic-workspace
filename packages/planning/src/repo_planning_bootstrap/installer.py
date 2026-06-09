@@ -2466,7 +2466,10 @@ def planning_reconcile(
     payload = _planning_reconcile_payload(target_root)
     if apply_safe_prune:
         apply_result = _apply_reconcile_safe_prune(
-            target_root=target_root, cleanup_targets=payload["completed_work_reconciliation"]["cleanup_targets"], dry_run=dry_run
+            target_root=target_root,
+            cleanup_targets=payload["completed_work_reconciliation"]["cleanup_targets"],
+            projection_sync_targets=payload.get("active_projection_reconciliation", {}).get("sync_targets", []),
+            dry_run=dry_run,
         )
         verification = _planning_reconcile_payload(target_root) if not dry_run else payload
         payload = verification
@@ -2545,6 +2548,11 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
         target_root=target_root,
         external_items_by_id=external_items_by_id,
     )
+    active_projection_sync_targets = _active_projection_sync_targets(
+        target_root=target_root,
+        state=state,
+        summary=summary,
+    )
 
     recommendations: list[str] = []
     if completed_execplans:
@@ -2553,6 +2561,8 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
         recommendations.append("Prune roadmap entries whose supplied external-work items are all closed or resolved.")
     if stale_decompositions:
         recommendations.append("Prune or archive decomposition records whose linked external-work items are all closed or resolved.")
+    if active_projection_sync_targets:
+        recommendations.append("Sync stale active TODO projections from their canonical active execplan.")
     if current_external_work.get("untracked_open_count", 0):
         recommendations.append("Route open external-work items into active or candidate checked-in planning state.")
     if not recommendations:
@@ -2583,12 +2593,17 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
         for item in stale_artifacts
     ]
     stale_artifact_count = len(stale_artifacts)
-    status = "attention-needed" if stale_artifact_count or current_external_work.get("untracked_open_count", 0) else "clean"
+    status = (
+        "attention-needed"
+        if stale_artifact_count or active_projection_sync_targets or current_external_work.get("untracked_open_count", 0)
+        else "clean"
+    )
 
     safe_cleanup_count = sum(1 for target in cleanup_targets if target.get("safe_to_prune") is True)
+    safe_projection_sync_count = sum(1 for target in active_projection_sync_targets if target.get("safe_to_sync") is True)
     apply_command = (
         "agentic-planning reconcile --apply-safe-prune --format json"
-        if safe_cleanup_count
+        if safe_cleanup_count or safe_projection_sync_count
         else "No exact safe_to_prune cleanup targets are available to apply."
     )
     return {
@@ -2613,9 +2628,25 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
                 "artifact resolves to a closed external item; ambiguous artifacts are reported, not deleted."
             ),
             "safe_cleanup_count": safe_cleanup_count,
-            "apply_available": safe_cleanup_count > 0,
+            "apply_available": safe_cleanup_count > 0 or safe_projection_sync_count > 0,
             "apply_command": apply_command,
-            "apply_dry_run_command": "agentic-planning reconcile --apply-safe-prune --dry-run --format json" if safe_cleanup_count else "",
+            "apply_dry_run_command": "agentic-planning reconcile --apply-safe-prune --dry-run --format json"
+            if safe_cleanup_count or safe_projection_sync_count
+            else "",
+        },
+        "active_projection_reconciliation": {
+            "kind": "planning-active-projection-reconciliation/v1",
+            "status": "stale-projections" if active_projection_sync_targets else "clean",
+            "stale_projection_count": len(active_projection_sync_targets),
+            "sync_target_count": len(active_projection_sync_targets),
+            "sync_targets": active_projection_sync_targets,
+            "safe_sync_count": safe_projection_sync_count,
+            "apply_available": safe_projection_sync_count > 0,
+            "apply_command": "agentic-planning reconcile --apply-safe-prune --format json" if safe_projection_sync_count else "",
+            "rule": (
+                "Only compact active TODO projection fields are synced; active execplans remain the canonical owner "
+                "for intent, next action, proof, and claim boundary."
+            ),
         },
         "external_work_state": current_external_work,
         "historical_audit_references": historical_audit_references,
@@ -2636,18 +2667,84 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
     }
 
 
+def _active_projection_sync_targets(
+    *,
+    target_root: Path,
+    state: dict[str, Any],
+    summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    continuation = summary.get("continuation_view", {})
+    stale_projections = continuation.get("stale_projections", []) if isinstance(continuation, dict) else []
+    if not isinstance(stale_projections, list) or not stale_projections:
+        return []
+    todo = state.get("todo")
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    if not isinstance(active_items, list):
+        return []
+    planning_record = summary.get("planning_record", {})
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return []
+    revision = planning_revision(target_root)
+    plan_source = str(revision.get("active_execplan") or "").strip()
+    plan_hash = str(revision.get("active_execplan_hash") or "").strip()
+    targets: list[dict[str, Any]] = []
+    for index, raw in enumerate(active_items):
+        if not isinstance(raw, dict):
+            continue
+        item_id = str(raw.get("id") or raw.get("title") or "").strip()
+        item_source = _active_execplan_reference(raw)
+        if plan_source and item_source and item_source != plan_source:
+            continue
+        updated_fields: dict[str, str] = {}
+        stale_fields: list[dict[str, str]] = []
+        next_action = str(planning_record.get("next_action", "")).strip()
+        if next_action and str(raw.get("next_action", "")).strip() != next_action:
+            updated_fields["next_action"] = next_action
+            stale_fields.append(
+                {
+                    "field": "next_action",
+                    "stale_value": str(raw.get("next_action", "")).strip(),
+                    "chosen_value": next_action,
+                }
+            )
+        if not stale_fields:
+            continue
+        targets.append(
+            {
+                "kind": "stale-active-todo-projection",
+                "path": PLANNING_STATE_PATH.as_posix(),
+                "surface": "todo.active_items",
+                "index": index,
+                "id": item_id,
+                "canonical_source": plan_source,
+                "canonical_source_hash": plan_hash,
+                "stale_fields": stale_fields,
+                "updated_fields": updated_fields,
+                "sync_action": "sync-active-todo-projection",
+                "safe_to_sync": True,
+                "recommended_action": "run planning reconcile --apply-safe-prune to sync compact active TODO projection fields",
+            }
+        )
+    return targets
+
+
 def _apply_reconcile_safe_prune(
     *,
     target_root: Path,
     cleanup_targets: list[dict[str, Any]],
+    projection_sync_targets: list[dict[str, Any]] | None = None,
     dry_run: bool,
 ) -> dict[str, Any]:
     safe_targets = [target for target in cleanup_targets if target.get("safe_to_prune") is True]
+    safe_sync_targets = [target for target in projection_sync_targets or [] if target.get("safe_to_sync") is True]
     applied: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
+    synced: list[dict[str, Any]] = []
+    sync_skipped: list[dict[str, Any]] = []
     state = _read_state_from_toml(target_root) or {}
     roadmap = state.get("roadmap")
     roadmap_changed = False
+    state_changed = False
 
     def _remove_roadmap_item(collection_name: str, item_id: str) -> bool:
         nonlocal roadmap_changed
@@ -2691,7 +2788,40 @@ def _apply_reconcile_safe_prune(
         else:
             skipped.append({**target, "reason": "target was already absent"})
 
-    if roadmap_changed and not dry_run:
+    todo = state.get("todo")
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    for target in safe_sync_targets:
+        if not isinstance(todo, dict) or not isinstance(active_items, list):
+            sync_skipped.append({**target, "reason": "todo.active_items is missing or invalid"})
+            continue
+        index = int(target.get("index", -1))
+        if index < 0 or index >= len(active_items):
+            sync_skipped.append({**target, "reason": "active item index is no longer present"})
+            continue
+        raw = active_items[index]
+        if not isinstance(raw, dict) or str(raw.get("id", "")).strip() != str(target.get("id", "")).strip():
+            sync_skipped.append({**target, "reason": "active item id no longer matches sync target"})
+            continue
+        updated_fields = target.get("updated_fields", {})
+        if not isinstance(updated_fields, dict):
+            sync_skipped.append({**target, "reason": "sync target has invalid updated_fields"})
+            continue
+        next_item = dict(raw)
+        changed = False
+        for key, value in updated_fields.items():
+            compact_key = str(key).replace(" ", "_")
+            next_value = str(value)
+            if str(next_item.get(compact_key, "")).strip() == next_value:
+                continue
+            next_item[compact_key] = next_value
+            changed = True
+        if changed:
+            if not dry_run:
+                active_items[index] = next_item
+            state_changed = True
+        synced.append(target)
+
+    if (roadmap_changed or state_changed) and not dry_run:
         _write_state_to_toml(target_root, state)
 
     return {
@@ -2700,9 +2830,14 @@ def _apply_reconcile_safe_prune(
         "safe_target_count": len(safe_targets),
         "applied_count": len(applied),
         "skipped_count": len(skipped),
+        "safe_sync_target_count": len(safe_sync_targets),
+        "synced_count": len(synced),
+        "sync_skipped_count": len(sync_skipped),
         "applied_targets": applied,
         "skipped_targets": skipped,
-        "rule": "Only cleanup targets already marked safe_to_prune by reconcile are eligible; unsupported or ambiguous targets are skipped.",
+        "synced_targets": synced,
+        "sync_skipped_targets": sync_skipped,
+        "rule": "Only cleanup targets already marked safe_to_prune and projection targets marked safe_to_sync by reconcile are eligible; unsupported or ambiguous targets are skipped.",
     }
 
 
@@ -12967,7 +13102,10 @@ def closeout_execplan(
     )
     result.actions.extend(archive_result.actions)
     result.warnings.extend(archive_result.warnings)
-    retention_skip_warning_classes = {"archive_retention_skipped_by_size_guardrail"}
+    retention_skip_warning_classes = {
+        "archive_retention_skipped_by_size_guardrail",
+        "closeout_evidence_retention_skipped_by_size_guardrail",
+    }
     retention_skipped = any(str(warning.get("warning_class", "")) in retention_skip_warning_classes for warning in result.warnings)
     blocking_warnings = [
         warning for warning in result.warnings if str(warning.get("warning_class", "")) not in retention_skip_warning_classes
@@ -13643,6 +13781,7 @@ def archive_execplan(
     archived_record_relative = destination_record.relative_to(target_root).as_posix()
     has_record = record_path.exists()
     archive_retention_skipped = False
+    closeout_evidence_retention_skipped = False
     closeout_evidence_path = _closeout_evidence_record_path(target_root=target_root, destination_record=destination_record)
     retention_skip_reason = (
         "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead"
@@ -13841,16 +13980,33 @@ def archive_execplan(
     else:
         if archive_retention_skipped:
             closeout_evidence_path = _unique_closeout_evidence_record_path(closeout_evidence_path)
-            _write_closeout_evidence_record(
-                record_path=closeout_evidence_path,
-                record=_closeout_evidence_record(
+            closeout_evidence_record = _compact_closeout_archive_record(
+                _closeout_evidence_record(
                     closeout_record=closeout_record,
                     plan_path=plan_path,
                     target_root=target_root,
                     intended_archive_path=destination_record,
                     reason=retention_skip_reason,
-                ),
+                )
             )
+            closeout_evidence_size_warning = _closeout_evidence_size_guardrail_warning(
+                target_root=target_root,
+                destination_record=closeout_evidence_path,
+                record_override=closeout_evidence_record,
+            )
+            if closeout_evidence_size_warning is not None:
+                result.warnings.append(closeout_evidence_size_warning)
+                result.add(
+                    "retained closeout evidence skipped",
+                    closeout_evidence_path,
+                    "compact closeout evidence would exceed the structured-file inventory max_bytes guardrail",
+                )
+                closeout_evidence_retention_skipped = True
+            else:
+                _write_closeout_evidence_record(
+                    record_path=closeout_evidence_path,
+                    record=closeout_evidence_record,
+                )
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
         if record_path.exists():
@@ -13872,7 +14028,10 @@ def archive_execplan(
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     else:
         if archive_retention_skipped:
-            result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
+            if closeout_evidence_retention_skipped:
+                result.add("retained closeout evidence skipped", closeout_evidence_path, "closeout evidence exceeded size guardrail")
+            else:
+                result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     return result
 
@@ -14012,6 +14171,29 @@ def _archive_size_guardrail_warning(
         "message": (
             f"Archive would write {projected_bytes} bytes, exceeding structured-file inventory max_bytes={max_bytes} "
             "for .agentic-workspace/planning/execplans/archive/*.plan.json; distill or shrink the execplan before archiving."
+        ),
+    }
+
+
+def _closeout_evidence_size_guardrail_warning(
+    *,
+    target_root: Path,
+    destination_record: Path,
+    record_override: dict[str, Any],
+) -> dict[str, str] | None:
+    max_bytes = _structured_file_inventory_max_bytes(target_root, ".agentic-workspace/planning/closeout-evidence/*.closeout.json")
+    if max_bytes is None:
+        return None
+    projected_bytes = len((json.dumps(record_override, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    if projected_bytes <= max_bytes:
+        return None
+    return {
+        "warning_class": "closeout_evidence_retention_skipped_by_size_guardrail",
+        "path": destination_record.relative_to(target_root).as_posix(),
+        "message": (
+            f"Retained closeout evidence would write {projected_bytes} bytes, exceeding structured-file inventory "
+            f"max_bytes={max_bytes} for .agentic-workspace/planning/closeout-evidence/*.closeout.json; "
+            "completed-plan cleanup continued after closeout distillation."
         ),
     }
 

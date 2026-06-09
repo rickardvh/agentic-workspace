@@ -1189,6 +1189,72 @@ candidates = []
     assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
 
 
+def test_planning_closeout_skips_oversized_retained_evidence(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    },
+                    {
+                        "pattern": ".agentic-workspace/planning/closeout-evidence/*.closeout.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    },
+                ]
+            }
+        )
+        + "\n",
+    )
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--what-happened",
+                "closed a plan whose retained evidence exceeded the guardrail.",
+                "--scope-touched",
+                "packages/planning closeout evidence retention",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; evidence retention skip is non-blocking after closeout distillation.",
+                "--outcome-summary",
+                "oversized retained evidence is skipped without blocking closeout.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
+    options = {option["id"]: option for option in payload["completion_options"]}
+
+    assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
+    assert any(warning["warning_class"] == "closeout_evidence_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
+    assert any(action["kind"] == "retained closeout evidence skipped" for action in payload["actions"])
+    assert not closeout_evidence_path.exists()
+    assert not record_path.exists()
+    assert options["resolve-closeout-blocker"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
+
+
 def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
