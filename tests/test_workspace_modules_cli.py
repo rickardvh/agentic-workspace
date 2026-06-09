@@ -44,6 +44,19 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "closeout",
     ]
     assert "workflow_phases" in participation_model["module_can_contribute"]
+    assert "task_posture_fragments" in participation_model["module_can_contribute"]
+    posture_model = participation_model["task_posture_model"]
+    assert posture_model["packet_name"] == "task_posture_packet"
+    assert "configurable AGENTS.md" in posture_model["purpose"]
+    assert "optimization_bias" in " ".join(posture_model["inputs"])
+    assert "authority_boundaries" in posture_model["fields"]
+    assert "workflow obligations" in posture_model["composition_rule"]
+    dynamic_projection = participation_model["dynamic_instruction_projection"]
+    assert "AGENTS.md remains" in dynamic_projection["static_adapter_role"]
+    assert "forbidden actions" in dynamic_projection["projection_outputs"]
+    posture_visibility = participation_model["posture_visibility_model"]
+    assert "closeout" in posture_visibility["closeout_visibility"].lower()
+    assert "source_surface" in posture_visibility["provenance_fields"]
     assert participation_model["workflow_obligation_model"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
     assert "force all modules into fixed loop slots" in participation_model["projection_boundaries"]["must_not"]
     assert {entry["module"] for entry in participation_model["first_party_examples"]} == {
@@ -51,6 +64,12 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "memory",
         "verification",
     }
+    module_participation = {module["name"]: module["participation"] for module in payload["modules"]}
+    assert "task_posture_fragments" in module_participation["planning"]["declares"]
+    assert "review_rubrics" in module_participation["memory"]["declares"]
+    verification_participation = cli._MODULE_REGISTRY_ENTRIES["verification"]["participation"]
+    assert "proof_routes" in verification_participation["declares"]
+    assert "authority_boundaries" in verification_participation["declares"]
     component_model = payload["component_model"]
     assert component_model["schema_version"] == "agentic-workspace/module-components/v1"
     assert component_model["runtime_dependency"] == "none"

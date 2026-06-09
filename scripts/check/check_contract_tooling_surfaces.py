@@ -2096,6 +2096,7 @@ def main(argv: list[str] | None = None) -> int:
             "capabilities": list(entry.capabilities),
             "dependencies": list(entry.dependencies),
             "conflicts": list(entry.conflicts),
+            "participation": entry.participation,
             "components": cli._MODULE_REGISTRY_ENTRIES[entry.name]["components"],  # type: ignore[attr-defined]
             "result_contract": {
                 "schema_version": entry.result_contract.schema_version,

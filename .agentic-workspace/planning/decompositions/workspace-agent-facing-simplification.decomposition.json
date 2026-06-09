@@ -22,10 +22,10 @@
       "id": "lane-1392-open-module-participation",
       "title": "Define open module participation and workflow obligations",
       "readiness": "ready",
-      "outcome": "A reviewed model explains how the recommended default loop composes with repo workflow obligations and arbitrary module contributions without hard-coding today's first-party modules or fixed slots.",
-      "owner_surface": "src/agentic_workspace/contracts/module_registry.json, src/agentic_workspace/contracts/skill_specs.json, workflow obligation config/report surfaces, docs/package/modules.md, docs/package/installed-surfaces.md, and first-party module README evidence",
-      "proof": "Reviewed design or issue comment answers the #1392 acceptance questions and maps Planning, Memory, and Verification as first-party examples of a generic participation contract.",
-      "slice_contribution_to_parent": "Prevents #1389 simplification from overfitting to the current Planning/Memory/Verification surfaces before classifying ordinary workflow exposure.",
+      "outcome": "A reviewed model explains how the recommended default loop composes with repo workflow obligations, arbitrary module contributions, task posture, and dynamic instruction routing without hard-coding today's first-party modules, fixed slots, or static AGENTS.md detail.",
+      "owner_surface": "src/agentic_workspace/contracts/module_registry.json, src/agentic_workspace/contracts/skill_specs.json, workflow obligation config/report surfaces, task posture/startup projection surfaces, docs/package/modules.md, docs/package/installed-surfaces.md, and first-party module README evidence",
+      "proof": "Reviewed design or issue comment answers the #1392 acceptance questions, maps Planning/Memory/Verification as first-party examples of a generic participation contract, and covers task posture packets, dynamic instruction projection, module-declared posture contributions, authority boundaries, output/review posture, and closeout/report visibility.",
+      "slice_contribution_to_parent": "Prevents #1389 simplification from overfitting to the current Planning/Memory/Verification surfaces or static AGENTS.md instructions before classifying ordinary workflow exposure.",
       "residual_parent_intent": "The ordinary loop classification, per-step simplification, implementation slices, and installed-product proof remain after this lane.",
       "parent_proof_boundary": "slice-only",
       "human_confirmation_needed": [],
@@ -103,13 +103,13 @@
     }
   ],
   "dependency_assumptions": [
-    "#1392 precedes #1390 and #1391 because the open participation model prevents later simplification from freezing today's first-party modules into fixed slots.",
+    "#1392 precedes #1390 and #1391 because the open participation and task-posture model prevents later simplification from freezing today's first-party modules, static AGENTS.md instructions, or fixed slots.",
     "#1390 precedes #1391 because the per-step investigation should simplify within the reviewed ordinary-loop model instead of redesigning it.",
     "Implementation slices are deferred until #1390 and #1391 produce reviewed recommendations with exact surface owners and proof expectations.",
     "Parent #1389 closure is blocked until visible installed-product simplification and host-repo walkthrough evidence exist, not merely a planning model."
   ],
   "parallelization_assumptions": [
-    "#1392 should be handled first and kept design-shaped; it may produce contract/schema/doc follow-up criteria without immediately changing module internals.",
+    "#1392 should be handled first and kept model-shaped; it may produce contract/schema/doc follow-up criteria without immediately implementing every runtime projection or changing module internals.",
     "Once #1390 establishes the top-level classification, #1391 per-step investigations can potentially be split by loop step if they keep the common structure and dependency on #1390 evidence.",
     "Implementation slices may run in parallel only after their affected surfaces and proof lanes are independent and parent residual intent is explicit."
   ],

@@ -1889,6 +1889,7 @@ class ModuleRegistryEntry:
     capabilities: tuple[str, ...]
     dependencies: tuple[str, ...]
     conflicts: tuple[str, ...]
+    participation: dict[str, Any]
     result_contract: ModuleResultContract
 
 
@@ -28034,6 +28035,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
                 "capabilities": list(entry.capabilities),
                 "dependencies": list(entry.dependencies),
                 "conflicts": list(entry.conflicts),
+                "participation": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("participation", {})),
                 "components": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("components", {})),
                 "result_contract": {
                     "schema_version": entry.result_contract.schema_version,
@@ -36153,6 +36155,7 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
                 capabilities=descriptor.capabilities,
                 dependencies=descriptor.dependencies,
                 conflicts=descriptor.conflicts,
+                participation=copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {})),
                 result_contract=descriptor.result_contract,
             )
         )

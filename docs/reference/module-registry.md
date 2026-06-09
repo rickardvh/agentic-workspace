@@ -40,6 +40,15 @@ Registry of workspace modules, feature tiers, component classes, and generated c
 | `participation_model.product_model` | string | yes |  | Top-level product model for the open operating substrate. |  |  |
 | `participation_model.recommended_loop` | array of object | yes |  | Recommended ordinary operating loop with extension rules. |  |  |
 | `participation_model.module_can_contribute` | array of string | yes |  | Capability classes a module may contribute to the operating substrate. |  |  |
+| `participation_model.task_posture_model` | object | yes |  | Task-specific posture packet model for dynamic instruction routing. |  |  |
+| `participation_model.task_posture_model.packet_name` | string | yes |  | Stable name for the task-specific posture packet. |  |  |
+| `participation_model.task_posture_model.purpose` | string | yes |  | Why the posture packet exists. |  |  |
+| `participation_model.task_posture_model.emitted_by` | array of string | yes |  | Commands or projections that may emit task posture. |  |  |
+| `participation_model.task_posture_model.inputs` | array of string | yes |  | Inputs that compose into the task posture packet. |  |  |
+| `participation_model.task_posture_model.fields` | array of string | yes |  | Fields a posture packet may expose when relevant. |  |  |
+| `participation_model.task_posture_model.composition_rule` | string | yes |  | How config posture, workflow obligations, task facts, and module declarations compose. |  |  |
+| `participation_model.task_posture_model.module_rule` | string | yes |  | How modules declare posture fragments and when startup may include them. |  |  |
+| `participation_model.task_posture_model.must_not` | array of string | yes |  | Posture projection boundaries that must be preserved. |  |  |
 | `participation_model.workflow_obligation_model` | object | yes |  | How repo-configured workflow obligations compose with the recommended operating loop. |  |  |
 | `participation_model.workflow_obligation_model.owner_surface` | string | yes |  | Config or contract surface that owns workflow obligation declarations. |  |  |
 | `participation_model.workflow_obligation_model.role` | string | yes |  | How workflow obligations compose with the recommended loop. |  |  |
@@ -53,6 +62,17 @@ Registry of workspace modules, feature tiers, component classes, and generated c
 | `participation_model.projection_boundaries.source_of_truth` | string | yes |  | Canonical source for participation declarations. |  |  |
 | `participation_model.projection_boundaries.generated_or_adapter_targets` | array of string | yes |  | Derived targets that may project participation metadata. |  |  |
 | `participation_model.projection_boundaries.must_not` | array of string | yes |  | Boundaries generated or adapter projections must preserve. |  |  |
+| `participation_model.dynamic_instruction_projection` | object | yes |  | Dynamic instruction projection model that keeps the static adapter small. |  |  |
+| `participation_model.dynamic_instruction_projection.static_adapter_role` | string | yes |  | Role of the static AGENTS.md adapter. |  |  |
+| `participation_model.dynamic_instruction_projection.projection_rule` | string | yes |  | How task-specific instruction projections are selected. |  |  |
+| `participation_model.dynamic_instruction_projection.selection_inputs` | array of string | yes |  | Inputs used to select dynamic instruction fragments. |  |  |
+| `participation_model.dynamic_instruction_projection.projection_outputs` | array of string | yes |  | Outputs that the dynamic instruction projection may expose. |  |  |
+| `participation_model.dynamic_instruction_projection.adherence_rule` | string | yes |  | How selected posture provenance remains visible for conflicts and closeout. |  |  |
+| `participation_model.posture_visibility_model` | object | yes |  | Visibility model for posture adherence in startup, reports, and closeout. |  |  |
+| `participation_model.posture_visibility_model.startup_visibility` | string | yes |  | When startup should show posture detail. |  |  |
+| `participation_model.posture_visibility_model.report_visibility` | string | yes |  | How reports expose posture and module contribution state. |  |  |
+| `participation_model.posture_visibility_model.closeout_visibility` | string | yes |  | How closeout reconciles posture adherence. |  |  |
+| `participation_model.posture_visibility_model.provenance_fields` | array of string | yes |  | Fields used to retain posture and module contribution provenance. |  |  |
 | `participation_model.first_party_examples` | array of object | yes |  | First-party modules mapped as examples, not privileged special cases. |  |  |
 | `module_profiles` | array of object | yes |  | Module profile summaries used for selection, reporting, and docs. |  |  |
 | `workspace_components` | object | yes |  | Root workspace components that are not owned by a single module. |  |  |

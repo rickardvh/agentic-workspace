@@ -45,6 +45,7 @@ Participation shape:
 
 - Contributes active-work and closeout state to the open Workspace operating loop.
 - Declares module-managed roots, summary resources, lifecycle tools, planning skills, schemas, and proof/continuation expectations through the module registry and Planning manifests.
+- Contributes task posture only when active planning state, lane-shaped work, planning-owned paths, or completion claims require allowed/forbidden actions, review posture, proof boundaries, or closeout gates.
 - Acts as a first-party example of module participation; it should not force every module into Planning-shaped active state or make Planning a general backlog system.
 
 Collaboration shape:

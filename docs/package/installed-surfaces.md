@@ -36,6 +36,18 @@ participation model. Their installed roots demonstrate active state, durable
 knowledge, and soft verification ownership, but they are not the limit of what a
 module can contribute.
 
+The same boundary applies to task posture. `AGENTS.md` should stay a compact
+adapter that points agents to the configured workspace entrypoint. Startup and
+changed-path commands emit the matching posture packet for the current task:
+workflow obligations, skill routes, allowed and forbidden actions, proof and
+closeout boundaries, read budget, authority boundaries, output-shape
+requirements, review rubrics, and module contributions appear only when task
+facts, changed paths, active state, or repo config activate them.
+
+Reports and closeout preserve provenance for selected posture fragments so
+agents can see whether a rule came from repo config, a workflow obligation, or a
+module declaration without turning first contact into a full inventory.
+
 ## Surface Classes
 
 The installed and source-checkout surfaces fall into different classes. Keeping those classes distinct is what prevents the docs set from becoming another startup burden.

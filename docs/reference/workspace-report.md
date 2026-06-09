@@ -56,6 +56,21 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
+| `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance. |  |  |
+| `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
+| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
+| `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
+| `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
+| `task_posture_packet.allowed_actions` | array of string | yes |  | Actions allowed under the resolved posture. |  |  |
+| `task_posture_packet.forbidden_actions` | array of string | yes |  | Actions forbidden under the resolved posture. |  |  |
+| `task_posture_packet.proof_boundaries` | array of string | yes |  | Proof boundaries selected for the current task. |  |  |
+| `task_posture_packet.closeout_boundaries` | array of string | yes |  | Closeout and claim boundaries selected for the current task. |  |  |
+| `task_posture_packet.read_budget` | object | yes |  | Read-budget profile and selector/deep-read limits for this task. |  |  |
+| `task_posture_packet.authority_boundaries` | array of object | yes |  | Authority boundaries with source and owner provenance. |  |  |
+| `task_posture_packet.output_shape_requirements` | array of string | yes |  | Output-shape constraints selected for this task. |  |  |
+| `task_posture_packet.review_rubrics` | array of string | yes |  | Review rubrics selected for this task. |  |  |
+| `task_posture_packet.module_contributions` | array of object | yes |  | Matched module posture contributions with trigger and projection provenance. |  |  |
+| `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
 | `maintainer_mode` | object | yes |  | Package-maintainer dogfooding report routes enabled by workspace.maintainer_mode. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
 | `config_effect_audit` | object | yes |  | Audit of each config setting's concrete force, affected output routes, and agent dependency. |  |  |

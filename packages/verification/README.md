@@ -27,6 +27,11 @@ known gaps, schemas, and owned roots. It is a first-party example of module
 participation in the proof step; it should not become the generic proof
 authority or a required slot for every repo.
 
+Verification contributes task posture only when assurance requirements, changed
+paths, proof selection, or known-gap reporting activate verification protocols;
+it may add review rubrics and authority boundaries, but completion permission
+stays with the owning workflow.
+
 ## Module CLI
 
 ```text

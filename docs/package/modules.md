@@ -49,6 +49,42 @@ This model is deliberately open-ended. It should keep ordinary startup small
 while allowing any number of modules to participate through declared roots,
 tools, state, reports, gates, proof routes, and lifecycle behavior.
 
+## Task Posture And Dynamic Instructions
+
+The same participation model covers task posture. Agentic Workspace acts like a
+richer configurable `AGENTS.md`: the static adapter points to the workspace
+entrypoint, while startup and changed-path commands emit the task-specific
+posture that is relevant now.
+
+A task posture packet can include task intent, operating posture, workflow
+obligations, skill routes, allowed and forbidden actions, proof and closeout
+boundaries, read budget, authority boundaries, output-shape requirements,
+review rubrics, and matched module contributions. It is composed from repo
+config, task facts, changed paths, active planning state, and module
+participation declarations.
+
+Config posture participates in that composition:
+
+| Input | Effect |
+| --- | --- |
+| `optimization_bias` | changes density, routing emphasis, and residue style without overriding hard obligations |
+| artifact posture | constrains generated, persisted, or user-facing outputs |
+| initiative posture | limits unsolicited cleanup and broader action |
+| assurance posture | raises proof, review, and delegation requirements |
+| read budget | controls whether startup emits compact selectors or deeper raw context |
+| `workflow_obligations` | adds stage- and scope-specific requirements to the current loop step |
+
+Modules declare their posture contributions instead of relying on bespoke core
+logic. A declaration names the loop steps it can affect, contribution classes,
+posture triggers, startup/report/closeout projections, authority boundaries, and
+conflict provenance. Startup includes only matching fragments so ordinary first
+contact does not grow into a full module manual.
+
+Reports and closeout keep the model auditable. They expose applied workflow
+obligations, selected module contributions, posture conflicts, and provenance
+when posture changed the allowed next action, proof burden, output shape, review
+rubric, authority boundary, or closeout permission.
+
 ## Module Profiles
 
 | Profile | Modules | Checked-in footprint |

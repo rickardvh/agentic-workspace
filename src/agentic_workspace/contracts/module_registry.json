@@ -70,8 +70,56 @@
       "workflow_phases",
       "startup_routing_hints",
       "state_owners",
+      "task_posture_fragments",
+      "output_shape_requirements",
+      "review_rubrics",
+      "authority_boundaries",
       "safety_metadata"
     ],
+    "task_posture_model": {
+      "packet_name": "task_posture_packet",
+      "purpose": "A compact, task-specific instruction packet that lets AW behave like a richer configurable AGENTS.md while keeping the static adapter small.",
+      "emitted_by": [
+        "agentic-workspace start",
+        "agentic-workspace implement --changed",
+        "agentic-workspace preflight",
+        "agentic-workspace summary when active planning owns continuation"
+      ],
+      "inputs": [
+        ".agentic-workspace/config.toml workflow_obligations",
+        "resolved optimization_bias",
+        "resolved artifact posture",
+        "resolved initiative posture",
+        "assurance and delegation posture",
+        "read budget and context profile",
+        "task intent and issue references",
+        "changed paths and active planning state",
+        "module participation declarations"
+      ],
+      "fields": [
+        "task_intent",
+        "operating_posture",
+        "workflow_obligations",
+        "skill_routes",
+        "allowed_actions",
+        "forbidden_actions",
+        "proof_boundaries",
+        "closeout_boundaries",
+        "read_budget",
+        "authority_boundaries",
+        "output_shape_requirements",
+        "review_rubrics",
+        "module_contributions"
+      ],
+      "composition_rule": "Workspace computes the packet from repo config, task facts, and selected module participation declarations. Optimization bias changes density and routing emphasis, artifact posture constrains generated or persisted outputs, initiative posture limits unsolicited work, assurance posture raises review/proof/delegation requirements, read budget gates raw context exposure, and workflow obligations add stage-specific requirements.",
+      "module_rule": "Modules may declare posture fragments, output requirements, review rubrics, authority boundaries, proof or closeout effects, and route triggers. Startup includes only fragments whose triggers match the task, changed paths, active state, or requested command.",
+      "must_not": [
+        "grow AGENTS.md with every possible module instruction",
+        "emit all module posture fragments on ordinary startup",
+        "let optimization bias or output posture override hard workflow obligations",
+        "let module-provided posture silently change authority or proof ownership"
+      ]
+    },
     "workflow_obligation_model": {
       "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
       "role": "Repo-configured obligations compose with the recommended loop by stage and scope tags. They are explicit, queryable, and reportable; they do not replace module ownership or make every obligation a new module.",
@@ -90,6 +138,9 @@
         "overlapping_owned_roots",
         "incompatible_module_selection",
         "contradictory_workflow_obligations",
+        "contradictory_task_posture_fragments",
+        "authority_boundary_collision",
+        "output_shape_collision",
         "proof_route_collision",
         "lifecycle_hook_collision",
         "startup_burden_growth"
@@ -109,6 +160,46 @@
         "force all modules into fixed loop slots",
         "promote first-party modules from examples into privileged special cases",
         "increase ordinary startup burden by exposing all module detail up front"
+      ]
+    },
+    "dynamic_instruction_projection": {
+      "static_adapter_role": "AGENTS.md remains an authority pointer and bootstrap adapter, not the place where every task posture, module rule, and workflow obligation is inlined.",
+      "projection_rule": "Startup and changed-path commands emit a compact instruction/routing projection selected from task facts, repo config, active planning state, and module participation declarations.",
+      "selection_inputs": [
+        "command surface",
+        "task text and issue references",
+        "changed paths",
+        "active planning state",
+        "installed modules",
+        "workflow obligation stage and scope tags",
+        "posture mode triggers",
+        "read budget"
+      ],
+      "projection_outputs": [
+        "required skills or prompts",
+        "allowed next action",
+        "forbidden actions",
+        "authority boundary",
+        "proof expectations",
+        "closeout obligations",
+        "module report or resource links",
+        "selector and verbose routes for deeper detail"
+      ],
+      "adherence_rule": "The projection must carry provenance for repo config, workflow obligation, and module fragments so conflicts can be reported and closeout can say which posture applied."
+    },
+    "posture_visibility_model": {
+      "startup_visibility": "Compact startup outputs show the active task posture only when it changes the allowed next action, proof burden, skill route, authority boundary, or read budget.",
+      "report_visibility": "Workspace reports expose applied workflow obligations, module contributions, posture conflicts, and selector routes without making every module report part of first contact.",
+      "closeout_visibility": "Closeout must reconcile proof, intent, and residue against the applied task posture when posture changed completion permission, output shape, review, or authority boundaries.",
+      "provenance_fields": [
+        "source_surface",
+        "module",
+        "stage",
+        "scope_tags",
+        "trigger",
+        "force",
+        "selected",
+        "conflicts"
       ]
     },
     "first_party_examples": [
@@ -594,6 +685,47 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "participation": {
+        "loop_steps": [
+          "startup",
+          "active-work",
+          "closeout"
+        ],
+        "declares": [
+          "state_owners",
+          "workflow_phases",
+          "lifecycle_hooks",
+          "task_posture_fragments",
+          "output_shape_requirements",
+          "review_rubrics",
+          "authority_boundaries",
+          "reports",
+          "gates"
+        ],
+        "posture_triggers": [
+          "active planning state is present",
+          "task shape is broad, lane-shaped, or issue-linked",
+          "changed paths include planning-owned surfaces",
+          "completion or archive claims are being made"
+        ],
+        "dynamic_projection": {
+          "startup_contribution": "Expose active plan/TODO pressure, allowed next action, forbidden implementation paths, planning-required skills, and proof/closeout posture only when planning state or task shape requires it.",
+          "report_contribution": "Report planning health, active state, continuation view, proof posture, closeout status, and stale or conflicting planning records.",
+          "closeout_contribution": "Require proof-to-intent reconciliation, residue routing, parent/lane boundary checks, and explicit continuation owner before completion claims."
+        },
+        "authority_boundaries": [
+          "Planning may own active execution sequencing and closeout state.",
+          "Planning must not decide semantic issue completion without proof and acceptance reconciliation.",
+          "Planning must not become a general backlog or durable knowledge store."
+        ],
+        "conflict_provenance": [
+          "planning state revision",
+          "active execplan path",
+          "todo item id",
+          "workflow obligation stage",
+          "changed planning-owned path"
+        ]
+      },
       "components": {
         "resources": [
           {
@@ -780,6 +912,43 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "participation": {
+        "loop_steps": [
+          "startup",
+          "durable-knowledge",
+          "closeout"
+        ],
+        "declares": [
+          "resources",
+          "prompts_or_skills",
+          "task_posture_fragments",
+          "output_shape_requirements",
+          "review_rubrics",
+          "reports",
+          "state_owners"
+        ],
+        "posture_triggers": [
+          "task needs durable repo knowledge",
+          "changed paths match memory-routed files",
+          "closeout residue contains reusable anti-rediscovery knowledge",
+          "startup has insufficient context after compact routing"
+        ],
+        "dynamic_projection": {
+          "startup_contribution": "Expose memory consultation guidance and read-first durable notes only when task facts or changed paths justify them.",
+          "report_contribution": "Report memory freshness, manifest routing, stale notes, and capture affordances without making notes part of ordinary startup.",
+          "closeout_contribution": "Route durable lessons to Memory only when they are stable, reusable, and cheaper to retain than rediscover."
+        },
+        "authority_boundaries": [
+          "Memory may own durable anti-rediscovery knowledge and capture hygiene.",
+          "Memory must not own active execution state, issue history, proof authority, or general documentation."
+        ],
+        "conflict_provenance": [
+          "memory manifest route",
+          "memory note path",
+          "changed memory-owned path",
+          "closeout residue bucket"
+        ]
+      },
       "components": {
         "resources": [
           {
@@ -961,6 +1130,42 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "participation": {
+        "loop_steps": [
+          "proof",
+          "closeout"
+        ],
+        "declares": [
+          "proof_routes",
+          "reports",
+          "schemas",
+          "task_posture_fragments",
+          "review_rubrics",
+          "authority_boundaries",
+          "safety_metadata"
+        ],
+        "posture_triggers": [
+          "task or changed paths activate verification protocols",
+          "assurance posture requires stronger proof",
+          "proof selection needs bounded evidence or known-gap reporting",
+          "closeout must distinguish evidence from completion permission"
+        ],
+        "dynamic_projection": {
+          "startup_contribution": "Stay quiet unless task facts, changed paths, or assurance requirements activate verification protocols.",
+          "report_contribution": "Expose configured protocols, proof route hints, evidence bundles, known gaps, and validation warnings.",
+          "closeout_contribution": "Make proof evidence and known gaps visible while preserving Planning or human ownership of completion claims."
+        },
+        "authority_boundaries": [
+          "Verification may contribute proof protocols and bounded evidence.",
+          "Verification must not become generic proof authority, CI ownership, Planning state, or issue-close permission."
+        ],
+        "conflict_provenance": [
+          "verification manifest entry",
+          "proof route id",
+          "assurance requirement",
+          "changed verification-owned path"
+        ]
+      },
       "components": {
         "resources": [
           {
