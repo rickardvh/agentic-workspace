@@ -29,6 +29,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `task_posture_packet.review_rubrics` | array of string | yes |  | Review rubrics selected for this task. |  |  |
 | `task_posture_packet.module_contributions` | array of object | yes |  | Matched module posture contributions with trigger and projection provenance. |  |  |
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
+| `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
+| `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
 | `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | no |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
 | `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |

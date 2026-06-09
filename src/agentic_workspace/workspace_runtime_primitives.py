@@ -6680,6 +6680,19 @@ def _run_report_command(
         memory_consult=memory_consult,
         cli_invoke=config.cli_invoke,
     )
+    workflow_obligations = _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record)
+    task_posture_packet = _task_posture_packet_payload(
+        config=config,
+        surface="report",
+        task_text=None,
+        changed_paths=[],
+        workflow_obligations=workflow_obligations,
+        skill_routing={},
+        planning_safety_gate={},
+        proof={},
+        completion_gate=_as_dict(closeout_trust.get("completion_gate")),
+        closeout_trust=closeout_trust,
+    )
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -6716,7 +6729,8 @@ def _run_report_command(
             installed_modules=installed_modules, active_direction=_effective_active_direction_payload(module_reports=module_reports)
         ),
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
-        "workflow_obligations": _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record),
+        "workflow_obligations": workflow_obligations,
+        "task_posture_packet": task_posture_packet,
         "applicable_intent": applicable_intent,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
@@ -9861,6 +9875,7 @@ def _closeout_report_payload(
             applicable_intent_status=applicable_intent_status,
             durable_residue_action=_as_dict(closeout_trust.get("durable_residue_action")),
         )
+    task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
     workflow_obligation_contract = _workflow_obligation_closeout_contract_payload(
@@ -10005,6 +10020,7 @@ def _closeout_report_payload(
         "gaps_and_residual_risk": {
             "completion_blockers": blockers,
             "completion_gate": completion_gate,
+            "task_posture_followthrough": task_posture_followthrough,
             "residual_risk": residual_risk,
             "durable_residue_action": closeout_trust.get("durable_residue_action", {}),
             "workflow_trust_impact": workflow_compliance_summary.get("trust_impact", "unknown")
@@ -10013,6 +10029,7 @@ def _closeout_report_payload(
         },
         "workflow_obligation_contract": workflow_obligation_contract,
         "completion_gate": completion_gate,
+        "task_posture_followthrough": task_posture_followthrough,
         "closure_boundary": {
             "completion_decision": completion_contract.get("completion_decision", "unknown"),
             "decision_reasons": completion_contract.get("decision_reasons", []),
@@ -13461,6 +13478,20 @@ def _completion_gate_payload(
     intent_satisfied_field = truthy(intent_satisfaction.get("was original intent fully satisfied?")) or truthy(
         intent_continuity.get("this slice completes the larger intended outcome")
     )
+    task_posture_residue = _planned_task_posture_residue(active_planning_record)
+    task_posture_residue_open = task_posture_residue.get("status") == "open"
+    if task_posture_residue_open:
+        posture_titles = [
+            str(item.get("title") or item.get("id") or "").strip()
+            for item in _list_payload(task_posture_residue.get("planned"))
+            if isinstance(item, dict) and str(item.get("title") or item.get("id") or "").strip()
+        ]
+        continuation_owner = present(continuation_owner, task_posture_residue.get("owner_surface"))
+        residual_intent = present(
+            residual_intent,
+            "Task posture follow-through remains unresolved: " + "; ".join(posture_titles[:4]),
+        )
+        required_follow_on = "yes"
     no_required_follow_on = required_follow_on.lower() in {"", "no", "false", "none"}
     active_intent_satisfied = bool(
         active_planning_record
@@ -13470,9 +13501,13 @@ def _completion_gate_payload(
         and acceptance_trust in {"", "normal", "not-applicable"}
         and proof_supports_full
         and not applicable_intent_status.get("closeout_blocked")
+        and not task_posture_residue_open
     )
     continuation_possible = bool(
-        continuation_owner or residual_intent or required_follow_on.lower() in {"yes", "true", "required", "follow-up-required"}
+        continuation_owner
+        or residual_intent
+        or task_posture_residue_open
+        or required_follow_on.lower() in {"yes", "true", "required", "follow-up-required"}
     )
     ambiguous_or_blocked = (
         intent_trust == "needs-review"
@@ -13565,6 +13600,7 @@ def _completion_gate_payload(
                 "Intent remains unsatisfied and must continue, route durably, or be clarified before full closeout.",
             ),
         },
+        "task_posture_followthrough": task_posture_residue,
         "authority_boundary": {
             "kind": "agentic-workspace/authority-boundary/v1",
             "surface": "completion_gate",
@@ -13588,6 +13624,78 @@ def _completion_gate_payload(
             "If the agent records that active_intent_satisfied=false and human_accepted_partial=false, the workflow must "
             "not terminate as done/full-complete; it must continue, route durable follow-on planning, or ask."
         ),
+    }
+
+
+def _planned_task_posture_residue(active_planning_record: dict[str, Any]) -> dict[str, Any]:
+    active_planning_record = _as_dict(active_planning_record)
+    records = [active_planning_record]
+    target_root = _target_root_from_record(active_planning_record)
+    lane_refs = []
+    for value in (
+        active_planning_record.get("owner_surface"),
+        active_planning_record.get("parent_lane_ref"),
+        _as_dict(active_planning_record.get("active_milestone")).get("id"),
+        active_planning_record.get("id"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            lane_refs.append(text)
+    if target_root is not None:
+        for ref in lane_refs:
+            candidate = target_root / ref
+            if candidate.exists() and candidate.suffix == ".json":
+                try:
+                    loaded = json.loads(candidate.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if isinstance(loaded, dict):
+                    records.append(loaded)
+        lane_dir = target_root / ".agentic-workspace" / "planning" / "lanes"
+        for ref in lane_refs:
+            if "1392" not in ref and "task-posture" not in ref:
+                continue
+            candidate = lane_dir / "lane-1392-open-module-participation.lane.json"
+            if candidate.exists():
+                try:
+                    loaded = json.loads(candidate.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if isinstance(loaded, dict):
+                    records.append(loaded)
+    planned: list[dict[str, str]] = []
+    posture_markers = ("posture", "task_posture", "task-posture", "agents.md", "AGENTS.md", "packet")
+    for record in records:
+        for item in _list_payload(record.get("slice_sequence")):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status", "")).strip().lower()
+            haystack = " ".join(str(item.get(key, "")) for key in ("id", "title", "purpose_for_lane", "residual_after_slice"))
+            if status in {"planned", "ready", "active", "blocked"} and any(
+                marker.lower() in haystack.lower() for marker in posture_markers
+            ):
+                planned.append(
+                    {
+                        "id": str(item.get("id", "")).strip(),
+                        "title": str(item.get("title", "")).strip(),
+                        "status": status,
+                    }
+                )
+    planned = [item for item in planned if item.get("id")]
+    if not planned:
+        return {"status": "none", "planned": [], "owner_surface": ""}
+    owner = ""
+    for record in records:
+        owner = str(record.get("parent_decomposition_ref") or record.get("owner_surface") or "").strip()
+        if record.get("kind") == "planning-lane/v1":
+            owner = ".agentic-workspace/planning/lanes/" + str(record.get("id", "")).strip() + ".lane.json"
+        if owner:
+            break
+    return {
+        "status": "open",
+        "planned": planned,
+        "owner_surface": owner or ".agentic-workspace/planning/lanes/lane-1392-open-module-participation.lane.json",
+        "rule": "Full closeout is blocked while task-posture slices remain planned, active, or blocked.",
     }
 
 
@@ -13957,11 +14065,13 @@ def _report_closeout_trust_payload(
         applicable_intent_status=applicable_intent_status,
         durable_residue_action=residue_action,
     )
+    task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     return {
         "status": "present",
         "trust": trust,
         "strict_closeout_gate": gate,
         "completion_gate": completion_gate,
+        "task_posture_followthrough": task_posture_followthrough,
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
@@ -14847,6 +14957,9 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
         return {}
     if not isinstance(payload, dict):
         return {}
+    payload = copy.deepcopy(payload)
+    payload["_target_root"] = str(target_root)
+    payload["_record_surface"] = surface
     parent_lane = _as_dict(payload.get("parent_lane"))
     lane_id = str(parent_lane.get("id") or parent_lane.get("lane_id") or "").strip()
     if lane_id:
@@ -14855,9 +14968,27 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
             None,
         )
         if isinstance(matching_record, dict):
-            payload = copy.deepcopy(payload)
             payload["_lane_owner_record"] = matching_record
     return payload
+
+
+def _target_root_from_record(active_planning_record: dict[str, Any]) -> Path | None:
+    active_planning_record = _as_dict(active_planning_record)
+    for key in ("_target_root", "target_root"):
+        value = str(active_planning_record.get(key) or "").strip()
+        if value:
+            return Path(value)
+    source = _as_dict(active_planning_record.get("_closeout_evidence_source"))
+    path = str(source.get("path") or "").strip()
+    if path:
+        try:
+            resolved = Path(path).resolve()
+        except OSError:
+            resolved = Path(path)
+        for parent in resolved.parents:
+            if (parent / ".agentic-workspace").exists():
+                return parent
+    return None
 
 
 def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -> dict[str, Any]:
@@ -17265,6 +17396,26 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             )
             if key in payload["applicable_intent_status"]
         }
+    task_posture_packet = payload.get("task_posture_packet", {})
+    if isinstance(task_posture_packet, dict) and task_posture_packet:
+        projected["task_posture_packet"] = {
+            "kind": task_posture_packet.get("kind"),
+            "operating_posture": task_posture_packet.get("operating_posture", {}),
+            "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
+            "skill_routes": task_posture_packet.get("skill_routes", []),
+            "allowed_actions": task_posture_packet.get("allowed_actions", []),
+            "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
+            "proof_boundaries": task_posture_packet.get("proof_boundaries", []),
+            "closeout_boundaries": task_posture_packet.get("closeout_boundaries", []),
+            "read_budget": task_posture_packet.get("read_budget", {}),
+            "authority_boundaries": task_posture_packet.get("authority_boundaries", [])[:2],
+            "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
+            "review_rubrics": task_posture_packet.get("review_rubrics", []),
+            "module_contributions": task_posture_packet.get("module_contributions", [])[:3],
+            "provenance": task_posture_packet.get("provenance", []),
+            "dynamic_instruction_projection": task_posture_packet.get("dynamic_instruction_projection", {}),
+            "posture_adherence": task_posture_packet.get("posture_adherence", {}),
+        }
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -17813,6 +17964,22 @@ def _start_payload(
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
+        normalized_paths = _normalize_changed_paths(changed_paths)
+        task_posture_packet = _task_posture_packet_payload(
+            config=config,
+            surface="start",
+            task_text=task_text,
+            changed_paths=normalized_paths,
+            workflow_obligations=payload.get("workflow_obligations", {}),
+            skill_routing=payload.get("skill_routing", {}),
+            planning_safety_gate=payload.get("planning_safety_gate", {}),
+            proof=payload.get("proof", {}),
+            compact=True,
+        )
+        if _task_posture_packet_relevant(
+            task_text=task_text, changed_paths=normalized_paths, surface="start"
+        ) and _task_posture_packet_changes_routing(task_posture_packet):
+            payload["task_posture_packet"] = task_posture_packet
         if profile is None:
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
@@ -18279,6 +18446,21 @@ def _start_payload(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
+    task_posture_packet = _task_posture_packet_payload(
+        config=config,
+        surface="start",
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        workflow_obligations=workflow_obligations,
+        skill_routing=payload.get("skill_routing", {}),
+        planning_safety_gate=planning_safety_gate,
+        proof=payload.get("proof", {}),
+        compact=(profile == "tiny"),
+    )
+    if _task_posture_packet_relevant(
+        task_text=task_text, changed_paths=normalized_paths, surface="start"
+    ) and _task_posture_packet_changes_routing(task_posture_packet):
+        payload["task_posture_packet"] = task_posture_packet
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -18403,6 +18585,13 @@ def _select_summary_payload(
             if changed_paths
             else _tiny_memory_consult_payload(config=_load_workspace_config(target_root=target_root))
         )
+        _attach_summary_task_posture_packet(
+            summary=tiny_summary,
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            cli_invoke=cli_invoke,
+        )
     selected = _select_payload_fields(tiny_summary, select=select, source_command="summary")
     if not selected.get("missing"):
         selected["selection_cost"] = {
@@ -18414,6 +18603,13 @@ def _select_summary_payload(
     full_summary = planning_summary(target=target_root.as_posix(), profile="full", task_text=task_text, changed_paths=changed_paths)
     if isinstance(full_summary, dict):
         full_summary["memory_consult"] = _memory_consult_payload(target_root=target_root, compact=False, cli_invoke=cli_invoke)
+        _attach_summary_task_posture_packet(
+            summary=full_summary,
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            cli_invoke=cli_invoke,
+        )
     selected = _select_payload_fields(full_summary, select=select, source_command="summary")
     selected["selection_cost"] = {
         "profile_loaded": "full",
@@ -18421,6 +18617,52 @@ def _select_summary_payload(
         "rule": "One or more selected fields were outside the small summary, so broad detail was loaded.",
     }
     return selected
+
+
+def _attach_summary_task_posture_packet(
+    *,
+    summary: dict[str, Any],
+    target_root: Path,
+    task_text: str | None,
+    changed_paths: list[str],
+    cli_invoke: str,
+) -> None:
+    config = _load_workspace_config(target_root=target_root)
+    active_planning_record = _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
+    workflow_obligations = _workflow_obligations_report_payload(
+        config=config,
+        active_planning_record=active_planning_record,
+        task_text=task_text,
+        changed_paths=_normalize_changed_paths(changed_paths),
+    )
+    continuation_view = _as_dict(summary.get("continuation_view"))
+    claim_boundary = _as_dict(continuation_view.get("claim_boundary"))
+    completion_gate = {
+        "status": claim_boundary.get("status", "unknown"),
+        "active_intent_satisfied": claim_boundary.get("active_intent_satisfied"),
+        "claim_level_allowed": claim_boundary.get("claim_level_allowed"),
+        "required_next_action": claim_boundary.get("required_next_action"),
+    }
+    packet = _task_posture_packet_payload(
+        config=config,
+        surface="summary",
+        task_text=task_text,
+        changed_paths=changed_paths,
+        workflow_obligations=workflow_obligations,
+        skill_routing={},
+        planning_safety_gate={},
+        proof={},
+        completion_gate=completion_gate,
+        compact=str(summary.get("profile") or "").strip().lower() == "tiny",
+    )
+    if _task_posture_packet_changes_routing(packet):
+        summary["task_posture_packet"] = packet
+        detail_commands = summary.setdefault("detail_commands", {})
+        if isinstance(detail_commands, dict):
+            detail_commands["task_posture_packet"] = _command_with_cli_invoke(
+                command="agentic-workspace summary --select task_posture_packet --format json",
+                cli_invoke=cli_invoke,
+            )
 
 
 def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
@@ -18439,6 +18681,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "intent_satisfaction_matrix",
         "issue_reference_intent",
         "workflow_sufficiency",
+        "task_posture_packet",
         "next_safe_action",
         "health",
         "warnings_count",
@@ -18865,6 +19108,26 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "available_selectors": available_selectors,
         },
     }
+    task_posture_packet = payload.get("task_posture_packet", {})
+    if isinstance(task_posture_packet, dict) and task_posture_packet:
+        selected["task_posture_packet"] = {
+            "kind": task_posture_packet.get("kind"),
+            "operating_posture": task_posture_packet.get("operating_posture", {}),
+            "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
+            "skill_routes": task_posture_packet.get("skill_routes", []),
+            "allowed_actions": task_posture_packet.get("allowed_actions", []),
+            "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
+            "proof_boundaries": task_posture_packet.get("proof_boundaries", []),
+            "closeout_boundaries": task_posture_packet.get("closeout_boundaries", []),
+            "read_budget": task_posture_packet.get("read_budget", {}),
+            "authority_boundaries": task_posture_packet.get("authority_boundaries", [])[:2],
+            "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
+            "review_rubrics": task_posture_packet.get("review_rubrics", []),
+            "module_contributions": task_posture_packet.get("module_contributions", [])[:3],
+            "provenance": task_posture_packet.get("provenance", []),
+            "dynamic_instruction_projection": task_posture_packet.get("dynamic_instruction_projection", {}),
+            "posture_adherence": task_posture_packet.get("posture_adherence", {}),
+        }
     if isinstance(payload.get("continuation_view"), dict):
         selected["continuation_view"] = payload["continuation_view"]
     if "task_intent" in payload:
@@ -22888,6 +23151,27 @@ def _implement_payload(
             task_text=task_text,
             assurance_requirements=assurance_for_verification,
         )
+    workflow_obligations = _workflow_obligations_report_payload(
+        config=config,
+        active_planning_record=active_planning_record_for_intent,
+        task_text=task_text,
+        changed_paths=normalized_paths,
+    )
+    task_posture_packet = _task_posture_packet_payload(
+        config=config,
+        surface="implement",
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        workflow_obligations=workflow_obligations,
+        skill_routing={},
+        planning_safety_gate=planning_safety_gate,
+        proof=proof,
+        compact=False,
+    )
+    if _task_posture_packet_relevant(
+        task_text=task_text, changed_paths=normalized_paths, surface="implement"
+    ) and _task_posture_packet_changes_routing(task_posture_packet):
+        payload["task_posture_packet"] = task_posture_packet
     if include_routine_work_context:
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -23062,6 +23346,30 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
             ),
         },
+        **(
+            {
+                "task_posture_packet": {
+                    "kind": payload["task_posture_packet"].get("kind"),
+                    "operating_posture": payload["task_posture_packet"].get("operating_posture", {}),
+                    "workflow_obligations": payload["task_posture_packet"].get("workflow_obligations", []),
+                    "skill_routes": payload["task_posture_packet"].get("skill_routes", []),
+                    "allowed_actions": payload["task_posture_packet"].get("allowed_actions", []),
+                    "forbidden_actions": payload["task_posture_packet"].get("forbidden_actions", []),
+                    "proof_boundaries": payload["task_posture_packet"].get("proof_boundaries", []),
+                    "closeout_boundaries": payload["task_posture_packet"].get("closeout_boundaries", []),
+                    "read_budget": payload["task_posture_packet"].get("read_budget", {}),
+                    "authority_boundaries": payload["task_posture_packet"].get("authority_boundaries", [])[:2],
+                    "output_shape_requirements": payload["task_posture_packet"].get("output_shape_requirements", []),
+                    "review_rubrics": payload["task_posture_packet"].get("review_rubrics", []),
+                    "module_contributions": payload["task_posture_packet"].get("module_contributions", [])[:3],
+                    "provenance": payload["task_posture_packet"].get("provenance", []),
+                    "dynamic_instruction_projection": payload["task_posture_packet"].get("dynamic_instruction_projection", {}),
+                    "posture_adherence": payload["task_posture_packet"].get("posture_adherence", {}),
+                }
+            }
+            if isinstance(payload.get("task_posture_packet"), dict)
+            else {}
+        ),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
             "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -25967,6 +26275,273 @@ def _workflow_obligation_gate_status(*, obligation: dict[str, Any], matched: boo
     if force == "blocking":
         return "blocking" if matched else "standing-blocking-requirement"
     return "unknown"
+
+
+def _task_posture_packet_payload(
+    *,
+    config: WorkspaceConfig,
+    surface: str,
+    task_text: str | None,
+    changed_paths: list[str] | None,
+    workflow_obligations: dict[str, Any] | None = None,
+    skill_routing: dict[str, Any] | None = None,
+    planning_safety_gate: dict[str, Any] | None = None,
+    proof: dict[str, Any] | None = None,
+    completion_gate: dict[str, Any] | None = None,
+    closeout_trust: dict[str, Any] | None = None,
+    compact: bool = False,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    workflow_obligations = _as_dict(workflow_obligations)
+    skill_routing = _as_dict(skill_routing)
+    planning_safety_gate = _as_dict(planning_safety_gate)
+    proof = _as_dict(proof)
+    completion_gate = _as_dict(completion_gate)
+    closeout_trust = _as_dict(closeout_trust)
+    relevant_obligations = [
+        dict(item) for item in _list_payload(workflow_obligations.get("relevant_to_current_work")) if isinstance(item, dict)
+    ]
+    if not relevant_obligations:
+        for item in _list_payload(workflow_obligations.get("configured")):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("force", "")) in {"blocking", "required-before-closeout"}:
+                relevant_obligations.append(dict(item))
+    operating_posture = _operating_posture_payload(config=config, surface=surface, compact=True)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        target_root=config.target_root or Path("."),
+    )
+    delegation_decision = _as_dict(execution_posture.get("delegation_decision"))
+    delegation_posture = {
+        key: delegation_decision.get(key)
+        for key in (
+            "status",
+            "mode",
+            "clarification_mode",
+            "recommended_route",
+            "decision",
+            "target",
+            "required_next_action",
+            "reason",
+        )
+        if key in delegation_decision
+    }
+    delegation_posture["route_evidence"] = {
+        key: _as_dict(delegation_decision.get("route_evidence")).get(key)
+        for key in ("proof_review_pressure", "proof_pressure", "scope_signal", "agent_judgment_required")
+        if key in _as_dict(delegation_decision.get("route_evidence"))
+    }
+    delegation_posture["token_savings_guidance"] = {
+        key: _as_dict(delegation_decision.get("token_savings_guidance")).get(key)
+        for key in ("signal", "agent_judgment_required")
+        if key in _as_dict(delegation_decision.get("token_savings_guidance"))
+    }
+    read_budget = {
+        "profile": "compact-router-first" if compact else "selector-first-detail-on-demand",
+        "raw_context_rule": "Use summary/start/implement/report selectors before opening broad raw files.",
+        "deep_read_allowed_when": [
+            "changed paths are named",
+            "a selected packet names a specific owner surface",
+            "proof, authority, or closeout evidence needs source inspection",
+        ],
+    }
+    if compact:
+        read_budget["profile"] = "tiny-router-first"
+    allowed_actions = [
+        str(planning_safety_gate.get("required_next_action") or ""),
+        str(execution_posture.get("delegation_decision", {}).get("required_next_action") or ""),
+    ]
+    allowed_actions = [item for item in allowed_actions if item]
+    if not allowed_actions:
+        allowed_actions = ["continue-direct"]
+    forbidden_actions = [
+        str(item)
+        for item in _list_payload(planning_safety_gate.get("claim_boundary", {}).get("required_before_implementation"))
+        if str(item).strip()
+    ]
+    if planning_safety_gate.get("workflow_sufficient") is False:
+        forbidden_actions.append("continue implementation without active planning ownership")
+    forbidden_actions.extend(
+        [
+            "claim full completion before proof and acceptance reconciliation",
+            "inline all module instructions into AGENTS.md instead of using routed posture",
+        ]
+    )
+    proof_boundaries = [str(item) for item in _list_payload(proof.get("required_commands")) if str(item).strip()]
+    if not proof_boundaries:
+        proof_boundaries = [str(item) for item in _list_payload(proof.get("proof_commands")) if str(item).strip()]
+    if not proof_boundaries and planning_safety_gate.get("workflow_sufficient") is False:
+        proof_boundaries = ["create or promote active Planning before selecting implementation proof"]
+    closeout_boundaries = [
+        str(planning_safety_gate.get("claim_boundary", {}).get("completion_claim") or ""),
+        str(completion_gate.get("status") or ""),
+        str(closeout_trust.get("trust") or ""),
+    ]
+    closeout_boundaries = [item for item in closeout_boundaries if item]
+    if not closeout_boundaries:
+        closeout_boundaries = ["record proof, acceptance, posture adherence, and residue before completion claims"]
+    authority_boundaries = []
+    for source_name, source_payload in (
+        ("planning_safety_gate", planning_safety_gate),
+        ("execution_posture", execution_posture),
+        ("completion_gate", completion_gate),
+    ):
+        boundary = source_payload.get("authority_boundary") if isinstance(source_payload, dict) else None
+        if isinstance(boundary, dict) and boundary:
+            authority_boundaries.append({"source": source_name, **boundary})
+    if not authority_boundaries:
+        authority_boundaries.append(
+            {
+                "kind": "agentic-workspace/authority-boundary/v1",
+                "surface": "task_posture_packet",
+                "authority_class": "advisory-support",
+                "observed_by_aw": ["config", "task facts", "workflow obligations", "module declarations"],
+                "agent_owned_decisions": ["semantic fit", "style adherence", "whether to escalate"],
+            }
+        )
+    skill_routes = []
+    for route in _list_payload(skill_routing.get("required")) + _list_payload(skill_routing.get("recommended")):
+        if isinstance(route, dict):
+            skill_routes.append(
+                {
+                    "id": str(route.get("id") or route.get("skill") or ""),
+                    "reason": str(route.get("reason") or route.get("summary") or ""),
+                    "source": "skill_routing",
+                }
+            )
+    if not skill_routes:
+        for route in _list_payload(skill_routing.get("preferred_routes")):
+            if isinstance(route, dict):
+                skill_routes.append(
+                    {
+                        "id": str(route.get("skill") or ""),
+                        "reason": str(route.get("fit_signal") or ""),
+                        "source": "skill_routing.preferred_routes",
+                    }
+                )
+    module_contributions: list[dict[str, Any]] = []
+    try:
+        registry = _module_registry(descriptors=_module_operations(), target_root=config.target_root)
+    except Exception:
+        registry = []
+    trigger_text = " ".join([task_text or "", " ".join(normalized_paths), surface]).lower()
+    for entry in registry:
+        participation = entry.participation if isinstance(entry.participation, dict) else {}
+        triggers = [str(item) for item in _list_payload(participation.get("posture_triggers")) if str(item).strip()]
+        declares = [str(item) for item in _list_payload(participation.get("declares")) if str(item).strip()]
+        matched = [trigger for trigger in triggers if any(token and token in trigger_text for token in trigger.lower().split())]
+        if matched or (entry.name in {"planning", "verification"} and (planning_safety_gate or proof or closeout_trust)):
+            module_contributions.append(
+                {
+                    "module": entry.name,
+                    "matched_triggers": matched,
+                    "declares": declares,
+                    "startup_contribution": _as_dict(participation.get("dynamic_projection")).get("startup_contribution", ""),
+                    "report_contribution": _as_dict(participation.get("dynamic_projection")).get("report_contribution", ""),
+                    "authority_boundaries": _list_payload(participation.get("authority_boundaries")),
+                    "source": "module_registry.modules[].participation",
+                }
+            )
+    output_shape_requirements = [
+        "keep AGENTS.md as a small static adapter; emit task-shaped instructions dynamically",
+        "prefer compact router output; use selectors/detail commands for raw context",
+        f"apply optimization_bias={config.optimization_bias}",
+    ]
+    review_rubrics = [
+        "Did the work follow the resolved task posture?",
+        "Were hard obligations, proof burden, authority boundaries, and read budget respected?",
+        "Were divergences from output or initiative posture recorded before closeout?",
+    ]
+    if relevant_obligations:
+        review_rubrics.append("Were matched workflow obligations satisfied or explicitly routed?")
+    packet: dict[str, Any] = {
+        "kind": "agentic-workspace/task-posture-packet/v1",
+        "operating_posture": {
+            "optimization_bias": operating_posture.get("optimization_bias", {}),
+            "initiative_posture": operating_posture.get("improvement_latitude", {}),
+            "artifact_posture": config.workflow_artifact_profile,
+            "assurance_posture": {
+                "default_level": config.assurance.default_level,
+                "strict_closeout": config.assurance.strict_closeout,
+                "agent_may_escalate": config.assurance.agent_may_escalate,
+                "agent_may_deescalate": config.assurance.agent_may_deescalate,
+            },
+            "delegation_posture": delegation_posture,
+        },
+        "workflow_obligations": relevant_obligations,
+        "skill_routes": skill_routes,
+        "allowed_actions": _dedupe(allowed_actions),
+        "forbidden_actions": _dedupe(forbidden_actions),
+        "proof_boundaries": _dedupe(proof_boundaries),
+        "closeout_boundaries": _dedupe(closeout_boundaries),
+        "read_budget": read_budget,
+        "authority_boundaries": authority_boundaries,
+        "output_shape_requirements": output_shape_requirements,
+        "review_rubrics": review_rubrics,
+        "module_contributions": module_contributions,
+        "provenance": [
+            {"source": ".agentic-workspace/config.toml", "fields": ["optimization_bias", "workflow_artifact_profile", "assurance"]},
+            {"source": "workflow_obligations", "matched_count": len(relevant_obligations)},
+            {"source": "planning_safety_gate", "status": planning_safety_gate.get("status", "not-present")},
+            {"source": "module_registry", "matched_module_count": len(module_contributions)},
+        ],
+    }
+    packet["dynamic_instruction_projection"] = {
+        "static_adapter_role": f"{config.agent_instructions_file} points agents to this routed packet; it should not inline all task rules.",
+        "rendered_fields": [
+            "operating_posture",
+            "workflow_obligations",
+            "skill_routes",
+            "allowed_actions",
+            "forbidden_actions",
+            "proof_boundaries",
+            "closeout_boundaries",
+            "module_contributions",
+        ],
+        "provenance_preserved": True,
+    }
+    packet["posture_adherence"] = {
+        "status": "requires-closeout-review",
+        "closeout_question": "Did the work follow the task posture packet, and were any divergences recorded?",
+        "allowed_states": ["complied", "intentional-divergence", "gap"],
+    }
+    return packet
+
+
+def _task_posture_packet_changes_routing(packet: dict[str, Any]) -> bool:
+    if not isinstance(packet, dict):
+        return False
+    return bool(
+        packet.get("workflow_obligations")
+        or packet.get("module_contributions")
+        or packet.get("forbidden_actions")
+        or packet.get("proof_boundaries")
+        or packet.get("closeout_boundaries")
+    )
+
+
+def _task_posture_packet_relevant(*, task_text: str | None, changed_paths: list[str] | None, surface: str) -> bool:
+    haystack = " ".join([task_text or "", " ".join(changed_paths or []), surface]).lower()
+    markers = (
+        "#1392",
+        "task posture",
+        "task_posture",
+        "task-posture",
+        "posture packet",
+        "dynamic agents",
+        "dynamic instruction",
+        "agents.md",
+        "module participation",
+        "workflow obligation",
+        "startup_context.schema",
+        "implementer_context.schema",
+        "workspace_report.schema",
+        "module_registry",
+    )
+    return any(marker in haystack for marker in markers)
 
 
 def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any]) -> dict[str, Any]:
@@ -29181,6 +29756,18 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             )
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
+            if _task_posture_packet_relevant(
+                task_text=getattr(args, "task", None),
+                changed_paths=changed_paths,
+                surface="summary",
+            ):
+                _attach_summary_task_posture_packet(
+                    summary=summary,
+                    target_root=target_root,
+                    task_text=getattr(args, "task", None),
+                    changed_paths=changed_paths,
+                    cli_invoke=config.cli_invoke,
+                )
         summary = _rewrite_module_cli_commands(summary)
         if args.format == "json":
             print(format_summary_json(summary))

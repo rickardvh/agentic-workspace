@@ -29,6 +29,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `task_posture_packet.review_rubrics` | array of string | yes |  | Review rubrics selected for this task. |  |  |
 | `task_posture_packet.module_contributions` | array of object | yes |  | Matched module posture contributions with trigger and projection provenance. |  |  |
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
+| `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
+| `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
 | `planning_revision` | object | no |  | Optimistic Planning state revision observed by this implementer read surface. |  |  |
 | `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
 | `adaptive_routing` | object | yes |  | Machine-readable need classification, read budget, and escalation detail commands for this implementer packet. |  |  |

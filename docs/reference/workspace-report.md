@@ -71,6 +71,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `task_posture_packet.review_rubrics` | array of string | yes |  | Review rubrics selected for this task. |  |  |
 | `task_posture_packet.module_contributions` | array of object | yes |  | Matched module posture contributions with trigger and projection provenance. |  |  |
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
+| `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
+| `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
 | `maintainer_mode` | object | yes |  | Package-maintainer dogfooding report routes enabled by workspace.maintainer_mode. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
 | `config_effect_audit` | object | yes |  | Audit of each config setting's concrete force, affected output routes, and agent dependency. |  |  |

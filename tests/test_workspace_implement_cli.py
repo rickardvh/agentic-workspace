@@ -32,6 +32,36 @@ def _implement_context(payload: dict[str, object]) -> dict[str, object]:
     return context if isinstance(context, dict) else payload
 
 
+def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "def changed():\n    return True\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement #1392 in full",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["task_posture_packet"]
+    assert packet["kind"] == "agentic-workspace/task-posture-packet/v1"
+    assert packet["posture_adherence"]["closeout_question"].startswith("Did the work follow the task posture packet")
+    assert packet["dynamic_instruction_projection"]["provenance_preserved"] is True
+
+
 def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

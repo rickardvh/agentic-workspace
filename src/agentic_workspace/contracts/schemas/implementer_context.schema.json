@@ -655,7 +655,9 @@
         "output_shape_requirements",
         "review_rubrics",
         "module_contributions",
-        "provenance"
+        "provenance",
+        "dynamic_instruction_projection",
+        "posture_adherence"
       ],
       "properties": {
         "kind": {
@@ -726,6 +728,16 @@
           "type": "array",
           "items": { "type": "object", "additionalProperties": true },
           "description": "Config, obligation, module, or command sources used to assemble this packet."
+        },
+        "dynamic_instruction_projection": {
+          "type": "object",
+          "description": "Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion.",
+          "additionalProperties": true
+        },
+        "posture_adherence": {
+          "type": "object",
+          "description": "Closeout/report visibility for whether the selected posture was followed or requires explanation.",
+          "additionalProperties": true
         }
       },
       "additionalProperties": false,

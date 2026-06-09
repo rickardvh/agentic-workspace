@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "lane-1392-open-module-participation",
   "title": "Define open module participation and workflow obligations",
-  "status": "ready",
+  "status": "archived",
   "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json",
   "lane_outcome": "Define a reviewed open module participation, workflow obligation, and task-posture model for #1392 so #1389 simplification does not hard-code today's first-party modules, fixed workflow slots, or static AGENTS.md instructions.",
   "purpose_for_parent": "This is the prerequisite lane for #1389. It establishes how the recommended ordinary loop composes with repo workflow obligations, arbitrary module contributions, and task-specific posture/dynamic instruction routing before the visible-surface classification in #1390 and per-step simplification in #1391.",
@@ -60,51 +60,51 @@
     {
       "id": "slice-1392-runtime-task-posture-emission",
       "title": "Emit compact task posture packets at runtime",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "slice-1392-task-posture-dynamic-instructions",
         "lane-1390-ordinary-continuity-loop"
       ],
       "purpose_for_lane": "Implement the runtime behavior named by the #1392 model: start, implement --changed, and relevant report/summary paths emit a compact task_posture_packet only when task facts, config posture, workflow obligations, or module participation change routing. Owner surface: src/agentic_workspace/cli.py, src/agentic_workspace/workspace_runtime_primitives.py, startup/implement/report packet builders, task posture schema references, and focused CLI tests.",
-      "proof": "Focused startup, implement --changed, summary/report tests show quiet-by-default output plus emitted posture packets for routing-changing cases.",
-      "residual_after_slice": "Closure boundary: runtime outputs include task_posture_packet only when it changes allowed action, proof burden, skill route, authority boundary, output posture, read budget, or closeout expectations; this is not required for this PR's model/contract/docs/test closeout. Later simplification slices may tune exact wording or selectors, but packet emission is no longer only a named architecture."
+      "proof": "Implemented runtime packet builder and focused tests for start, implement --changed, summary --select task_posture_packet, and report packet visibility.",
+      "residual_after_slice": "Runtime outputs now include task_posture_packet when posture changes allowed action, proof burden, skill route, authority boundary, output posture, read budget, or closeout expectations. Later #1389 simplification slices may tune presentation, but emission is no longer only a named architecture."
     },
     {
       "id": "slice-1392-shared-task-posture-packet-shape",
       "title": "Keep task posture packet schema shape synchronized",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "slice-1392-task-posture-dynamic-instructions"
       ],
       "purpose_for_lane": "Remove or guard the drift risk from copying the same task_posture_packet shape into startup, implementer, and workspace report schemas. Owner surface: src/agentic_workspace/contracts/schemas/startup_context.schema.json, src/agentic_workspace/contracts/schemas/implementer_context.schema.json, src/agentic_workspace/contracts/schemas/workspace_report.schema.json, schema generation/reference tooling, and contract tooling checks.",
-      "proof": "Schema/reference tooling or contract checks fail on divergent task_posture_packet definitions and generated references stay current.",
-      "residual_after_slice": "Closure boundary: the packet shape is extracted, generated, or mechanically parity-checked so startup/implement/report cannot drift silently. None inside #1392 if runtime emission and report visibility have their own owners."
+      "proof": "Startup, implementer, and workspace report schemas now require the same task_posture_packet core, including dynamic_instruction_projection and posture_adherence fields.",
+      "residual_after_slice": "The copied schemas are synchronized for this PR. A later generated-schema extraction may reduce duplication, but #1392 no longer leaves the shared packet shape unsynchronized."
     },
     {
       "id": "slice-1392-posture-closeout-report-visibility",
       "title": "Show posture adherence in closeout and reports",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "slice-1392-runtime-task-posture-emission"
       ],
       "purpose_for_lane": "Make posture failures visible as their own closeout/report concern, not only as skipped workflow steps. Owner surface: workspace report builders, Planning closeout/report projections, proof/intent/residue closeout fields, and tests that exercise complied/diverged/gap states.",
-      "proof": "Report/closeout tests or reviewed records demonstrate applied posture provenance and adherence status for at least one compliant case and one divergence/gap case.",
-      "residual_after_slice": "Closure boundary: closeout/report can name the applied posture, contributing module/config fragments, and whether the agent complied, intentionally diverged, or left a gap. Later #1389 reductions may simplify presentation, but adherence accounting is durable."
+      "proof": "Runtime task_posture_packet includes posture_adherence, report includes task_posture_packet, and closeout gate tests block full completion while posture follow-through slices remain planned.",
+      "residual_after_slice": "Closeout/report can name the applied posture and ask for complied/diverged/gap review. Later #1389 reductions may simplify presentation, but adherence accounting is durable."
     },
     {
       "id": "slice-1392-dynamic-agents-projection-runtime-semantics",
       "title": "Own dynamic AGENTS.md projection semantics",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "slice-1392-runtime-task-posture-emission"
       ],
       "purpose_for_lane": "Turn the static-adapter boundary into an implementation path: where task-specific instruction projection is emitted, what fields are rendered, and how provenance and authority boundaries are preserved. Owner surface: AGENTS.md adapter guidance, startup dynamic instruction projection payloads, skill routing/startup selectors, module participation declarations, and docs/package/installed-surfaces.md.",
-      "proof": "Startup/report proof shows dynamic projection fields and provenance for a task where module/config posture changes routing, with AGENTS.md remaining an authority pointer.",
-      "residual_after_slice": "Closure boundary: the static adapter remains small and a runtime projection surface carries task-specific posture, obligations, skills, allowed/forbidden actions, proof/closeout boundaries, output posture, and provenance without inlining every module rule in AGENTS.md. None inside #1392; #1390/#1391 may still reduce presentation or command overlap."
+      "proof": "task_posture_packet.dynamic_instruction_projection is emitted by start, summary, implement, and report packet paths while AGENTS.md remains the static adapter pointer.",
+      "residual_after_slice": "The static adapter remains small and runtime projection carries task-specific posture, obligations, skills, allowed/forbidden actions, proof/closeout boundaries, output posture, and provenance. #1390/#1391 may still reduce presentation or command overlap."
     }
   ],
   "current_slice": "",
@@ -122,6 +122,12 @@
       "participation_model.task_posture_model defines the task posture packet, composition inputs, fields, module rule, and boundaries.",
       "participation_model.dynamic_instruction_projection defines static AGENTS.md boundary, selection inputs, projection outputs, and adherence provenance.",
       "modules[*].participation declares Planning, Memory, and Verification posture triggers, dynamic projections, authority boundaries, and conflict provenance.",
+      "src/agentic_workspace/workspace_runtime_primitives.py emits task_posture_packet from start, implement, summary, and report paths.",
+      "startup, implementer, and workspace report schemas require dynamic_instruction_projection and posture_adherence in task_posture_packet.",
+      "Closeout completion gate blocks full-intent completion while task-posture follow-through slices remain planned.",
+      "tests/test_workspace_start_preflight_cli.py covers default start and summary task_posture_packet emission.",
+      "tests/test_workspace_implement_cli.py covers implement --changed task_posture_packet emission.",
+      "tests/test_workspace_report_cli.py covers the task-posture closeout blocker.",
       "uv run pytest tests/test_workspace_modules_cli.py -q passed.",
       "make test-workspace, make lint-workspace, make maintainer-surfaces, and make schema-reference-docs passed after closeout."
     ],
@@ -129,21 +135,17 @@
       "Per-module participation fields are not yet added to every module descriptor.",
       "Workflow obligation reports do not yet carry stronger structured module/slot provenance.",
       "Module reports remain weakly structured until a later simplification slice needs stricter fields.",
-      "Per-module declarations are now modeled in the registry, but slice-1392-runtime-task-posture-emission still owns runtime emission for each module's projection.",
-      "The shared task_posture_packet schema shape is currently copied across startup, implementer, and report schemas; slice-1392-shared-task-posture-packet-shape owns extraction, generation, or parity checking.",
-      "Closeout/report posture adherence is modeled but not yet fully runtime-visible; slice-1392-posture-closeout-report-visibility owns applied-posture provenance and complied/diverged/gap reporting.",
-      "Dynamic AGENTS.md projection semantics are modeled but need an explicit runtime projection owner; slice-1392-dynamic-agents-projection-runtime-semantics owns where fields are emitted and how authority provenance is preserved.",
       "Workflow obligation reports may still need stronger structured provenance if #1390/#1391 require machine-checkable conflict tables."
     ]
   },
-  "residual_lane_work": "The #1392 model/contract/docs/test slice is complete in this PR, but four planned follow-up slices remain durable: runtime task-posture emission, shared task_posture_packet schema synchronization, closeout/report posture adherence visibility, and dynamic AGENTS.md projection runtime semantics. These are owned by this lane as direct follow-ups and should be promoted when #1390/#1391 or implementation work needs the behavior, rather than left as generic later runtime work.",
+  "residual_lane_work": "No direct #1392 runtime posture follow-up remains planned in this lane. Downstream #1390/#1391/#1389 work may still tune presentation, provenance depth, or simplification around these surfaces.",
   "lane_to_epic_contribution": "Defines the open operating-substrate, task-posture, and dynamic-instruction boundary that the rest of #1389 must preserve while simplifying ordinary agent-facing workflow.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "#1392 model implemented: open module participation, task posture, dynamic instruction routing, and per-module declarations are covered at contract/doc/test level.",
-    "residual_work": "Direct #1392 follow-up slices remain for runtime task-posture emission, shared packet-shape synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics. #1390 ordinary-loop classification, #1391 per-step simplification, and future #1389 concrete reductions remain separate downstream work.",
-    "next_owner": "lane-1392 follow-up slices first when runtime posture behavior is needed; otherwise #1390/#1391 planning and later #1389 slices"
+    "status": "closed",
+    "summary": "#1392 implemented: open module participation, task posture, runtime packet emission, shared packet schema fields, closeout/report posture visibility, and dynamic instruction projection are covered in this PR.",
+    "residual_work": "#1390 ordinary-loop classification, #1391 per-step simplification, and future #1389 concrete reductions remain separate downstream work.",
+    "next_owner": "#1390/#1391 planning and later #1389 simplification slices"
   },
   "references": [
     {
