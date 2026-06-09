@@ -35,6 +35,25 @@ Registry of workspace modules, feature tiers, component classes, and generated c
 | `component_model.adapter_boundary.adapter_consumes` | array of string | yes |  | Ordered adapter consumes entries used by this contract. |  |  |
 | `component_model.adapter_boundary.adapter_must_not` | array of string | yes |  | Ordered adapter must not entries used by this contract. |  |  |
 | `component_model.adapter_boundary.blocking_prerequisites` | array of string | yes |  | Ordered blocking prerequisites entries used by this contract. |  |  |
+| `participation_model` | object | yes |  | Open participation contract for modules, workflow obligations, generated projections, and ordinary-loop composition. |  |  |
+| `participation_model.schema_version` | const `"agentic-workspace/module-participation/v1"` | yes |  | Contract version for the open module participation model. |  |  |
+| `participation_model.product_model` | string | yes |  | Top-level product model for the open operating substrate. |  |  |
+| `participation_model.recommended_loop` | array of object | yes |  | Recommended ordinary operating loop with extension rules. |  |  |
+| `participation_model.module_can_contribute` | array of string | yes |  | Capability classes a module may contribute to the operating substrate. |  |  |
+| `participation_model.workflow_obligation_model` | object | yes |  | How repo-configured workflow obligations compose with the recommended operating loop. |  |  |
+| `participation_model.workflow_obligation_model.owner_surface` | string | yes |  | Config or contract surface that owns workflow obligation declarations. |  |  |
+| `participation_model.workflow_obligation_model.role` | string | yes |  | How workflow obligations compose with the recommended loop. |  |  |
+| `participation_model.workflow_obligation_model.stages` | array of string | yes |  | Workflow stages where obligations can apply. |  |  |
+| `participation_model.workflow_obligation_model.composition_rule` | string | yes |  | How matched and unmatched obligations affect the operating loop. |  |  |
+| `participation_model.conflict_model` | object | yes |  | Conflict classes and resolution ownership for open module participation. |  |  |
+| `participation_model.conflict_model.rule` | string | yes |  | How conflicts are surfaced. |  |  |
+| `participation_model.conflict_model.conflict_classes` | array of string | yes |  | Conflict classes the participation model expects reports or lifecycle checks to surface. |  |  |
+| `participation_model.conflict_model.resolution_owner` | string | yes |  | Who decides policy or route conflicts after AW surfaces evidence. |  |  |
+| `participation_model.projection_boundaries` | object | yes |  | Boundaries for generated docs, plugins, MCP-style adapters, and catalogue projections. |  |  |
+| `participation_model.projection_boundaries.source_of_truth` | string | yes |  | Canonical source for participation declarations. |  |  |
+| `participation_model.projection_boundaries.generated_or_adapter_targets` | array of string | yes |  | Derived targets that may project participation metadata. |  |  |
+| `participation_model.projection_boundaries.must_not` | array of string | yes |  | Boundaries generated or adapter projections must preserve. |  |  |
+| `participation_model.first_party_examples` | array of object | yes |  | First-party modules mapped as examples, not privileged special cases. |  |  |
 | `module_profiles` | array of object | yes |  | Module profile summaries used for selection, reporting, and docs. |  |  |
 | `workspace_components` | object | yes |  | Root workspace components that are not owned by a single module. |  |  |
 | `workspace_components.scope` | object | yes |  | Scope details used by this contract. |  |  |

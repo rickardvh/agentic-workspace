@@ -482,6 +482,7 @@ _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for ite
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
 _PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footprint", {}))
+_MODULE_PARTICIPATION_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("participation_model", {}))
 _MODULE_COMPONENT_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("component_model", {}))
 _WORKSPACE_COMPONENTS = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("workspace_components", {}))
 _MODULE_PROFILE_ENTRIES = tuple((copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("module_profiles", [])))
@@ -28006,6 +28007,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     full_payload = {
         "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
+        "participation_model": copy.deepcopy(_MODULE_PARTICIPATION_MODEL),
         "component_model": copy.deepcopy(_MODULE_COMPONENT_MODEL),
         "workspace_components": copy.deepcopy(_WORKSPACE_COMPONENTS),
         "module_profiles": copy.deepcopy(list(_MODULE_PROFILE_ENTRIES)),

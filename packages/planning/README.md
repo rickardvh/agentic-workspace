@@ -41,6 +41,12 @@ Adoption shape:
 - Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
 - Selective adoption remains valid: a repo can install the `planning` preset without Memory, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
 
+Participation shape:
+
+- Contributes active-work and closeout state to the open Workspace operating loop.
+- Declares module-managed roots, summary resources, lifecycle tools, planning skills, schemas, and proof/continuation expectations through the module registry and Planning manifests.
+- Acts as a first-party example of module participation; it should not force every module into Planning-shaped active state or make Planning a general backlog system.
+
 Collaboration shape:
 
 - Works best when active work is split into feature-scoped execplans instead of broad shared status files.

@@ -2,6 +2,53 @@
 
 `agentic-workspace` is the package. It composes first-party modules behind one root lifecycle and context CLI. Modules own domain behavior; the package root owns orchestration, shared config, compact routing, and lifecycle coordination.
 
+## Open Participation Model
+
+Agentic Workspace is an operating substrate, not a fixed bundle of slots. It
+ships a recommended skill-guided loop for ordinary agents, but repos can add
+workflow obligations and modules can contribute capabilities to that loop when
+the contribution is explicit, queryable, safe, and cheap to route.
+
+The recommended loop is:
+
+| Step | Default owner | What modules may add |
+| --- | --- | --- |
+| startup | Workspace | startup routing hints, prompts, reports, or gates surfaced through compact routing |
+| active work | Workspace and Planning | state owners, lifecycle hooks, workflow phases, owned roots, and stop conditions |
+| durable knowledge | Memory | routeable durable context resources and prompts without owning active sequencing |
+| proof | Workspace proof and Verification | proof routes, protocols, evidence bundles, result schemas, and safety metadata |
+| closeout | Planning closeout | closeout obligations, residue routes, and claim gates without over-closing parent intent |
+
+Modules may contribute resources, tools, prompts or skills, schemas, roots,
+reports, gates, proof routes, lifecycle hooks, workflow phases, startup routing
+hints, state owners, and safety metadata. Those declarations live in the module
+registry or module-owned manifests and can be projected into generated docs,
+plugin/catalogue entries, or MCP-style adapters. Generated projections are not
+the source of truth.
+
+Repo-configured `workflow_obligations` compose with the same loop by stage and
+scope tag. A matched obligation raises the force of an existing step or closeout
+gate; an unmatched obligation stays quiet. Obligations do not replace module
+ownership and do not make every repo rule a new module.
+
+Conflicts should be surfaced, not resolved silently. Examples include
+overlapping owned roots, incompatible module selections, contradictory workflow
+obligations, proof-route collisions, lifecycle-hook collisions, and startup
+burden growth. The agent chooses a safe route from compact evidence; policy
+conflicts that change accepted workflow remain repo-owner or human decisions.
+
+Planning, Memory, and Verification are first-party examples of this model:
+
+| Module | Example role |
+| --- | --- |
+| Planning | active execution state, lane/slice decomposition, continuation ownership, and honest closeout |
+| Memory | durable anti-rediscovery knowledge and residue routing that reduces repeated context work |
+| Verification | soft verification protocols, bounded evidence, proof route hints, and known gaps |
+
+This model is deliberately open-ended. It should keep ordinary startup small
+while allowing any number of modules to participate through declared roots,
+tools, state, reports, gates, proof routes, and lifecycle behavior.
+
 ## Module Profiles
 
 | Profile | Modules | Checked-in footprint |
@@ -83,4 +130,3 @@ Implementation reference: [Command generation README](../../packages/command-gen
 ## Module Contracts
 
 The module registry declares available modules, profiles, component metadata, and repository footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference. The lower-level command and component generation path is documented by [Command package IR](../reference/command-package-ir.md), [Command adapter generation](../reference/command-adapter-generation.md), and [Lifecycle generation readiness](../reference/lifecycle-generation-readiness.md).
-

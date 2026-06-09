@@ -21,6 +21,12 @@ Verification owns:
 Verification does not own Planning state, Assurance requirements, Proof
 authority, Closeout claim decisions, Memory, CI, or raw transcript storage.
 
+In the open Workspace participation model, Verification contributes proof-step
+resources, report data, protocols, bounded evidence records, proof-route hints,
+known gaps, schemas, and owned roots. It is a first-party example of module
+participation in the proof step; it should not become the generic proof
+authority or a required slot for every repo.
+
 ## Module CLI
 
 ```text

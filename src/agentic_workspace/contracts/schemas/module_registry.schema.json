@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "package_footprint",
+    "participation_model",
     "component_model",
     "workspace_components",
     "module_profiles",
@@ -222,6 +223,188 @@
       },
       "additionalProperties": false,
       "description": "Declarative component model used to describe module-owned resources without requiring an MCP runtime."
+    },
+    "participation_model": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "product_model",
+        "recommended_loop",
+        "module_can_contribute",
+        "workflow_obligation_model",
+        "conflict_model",
+        "projection_boundaries",
+        "first_party_examples"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "agentic-workspace/module-participation/v1",
+          "description": "Contract version for the open module participation model."
+        },
+        "product_model": {
+          "type": "string",
+          "description": "Top-level product model for the open operating substrate."
+        },
+        "recommended_loop": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "purpose",
+              "default_owner",
+              "module_extension_rule"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable loop-step identifier."
+              },
+              "purpose": {
+                "type": "string",
+                "description": "Why this loop step exists."
+              },
+              "default_owner": {
+                "type": "string",
+                "description": "Default owner slot or module for ordinary AW operation."
+              },
+              "module_extension_rule": {
+                "type": "string",
+                "description": "How modules may participate in this loop step without increasing ordinary startup burden."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Recommended ordinary operating loop with extension rules."
+        },
+        "module_can_contribute": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Capability classes a module may contribute to the operating substrate."
+        },
+        "workflow_obligation_model": {
+          "type": "object",
+          "required": [
+            "owner_surface",
+            "role",
+            "stages",
+            "composition_rule"
+          ],
+          "properties": {
+            "owner_surface": {
+              "type": "string",
+              "description": "Config or contract surface that owns workflow obligation declarations."
+            },
+            "role": {
+              "type": "string",
+              "description": "How workflow obligations compose with the recommended loop."
+            },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Workflow stages where obligations can apply."
+            },
+            "composition_rule": {
+              "type": "string",
+              "description": "How matched and unmatched obligations affect the operating loop."
+            }
+          },
+          "additionalProperties": false,
+          "description": "How repo-configured workflow obligations compose with the recommended operating loop."
+        },
+        "conflict_model": {
+          "type": "object",
+          "required": [
+            "rule",
+            "conflict_classes",
+            "resolution_owner"
+          ],
+          "properties": {
+            "rule": {
+              "type": "string",
+              "description": "How conflicts are surfaced."
+            },
+            "conflict_classes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Conflict classes the participation model expects reports or lifecycle checks to surface."
+            },
+            "resolution_owner": {
+              "type": "string",
+              "description": "Who decides policy or route conflicts after AW surfaces evidence."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Conflict classes and resolution ownership for open module participation."
+        },
+        "projection_boundaries": {
+          "type": "object",
+          "required": [
+            "source_of_truth",
+            "generated_or_adapter_targets",
+            "must_not"
+          ],
+          "properties": {
+            "source_of_truth": {
+              "type": "string",
+              "description": "Canonical source for participation declarations."
+            },
+            "generated_or_adapter_targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Derived targets that may project participation metadata."
+            },
+            "must_not": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Boundaries generated or adapter projections must preserve."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Boundaries for generated docs, plugins, MCP-style adapters, and catalogue projections."
+        },
+        "first_party_examples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "module",
+              "example_role"
+            ],
+            "properties": {
+              "module": {
+                "type": "string",
+                "description": "First-party module name."
+              },
+              "example_role": {
+                "type": "string",
+                "description": "How the module demonstrates the generic participation model."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "First-party modules mapped as examples, not privileged special cases."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Open participation contract for modules, workflow obligations, generated projections, and ordinary-loop composition."
     },
     "module_profiles": {
       "type": "array",

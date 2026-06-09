@@ -33,6 +33,24 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert "unconditionally" in footprint["python_package_dependency_model"]
     assert "not Python package dependencies" in footprint["repo_footprint_rule"]
     assert footprint["bounded_by"] == ["#490", "#510"]
+    participation_model = payload["participation_model"]
+    assert participation_model["schema_version"] == "agentic-workspace/module-participation/v1"
+    assert "repo-native operating substrate" in participation_model["product_model"]
+    assert [step["id"] for step in participation_model["recommended_loop"]] == [
+        "startup",
+        "active-work",
+        "durable-knowledge",
+        "proof",
+        "closeout",
+    ]
+    assert "workflow_phases" in participation_model["module_can_contribute"]
+    assert participation_model["workflow_obligation_model"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
+    assert "force all modules into fixed loop slots" in participation_model["projection_boundaries"]["must_not"]
+    assert {entry["module"] for entry in participation_model["first_party_examples"]} == {
+        "planning",
+        "memory",
+        "verification",
+    }
     component_model = payload["component_model"]
     assert component_model["schema_version"] == "agentic-workspace/module-components/v1"
     assert component_model["runtime_dependency"] == "none"

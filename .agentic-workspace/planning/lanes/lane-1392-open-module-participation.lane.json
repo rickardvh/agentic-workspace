@@ -1,0 +1,111 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1392-open-module-participation",
+  "title": "Define open module participation and workflow obligations",
+  "status": "ready",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json",
+  "lane_outcome": "Define a reviewed open module participation and workflow obligations model for #1392 so #1389 simplification does not hard-code today's first-party modules or fixed workflow slots.",
+  "purpose_for_parent": "This is the prerequisite lane for #1389. It establishes how the recommended ordinary loop composes with repo workflow obligations and arbitrary module contributions before the visible-surface classification in #1390 and per-step simplification in #1391.",
+  "subsystems": [
+    "workspace module registry contracts",
+    "skill specification contracts",
+    "workflow obligation config and reports",
+    "Planning module participation",
+    "Memory module participation",
+    "Verification module participation",
+    "generated/plugin/MCP/catalogue projection boundaries"
+  ],
+  "technical_strategy": "Keep the first slice design-shaped. Inspect current contract, report, docs, and first-party module evidence; define the minimal participation vocabulary and optional extension points; map Planning, Memory, and Verification as examples; then route concrete contract/schema/doc changes into follow-on slices instead of changing internals prematurely.",
+  "technology_choices": [
+    "Use checked-in issue-linked Planning as the durable owner for lane sequencing.",
+    "Use reviewed design evidence before product-source mutations.",
+    "Keep module participation generic; first-party modules are evidence, not the whole model."
+  ],
+  "slice_sequence": [
+    {
+      "id": "slice-1392-model-and-evidence",
+      "title": "Define participation vocabulary and evidence map",
+      "status": "completed",
+      "execplan_ref": "archived by closeout after implementation",
+      "depends_on": [],
+      "purpose_for_lane": "Produce the reviewed design basis required by #1392: minimal participation contract, workflow-obligation composition, module contributions, conflict surfacing, startup exposure, and first-party module mapping.",
+      "proof": "Implemented contract/schema/runtime/docs/tests expose and validate participation_model; evidence cites module_registry, schema reference docs, docs/package/modules.md, docs/package/installed-surfaces.md, and Planning/Memory/Verification README surfaces.",
+      "residual_after_slice": "The #1392 model slice is complete. Deeper per-module participation fields, workflow-obligation provenance, and structured module reports remain optional follow-up only if #1390/#1391 or later #1389 slices need them."
+    },
+    {
+      "id": "slice-1392-contract-followups",
+      "title": "Route contract, schema, and docs follow-ups",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "slice-1392-model-and-evidence"
+      ],
+      "purpose_for_lane": "Turn accepted design gaps into bounded implementation issues or execplans with exact touched surfaces and proof.",
+      "proof": "Each follow-up has an owner surface, changed-path proof expectation, and explicit dependency impact on #1390/#1391.",
+      "residual_after_slice": "The lane may close once #1390 and #1391 have enough criteria to proceed without re-litigating the participation model."
+    }
+  ],
+  "current_slice": "slice-1392-contract-followups",
+  "acceptance_boundary": "This lane may be called complete only when #1392 has a reviewed open participation model that answers its acceptance questions, names follow-on contract/schema/doc criteria, and gives #1390/#1391 enough guidance to classify and simplify current surfaces without re-litigating architecture.",
+  "proof_strategy": "Aggregate design-review evidence against #1392 acceptance first. Implementation proof is required only for follow-on contract/schema/doc slices that actually change product surfaces; lane proof must record any known gaps before closeout.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "src/agentic_workspace/contracts/module_registry.json defines participation_model.",
+      "src/agentic_workspace/contracts/schemas/module_registry.schema.json validates participation_model.",
+      "src/agentic_workspace/workspace_runtime_primitives.py exposes participation_model in modules output.",
+      "docs/package/modules.md and docs/package/installed-surfaces.md document the open participation boundary.",
+      "packages/planning/README.md, packages/memory/README.md, and packages/verification/README.md map first-party module examples.",
+      "tests/test_workspace_modules_cli.py asserts the modules CLI participation payload.",
+      "uv run pytest tests/test_workspace_modules_cli.py -q passed.",
+      "make test-workspace, make lint-workspace, make maintainer-surfaces, and make schema-reference-docs passed after closeout."
+    ],
+    "known_gaps": [
+      "Per-module participation fields are not yet added to every module descriptor.",
+      "Workflow obligation reports do not yet carry stronger structured module/slot provenance.",
+      "Module reports remain weakly structured until a later simplification slice needs stricter fields."
+    ]
+  },
+  "residual_lane_work": "Use this completed #1392 model as input to #1390 and #1391. Route deeper contract/schema/doc follow-ups only if those lanes cannot classify or simplify surfaces with the current participation vocabulary.",
+  "lane_to_epic_contribution": "Defines the open operating-substrate boundary that the rest of #1389 must preserve while simplifying ordinary agent-facing workflow.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "#1392 model slice implemented; full #1389 simplification remains open.",
+    "residual_work": "#1390 ordinary-loop classification, #1391 per-step simplification, future #1389 concrete reductions, and optional deeper provenance/report schema follow-ups if needed.",
+    "next_owner": "#1390/#1391 planning and later #1389 slices"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1389",
+      "label": "parent simplification lane",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1392",
+      "label": "open module participation and workflow obligations model",
+      "role": "lane_intent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1390",
+      "label": "ordinary continuity loop classification follows this lane",
+      "role": "dependent_lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1391",
+      "label": "operating-loop substep investigation follows #1390",
+      "role": "dependent_lane"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": ".agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json",
+      "label": "parent #1389 decomposition",
+      "role": "parent_decomposition"
+    }
+  ],
+  "notes": "Priority: first lane under #1389 because #1392 explicitly precedes #1390 and #1391. The model slice is implemented; do not start broad implementation cleanup from this lane alone."
+}

@@ -22,6 +22,110 @@
       "planning, memory, and verification as first-party examples of the same module contract third parties use"
     ]
   },
+  "participation_model": {
+    "schema_version": "agentic-workspace/module-participation/v1",
+    "product_model": "Agentic Workspace is a repo-native operating substrate for agents. It provides a recommended skill-guided operating loop, while repo config and module declarations can add obligations, tools, state, reports, gates, proof routes, lifecycle hooks, roots, and workflow phases without becoming separate first-contact concepts.",
+    "recommended_loop": [
+      {
+        "id": "startup",
+        "purpose": "Orient the agent through the thin startup adapter and compact routing commands before opening deeper state.",
+        "default_owner": "workspace",
+        "module_extension_rule": "Modules may contribute startup routing hints, prompts, reports, or gates, but startup must expose them through compact routing rather than broad raw reads."
+      },
+      {
+        "id": "active-work",
+        "purpose": "Decide direct, bounded, lane, or epic shape and preserve current intent, stop conditions, and continuation owner.",
+        "default_owner": "workspace/planning",
+        "module_extension_rule": "Modules may add state owners, lifecycle hooks, or workflow phases when active work needs them; they must declare owned roots and proof or closeout effects."
+      },
+      {
+        "id": "durable-knowledge",
+        "purpose": "Load or capture only durable anti-rediscovery knowledge that is cheaper than re-deriving it.",
+        "default_owner": "memory",
+        "module_extension_rule": "Modules may contribute resources or prompts for durable context, but must not blur active sequencing, issue history, or broad documentation into Memory."
+      },
+      {
+        "id": "proof",
+        "purpose": "Select evidence for the changed surface and keep proof separate from semantic completion permission.",
+        "default_owner": "workspace.proof/verification",
+        "module_extension_rule": "Modules may contribute proof routes, verification protocols, evidence bundles, or gates; proof routes must name result schemas and safety metadata."
+      },
+      {
+        "id": "closeout",
+        "purpose": "Reconcile proof, intent satisfaction, residue, and next owner before any completion or issue-closure claim.",
+        "default_owner": "planning.closeout",
+        "module_extension_rule": "Modules may add closeout obligations or residue routes, but parent/lane closure remains blocked until the owning intent and proof boundaries are satisfied."
+      }
+    ],
+    "module_can_contribute": [
+      "resources",
+      "tools",
+      "prompts_or_skills",
+      "schemas",
+      "roots",
+      "reports",
+      "gates",
+      "proof_routes",
+      "lifecycle_hooks",
+      "workflow_phases",
+      "startup_routing_hints",
+      "state_owners",
+      "safety_metadata"
+    ],
+    "workflow_obligation_model": {
+      "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
+      "role": "Repo-configured obligations compose with the recommended loop by stage and scope tags. They are explicit, queryable, and reportable; they do not replace module ownership or make every obligation a new module.",
+      "stages": [
+        "pre-work",
+        "before-claiming-completion",
+        "before-commit",
+        "review",
+        "closeout"
+      ],
+      "composition_rule": "Matched obligations raise the force of an existing loop step or closeout gate; unmatched obligations stay quiet."
+    },
+    "conflict_model": {
+      "rule": "Conflicts are surfaced as report or lifecycle facts, not resolved silently.",
+      "conflict_classes": [
+        "overlapping_owned_roots",
+        "incompatible_module_selection",
+        "contradictory_workflow_obligations",
+        "proof_route_collision",
+        "lifecycle_hook_collision",
+        "startup_burden_growth"
+      ],
+      "resolution_owner": "Agent chooses the safe route from compact evidence; human or repo owner decides policy conflicts that change accepted workflow."
+    },
+    "projection_boundaries": {
+      "source_of_truth": "module_registry.json plus workspace config and module-owned manifests",
+      "generated_or_adapter_targets": [
+        "docs/reference",
+        "generated plugin projections",
+        "MCP-style adapters",
+        "catalogue entries"
+      ],
+      "must_not": [
+        "make generated projections the source of module behavior",
+        "force all modules into fixed loop slots",
+        "promote first-party modules from examples into privileged special cases",
+        "increase ordinary startup burden by exposing all module detail up front"
+      ]
+    },
+    "first_party_examples": [
+      {
+        "module": "planning",
+        "example_role": "active execution state, lane/slice decomposition, continuation owner, and honest closeout"
+      },
+      {
+        "module": "memory",
+        "example_role": "durable anti-rediscovery knowledge and residue routing that reduces repeated context work"
+      },
+      {
+        "module": "verification",
+        "example_role": "soft verification protocols, bounded evidence, proof route hints, and known gaps"
+      }
+    ]
+  },
   "component_model": {
     "schema_version": "agentic-workspace/module-components/v1",
     "alignment": "mcp-style-adapter-ready",
