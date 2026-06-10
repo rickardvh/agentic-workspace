@@ -439,6 +439,11 @@
         "closeout_boundaries",
         "read_budget",
         "authority_boundaries",
+        "knowledge_gates",
+        "gate_summary",
+        "blocked_actions",
+        "blocked_claims",
+        "next_allowed_action",
         "output_shape_requirements",
         "review_rubrics",
         "module_contributions",
@@ -512,6 +517,37 @@
             "additionalProperties": true
           },
           "description": "Authority boundaries with source and owner provenance."
+        },
+        "knowledge_gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Compact pre-work knowledge gates selected when routed knowledge can change task interpretation, work shape, proof, allowed action, or completion claims."
+        },
+        "gate_summary": {
+          "type": "object",
+          "description": "Count and force summary for selected knowledge gates.",
+          "additionalProperties": true
+        },
+        "blocked_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Concrete actions blocked by selected knowledge gates."
+        },
+        "blocked_claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Completion, merge, or issue-closure claims blocked by selected knowledge gates."
+        },
+        "next_allowed_action": {
+          "type": "string",
+          "description": "Smallest safe next action after applying knowledge gates."
         },
         "output_shape_requirements": {
           "type": "array",

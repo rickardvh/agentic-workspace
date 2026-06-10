@@ -60,6 +60,39 @@ def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) 
     assert packet["kind"] == "agentic-workspace/task-posture-packet/v1"
     assert packet["posture_adherence"]["closeout_question"].startswith("Did the work follow the task posture packet")
     assert packet["dynamic_instruction_projection"]["provenance_preserved"] is True
+    assert "knowledge_gates" not in packet
+
+
+def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "docs" / "package" / "knowledge-gates.md", "# Pre-Work Knowledge Gates\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/package/knowledge-gates.md",
+                "--task",
+                "Implement #1395 pre-work knowledge gates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["task_posture_packet"]
+    gates = {gate["gate_id"]: gate for gate in packet["knowledge_gates"]}
+    assert gates["source-authority-model"]["force"] == "required_before_design"
+    assert gates["source-authority-model"]["resolution_state"] == "open"
+    assert "change gate vocabulary without checking source authority" in packet["blocked_actions"]
+    assert packet["gate_summary"]["blocking_count"] >= 1
 
 
 def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:

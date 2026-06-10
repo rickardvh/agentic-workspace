@@ -163,7 +163,9 @@ a freshness check or an explicit lower-authority posture.
 ## Task Posture Integration
 
 Knowledge routing participates in the task posture packet as a selector, not as
-a default context dump. A posture packet may include:
+a default context dump. When a selected route must constrain work before design,
+editing, proof, or closeout, it becomes a [pre-work knowledge
+gate](knowledge-gates.md). A posture packet may include:
 
 - selected knowledge routes and why they matched;
 - each route's source kind, authority class, owner, locator, and freshness

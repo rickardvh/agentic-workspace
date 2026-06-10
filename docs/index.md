@@ -14,6 +14,7 @@ Use this map when updating docs so each page stays complete at its level without
 | Which CLI output profile should an agent use? | [CLI output profiles](package/output-profiles.md) | next-decision policy belongs in one command-output contract |
 | What files are installed and who owns them? | [Installed surfaces](package/installed-surfaces.md) | explaining startup adapters, managed fences, local-only state, or source-checkout boundaries |
 | How should agents route governing knowledge and source authority? | [Knowledge routing and source authority](package/knowledge-routing.md) | a page only needs to name a source kind, authority class, route trigger, freshness rule, or capture obligation |
+| When should governing knowledge block or constrain work? | [Pre-work knowledge gates](package/knowledge-gates.md) | a page only needs to name gate force, blocked actions, closeout evidence, or fallback behavior |
 | What do Planning and Memory own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state from durable repo knowledge |
 | What are the exact fields and generated references? | [Contracts and references](package/contracts.md) and [Reference material](reference/index.md) | hand-written docs would otherwise copy generated schema detail |
 | What is source-checkout maintainer workflow? | [Maintainer index](maintainer/index.md) | ordinary host-repo docs mention internal validation, dogfooding, or generation only as a boundary |
@@ -27,6 +28,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Installed surfaces](package/installed-surfaces.md): what files the package writes into a host repository and who owns them.
 - [Modules](package/modules.md): how the root package composes Planning and Memory.
 - [Knowledge routing and source authority](package/knowledge-routing.md): how startup, posture, closeout, Memory, Planning, issues, docs, and external sources route governing knowledge without broad mirroring.
+- [Pre-work knowledge gates](package/knowledge-gates.md): when routed knowledge should block design, edits, claims, or closeout until resolved.
 - [Contracts and references](package/contracts.md): how JSON contracts, schemata, generated reference docs, and runtime outputs relate.
 - [Jumpstart contract](jumpstart-contract.md): how a newly installed or adopted workspace in a lived-in repo should discover candidate durable surfaces without bulk importing repo prose.
 - [Collaboration safety](collaboration-safety.md): git-native collaboration model, merge recovery, and shared-state pressure rules.

@@ -130,6 +130,7 @@ def test_start_default_surfaces_compact_task_posture_packet(tmp_path: Path, caps
     )
     assert packet["posture_adherence"]["status"] == "requires-closeout-review"
     assert "claim full completion before proof and acceptance reconciliation" in packet["forbidden_actions"]
+    assert "knowledge_gates" not in packet
 
 
 def test_summary_selector_surfaces_task_posture_packet(tmp_path: Path, capsys) -> None:

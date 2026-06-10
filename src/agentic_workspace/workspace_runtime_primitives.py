@@ -17257,6 +17257,36 @@ def _compact_start_continuation_view(view: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in compact.items() if value not in ({}, [], "", None)}
 
 
+def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        "kind": task_posture_packet.get("kind"),
+        "operating_posture": task_posture_packet.get("operating_posture", {}),
+        "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
+        "skill_routes": task_posture_packet.get("skill_routes", []),
+        "allowed_actions": task_posture_packet.get("allowed_actions", []),
+        "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
+        "proof_boundaries": task_posture_packet.get("proof_boundaries", []),
+        "closeout_boundaries": task_posture_packet.get("closeout_boundaries", []),
+        "read_budget": task_posture_packet.get("read_budget", {}),
+        "authority_boundaries": task_posture_packet.get("authority_boundaries", [])[:2],
+        "knowledge_gates": task_posture_packet.get("knowledge_gates", []),
+        "gate_summary": task_posture_packet.get("gate_summary", {}),
+        "blocked_actions": task_posture_packet.get("blocked_actions", []),
+        "blocked_claims": task_posture_packet.get("blocked_claims", []),
+        "next_allowed_action": task_posture_packet.get("next_allowed_action", ""),
+        "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
+        "review_rubrics": task_posture_packet.get("review_rubrics", []),
+        "module_contributions": task_posture_packet.get("module_contributions", [])[:3],
+        "provenance": task_posture_packet.get("provenance", []),
+        "dynamic_instruction_projection": task_posture_packet.get("dynamic_instruction_projection", {}),
+        "posture_adherence": task_posture_packet.get("posture_adherence", {}),
+    }
+    if not compact["knowledge_gates"]:
+        for key in ("knowledge_gates", "gate_summary", "blocked_actions", "blocked_claims", "next_allowed_action"):
+            compact.pop(key, None)
+    return compact
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -17398,24 +17428,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         }
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
-        projected["task_posture_packet"] = {
-            "kind": task_posture_packet.get("kind"),
-            "operating_posture": task_posture_packet.get("operating_posture", {}),
-            "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
-            "skill_routes": task_posture_packet.get("skill_routes", []),
-            "allowed_actions": task_posture_packet.get("allowed_actions", []),
-            "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
-            "proof_boundaries": task_posture_packet.get("proof_boundaries", []),
-            "closeout_boundaries": task_posture_packet.get("closeout_boundaries", []),
-            "read_budget": task_posture_packet.get("read_budget", {}),
-            "authority_boundaries": task_posture_packet.get("authority_boundaries", [])[:2],
-            "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
-            "review_rubrics": task_posture_packet.get("review_rubrics", []),
-            "module_contributions": task_posture_packet.get("module_contributions", [])[:3],
-            "provenance": task_posture_packet.get("provenance", []),
-            "dynamic_instruction_projection": task_posture_packet.get("dynamic_instruction_projection", {}),
-            "posture_adherence": task_posture_packet.get("posture_adherence", {}),
-        }
+        projected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     assurance_requirements = payload.get("assurance_requirements", {})
     if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
         projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
@@ -19110,24 +19123,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     }
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
-        selected["task_posture_packet"] = {
-            "kind": task_posture_packet.get("kind"),
-            "operating_posture": task_posture_packet.get("operating_posture", {}),
-            "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
-            "skill_routes": task_posture_packet.get("skill_routes", []),
-            "allowed_actions": task_posture_packet.get("allowed_actions", []),
-            "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
-            "proof_boundaries": task_posture_packet.get("proof_boundaries", []),
-            "closeout_boundaries": task_posture_packet.get("closeout_boundaries", []),
-            "read_budget": task_posture_packet.get("read_budget", {}),
-            "authority_boundaries": task_posture_packet.get("authority_boundaries", [])[:2],
-            "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
-            "review_rubrics": task_posture_packet.get("review_rubrics", []),
-            "module_contributions": task_posture_packet.get("module_contributions", [])[:3],
-            "provenance": task_posture_packet.get("provenance", []),
-            "dynamic_instruction_projection": task_posture_packet.get("dynamic_instruction_projection", {}),
-            "posture_adherence": task_posture_packet.get("posture_adherence", {}),
-        }
+        selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     if isinstance(payload.get("continuation_view"), dict):
         selected["continuation_view"] = payload["continuation_view"]
     if "task_intent" in payload:
@@ -23347,26 +23343,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ),
         },
         **(
-            {
-                "task_posture_packet": {
-                    "kind": payload["task_posture_packet"].get("kind"),
-                    "operating_posture": payload["task_posture_packet"].get("operating_posture", {}),
-                    "workflow_obligations": payload["task_posture_packet"].get("workflow_obligations", []),
-                    "skill_routes": payload["task_posture_packet"].get("skill_routes", []),
-                    "allowed_actions": payload["task_posture_packet"].get("allowed_actions", []),
-                    "forbidden_actions": payload["task_posture_packet"].get("forbidden_actions", []),
-                    "proof_boundaries": payload["task_posture_packet"].get("proof_boundaries", []),
-                    "closeout_boundaries": payload["task_posture_packet"].get("closeout_boundaries", []),
-                    "read_budget": payload["task_posture_packet"].get("read_budget", {}),
-                    "authority_boundaries": payload["task_posture_packet"].get("authority_boundaries", [])[:2],
-                    "output_shape_requirements": payload["task_posture_packet"].get("output_shape_requirements", []),
-                    "review_rubrics": payload["task_posture_packet"].get("review_rubrics", []),
-                    "module_contributions": payload["task_posture_packet"].get("module_contributions", [])[:3],
-                    "provenance": payload["task_posture_packet"].get("provenance", []),
-                    "dynamic_instruction_projection": payload["task_posture_packet"].get("dynamic_instruction_projection", {}),
-                    "posture_adherence": payload["task_posture_packet"].get("posture_adherence", {}),
-                }
-            }
+            {"task_posture_packet": _compact_task_posture_packet_projection(payload["task_posture_packet"])}
             if isinstance(payload.get("task_posture_packet"), dict)
             else {}
         ),
@@ -26457,6 +26434,30 @@ def _task_posture_packet_payload(
     ]
     if relevant_obligations:
         review_rubrics.append("Were matched workflow obligations satisfied or explicitly routed?")
+    knowledge_gates = _knowledge_gates_payload(
+        surface=surface,
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        planning_safety_gate=planning_safety_gate,
+        proof=proof,
+        completion_gate=completion_gate,
+        closeout_trust=closeout_trust,
+        relevant_obligations=relevant_obligations,
+    )
+    gate_summary = _knowledge_gate_summary_payload(knowledge_gates)
+    blocked_actions = _dedupe(
+        [str(action) for gate in knowledge_gates for action in _list_payload(gate.get("forbidden_actions")) if str(action).strip()]
+    )
+    blocked_claims = _dedupe(
+        [str(claim) for gate in knowledge_gates for claim in _list_payload(gate.get("blocked_claims")) if str(claim).strip()]
+    )
+    gate_next_actions = [
+        str(gate.get("next_allowed_action"))
+        for gate in knowledge_gates
+        if str(gate.get("next_allowed_action") or "").strip()
+        and str(gate.get("resolution_state") or "") == "open"
+        and str(gate.get("force") or "") != "informational"
+    ]
     packet: dict[str, Any] = {
         "kind": "agentic-workspace/task-posture-packet/v1",
         "operating_posture": {
@@ -26479,6 +26480,13 @@ def _task_posture_packet_payload(
         "closeout_boundaries": _dedupe(closeout_boundaries),
         "read_budget": read_budget,
         "authority_boundaries": authority_boundaries,
+        "knowledge_gates": knowledge_gates,
+        "gate_summary": gate_summary,
+        "blocked_actions": blocked_actions,
+        "blocked_claims": blocked_claims,
+        "next_allowed_action": gate_next_actions[0]
+        if gate_next_actions
+        else (allowed_actions[0] if allowed_actions else "continue-direct"),
         "output_shape_requirements": output_shape_requirements,
         "review_rubrics": review_rubrics,
         "module_contributions": module_contributions,
@@ -26511,6 +26519,163 @@ def _task_posture_packet_payload(
     return packet
 
 
+def _knowledge_gates_payload(
+    *,
+    surface: str,
+    task_text: str | None,
+    changed_paths: list[str],
+    planning_safety_gate: dict[str, Any],
+    proof: dict[str, Any],
+    completion_gate: dict[str, Any],
+    closeout_trust: dict[str, Any],
+    relevant_obligations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    gates: list[dict[str, Any]] = []
+
+    def add_gate(
+        *,
+        gate_id: str,
+        route_id: str,
+        trigger: str,
+        force: str,
+        reason: str,
+        next_allowed_action: str,
+        forbidden_actions: Sequence[str] = (),
+        required_actions: Sequence[str] = (),
+        record_resolution_to: str,
+        resolution_state: str = "open",
+        blocked_claims: Sequence[str] = (),
+        fallback: str,
+    ) -> None:
+        gates.append(
+            {
+                "kind": "agentic-workspace/knowledge-gate/v1",
+                "gate_id": gate_id,
+                "route_id": route_id,
+                "surface": surface,
+                "trigger": trigger,
+                "force": force,
+                "reason": reason,
+                "next_allowed_action": next_allowed_action,
+                "forbidden_actions": list(forbidden_actions),
+                "required_actions": list(required_actions),
+                "record_resolution_to": record_resolution_to,
+                "resolution_state": resolution_state,
+                "blocked_claims": list(blocked_claims),
+                "fallback": fallback,
+            }
+        )
+
+    if planning_safety_gate.get("workflow_sufficient") is False:
+        required_next = str(planning_safety_gate.get("required_next_action") or "select-or-promote-candidate-lane")
+        add_gate(
+            gate_id="planning-owner-required",
+            route_id="planning-active-state",
+            trigger="active Planning state is required before broad or lane-shaped work",
+            force="required_before_edit",
+            reason="Planning owns active execution, lane order, continuation, and parent-intent closeout.",
+            next_allowed_action=required_next,
+            forbidden_actions=["continue implementation without active planning ownership"],
+            required_actions=[required_next],
+            record_resolution_to=".agentic-workspace/planning/state.toml",
+            blocked_claims=["full_intent_complete", "issue_closure"],
+            fallback="Use preflight or summary to repair or promote Planning ownership before editing.",
+        )
+
+    for index, obligation in enumerate(relevant_obligations, start=1):
+        force = str(obligation.get("force") or "")
+        if force not in {"blocking", "required-before-closeout", "required_before_claim", "required_before_edit"}:
+            continue
+        gate_force = "required_before_claim" if force == "required-before-closeout" else "required_before_edit"
+        add_gate(
+            gate_id=f"workflow-obligation-{index}",
+            route_id=str(obligation.get("id") or f"workflow-obligation-{index}"),
+            trigger="configured workflow obligation matched this task",
+            force=gate_force,
+            reason=str(obligation.get("reason") or obligation.get("description") or "A configured workflow obligation applies."),
+            next_allowed_action="satisfy or dismiss matched workflow obligation",
+            forbidden_actions=["claim completion before obligation is resolved"],
+            required_actions=["consult the obligation owner", "record satisfaction or dismissal in closeout"],
+            record_resolution_to=".agentic-workspace/config.toml",
+            blocked_claims=["full_intent_complete"] if gate_force == "required_before_claim" else [],
+            fallback="If the config owner is unavailable, route the unresolved obligation through Planning closeout.",
+        )
+
+    proof_required = bool(_list_payload(proof.get("required_commands")) or _list_payload(proof.get("proof_commands")))
+    if proof_required:
+        add_gate(
+            gate_id="proof-before-claim",
+            route_id="proof-selection",
+            trigger="selected proof commands exist for the changed paths or task",
+            force="required_before_claim",
+            reason="Completion claims require proof evidence, not only implementation completion.",
+            next_allowed_action="run selected proof or record why it is unavailable",
+            forbidden_actions=["claim full completion before required proof passes"],
+            required_actions=["run proof commands", "record proof result in closeout"],
+            record_resolution_to="proof_report or closeout evidence",
+            blocked_claims=["full_intent_complete", "issue_closure"],
+            fallback="If proof cannot run, record unavailable proof and keep completion claims blocked or lowered.",
+        )
+
+    trust = str(closeout_trust.get("trust") or "").strip().lower()
+    if trust == "lower-trust" or _as_int(closeout_trust.get("lower_trust_closeout_count")) > 0:
+        add_gate(
+            gate_id="closeout-trust-review",
+            route_id="closeout_trust",
+            trigger="closeout trust reports lower-trust signals",
+            force="required_before_claim",
+            reason="Lower-trust closeout evidence can change whether completion or merge claims are safe.",
+            next_allowed_action="inspect closeout_trust before completion claim",
+            forbidden_actions=["claim ordinary closeout without explaining lower-trust signals"],
+            required_actions=["consult closeout_trust", "record consulted, dismissed, stale, missing, or unavailable evidence"],
+            record_resolution_to="agentic-workspace report --target ./repo --section closeout_trust --format json",
+            blocked_claims=["full_intent_complete"],
+            fallback="Use report --section closeout_trust when available; otherwise record the missing trust inspection in Planning closeout.",
+        )
+
+    haystack = " ".join([task_text or "", " ".join(changed_paths), surface]).lower()
+    knowledge_markers = ("knowledge gate", "knowledge-gate", "knowledge routing", "source authority", "#1395", "#1394")
+    if any(marker in haystack for marker in knowledge_markers):
+        force = "recommended_before_work"
+        if any(path in {"docs/package/knowledge-gates.md", "docs/package/knowledge-routing.md"} for path in changed_paths):
+            force = "required_before_design"
+        add_gate(
+            gate_id="source-authority-model",
+            route_id="docs-package-knowledge-routing",
+            trigger="task text or changed paths name knowledge routing, source authority, or gates",
+            force=force,
+            reason="The source-authority and gate model can change the allowed work shape and completion claim.",
+            next_allowed_action="consult docs/package/knowledge-routing.md and docs/package/knowledge-gates.md",
+            forbidden_actions=["change gate vocabulary without checking source authority"],
+            required_actions=["consult source authority docs", "record whether the route was consulted or dismissed"],
+            record_resolution_to="Planning proof_report or closeout evidence",
+            blocked_claims=[],
+            fallback="If the docs are unavailable, treat the gate vocabulary as inferred and avoid hard completion claims.",
+        )
+
+    return gates
+
+
+def _knowledge_gate_summary_payload(knowledge_gates: list[dict[str, Any]]) -> dict[str, Any]:
+    by_force: dict[str, int] = {}
+    by_state: dict[str, int] = {}
+    for gate in knowledge_gates:
+        force = str(gate.get("force") or "unknown")
+        state = str(gate.get("resolution_state") or "unknown")
+        by_force[force] = by_force.get(force, 0) + 1
+        by_state[state] = by_state.get(state, 0) + 1
+    blocking_forces = {"required_before_design", "required_before_edit", "required_before_claim", "stale_check_required"}
+    return {
+        "kind": "agentic-workspace/knowledge-gate-summary/v1",
+        "status": "present" if knowledge_gates else "none",
+        "total": len(knowledge_gates),
+        "open_count": by_state.get("open", 0),
+        "blocking_count": sum(1 for gate in knowledge_gates if gate.get("force") in blocking_forces),
+        "by_force": by_force,
+        "by_resolution_state": by_state,
+    }
+
+
 def _task_posture_packet_changes_routing(packet: dict[str, Any]) -> bool:
     if not isinstance(packet, dict):
         return False
@@ -26536,6 +26701,12 @@ def _task_posture_packet_relevant(*, task_text: str | None, changed_paths: list[
         "agents.md",
         "module participation",
         "workflow obligation",
+        "knowledge gate",
+        "knowledge-gate",
+        "knowledge routing",
+        "source authority",
+        "#1395",
+        "#1394",
         "startup_context.schema",
         "implementer_context.schema",
         "workspace_report.schema",
