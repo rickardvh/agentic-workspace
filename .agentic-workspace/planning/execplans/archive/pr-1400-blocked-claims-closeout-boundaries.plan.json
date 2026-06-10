@@ -1,0 +1,394 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Address PR #1400 blocked_claims surface comment",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Address PR #1400 feedback by removing the separate knowledge-gate blocked_claims packet surface and expressing claim limits through closeout boundaries.",
+    "hard_constraints": "Keep scope bounded to the PR comment: runtime packet shape, schemas, docs, focused tests, generated schema references, and PR summary if stale.",
+    "agent_may_decide": "Exact wording of closeout boundary strings, test assertions, and whether stale PR metadata needs updating after code proof.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Update runtime/docs/schema/tests so knowledge gates use closeout boundaries instead of a separate blocked_claims surface.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_implement_cli.py::test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet -q",
+      "make schema-reference-docs",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "docs/package/knowledge-gates.md",
+      "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "generated schema reference docs if refreshed"
+    ],
+    "completion_criteria": [
+      "Task posture packets no longer expose top-level blocked_claims for knowledge gates.",
+      "Knowledge-gate claim limits are represented as closeout_boundaries.",
+      "Docs and schemas describe the reduced surface consistently.",
+      "Focused and required validation pass or failures are recorded honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Address PR #1400 blocked_claims surface comment."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Address PR #1400 feedback by removing the separate knowledge-gate blocked_claims packet surface and expressing claim limits through closeout boundaries.",
+      "constraints": "Keep scope bounded to the PR comment: runtime packet shape, schemas, docs, focused tests, generated schema references, and PR summary if stale.",
+      "latitude": "Exact wording of closeout boundary strings, test assertions, and whether stale PR metadata needs updating after code proof.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "pr-1400-blocked-claims-closeout-boundaries",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "docs/package/knowledge-gates.md",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "generated schema reference docs if refreshed"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Address PR #1400 feedback by reducing the knowledge-gate task-posture surface.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Address the comment on #1400",
+    "inferred intended outcome": "Remove or justify blocked_claims as a separate surface; prefer folding it into existing closeout boundary vocabulary.",
+    "chosen concrete what": "Remove blocked_claims from knowledge-gate task posture packets and represent those limits as closeout_boundaries.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime posture packet builder, knowledge-gates docs, task posture packet schemas, focused tests, generated schema references, active planning closeout, and PR metadata if stale.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "Focused posture tests, schema-reference-docs, make test-workspace, make lint-workspace, and selected closeout/report commands.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from the runtime/docs/schema/test edits that remove blocked_claims from the knowledge-gate packet surface.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Address PR #1400 feedback by removing the separate knowledge-gate blocked_claims packet surface and expressing claim limits through closeout boundaries.",
+    "hard constraints": "Keep scope bounded to the PR comment: runtime packet shape, schemas, docs, focused tests, generated schema references, and PR summary if stale.",
+    "agent may decide locally": "Exact wording of closeout boundary strings, test assertions, and whether stale PR metadata needs updating after code proof.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "pr-1400-blocked-claims-closeout-boundaries",
+    "status": "completed",
+    "scope": "Reduce the knowledge-gate claim-blocking surface for PR #1400.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Update runtime/docs/schema/tests so knowledge gates use closeout boundaries instead of a separate blocked_claims surface."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "docs/package/knowledge-gates.md",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "generated schema reference docs if refreshed"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet -q",
+    "make schema-reference-docs",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Task posture packets no longer expose top-level blocked_claims for knowledge gates.",
+    "Knowledge-gate claim limits are represented as closeout_boundaries.",
+    "Docs and schemas describe the reduced surface consistently.",
+    "Focused and required validation pass or failures are recorded honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Removed the separate knowledge-gate blocked_claims task-posture surface, represented gate claim limits through closeout_boundaries, refreshed schemas/reference docs, and fixed dogfooded tiny startup delegation-candidate bloat.",
+    "scope touched": "Task posture packet builder, knowledge gate/routing docs, task posture schemas/reference docs, focused posture tests, tiny startup delegation projection, active planning closeout.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; docs/package/knowledge-gates.md; docs/package/knowledge-routing.md; src/agentic_workspace/contracts/schemas/*.schema.json; docs/reference/*context.md and workspace-report.md; tests/test_workspace_implement_cli.py; tests/test_workspace_start_preflight_cli.py; .agentic-workspace/planning state/execplan.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed bounded to PR #1400 comment plus directly surfaced dogfooding regression from required proof. blocked_claims remains only in older applicable-intent/report claim authorization surfaces, not task_posture_packet or knowledge_gates.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused posture tests passed; make schema-reference-docs passed; make test-workspace passed; make lint-workspace passed; contract tooling, structured inventory, ruff, maintainer-surfaces, planning surfaces, and reconcile checks passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Address PR #1400 feedback by reducing the knowledge-gate task-posture surface.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1400 comment addressed: knowledge gates no longer expose blocked_claims; closeout_boundaries is the claim-boundary surface; validation passed.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "none - dogfooding tiny-payload regression fixed in this PR",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none - dogfooding tiny-payload regression fixed in this PR",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "none - dogfooding tiny-payload regression fixed in this PR"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-10: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "evidence_only",
+    "target": "none - dogfooding tiny-payload regression fixed in this PR",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1400",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Address PR #1400 feedback by reducing the knowledge-gate task-posture surface.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused posture tests passed; make schema-reference-docs passed; make test-workspace passed; make lint-workspace passed; contract tooling, structured inventory, ruff, maintainer-surfaces, planning surfaces, and reconcile checks passed.\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; docs/package/knowledge-gates.md; docs/package/knowledge-routing.md; src/agentic_workspace/contracts/schemas/*.schema.json; docs/reference/*context.md and workspace-report.md; tests/test_workspace_implement_cli.py; tests/test_workspace_start_preflight_cli.py; .agentic-workspace/planning state/execplan.\nDurable residue: evidence_only (none - dogfooding tiny-payload regression fixed in this PR)\nMemory learning: evidence_only\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

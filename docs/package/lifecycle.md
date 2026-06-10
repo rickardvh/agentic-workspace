@@ -33,7 +33,7 @@ Mutating commands are conservative. They operate on package-owned surfaces, mana
 | `modules` | Which modules are available or installed? |
 | `skills` | Which package or repo skills are registered for this task? |
 
-These commands are router views over checked-in state and package contracts. They should be queried before opening raw planning, memory, ownership, or contract files.
+These commands are router views over checked-in state and package contracts. They should be queried before opening raw planning, memory, ownership, or contract files. When known sources may change task interpretation, proof, work shape, or completion claims, commands may surface compact [pre-work knowledge gates](knowledge-gates.md) instead of broad reading lists.
 
 Exact output contracts are documented in the generated [Startup context](../reference/startup-context.md), [Workspace report](../reference/workspace-report.md), [Workspace config](../reference/workspace-config.md), [Workspace local override](../reference/workspace-local-override.md), [Proof selection rules](../reference/proof-selection-rules.md), and [Preflight policy](../reference/preflight-policy.md) references.
 

@@ -1,0 +1,331 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Github 1395 Workspace Add Pre Work Knowledge Gates To Startu",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Define the pre-work knowledge gate design requested by #1395 so startup and work-shaping can compactly block or constrain blind starts when known sources may change interpretation, proof, work shape, or completion claims.",
+    "hard_constraints": "Keep this lane to additive task-posture knowledge gate emission, schema support, tests, and package documentation; do not implement broad search, external lookup automation, or default startup reading lists.",
+    "agent_may_decide": "Choose the smallest runtime projection, schema fields, tests, and package documentation needed for #1395 to emit compact pre-work gates.",
+    "escalate_when": "A correct answer requires connector integrations, source indexing, broad Memory/doc search, or semantic source resolution beyond compact route/gate projection.",
+    "next_action": "Open the stacked PR for review; merge can close #1395 while #1389 remains open.",
+    "proof_expectations": [
+      "Run Agentic Workspace implement on the full docs/runtime/schema/test/planning changed paths.",
+      "Run focused gate runtime tests.",
+      "Run the AW-selected workspace, lint, contract, maintainer, summary, doctor, and schema-reference validation after closeout."
+    ],
+    "touched_scope": [
+      "docs/package/knowledge-gates.md",
+      "docs/package/knowledge-routing.md",
+      "docs/package/lifecycle.md",
+      "docs/package/overview.md",
+      "docs/index.md",
+      "docs/documentation-status.md",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "docs/reference/startup-context.md",
+      "docs/reference/implementer-context.md",
+      "docs/reference/workspace-report.md",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      ".agentic-workspace/planning/execplans/github-1395-workspace-add-pre-work-knowledge-gates-to-startu.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "A canonical package doc defines pre-work knowledge gate triggers, force levels, gate effects, task posture fields, command integration, closeout/report evidence, fallback behavior, and compact audit rules.",
+      "Task posture packets emit compact knowledge gate fields when selected routes can change work shape, proof, allowed actions, or completion claims.",
+      "Startup, implement, summary, and report packet schemas document the gate fields, with tests proving #1395 gate emission and tiny payload budget preservation."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Define the pre-work knowledge gate design requested by #1395."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Define and emit compact pre-work knowledge gates for #1395.",
+      "constraints": "Keep scope to additive task-posture gate projection, schemas, references, tests, and docs; avoid broad search, connector lookup, or default reading lists.",
+      "latitude": "Choose the smallest gate projection and docs needed to satisfy the lane.",
+      "escalation": "Escalate if source indexing, connector integrations, or semantic source resolution become necessary."
+    },
+    "execution": {
+      "milestone": "github-1395-workspace-add-pre-work-knowledge-gates-to-startu",
+      "status": "completed",
+      "next_step": "Open the stacked PR for review; merge can close #1395 while parent #1389 remains open.",
+      "proof": "Focused gate tests, schema reference validation, AW summary/doctor, and full selected validation after closeout."
+    },
+    "scope": {
+      "touched": [
+        "docs/package/knowledge-gates.md",
+        "docs/package/knowledge-routing.md",
+        "docs/package/lifecycle.md",
+        "docs/package/overview.md",
+        "docs/index.md",
+        "docs/documentation-status.md",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "docs/reference/startup-context.md",
+        "docs/reference/implementer-context.md",
+        "docs/reference/workspace-report.md",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive/github-1395-workspace-add-pre-work-knowledge-gates-to-startu.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Define and emit compact pre-work knowledge gates for #1395.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Task posture packets now expose compact gate fields for startup/work-shaping consumers.",
+    "intentionally deferred": "none",
+    "discovered implications": "Planning archive compatibility projections need a durable fix; routed to #1399.",
+    "proof achieved now": "yes",
+    "validation still needed": "full post-closeout validation",
+    "next likely slice": "promote the next #1389 candidate in planned order"
+  },
+  "intent_interpretation": {
+    "literal request": "Github 1395 Workspace Add Pre Work Knowledge Gates To Startu",
+    "inferred intended outcome": "Define and emit compact pre-work knowledge gates for #1395.",
+    "chosen concrete what": "Add the gate model, runtime task-posture fields, schemas, references, and focused tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "package docs, task-posture runtime primitive, startup/implementer/report schemas and references, focused tests, and Planning closeout state.",
+    "max changed files": "17",
+    "required validation commands": "AW implement; focused pytest; make test-workspace; make lint-workspace; contract/inventory/maintainer/schema-reference checks; AW summary and doctor.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#1395 is complete after post-closeout validation; continue by promoting the next #1389 candidate.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define and emit compact pre-work knowledge gates for #1395.",
+    "hard constraints": "No broad source search, connector lookup, or default startup reading list.",
+    "agent may decide locally": "Exact gate projection, schema wording, docs navigation, and focused tests.",
+    "escalate when": "Semantic source resolution or external/current-source lookup becomes necessary."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1395-workspace-add-pre-work-knowledge-gates-to-startu",
+    "status": "completed",
+    "scope": "Define #1395's pre-work knowledge gate model as a canonical package documentation surface, then wire it into package navigation.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Open the stacked PR for review; merge can close #1395 while #1389 remains open as the parent epic."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/package/knowledge-gates.md",
+    "docs/package/knowledge-routing.md",
+    "docs/package/lifecycle.md",
+    "docs/package/overview.md",
+    "docs/index.md",
+    "docs/documentation-status.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-1395-workspace-add-pre-work-knowledge-gates-to-startu.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run pymarkdown -d md013 scan docs/package/knowledge-gates.md docs/package/knowledge-routing.md docs/package/lifecycle.md docs/package/overview.md docs/index.md docs/documentation-status.md"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A canonical package doc defines pre-work knowledge gate triggers, force levels, gate effects, task posture fields, command integration, closeout/report evidence, fallback behavior, and compact audit rules.",
+    "The gate model depends on #1394 source authority without replacing it or increasing ordinary startup burden.",
+    "Runtime/schema implementation remains explicitly outside this lane unless promoted by #1397."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Added docs/package/knowledge-gates.md; linked it from package docs; added compact knowledge gate emission to task posture packets; extended startup, implementer, and report schemas; regenerated references; and added focused gate tests.",
+    "scope touched": "package docs, runtime task-posture projection, schemas/reference docs, tests, and active planning records",
+    "changed surfaces": "docs/package/knowledge-gates.md; docs/package/knowledge-routing.md; docs/package/lifecycle.md; docs/package/overview.md; docs/index.md; docs/documentation-status.md; src/agentic_workspace/workspace_runtime_primitives.py; task-posture schemas and generated references; focused tests; planning state and execplan",
+    "validations run": "AW implement pass; focused pytest; schema reference generation/check; lint/contract/inventory checks; full validation pending after closeout removes active Planning state from size-sensitive startup tests",
+    "result for continuation": "Pre-work knowledge gate emission is available through task posture packets; broader source indexing, connector lookup, and semantic source resolution remain out of scope.",
+    "next step": "Open the stacked PR with base codex/1389-1394-knowledge-routing-source-authority."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes: additive task-posture gate projection only; no broad search, connector lookup, or default reading list added",
+    "proof status": "passed",
+    "intent served": "yes: #1395 design topics are covered and compact gates now emit through task posture packets",
+    "config compliance": "yes: used the configured Agentic Workspace CLI invocation and changed-path implement flow",
+    "misinterpretation risk": "low: #1395 requires compact pre-work gate emission, not full source search or connectors",
+    "follow-on decision": "#1397 can deepen proof/closeout integration if promoted"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused pytest passed for #1395 gate emission and startup posture packet coverage. Schema references were regenerated and `make schema-reference-docs` passed. Full AW-selected validation will be rerun after Planning closeout removes active branch state from size-sensitive startup tests."
+  },
+  "intent_satisfaction": {
+    "original intent": "Define the pre-work knowledge gate design requested by #1395.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The new package doc defines the required gate model and is linked from normal package routing surfaces.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Canonical pre-work knowledge gate design for #1395",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#1399 for dogfooding archive projection cleanup; #1397 may deepen proof/closeout integration if promoted",
+    "post-work posterity capture": "docs/package/knowledge-gates.md",
+    "knowledge promoted (Memory/Docs/Config)": "Docs",
+    "resume from": "next #1389 lane after stacked PR creation"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "#1395 requested compact pre-work knowledge gates, and the branch adds the model, runtime task-posture emission, schema fields, references, and focused tests. This closes only #1395; parent epic #1389 remains open.",
+    "evidence carried forward": "docs/package/knowledge-gates.md covers triggers, force levels, gate effects, command integration, task posture fields, closeout/report evidence, fallback behavior, and compact audit rules. Task posture packets now include knowledge_gates, gate_summary, blocked_actions, blocked_claims, and next_allowed_action when gates are selected.",
+    "reopen trigger": "Reopen if review finds a #1395-required trigger source, force level, command integration point, posture field, closeout evidence state, fallback behavior, or compactness rule missing from the design."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Planning close-item/archive can preserve scaffolded compatibility fields even after canonical closeout is complete, requiring manual cleanup before review."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Opened #1399 for Planning archive projection cleanup."
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub issue"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-10: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
