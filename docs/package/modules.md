@@ -49,6 +49,11 @@ This model is deliberately open-ended. It should keep ordinary startup small
 while allowing any number of modules to participate through declared roots,
 tools, state, reports, gates, proof routes, and lifecycle behavior.
 
+The ordinary agent loop and current visible-surface classification are reviewed
+in [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md).
+That page treats Planning, Memory, and Verification as first-party participants
+in this open model, not as the architecture's fixed outer boundary.
+
 ## Task Posture And Dynamic Instructions
 
 The same participation model covers task posture. Agentic Workspace acts like a

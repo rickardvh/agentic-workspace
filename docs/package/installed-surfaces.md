@@ -64,6 +64,10 @@ The installed and source-checkout surfaces fall into different classes. Keeping 
 
 Stable conclusions in this table come from the dated visible-surface and shipped-payload reviews, now promoted here so readers do not need to mine review history for the current answer.
 
+For the reviewed ordinary-loop classification of these surfaces, including
+skills, diagnostics, generated references, module CLIs, and closeout posture,
+see [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md).
+
 ## Planning Surfaces
 
 Planning adds active execution state:

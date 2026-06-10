@@ -4,6 +4,10 @@ This page is a human navigation map for the shipped `agentic-workspace` command 
 
 For machine-readable agent use, prefer the default answer plus exact `--select` drill-down when available. Use `--verbose` for broad diagnostics. See [CLI output selection](output-profiles.md).
 
+This page maps commands; it is not the ordinary agent workflow. For the reviewed
+loop and visibility classification, see [Ordinary continuity loop and surface
+classification](ordinary-continuity-loop.md).
+
 ## Ordinary Host-Repo Commands
 
 | Command | Use when |
