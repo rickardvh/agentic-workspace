@@ -91,7 +91,10 @@ def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tm
     gates = {gate["gate_id"]: gate for gate in packet["knowledge_gates"]}
     assert gates["source-authority-model"]["force"] == "required_before_design"
     assert gates["source-authority-model"]["resolution_state"] == "open"
+    assert "blocked_claims" not in packet
+    assert all("blocked_claims" not in gate for gate in packet["knowledge_gates"])
     assert "change gate vocabulary without checking source authority" in packet["blocked_actions"]
+    assert "full_intent_complete" in packet["closeout_boundaries"]
     assert packet["gate_summary"]["blocking_count"] >= 1
 
 

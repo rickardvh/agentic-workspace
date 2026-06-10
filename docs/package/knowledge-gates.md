@@ -31,7 +31,7 @@ knowledge gate:
 | `required_actions` | consult, dismiss, refresh, prove, capture, promote, demote, or escalate |
 | `record_resolution_to` | owner surface for evidence or dismissal |
 | `resolution_state` | `open`, `consulted`, `dismissed`, `stale`, `missing`, `unavailable`, `captured`, or `superseded` |
-| `block_claims` | completion or issue-closure claims blocked by the gate |
+| `closeout_boundaries` | completion, merge, or issue-closure boundaries imposed by the gate |
 | `fallback` | safe behavior when a CLI, source, or external access is unavailable |
 
 The gate record should be omitted when no route can change the current work.
@@ -104,8 +104,8 @@ the generated reference owner is checked" over generic "do not proceed" text.
 ## Command Integration
 
 `start` should emit only gates that affect the first safe action. It may include
-the gate id, force, source selector, reason, next allowed action, and blocked
-claim classes. It should not emit broad route lists.
+the gate id, force, source selector, reason, next allowed action, blocked
+actions, and closeout boundaries. It should not emit broad route lists.
 
 `implement --changed` should combine task text with changed paths. It should
 raise gates for active Planning ownership, generated-reference freshness,
@@ -136,13 +136,15 @@ A task posture packet may include:
 | `knowledge_gates` | compact list of gates relevant to the current task |
 | `gate_summary` | count by force and resolution state |
 | `blocked_actions` | concrete actions currently forbidden |
-| `blocked_claims` | completion or issue-closure claims currently forbidden |
 | `next_allowed_action` | smallest safe action across all active gates |
 | `resolution_routes` | owner surfaces or commands for consultation, dismissal, refresh, or capture |
 | `gate_conflicts` | source conflicts that need owner or human resolution |
 
 The packet should include gate detail only when the gate changes action. Other
-routes remain available through selectors.
+routes remain available through selectors. Knowledge gates do not add a separate
+claim-blocking vocabulary to the packet; completion, merge, and issue-closure
+limits are expressed through the existing `closeout_boundaries` field, while
+`blocked_actions` is reserved for concrete actions that are currently forbidden.
 
 ## Closeout And Report Evidence
 

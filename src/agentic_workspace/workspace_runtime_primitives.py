@@ -17272,7 +17272,6 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
         "knowledge_gates": task_posture_packet.get("knowledge_gates", []),
         "gate_summary": task_posture_packet.get("gate_summary", {}),
         "blocked_actions": task_posture_packet.get("blocked_actions", []),
-        "blocked_claims": task_posture_packet.get("blocked_claims", []),
         "next_allowed_action": task_posture_packet.get("next_allowed_action", ""),
         "output_shape_requirements": task_posture_packet.get("output_shape_requirements", []),
         "review_rubrics": task_posture_packet.get("review_rubrics", []),
@@ -17282,7 +17281,7 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
         "posture_adherence": task_posture_packet.get("posture_adherence", {}),
     }
     if not compact["knowledge_gates"]:
-        for key in ("knowledge_gates", "gate_summary", "blocked_actions", "blocked_claims", "next_allowed_action"):
+        for key in ("knowledge_gates", "gate_summary", "blocked_actions", "next_allowed_action"):
             compact.pop(key, None)
     return compact
 
@@ -17607,6 +17606,14 @@ def _compact_route_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     return compact
 
 
+def _tiny_route_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    compact = {key: candidate.get(key) for key in ("lane_id", "title", "owner_surface", "candidate_route") if key in candidate}
+    route = _candidate_route_label(candidate)
+    if route not in (None, ""):
+        compact["candidate_route"] = route
+    return compact
+
+
 def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_detail: bool = True) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
@@ -17706,9 +17713,9 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         }
         candidates = [item for item in decomposition_delegation.get("candidates", []) if isinstance(item, dict)]
         if candidates:
-            compact["decomposition_delegation"]["candidates"] = [_compact_route_candidate(candidate) for candidate in candidates[:2]]
+            compact["decomposition_delegation"]["candidates"] = [_tiny_route_candidate(candidate) for candidate in candidates[:1]]
     if delegation_candidates and (decision == "suggest-delegation" or include_decomposition):
-        compact["delegation_candidates"] = [_compact_route_candidate(candidate) for candidate in delegation_candidates[:2]]
+        compact["delegation_candidates"] = [_tiny_route_candidate(candidate) for candidate in delegation_candidates[:1]]
     auto_delegation_audit = value.get("auto_delegation_audit")
     if isinstance(auto_delegation_audit, dict) and auto_delegation_audit.get("status") == "skipped":
         compact["auto_delegation_audit"] = {
@@ -26448,8 +26455,8 @@ def _task_posture_packet_payload(
     blocked_actions = _dedupe(
         [str(action) for gate in knowledge_gates for action in _list_payload(gate.get("forbidden_actions")) if str(action).strip()]
     )
-    blocked_claims = _dedupe(
-        [str(claim) for gate in knowledge_gates for claim in _list_payload(gate.get("blocked_claims")) if str(claim).strip()]
+    gate_closeout_boundaries = _dedupe(
+        [str(boundary) for gate in knowledge_gates for boundary in _list_payload(gate.get("closeout_boundaries")) if str(boundary).strip()]
     )
     gate_next_actions = [
         str(gate.get("next_allowed_action"))
@@ -26477,13 +26484,12 @@ def _task_posture_packet_payload(
         "allowed_actions": _dedupe(allowed_actions),
         "forbidden_actions": _dedupe(forbidden_actions),
         "proof_boundaries": _dedupe(proof_boundaries),
-        "closeout_boundaries": _dedupe(closeout_boundaries),
+        "closeout_boundaries": _dedupe([*closeout_boundaries, *gate_closeout_boundaries]),
         "read_budget": read_budget,
         "authority_boundaries": authority_boundaries,
         "knowledge_gates": knowledge_gates,
         "gate_summary": gate_summary,
         "blocked_actions": blocked_actions,
-        "blocked_claims": blocked_claims,
         "next_allowed_action": gate_next_actions[0]
         if gate_next_actions
         else (allowed_actions[0] if allowed_actions else "continue-direct"),
@@ -26544,7 +26550,7 @@ def _knowledge_gates_payload(
         required_actions: Sequence[str] = (),
         record_resolution_to: str,
         resolution_state: str = "open",
-        blocked_claims: Sequence[str] = (),
+        closeout_boundaries: Sequence[str] = (),
         fallback: str,
     ) -> None:
         gates.append(
@@ -26561,7 +26567,7 @@ def _knowledge_gates_payload(
                 "required_actions": list(required_actions),
                 "record_resolution_to": record_resolution_to,
                 "resolution_state": resolution_state,
-                "blocked_claims": list(blocked_claims),
+                "closeout_boundaries": list(closeout_boundaries),
                 "fallback": fallback,
             }
         )
@@ -26578,7 +26584,7 @@ def _knowledge_gates_payload(
             forbidden_actions=["continue implementation without active planning ownership"],
             required_actions=[required_next],
             record_resolution_to=".agentic-workspace/planning/state.toml",
-            blocked_claims=["full_intent_complete", "issue_closure"],
+            closeout_boundaries=["full_intent_complete", "issue_closure"],
             fallback="Use preflight or summary to repair or promote Planning ownership before editing.",
         )
 
@@ -26597,7 +26603,7 @@ def _knowledge_gates_payload(
             forbidden_actions=["claim completion before obligation is resolved"],
             required_actions=["consult the obligation owner", "record satisfaction or dismissal in closeout"],
             record_resolution_to=".agentic-workspace/config.toml",
-            blocked_claims=["full_intent_complete"] if gate_force == "required_before_claim" else [],
+            closeout_boundaries=["full_intent_complete"] if gate_force == "required_before_claim" else [],
             fallback="If the config owner is unavailable, route the unresolved obligation through Planning closeout.",
         )
 
@@ -26613,7 +26619,7 @@ def _knowledge_gates_payload(
             forbidden_actions=["claim full completion before required proof passes"],
             required_actions=["run proof commands", "record proof result in closeout"],
             record_resolution_to="proof_report or closeout evidence",
-            blocked_claims=["full_intent_complete", "issue_closure"],
+            closeout_boundaries=["full_intent_complete", "issue_closure"],
             fallback="If proof cannot run, record unavailable proof and keep completion claims blocked or lowered.",
         )
 
@@ -26629,7 +26635,7 @@ def _knowledge_gates_payload(
             forbidden_actions=["claim ordinary closeout without explaining lower-trust signals"],
             required_actions=["consult closeout_trust", "record consulted, dismissed, stale, missing, or unavailable evidence"],
             record_resolution_to="agentic-workspace report --target ./repo --section closeout_trust --format json",
-            blocked_claims=["full_intent_complete"],
+            closeout_boundaries=["full_intent_complete"],
             fallback="Use report --section closeout_trust when available; otherwise record the missing trust inspection in Planning closeout.",
         )
 
@@ -26649,7 +26655,7 @@ def _knowledge_gates_payload(
             forbidden_actions=["change gate vocabulary without checking source authority"],
             required_actions=["consult source authority docs", "record whether the route was consulted or dismissed"],
             record_resolution_to="Planning proof_report or closeout evidence",
-            blocked_claims=[],
+            closeout_boundaries=[],
             fallback="If the docs are unavailable, treat the gate vocabulary as inferred and avoid hard completion claims.",
         )
 

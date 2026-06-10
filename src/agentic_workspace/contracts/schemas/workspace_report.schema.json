@@ -442,7 +442,6 @@
         "knowledge_gates",
         "gate_summary",
         "blocked_actions",
-        "blocked_claims",
         "next_allowed_action",
         "output_shape_requirements",
         "review_rubrics",
@@ -537,13 +536,6 @@
             "type": "string"
           },
           "description": "Concrete actions blocked by selected knowledge gates."
-        },
-        "blocked_claims": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Completion, merge, or issue-closure claims blocked by selected knowledge gates."
         },
         "next_allowed_action": {
           "type": "string",

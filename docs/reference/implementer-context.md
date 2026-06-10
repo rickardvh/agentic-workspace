@@ -28,7 +28,6 @@ Cheap implementer context for a bounded changed-path scope.
 | `task_posture_packet.knowledge_gates` | array of object | yes |  | Compact pre-work knowledge gates selected when routed knowledge can change task interpretation, work shape, proof, allowed action, or completion claims. |  |  |
 | `task_posture_packet.gate_summary` | object | yes |  | Count and force summary for selected knowledge gates. |  |  |
 | `task_posture_packet.blocked_actions` | array of string | yes |  | Concrete actions blocked by selected knowledge gates. |  |  |
-| `task_posture_packet.blocked_claims` | array of string | yes |  | Completion, merge, or issue-closure claims blocked by selected knowledge gates. |  |  |
 | `task_posture_packet.next_allowed_action` | string | yes |  | Smallest safe next action after applying knowledge gates. |  |  |
 | `task_posture_packet.output_shape_requirements` | array of string | yes |  | Output-shape constraints selected for this task. |  |  |
 | `task_posture_packet.review_rubrics` | array of string | yes |  | Review rubrics selected for this task. |  |  |

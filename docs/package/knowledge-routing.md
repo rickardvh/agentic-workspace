@@ -55,7 +55,7 @@ authority vocabulary.
 | `required_when` | condition that makes the source required |
 | `missing_required_source` | source or class that was expected but not available |
 | `required_actions` | freshness check, source read, promotion, dismissal, proof, or escalation needed |
-| `block_claims` | whether the gate blocks completion or issue-closure claims |
+| `closeout_boundaries` | completion, merge, or issue-closure boundaries imposed by the gate |
 | `escalation` | human, repo owner, module owner, issue, or follow-up route when the gate cannot be satisfied locally |
 
 ## Source Kinds
