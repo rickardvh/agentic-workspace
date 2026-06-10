@@ -229,5 +229,7 @@ fallback or generated adapter payload.
    capture.
 
 This sequence intentionally leaves #1389 open. #1390 supplies the target model
-and classification; later lanes must reduce actual visible surface area,
-duplication, or startup burden against this model.
+and classification. #1391 supplies the reviewed per-step inventory in
+[Operating loop substep inventory](operating-loop-substeps.md). Later lanes must
+reduce actual visible surface area, duplication, or startup burden against
+these models.

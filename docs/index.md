@@ -12,6 +12,7 @@ Use this map when updating docs so each page stays complete at its level without
 | Which preset/profile should a repo start with? | [Which package should I install?](which-package.md) | repeating the memory/planning/full threshold would duplicate install guidance |
 | What does the root CLI do? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) | a page only needs to name a command or compact router |
 | What is the ordinary agent operating loop and how are visible surfaces classified? | [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md) | later simplification work needs the target workflow, surface classes, overlap findings, or follow-on sequence |
+| Which substeps inside the ordinary loop should be simplified next? | [Operating loop substep inventory](package/operating-loop-substeps.md) | later #1389 slices need per-step decisions, module-slot seams, knowledge-gate fields, or concrete follow-on issues |
 | Which CLI output profile should an agent use? | [CLI output profiles](package/output-profiles.md) | next-decision policy belongs in one command-output contract |
 | What files are installed and who owns them? | [Installed surfaces](package/installed-surfaces.md) | explaining startup adapters, managed fences, local-only state, or source-checkout boundaries |
 | How should agents route governing knowledge and source authority? | [Knowledge routing and source authority](package/knowledge-routing.md) | a page only needs to name a source kind, authority class, route trigger, freshness rule, or capture obligation |
@@ -27,6 +28,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Lifecycle and context commands](package/lifecycle.md): how the root command initializes, inspects, routes, verifies, upgrades, and removes installed surfaces.
 - [Command map](package/commands.md): quick human map of the shipped CLI surface.
 - [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md): reviewed target model for ordinary agent operation and follow-on simplification lanes.
+- [Operating loop substep inventory](package/operating-loop-substeps.md): reviewed per-step #1391 inventory for simplifying startup, active work, durable knowledge, proof, and closeout.
 - [Installed surfaces](package/installed-surfaces.md): what files the package writes into a host repository and who owns them.
 - [Modules](package/modules.md): how the root package composes Planning and Memory.
 - [Knowledge routing and source authority](package/knowledge-routing.md): how startup, posture, closeout, Memory, Planning, issues, docs, and external sources route governing knowledge without broad mirroring.
