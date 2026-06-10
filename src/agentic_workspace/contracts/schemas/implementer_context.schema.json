@@ -52,6 +52,10 @@
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
       "additionalProperties": true
     },
+    "task_posture_packet": {
+      "$ref": "#/$defs/task_posture_packet",
+      "description": "Optional dynamic instruction packet emitted when changed paths, task facts, config posture, workflow obligations, or module contributions affect implementation routing."
+    },
     "planning_revision": {
       "type": "object",
       "description": "Optimistic Planning state revision observed by this implementer read surface.",
@@ -635,6 +639,110 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "task_posture_packet": {
+      "type": "object",
+      "required": [
+        "kind",
+        "operating_posture",
+        "workflow_obligations",
+        "skill_routes",
+        "allowed_actions",
+        "forbidden_actions",
+        "proof_boundaries",
+        "closeout_boundaries",
+        "read_budget",
+        "authority_boundaries",
+        "output_shape_requirements",
+        "review_rubrics",
+        "module_contributions",
+        "provenance",
+        "dynamic_instruction_projection",
+        "posture_adherence"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-posture-packet/v1",
+          "description": "Discriminator for dynamic task posture."
+        },
+        "operating_posture": {
+          "type": "object",
+          "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
+          "additionalProperties": true
+        },
+        "workflow_obligations": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Matched workflow obligations with stage, force, scope, and provenance."
+        },
+        "skill_routes": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Task-selected skills, prompts, or routing fragments."
+        },
+        "allowed_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions allowed under the resolved posture."
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions forbidden under the resolved posture."
+        },
+        "proof_boundaries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Proof boundaries selected for the current task."
+        },
+        "closeout_boundaries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closeout and claim boundaries selected for the current task."
+        },
+        "read_budget": {
+          "type": "object",
+          "description": "Read-budget profile and selector/deep-read limits for this task.",
+          "additionalProperties": true
+        },
+        "authority_boundaries": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Authority boundaries with source and owner provenance."
+        },
+        "output_shape_requirements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Output-shape constraints selected for this task."
+        },
+        "review_rubrics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Review rubrics selected for this task."
+        },
+        "module_contributions": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Matched module posture contributions with trigger and projection provenance."
+        },
+        "provenance": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Config, obligation, module, or command sources used to assemble this packet."
+        },
+        "dynamic_instruction_projection": {
+          "type": "object",
+          "description": "Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion.",
+          "additionalProperties": true
+        },
+        "posture_adherence": {
+          "type": "object",
+          "description": "Closeout/report visibility for whether the selected posture was followed or requires explanation.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Task-specific posture and dynamic instruction packet selected from config, task facts, workflow obligations, and module declarations."
+    },
     "proof_selection": {
       "type": "object",
       "required": [

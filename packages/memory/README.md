@@ -35,6 +35,13 @@ Adoption shape:
 - Works alongside Agentic Planning when the repo also needs active execution steering.
 - Selective adoption remains valid: a repo can install the `memory` preset without Planning, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
 
+Participation shape:
+
+- Contributes durable-knowledge resources, routing prompts, capture and hygiene tools, schemas, and owned roots to the open Workspace operating loop.
+- Participates only when compact routing, changed surfaces, or closeout residue make durable anti-rediscovery knowledge useful.
+- Contributes task posture only when durable context, read-first notes, capture hygiene, output-shape guidance, or closeout residue routing is relevant to the current task.
+- Acts as a first-party example of module participation; it should not force every module into Memory-shaped notes or make Memory a general documentation or task-state layer.
+
 Collaboration shape:
 
 - Treat `.agentic-workspace/memory/repo/current/` as optional routing calibration and legacy migration residue, not as the canonical home for durable facts or active state.

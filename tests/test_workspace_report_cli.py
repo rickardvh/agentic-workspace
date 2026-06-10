@@ -3558,6 +3558,49 @@ def test_report_completion_gate_allows_satisfied_intent_full_closeout(tmp_path: 
     assert options["claim-work-complete"]["allowed"] is True
 
 
+def test_report_completion_gate_blocks_full_closeout_for_planned_task_posture_slice(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_completion_gate_fixture(
+        target,
+        plan_id="posture-followthrough-gate",
+        original_intent="Implement the #1392 runtime posture behavior in full.",
+        delivered_work="Recorded model and schema work.",
+        slice_completes="yes",
+        required_follow_on="no",
+        continuation_owner="none",
+        closure_status="closed",
+        closure_decision="archive-and-close",
+        proof_status="sufficient_for_claim",
+        claim_boundary="work",
+        references=[{"target": "#1392", "role": "satisfied issue"}],
+    )
+    plan_path = target / ".agentic-workspace" / "planning" / "execplans" / "posture-followthrough-gate.plan.json"
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    plan["slice_sequence"] = [
+        {
+            "id": "slice-1392-runtime-task-posture-emission",
+            "title": "Emit compact task posture packets at runtime",
+            "status": "planned",
+        }
+    ]
+    _write_json(plan_path, plan)
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    gate = closeout["completion_gate"]
+    assert gate["status"] == "continue-required"
+    assert gate["active_intent_satisfied"] is False
+    assert "full_intent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "completion_gate" in options["claim-work-complete"]["blocking_fields"]
+
+
 def test_report_completion_gate_blocks_full_closeout_when_proof_missing(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

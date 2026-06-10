@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "package_footprint",
+    "participation_model",
     "component_model",
     "workspace_components",
     "module_profiles",
@@ -222,6 +223,331 @@
       },
       "additionalProperties": false,
       "description": "Declarative component model used to describe module-owned resources without requiring an MCP runtime."
+    },
+    "participation_model": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "product_model",
+        "recommended_loop",
+        "module_can_contribute",
+        "task_posture_model",
+        "workflow_obligation_model",
+        "conflict_model",
+        "projection_boundaries",
+        "dynamic_instruction_projection",
+        "posture_visibility_model",
+        "first_party_examples"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "agentic-workspace/module-participation/v1",
+          "description": "Contract version for the open module participation model."
+        },
+        "product_model": {
+          "type": "string",
+          "description": "Top-level product model for the open operating substrate."
+        },
+        "recommended_loop": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "purpose",
+              "default_owner",
+              "module_extension_rule"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable loop-step identifier."
+              },
+              "purpose": {
+                "type": "string",
+                "description": "Why this loop step exists."
+              },
+              "default_owner": {
+                "type": "string",
+                "description": "Default owner slot or module for ordinary AW operation."
+              },
+              "module_extension_rule": {
+                "type": "string",
+                "description": "How modules may participate in this loop step without increasing ordinary startup burden."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Recommended ordinary operating loop with extension rules."
+        },
+        "module_can_contribute": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Capability classes a module may contribute to the operating substrate."
+        },
+        "task_posture_model": {
+          "type": "object",
+          "required": [
+            "packet_name",
+            "purpose",
+            "emitted_by",
+            "inputs",
+            "fields",
+            "composition_rule",
+            "module_rule",
+            "must_not"
+          ],
+          "properties": {
+            "packet_name": {
+              "type": "string",
+              "description": "Stable name for the task-specific posture packet."
+            },
+            "purpose": {
+              "type": "string",
+              "description": "Why the posture packet exists."
+            },
+            "emitted_by": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Commands or projections that may emit task posture."
+            },
+            "inputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Inputs that compose into the task posture packet."
+            },
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Fields a posture packet may expose when relevant."
+            },
+            "composition_rule": {
+              "type": "string",
+              "description": "How config posture, workflow obligations, task facts, and module declarations compose."
+            },
+            "module_rule": {
+              "type": "string",
+              "description": "How modules declare posture fragments and when startup may include them."
+            },
+            "must_not": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Posture projection boundaries that must be preserved."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Task-specific posture packet model for dynamic instruction routing."
+        },
+        "workflow_obligation_model": {
+          "type": "object",
+          "required": [
+            "owner_surface",
+            "role",
+            "stages",
+            "composition_rule"
+          ],
+          "properties": {
+            "owner_surface": {
+              "type": "string",
+              "description": "Config or contract surface that owns workflow obligation declarations."
+            },
+            "role": {
+              "type": "string",
+              "description": "How workflow obligations compose with the recommended loop."
+            },
+            "stages": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Workflow stages where obligations can apply."
+            },
+            "composition_rule": {
+              "type": "string",
+              "description": "How matched and unmatched obligations affect the operating loop."
+            }
+          },
+          "additionalProperties": false,
+          "description": "How repo-configured workflow obligations compose with the recommended operating loop."
+        },
+        "conflict_model": {
+          "type": "object",
+          "required": [
+            "rule",
+            "conflict_classes",
+            "resolution_owner"
+          ],
+          "properties": {
+            "rule": {
+              "type": "string",
+              "description": "How conflicts are surfaced."
+            },
+            "conflict_classes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Conflict classes the participation model expects reports or lifecycle checks to surface."
+            },
+            "resolution_owner": {
+              "type": "string",
+              "description": "Who decides policy or route conflicts after AW surfaces evidence."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Conflict classes and resolution ownership for open module participation."
+        },
+        "projection_boundaries": {
+          "type": "object",
+          "required": [
+            "source_of_truth",
+            "generated_or_adapter_targets",
+            "must_not"
+          ],
+          "properties": {
+            "source_of_truth": {
+              "type": "string",
+              "description": "Canonical source for participation declarations."
+            },
+            "generated_or_adapter_targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Derived targets that may project participation metadata."
+            },
+            "must_not": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Boundaries generated or adapter projections must preserve."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Boundaries for generated docs, plugins, MCP-style adapters, and catalogue projections."
+        },
+        "dynamic_instruction_projection": {
+          "type": "object",
+          "required": [
+            "static_adapter_role",
+            "projection_rule",
+            "selection_inputs",
+            "projection_outputs",
+            "adherence_rule"
+          ],
+          "properties": {
+            "static_adapter_role": {
+              "type": "string",
+              "description": "Role of the static AGENTS.md adapter."
+            },
+            "projection_rule": {
+              "type": "string",
+              "description": "How task-specific instruction projections are selected."
+            },
+            "selection_inputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Inputs used to select dynamic instruction fragments."
+            },
+            "projection_outputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Outputs that the dynamic instruction projection may expose."
+            },
+            "adherence_rule": {
+              "type": "string",
+              "description": "How selected posture provenance remains visible for conflicts and closeout."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Dynamic instruction projection model that keeps the static adapter small."
+        },
+        "posture_visibility_model": {
+          "type": "object",
+          "required": [
+            "startup_visibility",
+            "report_visibility",
+            "closeout_visibility",
+            "provenance_fields"
+          ],
+          "properties": {
+            "startup_visibility": {
+              "type": "string",
+              "description": "When startup should show posture detail."
+            },
+            "report_visibility": {
+              "type": "string",
+              "description": "How reports expose posture and module contribution state."
+            },
+            "closeout_visibility": {
+              "type": "string",
+              "description": "How closeout reconciles posture adherence."
+            },
+            "provenance_fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Fields used to retain posture and module contribution provenance."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Visibility model for posture adherence in startup, reports, and closeout."
+        },
+        "first_party_examples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "module",
+              "example_role"
+            ],
+            "properties": {
+              "module": {
+                "type": "string",
+                "description": "First-party module name."
+              },
+              "example_role": {
+                "type": "string",
+                "description": "How the module demonstrates the generic participation model."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "First-party modules mapped as examples, not privileged special cases."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Open participation contract for modules, workflow obligations, generated projections, and ordinary-loop composition."
     },
     "module_profiles": {
       "type": "array",
@@ -465,6 +791,7 @@
           "capabilities",
           "dependencies",
           "conflicts",
+          "participation",
           "components",
           "result_contract"
         ],
@@ -581,6 +908,85 @@
               "description": "One entry in the conflicts list."
             },
             "description": "Ordered conflicts entries used by this contract."
+          },
+          "participation": {
+            "type": "object",
+            "required": [
+              "loop_steps",
+              "declares",
+              "posture_triggers",
+              "dynamic_projection",
+              "authority_boundaries",
+              "conflict_provenance"
+            ],
+            "properties": {
+              "loop_steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Operating-loop steps where this module may participate."
+              },
+              "declares": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Participation contribution classes this module declares."
+              },
+              "posture_triggers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Task facts that make this module's posture contribution relevant."
+              },
+              "dynamic_projection": {
+                "type": "object",
+                "required": [
+                  "startup_contribution",
+                  "report_contribution",
+                  "closeout_contribution"
+                ],
+                "properties": {
+                  "startup_contribution": {
+                    "type": "string",
+                    "description": "Instruction or routing contribution available to startup when triggers match."
+                  },
+                  "report_contribution": {
+                    "type": "string",
+                    "description": "Contribution exposed through report or selector surfaces."
+                  },
+                  "closeout_contribution": {
+                    "type": "string",
+                    "description": "Contribution that affects closeout, proof, residue, or completion claims."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "How this module contributes to dynamic instruction projections."
+              },
+              "authority_boundaries": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Authority boundaries this module contribution must preserve."
+              },
+              "conflict_provenance": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Provenance fields or surfaces used when this module contribution conflicts."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Concrete module participation declaration used by startup, reports, and closeout routing."
           },
           "components": {
             "$ref": "#/$defs/module_components",

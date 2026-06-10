@@ -17,6 +17,37 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
 
+## Participation Boundary
+
+Installed surfaces should expose the operating loop, not every implementation
+detail. The ordinary path starts from `AGENTS.md` and compact Workspace commands;
+module roots, reports, skills, and generated references are opened only when
+that loop routes there.
+
+Modules participate by declaring resources, tools, prompts or skills, schemas,
+roots, reports, gates, proof routes, lifecycle hooks, workflow phases, startup
+routing hints, state owners, and safety metadata. Repo-configured
+`workflow_obligations` participate by stage and scope tag. Both are surfaced
+through compact routing and reports so a host repo can add obligations or
+modules without turning the first-contact surface into a manual.
+
+Planning, Memory, and Verification are first-party examples of the same open
+participation model. Their installed roots demonstrate active state, durable
+knowledge, and soft verification ownership, but they are not the limit of what a
+module can contribute.
+
+The same boundary applies to task posture. `AGENTS.md` should stay a compact
+adapter that points agents to the configured workspace entrypoint. Startup and
+changed-path commands emit the matching posture packet for the current task:
+workflow obligations, skill routes, allowed and forbidden actions, proof and
+closeout boundaries, read budget, authority boundaries, output-shape
+requirements, review rubrics, and module contributions appear only when task
+facts, changed paths, active state, or repo config activate them.
+
+Reports and closeout preserve provenance for selected posture fragments so
+agents can see whether a rule came from repo config, a workflow obligation, or a
+module declaration without turning first contact into a full inventory.
+
 ## Surface Classes
 
 The installed and source-checkout surfaces fall into different classes. Keeping those classes distinct is what prevents the docs set from becoming another startup burden.

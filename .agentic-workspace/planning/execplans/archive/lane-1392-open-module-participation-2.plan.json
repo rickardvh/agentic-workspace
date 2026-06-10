@@ -1,0 +1,318 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lane 1392 Open Module Participation",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "delegation",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation",
+      "required_tools"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1392 in full in PR #1393: runtime task-posture emission, shared task_posture_packet schema synchronization, posture closeout/report visibility, dynamic AGENTS.md projection runtime semantics, and a closeout gate that prevents full completion while the full intent remains unsatisfied.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "No direct #1392 runtime posture follow-up remains; the lane and execplan are archived after proof passed.",
+    "proof_expectations": [
+      "Focused tests cover start, summary, implement, and closeout task-posture behavior.",
+      "Schema/reference tooling confirms the task_posture_packet schema copies and generated references are current.",
+      "AW summary/report closeout confirms no direct #1392 runtime posture follow-up remains planned."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/lanes/lane-1392-open-module-participation.lane.json"
+    ],
+    "completion_criteria": [
+      "start emits compact task_posture_packet on the default first-contact route when posture changes routing.",
+      "summary --select task_posture_packet exposes the same dynamic posture packet.",
+      "implement --changed emits task_posture_packet for changed-path implementation context.",
+      "report carries task_posture_packet and closeout/report posture adherence visibility.",
+      "completion_gate prevents full-intent completion when task-posture follow-through remains planned.",
+      "The lane no longer records the four #1392 runtime posture slices as planned residual work."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "PR #1393 makes the #1392 model slice claimable, but runtime task-posture emission, packet schema synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics must stay discoverable through normal Planning routes until deliberately promoted, dismissed, or superseded."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1392 in full in PR #1393: runtime task-posture emission, shared task_posture_packet schema synchronization, posture closeout/report visibility, dynamic AGENTS.md projection runtime semantics, and a closeout gate that prevents full completion while the full intent remains unsatisfied.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "lane-1392-open-module-participation",
+      "status": "completed",
+      "next_step": "None for direct #1392 runtime posture work.",
+      "proof": "Focused tests, full workspace tests, lint, schema/reference checks, contract tooling, structured inventory, and ruff passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_report_cli.py",
+        ".agentic-workspace/planning/lanes/lane-1392-open-module-participation.lane.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "PR #1393 makes the #1392 model slice claimable, but runtime task-posture emission, packet schema synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics must stay discoverable through normal Planning routes until deliberately promoted, dismissed, or superseded.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Task posture is now a runtime packet and closeout input, not only a planning note.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none for direct #1392 runtime posture work",
+    "next likely slice": "none for #1392; downstream #1390/#1391/#1389 may tune presentation, provenance, or simplification separately."
+  },
+  "intent_interpretation": {
+    "literal request": "Lane 1392 Open Module Participation",
+    "inferred intended outcome": "PR #1393 makes the #1392 model slice claimable, but runtime task-posture emission, packet schema synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics must stay discoverable through normal Planning routes until deliberately promoted, dismissed, or superseded.",
+    "chosen concrete what": "Implement the four #1392 runtime posture slices in this PR and close their direct residual lane work.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime primitive, task posture schemas, focused CLI tests, and the #1392 Planning lane/execplan.",
+    "max changed files": "Runtime, schemas, tests, and Planning closeout records only.",
+    "required validation commands": "Focused posture runtime tests, schema/reference checks, and AW summary/report closeout checks.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Run proof and close the active #1392 runtime posture implementation after start/summary/implement/report packet behavior and closeout blocking are verified.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "PR #1393 makes the #1392 model slice claimable, but runtime task-posture emission, packet schema synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics must stay discoverable through normal Planning routes until deliberately promoted, dismissed, or superseded.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "no-safe-route",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "lane-1392-open-module-participation",
+    "status": "completed",
+    "scope": "Runtime task posture emission, schema synchronization, report/closeout visibility, and closeout blocking for #1392.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No direct #1392 runtime posture action remains."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/planning/lanes/lane-1392-open-module-participation.lane.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet tests/test_workspace_start_preflight_cli.py::test_summary_selector_surfaces_task_posture_packet tests/test_workspace_implement_cli.py::test_implement_changed_surfaces_task_posture_packet tests/test_workspace_report_cli.py::test_report_completion_gate_blocks_full_closeout_for_planned_task_posture_slice -q",
+    "uv run pytest tests/test_workspace_summary_cli.py::test_workspace_summary_json_defaults_to_tiny_profile tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_default_returns_selector_first_router tests/test_workspace_start_preflight_cli.py::test_start_command_returns_minimum_safe_startup_context tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics tests/test_workspace_report_cli.py::test_default_command_outputs_stay_router_sized tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet tests/test_workspace_start_preflight_cli.py::test_summary_selector_surfaces_task_posture_packet tests/test_workspace_implement_cli.py::test_implement_changed_surfaces_task_posture_packet tests/test_workspace_report_cli.py::test_report_completion_gate_blocks_full_closeout_for_planned_task_posture_slice -q",
+    "uv run pytest tests/test_structured_file_inventory.py::test_current_tracked_structured_files_are_classified -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "make schema-reference-docs",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "start emits compact task_posture_packet on the default first-contact route when posture changes routing.",
+    "summary --select task_posture_packet exposes the same dynamic posture packet.",
+    "implement --changed emits task_posture_packet for changed-path implementation context.",
+    "report carries task_posture_packet and closeout/report posture adherence visibility.",
+    "completion_gate prevents full-intent completion when task-posture follow-through remains planned.",
+    "The lane no longer records the four #1392 runtime posture slices as planned residual work."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "codex",
+    "handoff source": "agentic-planning promote-to-plan plus user request to finish #1392 in full",
+    "what happened": "Implemented runtime task_posture_packet emission for start, implement, summary, and report; synchronized packet schema fields; surfaced posture adherence; and added completion-gate blocking for planned posture follow-through.",
+    "scope touched": "runtime primitive, startup/implement/report schemas, focused CLI tests, and #1392 lane closeout state",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; startup_context.schema.json; implementer_context.schema.json; workspace_report.schema.json; focused tests; #1392 lane/execplan records",
+    "validations run": "Focused posture tests passed; router-size regression subset passed; structured inventory test passed; make test-workspace passed; make lint-workspace passed; schema-reference-docs passed; contract tooling passed; structured file inventory passed; ruff passed.",
+    "result for continuation": "no direct #1392 runtime posture follow-up remains",
+    "next step": "None for direct #1392 runtime posture work."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "full proof passed",
+    "intent served": "yes",
+    "config compliance": "AW start, summary, implement, and closeout routing followed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no direct #1392 runtime posture follow-up remains planned"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Tightly coupled runtime/schema/test edits were safer to complete locally than delegate after the lane was already narrowed.",
+    "expected savings": "low",
+    "actual friction": "low",
+    "proof result": "full proof passed",
+    "quality concern": "none known",
+    "decomposition adjustment": "The routed follow-up slices were implemented directly and closed."
+  },
+  "proof_report": {
+    "validation proof": "Focused posture tests passed; router-size regression subset passed; structured inventory test passed; make test-workspace passed; make lint-workspace passed; make schema-reference-docs passed; contract tooling passed; structured file inventory passed; ruff passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Runtime task_posture_packet emission, schema synchronization, closeout/report visibility, dynamic projection fields, and closeout blocking are implemented and covered by focused and broad validation."
+  },
+  "intent_satisfaction": {
+    "original intent": "PR #1393 makes the #1392 model slice claimable, but runtime task-posture emission, packet schema synchronization, posture closeout/report visibility, and dynamic AGENTS.md projection semantics must stay discoverable through normal Planning routes until deliberately promoted, dismissed, or superseded.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Runtime packet emission, schema synchronization, posture closeout/report visibility, dynamic projection fields, and closeout blocking are implemented and covered by focused tests.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Runtime #1392 task posture behavior implemented in this PR.",
+    "validation confirmed": "full proof passed",
+    "follow-on routed to": "none for direct #1392 runtime posture work",
+    "post-work posterity capture": "Runtime behavior lives in workspace_runtime_primitives.py, schema contracts, focused tests, and archived #1392 Planning lane/execplan records.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#1390/#1391 downstream simplification planning; no direct #1392 runtime posture follow-up remains."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The PR now implements the four runtime posture slices rather than leaving them only as routed follow-up work.",
+    "evidence carried forward": "Focused posture tests, full workspace tests, schema/reference checks, contract tooling, structured inventory, and ruff passed.",
+    "reopen trigger": "PR review identifies missing #1392 runtime posture behavior."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-09: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

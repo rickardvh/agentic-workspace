@@ -115,6 +115,37 @@ def _start_workflow_sufficiency(payload: dict[str, object]) -> dict[str, object]
     raise KeyError("workflow_sufficiency")
 
 
+def test_start_default_surfaces_compact_task_posture_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement #1392 in full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["task_posture_packet"]
+    assert packet["kind"] == "agentic-workspace/task-posture-packet/v1"
+    assert packet["dynamic_instruction_projection"]["static_adapter_role"].endswith(
+        "points agents to this routed packet; it should not inline all task rules."
+    )
+    assert packet["posture_adherence"]["status"] == "requires-closeout-review"
+    assert "claim full completion before proof and acceptance reconciliation" in packet["forbidden_actions"]
+
+
+def test_summary_selector_surfaces_task_posture_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "task_posture_packet", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["values"]["task_posture_packet"]
+    assert packet["kind"] == "agentic-workspace/task-posture-packet/v1"
+    assert packet["read_budget"]["raw_context_rule"].startswith("Use summary/start/implement/report selectors")
+    assert packet["dynamic_instruction_projection"]["provenance_preserved"] is True
+
+
 def test_preflight_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
