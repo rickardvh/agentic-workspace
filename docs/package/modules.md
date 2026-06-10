@@ -85,6 +85,13 @@ obligations, selected module contributions, posture conflicts, and provenance
 when posture changed the allowed next action, proof burden, output shape, review
 rubric, authority boundary, or closeout permission.
 
+Knowledge routing is one cross-cutting posture input. It selects governing
+source references by task text, changed paths, active state, module
+declarations, and workflow obligations without turning startup into a broad
+reading list. The source kind, authority class, owner, freshness state, and
+closeout capture rule are defined in [Knowledge routing and source
+authority](knowledge-routing.md).
+
 ## Module Profiles
 
 | Profile | Modules | Checked-in footprint |
@@ -95,7 +102,7 @@ rubric, authority boundary, or closeout permission.
 | verification | Verification | soft verification protocols and bounded evidence projections |
 | full | Planning and Memory | both active work state and durable repo knowledge |
 
-The AW package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is already selected by profile. The exact profile and component metadata is defined by the generated [Module registry](../reference/module-registry.md) and [Module capability](../reference/module-capability.md) references.
+The AW package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is already selected by profile. The exact profile and component metadata is defined by the generated [Module registry](../reference/module-registry.md) and [Module capability](../reference/module-capability.md) references. Knowledge routing and source authority are defined in [Knowledge routing and source authority](knowledge-routing.md).
 
 ## Planning
 
