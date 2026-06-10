@@ -21,7 +21,7 @@ The root package ships:
 
 The root package currently depends on the first-party Planning and Memory packages so one command can orchestrate ordinary lifecycle work. Presets control the checked-in repository footprint, not the Python dependency graph.
 
-Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md).
+Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md). Knowledge routing and source authority are defined in [Knowledge routing and source authority](knowledge-routing.md).
 
 ## Runtime Model
 
@@ -68,4 +68,5 @@ The threshold is not team size. A solo maintainer and one agent can still benefi
 - [Command map](commands.md)
 - [Installed surfaces](installed-surfaces.md)
 - [Modules](modules.md)
+- [Knowledge routing and source authority](knowledge-routing.md)
 - [Contracts and references](contracts.md)

@@ -1,0 +1,304 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Github 1394 Workspace Define Knowledge Routing And Source Au",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Define the Agentic Workspace knowledge routing and source authority model requested by #1394 so future #1389 slices have a canonical owner for source kinds, authority, triggers, freshness, mirror policy, posture integration, closeout capture, and Memory promotion boundaries.",
+    "hard_constraints": "Keep this lane to the design and navigation surface for #1394; do not implement runtime routing, connector integrations, broad search, or unrelated module simplification.",
+    "agent_may_decide": "Choose the smallest canonical documentation surface and nearby package-doc links needed to make the model discoverable through normal docs and future lane planning.",
+    "escalate_when": "A correct answer requires runtime enforcement, schema changes, or source integrations beyond #1394's design scope.",
+    "next_action": "Add a package-level source authority design document and wire it into the docs owner map and module posture explanation.",
+    "proof_expectations": [
+      "Run Agentic Workspace implement on the changed docs/planning paths.",
+      "Run the narrow docs/lint validation available for documentation-only package changes."
+    ],
+    "touched_scope": [
+      "docs/package/knowledge-routing.md",
+      "docs/package/modules.md",
+      "docs/package/overview.md",
+      "docs/index.md",
+      "docs/documentation-status.md",
+      ".agentic-workspace/planning/execplans/github-1394-workspace-define-knowledge-routing-and-source-au.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "A canonical package doc defines source kinds, authority classes, route triggers, mirror policy, freshness/staleness, task posture integration, startup/work-shaping, closeout capture, and Memory promotion/demotion.",
+      "The docs owner map and package navigation route future agents to that model without broad repo archaeology.",
+      "The model explicitly informs #1390 and #1391 while avoiding extra ordinary startup burden."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Define the Agentic Workspace knowledge routing and source authority model requested by #1394."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Define #1394's knowledge routing and source authority model and make it discoverable through package docs.",
+      "constraints": "Keep scope bounded to design and navigation; do not implement runtime routing or connector integrations in this lane.",
+      "latitude": "Choose the canonical docs surface and the package links needed for future lane routing.",
+      "escalation": "Escalate if completion requires runtime schemas, gates, or source integrations beyond #1394's design scope."
+    },
+    "execution": {
+      "milestone": "github-1394-workspace-define-knowledge-routing-and-source-au",
+      "status": "completed",
+      "next_step": "Open the PR for review; merge can close #1394 while parent #1389 remains open.",
+      "proof": "AW implement pass, diff inspection, planning summary, and planning doctor passed."
+    },
+    "scope": {
+      "touched": [
+        "docs/package/knowledge-routing.md",
+        "docs/package/modules.md",
+        "docs/package/overview.md",
+        "docs/index.md",
+        "docs/documentation-status.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive/github-1394-workspace-define-knowledge-routing-and-source-au.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Define the Agentic Workspace knowledge routing and source authority model requested by #1394.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "#1390 and #1391 can classify operating-loop and surface-audit work against a shared source-authority model.",
+    "intentionally deferred": "none",
+    "discovered implications": "Runtime route emission and gate enforcement should be separately promoted if later lanes need them.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #1394 design lane",
+    "next likely slice": "promote the next #1389 candidate in planned order"
+  },
+  "intent_interpretation": {
+    "literal request": "Github 1394 Workspace Define Knowledge Routing And Source Au",
+    "inferred intended outcome": "Define the knowledge routing and source authority model requested by #1394.",
+    "chosen concrete what": "Add a canonical package doc plus navigation links.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs/package/knowledge-routing.md, docs/package/modules.md, docs/package/overview.md, docs/index.md, docs/documentation-status.md, and Planning closeout state.",
+    "max changed files": "7",
+    "required validation commands": "AW implement pass, git diff inspection, AW summary, and AW doctor --modules planning.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#1394 is complete in docs; continue by promoting the next #1389 candidate.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define #1394's knowledge routing and source authority model.",
+    "hard constraints": "Keep scope to design/navigation, not runtime enforcement.",
+    "agent may decide locally": "Exact package doc shape, route model wording, and doc navigation links.",
+    "escalate when": "Runtime contract or command behavior becomes necessary to satisfy the lane."
+  },
+  "post_decomposition_delegation": {
+    "status": "completed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1394-workspace-define-knowledge-routing-and-source-au",
+    "status": "completed",
+    "scope": "Define #1394's knowledge routing and source authority model as a canonical package documentation surface, then wire it into package navigation.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Open the PR for review; merge can close #1394 while #1389 remains open as the parent epic."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/package/knowledge-routing.md",
+    "docs/package/modules.md",
+    "docs/package/overview.md",
+    "docs/index.md",
+    "docs/documentation-status.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-1394-workspace-define-knowledge-routing-and-source-au.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A canonical package doc defines source kinds, authority classes, route triggers, mirror policy, freshness/staleness, task posture integration, startup/work-shaping, closeout capture, and Memory promotion/demotion.",
+    "The docs owner map and package navigation route future agents to that model without broad repo archaeology.",
+    "The model explicitly informs #1390 and #1391 while avoiding extra ordinary startup burden."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Added docs/package/knowledge-routing.md as the canonical #1394 design surface and linked it from package overview, module posture docs, docs index, and documentation status.",
+    "scope touched": "package docs and active planning records only",
+    "changed surfaces": "docs/package/knowledge-routing.md; docs/package/modules.md; docs/package/overview.md; docs/index.md; docs/documentation-status.md; planning state and execplan",
+    "validations run": "git diff review; agentic-workspace summary; agentic-workspace doctor --modules planning",
+    "result for continuation": "Knowledge routing/source authority model is available for #1390 and #1391 planning; no runtime route enforcement was implemented in this design lane.",
+    "next step": "Open the PR with Closes #1394 and Refs #1389."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes: docs/planning-only lane; no runtime or connector implementation added",
+    "proof status": "passed",
+    "intent served": "yes: #1394 design topics are covered and routed through package docs",
+    "config compliance": "yes: used the configured Agentic Workspace CLI invocation and changed-path implement flow",
+    "misinterpretation risk": "low: #1394 is a design issue and runtime enforcement remains outside this lane",
+    "follow-on decision": "#1390 and #1391 should consume the model; no separate follow-up issue is required from #1394"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped; delegated explorer did not return before local proof was sufficient",
+    "expected savings": "possible sidecar validation",
+    "actual friction": "no blocking result available during the implementation window",
+    "proof result": "local proof passed",
+    "quality concern": "none from available evidence",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Diff review showed #1394 navigation and module-doc links; explicit inspection showed docs/package/knowledge-routing.md covers source kinds, authority classes, triggers, mirror policy, freshness, posture integration, startup/work-shaping, closeout capture, Memory promotion/demotion, and #1390/#1391 relationship. `uv run python scripts/run_agentic_workspace.py summary --target . --format json` reported no warnings. `uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json` reported healthy with zero warnings."
+  },
+  "intent_satisfaction": {
+    "original intent": "Define the Agentic Workspace knowledge routing and source authority model requested by #1394.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The new package doc defines the required model and is linked from normal package routing surfaces.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Canonical knowledge routing and source authority design for #1394",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#1390 and #1391 via docs/package/knowledge-routing.md",
+    "post-work posterity capture": "docs/package/knowledge-routing.md",
+    "knowledge promoted (Memory/Docs/Config)": "Docs",
+    "resume from": "next #1389 lane after PR creation"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "#1394 requested an accepted design model, and the branch adds that model plus its routing links. Runtime enforcement belongs to later lanes only if separately promoted. This closes only #1394; parent epic #1389 remains open.",
+    "evidence carried forward": "docs/package/knowledge-routing.md routes source kinds, authority, triggers, mirror/reference policy, freshness, posture, startup, closeout, Memory promotion, and #1390/#1391 usage.",
+    "reopen trigger": "Reopen if review finds a #1394-required source kind, authority class, trigger, freshness rule, posture integration, or closeout capture obligation missing from the design."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-10: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
