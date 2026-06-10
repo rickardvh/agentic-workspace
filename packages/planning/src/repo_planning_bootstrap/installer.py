@@ -11753,7 +11753,18 @@ def _closeout_sequence_needs_normalization(value: Any) -> bool:
         text = json.dumps(value, sort_keys=True).lower()
     else:
         return False
-    return any(token in text for token in ("fill in", "pending", "not-run-yet", "not run yet", "todo", "tbd"))
+    return any(
+        token in text
+        for token in (
+            "fill in",
+            "pending",
+            "not-run-yet",
+            "not run yet",
+            "todo",
+            "tbd",
+            "open upstream issue from refreshed external intent evidence",
+        )
+    )
 
 
 def _prepared_canonical_core_closeout(
@@ -11768,6 +11779,8 @@ def _prepared_canonical_core_closeout(
     canonical_core = copy.deepcopy(raw_canonical_core) if isinstance(raw_canonical_core, dict) else {}
     proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
     outcome = outcome_delivered.strip() or "bounded slice closeout completed."
+    if _closeout_sequence_needs_normalization(canonical_core.get("requested_outcome")):
+        canonical_core["requested_outcome"] = outcome
     if _closeout_sequence_needs_normalization(canonical_core.get("proof_expectations")):
         canonical_core["proof_expectations"] = [proof]
     if _closeout_sequence_needs_normalization(canonical_core.get("touched_scope")):
@@ -11792,6 +11805,11 @@ def _prepared_machine_readable_contract_closeout(
     execution = dict(contract.get("execution", {})) if isinstance(contract.get("execution"), dict) else {}
     scope = dict(contract.get("scope", {})) if isinstance(contract.get("scope"), dict) else {}
     proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
+    outcome = str(
+        _canonical_execution_summary(_record_section_dict(record, "execution_summary") or {}).get("outcome delivered", "")
+    ).strip()
+    if _closeout_sequence_needs_normalization(intent.get("outcome")):
+        intent["outcome"] = outcome or "bounded slice closeout completed."
     if _closeout_sequence_needs_normalization(intent.get("proof")):
         intent["proof"] = proof
     execution["status"] = "completed"
@@ -11840,6 +11858,8 @@ def _prepared_intent_interpretation_closeout(*, record: dict[str, Any], outcome_
     existing = _record_section_dict(record, "intent_interpretation") or {}
     prepared = dict(existing)
     outcome = outcome_delivered.strip() or "The bounded slice completed with recorded closeout evidence."
+    if _closeout_sequence_needs_normalization(prepared.get("inferred intended outcome")):
+        prepared["inferred intended outcome"] = outcome
     if _closeout_sequence_needs_normalization(prepared.get("chosen concrete what")):
         prepared["chosen concrete what"] = outcome
     if _closeout_sequence_needs_normalization(prepared.get("review guidance")):
@@ -12279,6 +12299,21 @@ def _prepare_execplan_closeout(
         validation_evidence=validation_evidence,
         outcome_delivered=str(execution_summary.get("outcome delivered", "")).strip(),
     )
+    outcome_delivered = (
+        str(execution_summary.get("outcome delivered", "")).strip() or "The bounded slice completed with recorded closeout evidence."
+    )
+    if _closeout_sequence_needs_normalization(record.get("goal")):
+        patch["goal"] = [outcome_delivered]
+    prepared_delegated_judgment = dict(delegated_judgment)
+    if _closeout_sequence_needs_normalization(prepared_delegated_judgment.get("requested outcome")):
+        prepared_delegated_judgment["requested outcome"] = outcome_delivered
+    if prepared_delegated_judgment:
+        patch["delegated_judgment"] = prepared_delegated_judgment
+    prepared_intent_continuity = dict(intent_continuity)
+    if _closeout_sequence_needs_normalization(prepared_intent_continuity.get("larger intended outcome")):
+        prepared_intent_continuity["larger intended outcome"] = outcome_delivered
+    if prepared_intent_continuity:
+        patch["intent_continuity"] = prepared_intent_continuity
     patch["machine_readable_contract"] = _prepared_machine_readable_contract_closeout(
         record=record,
         validation_evidence=validation_evidence,
@@ -13225,11 +13260,13 @@ def close_planning_item(
 
     candidate = candidates[0]
     if candidate["kind"] == "execplan":
+        prepare_closeout = _close_item_can_prepare_execplan_archive(target_root=target_root, candidate=candidate)
         archive_result = archive_execplan(
             str(candidate["plan_arg"]),
             target=target_root,
             dry_run=dry_run,
             apply_cleanup=True,
+            prepare_closeout=prepare_closeout,
             retain_archive=True,
         )
         archive_result.message = f"Close planning item {item_id} through execplan archive flow"
@@ -16843,6 +16880,20 @@ def _close_item_id_match(candidate_id: str, item_id: str) -> str | None:
     if candidate_id.startswith(item_id):
         return "prefix"
     return None
+
+
+def _close_item_can_prepare_execplan_archive(*, target_root: Path, candidate: dict[str, Any]) -> bool:
+    path_text = str(candidate.get("path", "")).strip()
+    if not path_text:
+        return False
+    record = _load_execplan_record(target_root / path_text)
+    if record is None:
+        return False
+    closure_check = _record_section_dict(record, "closure_check") or {}
+    closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
+    if closure_decision in {"archive-and-close", "archive-but-keep-lane-open"}:
+        return True
+    return False
 
 
 def _collapse_close_item_plan_state_pairs(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -95,15 +95,40 @@ active_items = [
 """,
     )
     _write_execplan_record(tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json", status="completed")
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    scaffold_outcome = "Open upstream issue from refreshed external intent evidence; priority P2 inferred from inferred-planning."
+    record["goal"] = [scaffold_outcome]
+    record["canonical_core"]["requested_outcome"] = scaffold_outcome
+    record["canonical_core"]["proof_expectations"] = ["Fill in the narrowest command that proves the promoted work."]
+    record["machine_readable_contract"]["intent"]["outcome"] = scaffold_outcome
+    record["machine_readable_contract"]["execution"]["status"] = "in-progress"
+    record["machine_readable_contract"]["execution"]["proof"] = "Fill in the narrowest command that proves the promoted work."
+    record["delegated_judgment"]["requested outcome"] = scaffold_outcome
+    record["intent_continuity"]["larger intended outcome"] = scaffold_outcome
+    record["intent_interpretation"]["inferred intended outcome"] = scaffold_outcome
+    record["execution_bounds"]["required validation commands"] = "Fill in the narrowest command that proves the promoted work."
+    record["validation_commands"] = ["Fill in the narrowest command that proves the promoted work."]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
 
     result = close_planning_item("plan-alpha", target=tmp_path)
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    archived = json.loads(archived_path.read_text(encoding="utf-8"))
+    archived_text = json.dumps(archived)
 
     assert result.warnings == []
     assert not (tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json").exists()
-    assert (tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json").exists()
+    assert archived_path.exists()
     assert state["todo"]["active_items"] == []
     assert any(action.kind == "archived" for action in result.actions)
+    assert any(action.kind == "updated" and "prepared normalized closeout fields" in action.detail for action in result.actions)
+    assert "Open upstream issue from refreshed external intent evidence" not in archived_text
+    assert "Fill in the narrowest command" not in archived_text
+    assert archived["machine_readable_contract"]["execution"]["status"] == "completed"
+    assert archived["goal"] == [archived["execution_summary"]["outcome delivered"]]
+    assert archived["canonical_core"]["requested_outcome"] == archived["execution_summary"]["outcome delivered"]
+    assert archived["machine_readable_contract"]["intent"]["outcome"] == archived["execution_summary"]["outcome delivered"]
 
 
 def test_close_item_blocked_archive_flow_reports_machine_readable_status(tmp_path: Path) -> None:
