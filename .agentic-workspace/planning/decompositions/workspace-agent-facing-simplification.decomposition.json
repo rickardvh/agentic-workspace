@@ -37,7 +37,7 @@
       "title": "Define the ordinary agent continuity loop and classify visible surfaces",
       "readiness": "promoted",
       "outcome": "A reviewed target ordinary workflow and surface classification exists for startup, active work, durable knowledge, proof, and closeout under the skills-first, CLI-as-aid model.",
-      "owner_surface": ".agentic-workspace/planning/execplans/lane-1390-ordinary-continuity-loop.plan.json",
+      "owner_surface": "docs/package/ordinary-continuity-loop.md",
       "proof": "Classification evidence considers all surfaces named in #1390 and produces concrete follow-on recommendations without implementing command or deletion changes.",
       "slice_contribution_to_parent": "Creates the top-level simplification target and prevents scattered local cleanup.",
       "residual_parent_intent": "Per-step substep simplification, concrete implementation issues, visible installed-product reduction, and walkthrough proof remain.",
