@@ -1,0 +1,105 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Investigate simplification of operating-loop substeps",
+  "plan_id": "lane-1391-operating-loop-substeps",
+  "created_at": "2026-06-10T14:58:47.065291+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1391-operating-loop-substeps.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1391-operating-loop-substeps.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1391-operating-loop-substeps",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json lane lane-1391-operating-loop-substeps.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added docs/package/operating-loop-substeps.md as the reviewed per-step #1391 inventory, linked it from package docs, created follow-up issues #1404-#1408, refreshed external intent evidence, and updated the #1389 decomposition to route the next implementation lane.",
+    "scope touched": "#1391 planning/docs lane only; parent #1389 remains open.",
+    "changed surfaces": "docs/package/operating-loop-substeps.md, docs/package/ordinary-continuity-loop.md, docs/index.md, .agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/external-intent-evidence.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from #1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+    "next step": "promote the next bounded slice from #1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected: produced the reviewed substep inventory and routable follow-up issues without implementing command/runtime simplification. Parent #1389 remains unsatisfied until visible installed-product simplification and walkthrough proof land.",
+    "proof status": "passed",
+    "intent served": "#1391 slice served; parent #1389 intent remains open because intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408"
+  },
+  "proof_report": {
+    "validation proof": "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Simplify agent-facing surfaces and workflows from the highest abstraction downward while preserving AW as a repo-native continuity and execution layer for intent, context, proof, and handoff.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when #1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408 activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408.",
+    "motivation worth preserving": "Future agents should continue from #1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408 rather than rediscover this closeout residue.",
+    "canonical owner now": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1391 satisfied as the current slice; #1389 continuation routed to #1404 first, then #1405-#1408 unless reordered with evidence.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+          "owner": "#1389 decomposition and follow-up issues #1404, #1405, #1406, #1407, #1408",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

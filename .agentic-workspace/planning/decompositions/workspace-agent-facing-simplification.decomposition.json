@@ -51,9 +51,9 @@
     {
       "id": "lane-1391-operating-loop-substeps",
       "title": "Investigate simplification of operating-loop substeps",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "Each operating-loop step has a compact reviewed inventory of skill/protocol responsibility, required agent decision, CLI aids, reasoning guidance, CLI-mirroring artifacts, state owners, fallback path, merge/remove candidates, and follow-on issue.",
-      "owner_surface": "AGENTS.md, .agentic-workspace/WORKFLOW.md, .agentic-workspace/skills/REGISTRY.json, .agentic-workspace/docs/module-map.md, docs/package/commands.md, docs/package/lifecycle.md, docs/package/installed-surfaces.md, docs/package/modules.md, src/agentic_workspace/contracts/cli_commands.json, and Planning/Memory/Verification package READMEs",
+      "owner_surface": "docs/package/operating-loop-substeps.md",
       "proof": "Reviewed per-step inventories cover startup, active work, proof/verification, closeout, and durable knowledge in the order requested by #1391 or explain any deviation.",
       "slice_contribution_to_parent": "Turns the high-level model into concrete simplification choices without jumping straight to opportunistic command or docs changes.",
       "residual_parent_intent": "Concrete implementation slices and final installed-product simplification proof remain.",
@@ -68,16 +68,14 @@
     {
       "id": "lane-agent-facing-surface-reduction-slices",
       "title": "Implement bounded surface reductions from reviewed recommendations",
-      "readiness": "deferred",
-      "outcome": "Concrete mergers, removals, backgrounding, generated/catalogue boundaries, routing changes, or command-output compression land as child slices with exact proof and parent-residual reporting.",
-      "owner_surface": "To be selected from reviewed #1390 and #1391 recommendations; likely docs, skills, startup adapter, CLI compact outputs, module reports, generated/catalogue boundaries, and fallback surfaces.",
+      "readiness": "ready",
+      "outcome": "After lane-1391-operating-loop-substeps is closed, concrete mergers, removals, backgrounding, generated/catalogue boundaries, routing changes, or command-output compression land through #1404, #1405, #1406, #1407, #1408, or a reviewed cross-cutting slice with exact proof and parent-residual reporting.",
+      "owner_surface": "#1404 startup protocol-first exposure, #1405 active-work boundaries, #1406 proof adequacy, #1407 closeout protocol, #1408 durable-knowledge flow; likely touched surfaces include docs, skills, startup adapter, CLI compact outputs, module reports, generated/catalogue boundaries, and fallback surfaces.",
       "proof": "Each implementation slice runs changed-path proof plus installed-surface or host-repo walkthrough evidence appropriate to the touched surface.",
       "slice_contribution_to_parent": "Moves #1389 from reviewed model to visible installed-product simplification.",
       "residual_parent_intent": "Final before/after inventory and realistic startup or continuation walkthrough remain until enough slices have landed.",
       "parent_proof_boundary": "slice-only",
-      "human_confirmation_needed": [
-        "Select exact child issue(s) from reviewed #1390/#1391 recommendations before promotion."
-      ],
+      "human_confirmation_needed": [],
       "depends_on": [
         "lane-1391-operating-loop-substeps"
       ],
@@ -119,7 +117,7 @@
     "Every lane closeout must state whether it is slice-only, advances parent acceptance, or contributes to parent closure.",
     "Final #1389 proof must include before/after surface inventory, ordinary path walkthrough, fallback/CLI-mirroring duplication review, and ownership-boundary confirmation."
   ],
-  "promotion_rule": "Promote only the next prerequisite lane into a first-class lane. Current priority is lane-1392-open-module-participation; do not promote #1390, #1391, or implementation cleanup until their dependencies are satisfied or explicitly re-ordered with evidence.",
+  "promotion_rule": "Promote only the next prerequisite lane into a first-class lane. After lane-1391-operating-loop-substeps is closed, the next implementation priority is #1404 unless #1389 is explicitly re-ordered with evidence; #1405, #1406, #1407, and #1408 remain queued implementation inputs from the reviewed #1391 inventory.",
   "references": [
     {
       "kind": "github-issue",
@@ -144,7 +142,37 @@
       "target": "#1391",
       "label": "operating-loop substep simplification",
       "role": "third_lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1404",
+      "label": "startup protocol-first exposure",
+      "role": "next_implementation_slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1405",
+      "label": "active-work protocol boundaries",
+      "role": "queued_implementation_slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1406",
+      "label": "proof adequacy protocol",
+      "role": "queued_implementation_slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1407",
+      "label": "closeout protocol-first loop phase",
+      "role": "queued_implementation_slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1408",
+      "label": "durable-knowledge flow simplification",
+      "role": "queued_implementation_slice"
     }
   ],
-  "notes": "Created from refreshed GitHub issue evidence on 2026-06-09. The decomposition intentionally keeps implementation cleanup deferred until the prerequisite model and classification slices have reviewed outputs."
+  "notes": "Created from refreshed GitHub issue evidence on 2026-06-09. Updated by #1391 work on 2026-06-10 to route reviewed implementation follow-ups through #1404, #1405, #1406, #1407, and #1408 while keeping #1389 open until installed-product simplification proof exists."
 }
