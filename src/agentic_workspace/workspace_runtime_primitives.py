@@ -17558,6 +17558,29 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return projected
 
 
+def _attach_start_router_fields(payload: dict[str, Any]) -> None:
+    if "next_safe_action" not in payload:
+        payload["next_safe_action"] = _next_safe_action_packet(
+            immediate=payload.get("immediate_next_allowed_action"),
+            workflow_sufficiency=payload.get("workflow_sufficiency"),
+            skill_routing=payload.get("skill_routing"),
+            memory_consult=payload.get("memory_consult"),
+        )
+    if "action_signals" not in payload:
+        next_safe_action = payload["next_safe_action"] if isinstance(payload.get("next_safe_action"), dict) else {}
+        payload["action_signals"] = _compact_action_signals_payload(
+            surface="start",
+            allowed_next_action=str(next_safe_action.get("next_safe_action", "")),
+            hard_blockers=next_safe_action.get("closure_blockers", []),
+            implementation_allowed=bool(next_safe_action.get("implementation_allowed")),
+            read_only_allowed=bool(next_safe_action.get("read_only_allowed")),
+            proof_required=bool(next_safe_action.get("proof_required")),
+            proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
+            advisory_selectors=["skill_routing", "workflow_sufficiency"],
+            agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+        )
+
+
 def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
     compact = {
         key: proof.get(key)
@@ -18569,6 +18592,8 @@ def _hydrate_selected_start_advisory_payloads(
     task_text: str | None,
     config: WorkspaceConfig,
 ) -> None:
+    if _selector_requests(select, "next_safe_action") or _selector_requests(select, "action_signals"):
+        _attach_start_router_fields(payload)
     vague_orientation: dict[str, Any] | None = None
     if _selector_requests(select, "vague_outcome_orientation"):
         vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)

@@ -808,6 +808,66 @@ candidates = []
     assert "continuation_view" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_select_returns_router_fields_for_active_planning_compact_profile(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    plan_path = target / ".agentic-workspace/planning/execplans/resume.plan.json"
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Resume",
+        item_id="resume",
+        status="active",
+        why_now="Preserve the active user intent.",
+        next_action="Continue from the execplan next action.",
+        done_when="The active user intent is satisfied.",
+    )
+    _write_json(plan_path, record)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "resume", title = "Resume", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/resume.plan.json", next_action = "Continue from the execplan next action.", done_when = "Done.", proof = "Proof." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Continue active work",
+                "--select",
+                "next_safe_action,action_signals,continuation_view",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "missing" not in payload
+    packet = payload["values"]["next_safe_action"]
+    _assert_next_safe_action_valid(packet)
+    assert packet["next_safe_action"] == "continue-active-planning-record"
+    assert payload["values"]["action_signals"]["allowed_next_action"] == "continue-active-planning-record"
+    assert payload["values"]["continuation_view"]["answers"]["next_safe_action"] == "Continue from the execplan next action."
+
+
 def test_start_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

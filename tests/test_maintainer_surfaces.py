@@ -123,6 +123,14 @@ def test_workspace_workflow_is_projection_not_primary_authority() -> None:
         assert "| Workflow transition data | `transition_gates`" in text
         assert "| Command surface facts | `src/agentic_workspace/contracts/cli_commands.json`" in text
         assert "Ordinary first contact is one routed decision" in text
+        assert "## Active Work Boundary" in text
+        assert "Active work is Work Shaping plus Planning Autopilot" in text
+        assert "`start` owns ordinary first-contact routing" in text
+        assert "`summary` owns active continuation" in text
+        assert "`implement --changed` owns known changed-path work context" in text
+        assert "`planning` owns routed state mutation" in text
+        assert "## Fallback Work Shape" in text
+        assert "## Work Routing Gate" not in text
         assert (
             "Treat `preflight`, `summary`, `config`, `defaults`, `planning`, `skills`, `modules`, `ownership`, and `report` as routed drill-down"
             in text
