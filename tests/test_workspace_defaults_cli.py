@@ -281,6 +281,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "stale" in closeout_protocol["knowledge_route_state_vocabulary"]
     assert "completion permission" in closeout_protocol["claim_boundary"]["proof_success_is_not"]
     assert "report closeout_trust.closeout_protocol" in closeout_protocol["routed_outputs"]
+    memory_consultation = payload["memory_consultation"]
+    assert memory_consultation["protocol"] == "Memory Consultation / Anti-Rediscovery"
+    assert "checked_none" in memory_consultation["consultation_states"]
+    assert memory_consultation["owner_routing"]["planning"].startswith("active intent")
+    assert memory_consultation["skill_posture"][0]["posture"] == "reasoning-protocol"
+    assert "chat transcripts" in memory_consultation["capture_boundary"]["forbidden"]
     assert payload["assurance_onboarding"]["status"] == "absent"
     assert payload["assurance_onboarding"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
     assert payload["assurance_onboarding"]["states"]["usable"].startswith("at least one proof profile")

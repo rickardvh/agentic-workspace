@@ -3521,6 +3521,7 @@ def test_summary_command_includes_memory_consult(tmp_path: Path, capsys) -> None
     assert payload["memory_consult"]["kind"] == "agentic-workspace/memory-consult/v1"
     assert payload["memory_consult"]["do_not_bulk_read"] is True
     assert payload["memory_consult"]["consultation_state"] == "checked-with-matches"
+    assert payload["memory_consult"]["protocol"] == "Memory Consultation / Anti-Rediscovery"
 
 
 def test_summary_changed_path_memory_consult_surfaces_route_matches(tmp_path: Path, capsys) -> None:
@@ -3564,6 +3565,7 @@ surfaces = ["api"]
     assert memory_consult["changed_path_route_count"] >= 1
     assert any(match["path"] == ".agentic-workspace/memory/repo/domains/api.md" for match in memory_consult["route_matches"])
     assert ".agentic-workspace/memory/repo/domains/api.md" in memory_consult["read_first"]
+    assert memory_consult["consultation_protocol"]["evidence"]["route_match_count"] >= 1
 
 
 def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path, capsys) -> None:
@@ -3583,6 +3585,7 @@ def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path,
     memory_consult = payload["answer"]
     assert memory_consult["capture_helper"].startswith("uv run agentic-workspace memory capture-note")
     assert memory_consult["promotion_pressure"]["command"].startswith("uv run agentic-workspace memory promotion-report")
+    assert memory_consult["consultation_protocol"]["capture_boundary"]["helper"].startswith("uv run agentic-workspace memory capture-note")
 
 
 def test_start_reports_blocking_cli_compatibility_drift_without_health_remediation(tmp_path: Path, capsys) -> None:

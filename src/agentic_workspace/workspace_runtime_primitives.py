@@ -11613,12 +11613,103 @@ def _rewrite_module_cli_commands(value: Any) -> Any:
     return value
 
 
+def _memory_consultation_protocol_payload(
+    *,
+    consultation_state: str,
+    read_first: list[str],
+    route_actions: list[dict[str, Any]],
+    promotion_pressure: dict[str, Any],
+    capture_helper: str,
+) -> dict[str, Any]:
+    promotion_status = str(promotion_pressure.get("status") or "").strip()
+    promotion_samples = _list_payload(promotion_pressure.get("sample"))
+    capture_candidate = bool(promotion_samples) or promotion_status in {"attention", "candidate", "promotion-required"}
+    route_match_count = len(route_actions)
+    if consultation_state == "not-checked":
+        durable_residue_decision = "follow_up_required"
+    elif capture_candidate:
+        durable_residue_decision = "memory"
+    elif route_match_count:
+        durable_residue_decision = "none_found"
+    elif consultation_state == "checked-none":
+        durable_residue_decision = "none_found"
+    else:
+        durable_residue_decision = "none_found"
+    return {
+        "kind": "agentic-workspace/memory-consultation-protocol/v1",
+        "protocol": "Memory Consultation / Anti-Rediscovery",
+        "consultation_state": consultation_state,
+        "state_vocabulary": [
+            "not_checked",
+            "checked_none",
+            "relevant_notes_found",
+            "capture_candidate",
+            "routed_elsewhere",
+            "dismissed",
+            "follow_up_required",
+        ],
+        "status_mapping": {
+            "not_checked": "no Memory route, index, or structured memory surface was inspected",
+            "checked_none": "Memory routing was inspected and no relevant note was found",
+            "relevant_notes_found": "existing notes or routes informed the work",
+            "capture_candidate": "a durable anti-rediscovery lesson may belong in Memory",
+            "routed_elsewhere": "residue belongs in Planning, docs, tests, contracts, config, review, or an issue",
+            "dismissed": "the signal is one-off or too weak to keep",
+            "follow_up_required": "a later owner or proof must decide the durable route",
+        },
+        "durable_residue_decision": durable_residue_decision,
+        "owner_routing": {
+            "memory_when": "durable anti-rediscovery lessons, invariants, routing hints, or recurring failure patterns",
+            "planning_when": "active intent, sequencing, continuation, issue linkage, or completion claims",
+            "docs_or_contracts_when": "stable canonical guidance, requirements, checks, or enforceable rules",
+            "issue_when": "external follow-up work should be routable outside checked-in Planning",
+            "dismiss_when": "one-off task detail, transcript residue, validation logs, or weak unrepeated signals",
+        },
+        "ordinary_read_rule": "Read only routed notes that can change interpretation, safe action, proof, or closeout; do not bulk-read Memory for diligence.",
+        "capture_boundary": {
+            "allowed": "compact reusable knowledge with future route value",
+            "forbidden": [
+                "active task state",
+                "issue triage",
+                "broad documentation copies",
+                "chat transcripts",
+                "validation logs",
+                "plan history",
+            ],
+            "helper": capture_helper,
+        },
+        "evidence": {
+            "read_first_count": len(read_first),
+            "route_match_count": route_match_count,
+            "promotion_status": promotion_status,
+            "promotion_sample_count": len(promotion_samples),
+        },
+    }
+
+
+def _compact_memory_consultation_protocol(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value.get(key)
+        for key in (
+            "protocol",
+            "consultation_state",
+            "durable_residue_decision",
+            "evidence",
+        )
+        if key in value
+    }
+
+
 def _memory_consult_payload(
     *, target_root: Path, changed_paths: list[str] | None = None, compact: bool = False, cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
     try:
         from repo_memory_bootstrap.installer import memory_report, route_memory
     except ImportError:
+        capture_helper = _memory_command_with_invoke(
+            command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+            workspace_cli_invoke=cli_invoke,
+        )
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
@@ -11627,10 +11718,21 @@ def _memory_consult_payload(
             "read_first": [],
             "max_notes": 0,
             "do_not_bulk_read": True,
+            "consultation_protocol": _memory_consultation_protocol_payload(
+                consultation_state="not-checked",
+                read_first=[],
+                route_actions=[],
+                promotion_pressure={},
+                capture_helper=capture_helper,
+            ),
         }
     try:
         report = memory_report(target=target_root)
     except Exception as exc:
+        capture_helper = _memory_command_with_invoke(
+            command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+            workspace_cli_invoke=cli_invoke,
+        )
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
@@ -11639,6 +11741,13 @@ def _memory_consult_payload(
             "read_first": [],
             "max_notes": 0,
             "do_not_bulk_read": True,
+            "consultation_protocol": _memory_consultation_protocol_payload(
+                consultation_state="not-checked",
+                read_first=[],
+                route_actions=[],
+                promotion_pressure={},
+                capture_helper=capture_helper,
+            ),
         }
     report_payload: dict[str, Any] = cast(dict[str, Any], report) if isinstance(report, dict) else {}
     habitual_raw = report_payload.get("habitual_pull", {})
@@ -11670,10 +11779,22 @@ def _memory_consult_payload(
         "recommended" if read_first and status in {"ready-for-ordinary-work", "attention-needed", "needs-more-proof"} else "not-recommended"
     )
     promotion_pressure = report_payload.get("promotion_pressure", {})
+    capture_helper = _memory_command_with_invoke(
+        command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
+        workspace_cli_invoke=cli_invoke,
+    )
+    consultation_state = "checked-with-matches" if read_first else "checked-none"
+    consultation_protocol = _memory_consultation_protocol_payload(
+        consultation_state=consultation_state,
+        read_first=read_first,
+        route_actions=route_actions,
+        promotion_pressure=promotion_pressure if isinstance(promotion_pressure, dict) else {},
+        capture_helper=capture_helper,
+    )
     payload = {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": consult_status,
-        "consultation_state": "checked-with-matches" if read_first else "checked-none",
+        "consultation_state": consultation_state,
         "source": "memory.habitual_pull",
         "why": habitual_pull.get("summary", ""),
         "read_first": read_first,
@@ -11683,13 +11804,12 @@ def _memory_consult_payload(
         "changed_path_route_count": len(route_actions),
         "route_matches": route_actions[:max_notes],
         "evidence": evidence if isinstance(evidence, dict) else {},
-        "capture_helper": _memory_command_with_invoke(
-            command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
-            workspace_cli_invoke=cli_invoke,
-        ),
+        "capture_helper": capture_helper,
         "promotion_pressure": _memory_payload_commands_with_invoke(value=promotion_pressure, workspace_cli_invoke=cli_invoke),
+        "consultation_protocol": consultation_protocol,
     }
     if compact:
+        payload["consultation_protocol"] = _compact_memory_consultation_protocol(consultation_protocol)
         if consult_status != "recommended":
             return {
                 "kind": payload["kind"],
@@ -11706,6 +11826,7 @@ def _memory_consult_payload(
             "do_not_bulk_read",
             "changed_path_route_count",
             "route_matches",
+            "consultation_protocol",
         )
         keys = (*keys, "why", "selection_rule")
         return {key: payload[key] for key in keys if key in payload}
@@ -20482,15 +20603,16 @@ def _planning_state_has_active_items(*, target_root: Path) -> bool:
 
 
 def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    _ = config
     return {
         "kind": "agentic-workspace/memory-consult/v1",
+        "protocol": "Memory Consultation / Anti-Rediscovery",
         "status": "recommended",
         "consultation_state": "checked-with-matches",
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
         "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",
-        "selection_rule": "after the baseline, load only manifest- or index-routed durable notes from touched files or explicit surfaces",
-        "capture_helper": f"{config.cli_invoke} memory capture-note <slug> --summary <text> --files <changed paths> --format json",
+        "selection_rule": "load only manifest- or index-routed durable notes from touched files or explicit surfaces",
     }
 
 
