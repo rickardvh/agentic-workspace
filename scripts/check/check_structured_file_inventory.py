@@ -441,6 +441,12 @@ def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]
         if not matched:
             findings.append(Finding(path=location, message="generated mirror declaration matches no tracked file"))
             continue
+        route = str(mirror.get("ordinary_agent_route", ""))
+        pattern = str(mirror.get("pattern", ""))
+        if pattern.startswith("generated/") and "drill-down only" not in route:
+            findings.append(Finding(path=location, message="generated mirror ordinary_agent_route must be explicit drill-down only"))
+        if "plugins/" in pattern and "plugin/catalogue drill-down only" not in route:
+            findings.append(Finding(path=location, message="generated plugin mirror route must be plugin/catalogue drill-down only"))
         covered_paths.update(matched)
         max_bytes = mirror.get("max_bytes")
         if isinstance(max_bytes, int):
