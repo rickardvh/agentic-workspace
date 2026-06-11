@@ -113,6 +113,7 @@ from agentic_workspace.contract_tooling import (
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_selection_rules_manifest,
+    python_runtime_projection_inventory_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -23813,20 +23814,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "generated_cli_freshness": _tiny_generated_cli_freshness_payload(payload.get("proof", {}).get("generated_cli_freshness", {}))
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("generated_cli_freshness"), dict)
             else {},
-            "runtime_source_edit_review": {
-                key: payload.get("proof", {}).get("runtime_source_edit_review", {}).get(key)
-                for key in (
-                    "kind",
-                    "status",
-                    "changed_paths",
-                    "accepted_direct_edit_reasons",
-                    "rejected_vague_reasons",
-                    "completion_claim_rule",
-                )
-                if isinstance(payload.get("proof"), dict)
-                and isinstance(payload.get("proof", {}).get("runtime_source_edit_review"), dict)
-                and key in payload.get("proof", {}).get("runtime_source_edit_review", {})
-            },
+            "runtime_source_edit_review": _tiny_runtime_source_edit_review_payload(
+                payload.get("proof", {}).get("runtime_source_edit_review", {})
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("runtime_source_edit_review"), dict)
+            else {},
             "proof_obligations": _tiny_proof_obligations_payload(
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
@@ -33725,6 +33717,56 @@ def _tiny_generated_cli_freshness_payload(value: dict[str, Any]) -> dict[str, An
     return payload
 
 
+def _tiny_runtime_source_edit_review_payload(value: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    review_items = []
+    for item in _list_payload(value.get("review_items"))[:3]:
+        if not isinstance(item, dict):
+            continue
+        symbols = []
+        for symbol in _list_payload(item.get("accepted_runtime_symbols"))[:5]:
+            if not isinstance(symbol, dict):
+                continue
+            symbols.append(
+                {
+                    "source_module": symbol.get("source_module", ""),
+                    "source_symbol": symbol.get("source_symbol", ""),
+                    "owner": symbol.get("owner", ""),
+                    "operation_ids": symbol.get("operation_ids", []),
+                    "primitive_refs": symbol.get("primitive_refs", []),
+                    "conformance_ref": symbol.get("conformance_ref", ""),
+                    "direct_edit_reasons_allowed": symbol.get("direct_edit_reasons_allowed", []),
+                }
+            )
+        review_items.append(
+            {
+                "changed_path": item.get("changed_path", ""),
+                "status": item.get("status", "unknown"),
+                "accepted_runtime_symbol_count": item.get("accepted_runtime_symbol_count", 0),
+                "sample_accepted_runtime_symbols": symbols,
+                "required_evidence": item.get("required_evidence", []),
+            }
+        )
+    payload = {
+        key: value.get(key)
+        for key in (
+            "kind",
+            "status",
+            "changed_paths",
+            "inventory_source",
+            "missing_inventory_paths",
+            "accepted_direct_edit_reasons",
+            "rejected_vague_reasons",
+            "completion_claim_rule",
+        )
+        if key in value
+    }
+    if review_items:
+        payload["review_items"] = review_items
+    return payload
+
+
 def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
     sensitive = [
         command
@@ -33846,15 +33888,83 @@ _GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS = {
     "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 }
 
+_GENERATED_CLI_RUNTIME_SOURCE_MODULE_PATHS = {
+    "agentic_workspace.workspace_runtime_primitives": "src/agentic_workspace/workspace_runtime_primitives.py",
+    "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+    "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "repo_memory_bootstrap.runtime_search": "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
+    "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "repo_verification_bootstrap.runtime_primitives": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+}
+
+
+def _runtime_source_inventory_entries_for_path(changed_path: str) -> list[dict[str, Any]]:
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception:
+        return []
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    if not isinstance(entries, list):
+        return []
+    matched: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        source_module = str(entry.get("source_module", "")).strip()
+        if _GENERATED_CLI_RUNTIME_SOURCE_MODULE_PATHS.get(source_module) != changed_path:
+            continue
+        matched.append(
+            {
+                "binding_kind": str(entry.get("binding_kind", "")),
+                "source_module": source_module,
+                "source_symbol": str(entry.get("source_symbol", "")),
+                "owner": str(entry.get("owner_package", "")),
+                "operation_ids": _list_payload(entry.get("operation_ids")),
+                "primitive_refs": _list_payload(entry.get("primitive_refs")),
+                "conformance_ref": str(entry.get("conformance_ref", "")),
+                "runtime_boundary_class": str(entry.get("runtime_boundary_class", "")),
+                "minimization_route": str(entry.get("minimization_route", "")),
+                "minimization_owner": str(entry.get("minimization_owner", "")),
+                "minimization_tracking_issue": str(entry.get("minimization_tracking_issue", "")),
+                "direct_edit_reasons_allowed": _list_payload(entry.get("direct_edit_reasons_allowed")),
+                "stale_when": str(entry.get("stale_when", "")),
+            }
+        )
+    return sorted(matched, key=lambda item: (str(item["source_module"]), str(item["source_symbol"])))
+
 
 def _runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
     runtime_paths = [path for path in changed_paths if path in _GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS]
     if not runtime_paths:
         return {"kind": "agentic-workspace/runtime-source-edit-review/v1", "status": "not-applicable", "changed_paths": []}
+    inventory_by_path = {path: _runtime_source_inventory_entries_for_path(path) for path in runtime_paths}
+    review_items = [
+        {
+            "changed_path": path,
+            "status": "inventory-backed" if inventory_by_path[path] else "inventory-missing",
+            "accepted_runtime_symbols": inventory_by_path[path],
+            "accepted_runtime_symbol_count": len(inventory_by_path[path]),
+            "required_evidence": [
+                "edit_reason",
+                "owner",
+                "source_symbol_or_primitive",
+                "proof",
+                "whether command-generation or AW owns the next change",
+            ],
+        }
+        for path in runtime_paths
+    ]
+    missing_inventory = [item["changed_path"] for item in review_items if item["status"] == "inventory-missing"]
+    status = "blocked-missing-inventory" if missing_inventory else "classification-required"
     return {
         "kind": "agentic-workspace/runtime-source-edit-review/v1",
-        "status": "classification-required",
+        "status": status,
         "changed_paths": runtime_paths,
+        "review_items": review_items,
+        "inventory_source": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "missing_inventory_paths": missing_inventory,
         "accepted_direct_edit_reasons": [
             "existing-primitive-bugfix",
             "new-primitive-implementation",
@@ -33886,12 +33996,15 @@ def _runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> d
         },
         "completion_claim_rule": (
             "Do not claim generated-CLI boundary satisfaction from a runtime source edit until the final report states the edit reason, "
-            "owner, symbol/primitive, proof, and residual risk."
+            "owner, inventory-backed symbol/primitive, proof, and residual risk."
         ),
         "authority_boundary": _authority_boundary_payload(
             surface="runtime_source_edit_review",
-            observed_by_aw=["changed runtime source path"],
-            recommended_by_aw=["classify direct runtime edit before closeout"],
+            observed_by_aw=["changed runtime source path", "python_runtime_projection_inventory accepted runtime boundary entries"],
+            recommended_by_aw=[
+                "classify direct runtime edit before closeout",
+                "use exact symbol inventory instead of whole-file boundary wording",
+            ],
             agent_owned_decisions=["edit reason", "owner judgment", "whether the change belongs in command-generation"],
             rule="AW reports runtime-source edit evidence and required proof; the agent owns the semantic classification.",
         ),
