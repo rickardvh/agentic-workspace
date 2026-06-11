@@ -208,6 +208,12 @@
             "diagnostic_router",
             "reference_detail",
             "task_behavior_routing",
+            "module_drilldown",
+            "module_front_door",
+            "lifecycle_health_drilldown",
+            "recovery_diagnostic",
+            "authority_drilldown",
+            "post_bootstrap_diagnostic",
             "no_cli_fallback_projection"
           ]
         },

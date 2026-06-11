@@ -232,7 +232,11 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_roles["report"] == "core_context_router"
     assert command_roles["modules"] == "module_delegation_front_door"
     assert command_roles["setup"] == "reusable_host_repo_diagnostics"
+    assert command_roles["doctor"] == "core_lifecycle"
     assert command_roles["external-intent"] == "reusable_host_repo_diagnostics"
+    assert command_audiences["modules"] == "advanced_host_repo"
+    assert command_audiences["status"] == "advanced_host_repo"
+    assert command_audiences["doctor"] == "advanced_host_repo"
     assert command_audiences["note-delegation-outcome"] == "local_only"
     assert command_audiences["setup"] == "advanced_host_repo"
     assert all(command["classification_note"] for command in commands)

@@ -51,6 +51,48 @@
       "primary_next_action": "select task-specific behavioral guidance"
     },
     {
+      "command": "modules",
+      "role": "module_drilldown",
+      "first_line": false,
+      "primary_next_action": "inspect module inventory only after startup/report/defaults points to module detail"
+    },
+    {
+      "command": "planning",
+      "role": "module_front_door",
+      "first_line": false,
+      "primary_next_action": "run Planning mutations or reports only when compact routing names the Planning command"
+    },
+    {
+      "command": "memory",
+      "role": "module_front_door",
+      "first_line": false,
+      "primary_next_action": "run Memory routing or residue commands only when compact routing names the Memory command"
+    },
+    {
+      "command": "status",
+      "role": "lifecycle_health_drilldown",
+      "first_line": false,
+      "primary_next_action": "inspect installed-module health only for lifecycle or remediation checks"
+    },
+    {
+      "command": "doctor",
+      "role": "recovery_diagnostic",
+      "first_line": false,
+      "primary_next_action": "inspect drift diagnostics only for recovery, remediation, or maintainer proof"
+    },
+    {
+      "command": "ownership",
+      "role": "authority_drilldown",
+      "first_line": false,
+      "primary_next_action": "inspect ownership detail only when authority or edit safety is uncertain"
+    },
+    {
+      "command": "setup",
+      "role": "post_bootstrap_diagnostic",
+      "first_line": false,
+      "primary_next_action": "inspect post-bootstrap guidance only during setup or lifecycle remediation"
+    },
+    {
       "command": "WORKFLOW.md",
       "role": "no_cli_fallback_projection",
       "first_line": false,

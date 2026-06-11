@@ -330,6 +330,14 @@ def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -
     assert command_roles["preflight"]["role"] == "recovery_takeover"
     assert command_roles["preflight"]["first_line"] is False
     assert command_roles["summary"]["role"] == "active_planning_state"
+    assert command_roles["modules"]["role"] == "module_drilldown"
+    assert command_roles["modules"]["first_line"] is False
+    assert command_roles["planning"]["role"] == "module_front_door"
+    assert command_roles["memory"]["role"] == "module_front_door"
+    assert command_roles["status"]["role"] == "lifecycle_health_drilldown"
+    assert command_roles["doctor"]["role"] == "recovery_diagnostic"
+    assert command_roles["ownership"]["role"] == "authority_drilldown"
+    assert command_roles["setup"]["role"] == "post_bootstrap_diagnostic"
     assert command_roles["WORKFLOW.md"]["role"] == "no_cli_fallback_projection"
 
     warning_roles = {entry["warning_class"]: entry for entry in manifest["warning_roles"]}
