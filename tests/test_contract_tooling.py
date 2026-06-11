@@ -1814,8 +1814,9 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     assert all(entry["stale_when"] for entry in accepted_boundaries["entries"])
     front_door_entries = [entry for entry in accepted_boundaries["entries"] if entry["runtime_boundary_class"] == "front-door-dispatch"]
     assert front_door_entries
-    assert all(entry["minimization_route"] == "candidate-extract-when-contract-stable" for entry in front_door_entries)
-    assert all(entry["minimization_tracking_issue"] == "#1367" for entry in front_door_entries)
+    assert all(entry["minimization_route"] == "keep-as-hand-owned-primitive" for entry in front_door_entries)
+    assert all(entry["minimization_tracking_issue"] == "#1449" for entry in front_door_entries)
+    assert all("stable cross-package module-dispatch primitive" in entry["stale_when"] for entry in front_door_entries)
     output_entries = [
         entry
         for entry in accepted_boundaries["entries"]
