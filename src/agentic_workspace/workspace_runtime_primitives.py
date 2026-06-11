@@ -29268,11 +29268,11 @@ def _startup_skill_routing_payload(
     advanced_routes = [route for route in available_advanced_routes if str(route.get("feature", "")) in configured_features]
     payload: dict[str, Any] = {
         "status": "advisory",
-        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced host-repo diagnostics are opt-in.",
+        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI as the ordinary route and workflow docs as conservative no-CLI recovery. Advanced host-repo diagnostics are opt-in.",
         "query": skill_command,
         "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
         "fallback_when_skills_unavailable": [
-            "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
+            "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
             'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
             "use agentic-workspace summary --format json before raw planning reads",
         ],
@@ -29303,7 +29303,7 @@ def _startup_skill_routing_payload(
             {"fit_signal": route["fit_signal"], "skill": route["skill"]} for route in payload["preferred_routes"] if isinstance(route, dict)
         ]
         payload["fallback_when_skills_unavailable_count"] = len(fallback_items) if isinstance(fallback_items, list) else 0
-        payload["fallback_detail"] = "Use AGENTS.md and compact CLI routers when skills are unavailable."
+        payload["fallback_detail"] = "Use compact CLI routers if skills are unavailable."
     return payload
 
 

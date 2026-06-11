@@ -85,7 +85,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert 'agentic-workspace start --task "<task>" --format json' in routing_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
-        'Use `agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router.' in item
+        'Use `agentic-workspace start --task "<task>" --format json` before non-trivial work.' in item
         for item in manifest_payload["bootstrap"]["first_queries"]
     )
     assert any(

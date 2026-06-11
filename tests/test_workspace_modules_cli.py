@@ -472,6 +472,6 @@ def test_workspace_agents_template_renders_resolved_cli_invocation() -> None:
     rendered = cli._workspace_agents_template(selected_modules=[], descriptors={}, cli_invoke="uv run agentic-workspace")
 
     assert "- canonical_source: `.agentic-workspace/config.toml` and `uv run agentic-workspace start --target . --format json`" in rendered
-    assert 'use `uv run agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router' in rendered
-    assert 'use `uv run agentic-workspace implement --changed <paths> --task "<task>" --format json`' in rendered
+    assert 'Use `uv run agentic-workspace start --task "<task>" --format json` before non-trivial answers' in rendered
+    assert 'Use `uv run agentic-workspace implement --changed <paths> --task "<task>" --format json`' in rendered
     assert "use the effective CLI invocation from `agentic-workspace start" not in rendered

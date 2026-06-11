@@ -3646,7 +3646,7 @@
       "For ordinary first contact, run `agentic-workspace start --task \"<task>\" --format json`.",
       "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
       "Treat active work as Work Shaping plus Planning Autopilot: `start` routes, `summary` continues, `implement --changed` supplies known-path work/proof context, and `planning` mutates checked-in Planning state when routed.",
-      "Use routed drill-down such as `preflight`, `config`, `defaults`, or `summary` only when the startup packet or explicit request names that need.",
+      "Use routed drill-down such as `preflight`, `config`, `defaults`, or `summary` only when the startup packet or explicit request names that need; fallback prose is recovery-only when compact packets are unavailable.",
       "Read the configured root startup file from the startup packet first; use `agentic-workspace config --target ./repo --format json` only when configuration itself is the question.",
       "Use `agentic-workspace summary --format json` only when the startup packet routes to current planning state before opening raw planning files.",
       "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there."
@@ -3660,7 +3660,7 @@
       "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
       "available_advanced_route_command": "agentic-workspace modules --target ./repo --format json",
       "fallback_when_skills_unavailable": [
-        "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
+        "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
         "use agentic-workspace start --task \"<task>\" --format json for ordinary first contact",
         "use agentic-workspace summary --format json before raw planning reads"
       ],
@@ -3677,7 +3677,7 @@
         }
       ],
       "query": "agentic-workspace skills --target ./repo --task \"<task>\" --format json",
-      "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced host-repo diagnostics are opt-in.",
+      "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI as the ordinary route and workflow docs as conservative no-CLI recovery. Advanced host-repo diagnostics are opt-in.",
       "status": "advisory"
     },
     "supported_agent_instructions_files": [
@@ -3766,7 +3766,7 @@
         "agentic-workspace skills --target . --task \"<task>\" --format json"
       ],
       "first_surface": "startup_guidance.primary_next_action from preflight or immediate_next_allowed_action from start",
-      "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable.",
+      "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable; fallback workflow prose is a recovery surface, not an ordinary first-contact surface.",
       "rule": "For vague outcome prompts, resolve intent and satisfaction evidence from compact CLI output before raw workspace reads.",
       "status": "available"
     },
@@ -3799,7 +3799,8 @@
       "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits."
     },
     "workflow_recovery": [
-      "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json` and follow its routed drill-down before broader prose or repo-local workaround guidance."
+      "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json` and follow its routed drill-down before broader prose or repo-local workaround guidance.",
+      "Use `.agentic-workspace/WORKFLOW.md` only after the effective CLI is unavailable or compact JSON cannot be read; resume compact packets as soon as they work."
     ]
   },
   "surface_value_guardrail": {

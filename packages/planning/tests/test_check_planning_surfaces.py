@@ -333,7 +333,7 @@ def _baseline_manifest() -> dict[str, object]:
         "bootstrap": {
             "first_reads": ["AGENTS.md"],
             "first_queries": [
-                'Use `agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router.',
+                'Use `agentic-workspace start --task "<task>" --format json` before non-trivial work.',
                 'Use `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are already known.',
             ],
             "tiny_safe_model": [
