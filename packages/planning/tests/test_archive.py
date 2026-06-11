@@ -1179,6 +1179,9 @@ candidates = []
     assert retained["kind"] == "planning-closeout-evidence/v1"
     assert retained["plan_id"] == "plan-alpha"
     assert retained["retention"]["state"] == "archive-retention-skipped"
+    assert retained["retention"]["canonical evidence"] == "retained closeout evidence"
+    assert "closeout_report" in retained["retention"]["ordinary route"]
+    assert "omitted full execplan archive" in retained["retention"]["trust rule"]
     assert retained["execution_run"]["what happened"] == "implemented the retention skip closeout option fix."
     assert retained["execution_run"]["next step"] == "compact closeout evidence retained; no active planning work remains"
     assert retained["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
