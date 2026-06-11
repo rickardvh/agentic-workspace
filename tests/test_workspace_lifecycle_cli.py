@@ -844,6 +844,8 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert not (target / "AGENTS.local.md").exists()
     assert "Run `agentic-workspace start --format json`" not in agents_text
     assert "Do not try a bare `agentic-workspace` command first" in agents_text
+    assert "as the ordinary first-contact router" in agents_text
+    assert "routed drill-down or recovery surfaces" in agents_text
     assert "agentic-workspace preflight --format json" not in agents_text
     assert (
         "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text
@@ -865,6 +867,7 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
     assert 'start --task "<task>"' in gemini_text
+    assert "as the ordinary first-contact router" in gemini_text
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in gemini_text
     assert not (target / "llms.txt").exists()
 
@@ -1473,6 +1476,7 @@ def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp
     assert "More local instructions." in updated
     assert "<!-- agentic-workspace:workflow:start -->" in updated
     assert 'start --task "<task>"' in updated
+    assert "as the ordinary first-contact router" in updated
 
 
 def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tmp_path: Path, capsys) -> None:

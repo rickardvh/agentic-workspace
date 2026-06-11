@@ -1111,14 +1111,15 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
-        "as the effective agentic workspace cli invocation",
+        "as the ordinary first-contact router",
         "start --task",
         "config.local.toml",
-        "immediate_next_allowed_action",
-        "skill_routing",
+        "next_safe_action",
+        "action_signals",
+        "skills",
         "do not open raw `.agentic-workspace` files before this command",
         "do not try a bare `agentic-workspace` command first",
-        "preflight",
+        "routed drill-down or recovery surfaces",
         ".agentic-workspace/workflow.md",
         "<!-- agentic-workspace:workflow:end -->",
     )
@@ -1220,12 +1221,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     surface_roles_lower = [str(item).lower() for item in surface_roles]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
 
-    if not any("summary --format json" in row for row in first_queries_lower):
+    if not any('start --task "<task>" --format json' in row for row in first_queries_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_queries must include a summary-first planning recovery query.",
+                "Manifest first_queries must include the Startup Router as the ordinary first-contact query.",
             )
         )
 
@@ -1243,12 +1244,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("defaults --section startup" in row for row in first_queries_lower):
+    if not any("implement --changed <paths>" in row for row in first_queries_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_queries must still mention the startup defaults query.",
+                "Manifest first_queries must include implement --changed for known changed paths.",
             )
         )
 
@@ -1270,12 +1271,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("agentic-workspace summary --format json" in row for row in conditional_reads_lower):
+    if not any("agentic-workspace summary --format json" in row and "startup router" in row for row in conditional_reads_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest conditional_reads must mention the summary-first planning recovery query.",
+                "Manifest conditional_reads must route planning recovery through the Startup Router before summary detail.",
             )
         )
 

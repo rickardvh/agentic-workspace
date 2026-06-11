@@ -1,0 +1,426 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Github 1404 Workspace Make Startup Protocol First And Reduc",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Tighten startup adapter/docs/output posture so Startup Router is the conceptual front door and diagnostics are routed drill-down.",
+    "proof_expectations": [
+      "passed"
+    ],
+    "touched_scope": [
+      "closeout scope recorded in closure_check and generated_closeout."
+    ],
+    "completion_criteria": [
+      "Implement the first #1389 surface-reduction slice from the reviewed #1391 inventory."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "passed"
+    },
+    "execution": {
+      "milestone": "github-1404-workspace-make-startup-protocol-first-and-reduc",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        "closeout scope recorded in closure_check and generated_closeout."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "make maintainer-surfaces; make test-workspace; make lint-workspace; make test-planning; make lint-planning; check_planning_surfaces; check_contract_tooling_surfaces; check_structured_file_inventory; targeted ruff; selector dogfood; docs diff review; summary; planning doctor",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Github 1404 Workspace Make Startup Protocol First And Reduc",
+    "inferred intended outcome": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+    "chosen concrete what": "Tighten startup adapter/docs/output posture so Startup Router is the conceptual front door and diagnostics are routed drill-down.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "passed",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Tighten startup adapter/docs/output posture so Startup Router is the conceptual front door and diagnostics are routed drill-down.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1404-workspace-make-startup-protocol-first-and-reduc",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Tighten startup adapter/docs/output posture so Startup Router is the conceptual front door and diagnostics are routed drill-down."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "AGENTS.md",
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/docs/minimum-operating-model.md",
+    ".agentic-workspace/docs/routing-contract.md",
+    ".agentic-workspace/planning/agent-manifest.json",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/contracts/workspace_defaults/payload.json",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "packages/planning/bootstrap/.agentic-workspace/docs/minimum-operating-model.md",
+    "packages/planning/bootstrap/.agentic-workspace/docs/routing-contract.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
+    "packages/planning/scripts/check/check_planning_surfaces.py",
+    "generated/planning/python/_payload/.agentic-workspace/docs/minimum-operating-model.md",
+    "generated/planning/python/_payload/.agentic-workspace/docs/routing-contract.md",
+    "generated/planning/python/_payload/.agentic-workspace/planning/agent-manifest.json",
+    "generated/planning/typescript/resources/_payload/.agentic-workspace/docs/minimum-operating-model.md",
+    "generated/planning/typescript/resources/_payload/.agentic-workspace/docs/routing-contract.md",
+    "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/agent-manifest.json",
+    "generated/workspace/python/_contracts/payload.json",
+    "generated/workspace/typescript/resources/_contracts/payload.json",
+    "tools/agent-manifest.json",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_defaults_cli.py",
+    "tests/test_workspace_lifecycle_cli.py",
+    "tests/test_workspace_modules_cli.py",
+    "tests/test_maintainer_surfaces.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/planning/tests/test_check_planning_surfaces.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make maintainer-surfaces",
+    "make test-workspace",
+    "make lint-workspace",
+    "make test-planning",
+    "make lint-planning",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "uv run python scripts/run_agentic_workspace.py start --task \"Dogfood #1404 read-only allowances\" --format json --select next_safe_action,action_signals",
+    "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement the first #1389 surface-reduction slice from the reviewed #1391 inventory."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Implemented #1404 by making the installed adapter, fallback workflow, startup defaults, Planning bootstrap payloads, generated payload mirrors, and maintainer-surface checker describe Startup Router as the ordinary front door. Also tightened start next_safe_action read-only allowances and fixed dogfooded selector access for next_safe_action/action_signals.",
+    "scope touched": "startup adapter text, fallback workflow projection, defaults startup model, Planning bootstrap startup projections, generated payload mirrors, runtime start packet selector/read-only posture, and tests/checkers covering those surfaces",
+    "changed surfaces": "AGENTS.md; .agentic-workspace/WORKFLOW.md; .agentic-workspace/docs/minimum-operating-model.md; .agentic-workspace/docs/routing-contract.md; .agentic-workspace/planning/agent-manifest.json; workspace runtime/config/defaults contracts; Planning bootstrap payloads and generated mirrors; startup/defaults/lifecycle/modules/maintainer/planning tests",
+    "validations run": "passed",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes are bounded to #1404 startup/router exposure plus generated mirrors and tests required by payload changes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "adapter_surface_refresh and dogfooding_lane_closeout satisfied; startup_first_contact_routing followed and strengthened",
+    "misinterpretation risk": "low; tests assert first compact queries no longer include config/summary as ordinary startup and selector dogfood covers next_safe_action/action_signals",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "stay-local",
+    "route skipped reason": "proof pressure was high and changes crossed runtime, generated payloads, Planning bootstrap payloads, and checker policy; local integrated validation was safer than splitting late",
+    "expected savings": "low after scope became proof-heavy",
+    "actual friction": "dogfooding found stale selector access for next_safe_action/action_signals and primary read-only allowance command-list wording",
+    "proof result": "passed",
+    "quality concern": "none remaining for #1404",
+    "decomposition adjustment": "none; continue planned Milestone B order"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "make maintainer-surfaces; make test-workspace; make lint-workspace; make test-planning; make lint-planning; check_planning_surfaces; check_contract_tooling_surfaces; check_structured_file_inventory; targeted ruff; selector dogfood; docs diff review; summary; planning doctor",
+    "evidence for \"proof achieved\" state": "All listed commands exited 0 after the selector dogfood fix. make test-workspace reported 1112 passed and 1 skipped; make test-planning, lint lanes, planning surfaces, contract tooling, structured inventory, and planning doctor were clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "passed",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Startup Router is now the conceptual and installed ordinary front door; broad command exposure is demoted to routed drill-down/recovery surfaces.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "execplan closeout plus PR body",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "Docs/payload/checker contracts updated directly; no Memory promotion needed"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "passed",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Dogfooding start --select next_safe_action showed next_safe_action existed in default output but was missing from selector output.",
+      "Dogfooding next_safe_action.allowed_read_only_actions showed a primary packet string still enumerated root read-only commands."
+    ],
+    "signals fixed": [
+      "Added selector support/regression coverage for next_safe_action and action_signals.",
+      "Reworded allowed_read_only_actions to say read-only AW commands run only when named by next_safe_action, task posture, or drill-down selectors."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Added selector support/regression coverage for next_safe_action and action_signals.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "Reworded allowed_read_only_actions to say read-only AW commands run only when named by next_safe_action, task posture, or drill-down selectors.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [
+        {
+          "summary": "Docs/payload/checker contracts updated directly; no Memory promotion needed",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "Docs/payload/checker contracts updated directly; no Memory promotion needed",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Docs/payload/checker contracts updated directly; no Memory promotion needed",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-11: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Next implementation priority from #1389 decomposition after #1391 closeout; starts with startup because ordinary first-contact exposure determines later routing burden.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: AGENTS.md; .agentic-workspace/WORKFLOW.md; .agentic-workspace/docs/minimum-operating-model.md; .agentic-workspace/docs/routing-contract.md; .agentic-workspace/planning/agent-manifest.json; workspace runtime/config/defaults contracts; Planning bootstrap payloads and generated mirrors; startup/defaults/lifecycle/modules/maintainer/planning tests\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

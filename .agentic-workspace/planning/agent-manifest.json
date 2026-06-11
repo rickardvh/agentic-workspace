@@ -9,15 +9,14 @@
       "AGENTS.md"
     ],
     "first_queries": [
-      "Use `agentic-workspace summary --format json` first for the active-state router; add `--select <field[,field...]>` when one or two exact details are needed.",
-      "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
-      "Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.",
-      "Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state."
+      "Use `agentic-workspace start --task \"<task>\" --format json` as the ordinary first-contact router.",
+      "Use `agentic-workspace implement --changed <paths> --task \"<task>\" --format json` when changed paths are already known.",
+      "Use `summary`, `config`, `defaults`, `report`, or raw Planning files only when the router packet or explicit user request names that need."
     ],
     "tiny_safe_model": [
       "Start from the configured repo entrypoint (`AGENTS.md` by default), not from module internals or broad docs.",
-      "Ask compact startup queries first: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and the tiny default `agentic-workspace summary --format json`.",
-      "Open raw planning state, execplan prose, or deeper routing docs only when those compact answers show that the small model is no longer sufficient."
+      "Ask the Startup Router first: `agentic-workspace start --task \"<task>\" --format json`, or `agentic-workspace implement --changed <paths> --task \"<task>\" --format json` when changed paths are known.",
+      "Open raw planning state, execplan prose, or deeper routing docs only when the router packet shows that the small model is no longer sufficient."
     ],
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
@@ -82,14 +81,14 @@
       }
     ],
     "conditional_reads": [
-      "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question; use `--select <field[,field...]>` for exact detail and `--verbose` only for broad diagnostics.",
+      "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review; use `--select <field[,field...]>` for exact detail and `--verbose` only for broad diagnostics.",
       "Read `.agentic-workspace/planning/state.toml` only when the compact summary shows active work that still needs raw queue detail.",
       "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the task belongs to one.",
       "Read the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work, reprioritising, or reviewing candidate epics.",
       "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
-      "Do not bulk-read all planning surfaces for ordinary execution work; start from `agentic-workspace summary --format json` and then the one relevant active plan.",
+      "Do not bulk-read all planning surfaces for ordinary execution work; start from the Startup Router and then the one relevant active plan if routed there.",
       "Read only the repo docs explicitly referenced by that route.",
-      "When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose."
+      "When the question is active planning recovery rather than startup order, prefer the Startup Router before broader prose and follow its routed detail command."
     ],
     "small_task_mode": [
       "For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.",

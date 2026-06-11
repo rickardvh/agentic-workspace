@@ -3413,7 +3413,7 @@
     "fallbacks": [
       "If the current agent does not natively look for `AGENTS.md`, inspect `agentic-workspace config --target ./repo --format json` and follow the configured startup file; if the CLI is unavailable, fall back to `AGENTS.md` or another supported startup file already present.",
       "If you need takeover guidance plus live state together, prefer `agentic-workspace preflight --format json` before running multiple compact queries or rereading repo prose.",
-      "If the question is active planning recovery rather than startup order, prefer the tiny default `agentic-workspace summary --format json` before raw planning state or execplan prose; use `--verbose` only when the tiny router is insufficient."
+      "If the question is active planning recovery rather than startup order, use the `start` packet route first; run `agentic-workspace summary --format json` before raw planning state or execplan prose only when the route points there."
     ],
     "first_queries": [
       {
@@ -3423,29 +3423,18 @@
         "why": "start bundles ordinary startup routing, active-state summary, and task-specific skill recommendations"
       },
       {
-        "command": "agentic-workspace defaults --section startup --format json",
-        "question": "What is the ordinary repo startup path?",
-        "why": "startup defaults carry reference routing when start is unavailable or insufficient"
-      },
-      {
-        "command": "agentic-workspace config --target ./repo --format json",
-        "field": "workspace.agent_instructions_file",
-        "question": "Which startup file is canonical here?",
-        "why": "repo config is authoritative when the startup filename differs from the default `AGENTS.md`"
-      },
-      {
-        "command": "agentic-workspace summary --format json",
-        "field": "planning_record",
-        "question": "What is active right now?",
-        "why": "active-state recovery should come from the compact planning summary before raw planning prose"
+        "command": "agentic-workspace implement --changed <paths> --task \"<task>\" --format json",
+        "field": "task_posture_packet",
+        "question": "What is the bounded implementer posture when changed paths are already known?",
+        "why": "implement carries proof, posture, and knowledge gates without broad startup diagnostics"
       }
     ],
     "primary": [
       "For ordinary first contact, run `agentic-workspace start --task \"<task>\" --format json`.",
       "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
-      "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
-      "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
-      "Use `agentic-workspace summary --format json` only when current planning state matters before opening raw planning files.",
+      "Use routed drill-down such as `preflight`, `config`, `defaults`, or `summary` only when the startup packet or explicit request names that need.",
+      "Read the configured root startup file from the startup packet first; use `agentic-workspace config --target ./repo --format json` only when configuration itself is the question.",
+      "Use `agentic-workspace summary --format json` only when the startup packet routes to current planning state before opening raw planning files.",
       "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there."
     ],
     "secondary": [
@@ -3523,9 +3512,7 @@
       "entrypoint": "AGENTS.md",
       "first_compact_queries": [
         "agentic-workspace start --target ./repo --task \"<task>\" --format json",
-        "agentic-workspace implement --changed <paths> --format json",
-        "agentic-workspace config --target ./repo --format json",
-        "agentic-workspace summary --format json"
+        "agentic-workspace implement --changed <paths> --task \"<task>\" --format json"
       ],
       "summary": "Start from one repo entrypoint, one ordinary startup query, and conditional deeper reads."
     },
@@ -3598,7 +3585,7 @@
       "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits."
     },
     "workflow_recovery": [
-      "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json`, then `agentic-workspace preflight --format json`, `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json` before broader prose or repo-local workaround guidance."
+      "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json` and follow its routed drill-down before broader prose or repo-local workaround guidance."
     ]
   },
   "surface_value_guardrail": {

@@ -946,6 +946,8 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert packet["read_only_allowed"] is True
     assert packet["exploration_allowed"] is True
     assert packet["allowed_read_only_actions"]
+    assert not any("preflight" in action for action in packet["allowed_read_only_actions"])
+    assert any("drill-down selectors" in action for action in packet["allowed_read_only_actions"])
     assert packet["claim_boundary"]["completion_claim"] in {
         "allowed-after-proof",
         "blocked-until-proof-and-acceptance",
@@ -1237,6 +1239,17 @@ def test_start_select_returns_requested_startup_fields(capsys) -> None:
     assert payload["values"]["cli_invocation"]["primary"] == REPO_LOCAL_CLI_INVOKE
     assert payload["missing"] == ["durable_intent.missing"]
     assert "skill_routing" in payload["available_selectors"]
+
+
+def test_start_select_returns_projected_router_fields(capsys) -> None:
+    task = "Promote actionable findings to issues"
+    assert cli.main(["start", "--task", task, "--select", "next_safe_action,action_signals", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "missing" not in payload
+    packet = payload["values"]["next_safe_action"]
+    _assert_next_safe_action_valid(packet)
+    assert payload["values"]["action_signals"]["allowed_next_action"] == packet["next_safe_action"]
 
 
 def test_start_select_returns_acceptance_and_durable_promotion(capsys) -> None:
@@ -3581,8 +3594,12 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     queries = tiny_safe.get("first_compact_queries", [])
     assert not any("agentic-workspace preflight --format json" in q for q in queries)
     assert any("agentic-workspace start --target ./repo" in q for q in queries)
-    assert any("agentic-workspace config --target" in q for q in queries)
-    assert any("agentic-workspace summary" in q for q in queries)
+    assert queries == [
+        'agentic-workspace start --target ./repo --task "<task>" --format json',
+        'agentic-workspace implement --changed <paths> --task "<task>" --format json',
+    ]
+    assert not any("agentic-workspace config --target" in q for q in queries)
+    assert not any("agentic-workspace summary" in q for q in queries)
     # Ensure NO stale bootstrap references in startup queries (most critical part)
     assert not any("agentic-planning summary" in q for q in queries)
 

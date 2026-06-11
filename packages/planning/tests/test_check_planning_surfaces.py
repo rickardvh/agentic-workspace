@@ -333,12 +333,12 @@ def _baseline_manifest() -> dict[str, object]:
         "bootstrap": {
             "first_reads": ["AGENTS.md"],
             "first_queries": [
-                "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question.",
-                "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
+                'Use `agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router.',
+                'Use `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are already known.',
             ],
             "tiny_safe_model": [
                 "Start from `AGENTS.md`.",
-                "Ask compact startup queries first.",
+                "Ask the Startup Router first.",
                 "Open deeper surfaces only when the small model stops being sufficient.",
             ],
             "surface_roles": [
@@ -389,7 +389,7 @@ def _baseline_manifest() -> dict[str, object]:
                 },
             ],
             "conditional_reads": [
-                "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",
+                "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review.",
                 "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.",
                 "Read `ROADMAP.md` only when promoting work.",
                 "Treat `.agentic-workspace/docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",

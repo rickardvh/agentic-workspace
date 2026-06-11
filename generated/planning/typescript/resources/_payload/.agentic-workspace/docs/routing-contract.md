@@ -4,23 +4,20 @@ This contract defines how to enter the repository, orient quickly, and pick the 
 
 ## 1. Startup and First Contact
 
-Use the following order for a fresh entry:
+Use the Startup Router for a fresh entry:
 
 1. **High-Efficiency Entry**: Use the [Cold-Start Protocol](cold-start-protocol.md) for a <3 turn activation.
-2. **Configured Startup File**: Check `agentic-workspace config --target ./repo --format json` for the entrypoint (default `AGENTS.md`).
-3. **Compact State**: Read `agentic-workspace summary --format json` first to see the compact planning and ownership state.
-4. **Active Queue**: Read `.agentic-workspace/planning/state.toml` only when the summary shows active work that still needs raw queue detail.
-5. **Compact Queries**: Before reading broad prose, use:
-   - `agentic-workspace defaults --section startup --format json`: For startup order and surface roles.
-   - `agentic-workspace report --target ./repo --format json`: For combined workspace/module status.
+2. **Configured Startup File**: Start from the configured repo startup file (default `AGENTS.md`).
+3. **Startup Router**: Run `agentic-workspace start --task "<task>" --format json`, or `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are already known.
+4. **Routed Detail**: Use `summary`, `config`, `defaults`, `report`, or raw Planning files only when the router packet or explicit user request names that need.
 
 ### Tiny Safe Model
 
 Ordinary work should begin from one small operating model:
 
 - one startup entrypoint: `AGENTS.md` by default
-- one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`
-- one rule for deeper reads: load broader prose or module-specific surfaces only when the task crosses a real boundary
+- one Startup Router query: `agentic-workspace start --task "<task>" --format json`
+- one rule for deeper reads: load broader prose or module-specific surfaces only when the router packet shows the task crosses a real boundary
 
 Use [minimum-operating-model.md](minimum-operating-model.md) for the compact module-boundary and escalation-cue contract.
 

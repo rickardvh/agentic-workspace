@@ -45,6 +45,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         payload["startup"]["tiny_safe_model"]["first_compact_queries"][0]
         == 'agentic-workspace start --target ./repo --task "<task>" --format json'
     )
+    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"] == [
+        'agentic-workspace start --target ./repo --task "<task>" --format json',
+        'agentic-workspace implement --changed <paths> --task "<task>" --format json',
+    ]
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
     vague_route = payload["startup"]["vague_outcome_route"]
     assert vague_route["status"] == "available"
@@ -59,9 +63,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert ".agentic-workspace/planning/state.toml" not in payload["startup"]["primary"][2]
     assert payload["startup"]["first_queries"][0]["command"] == 'agentic-workspace start --task "<task>" --format json'
     assert payload["startup"]["first_queries"][0]["field"] == "immediate_next_allowed_action"
-    assert payload["startup"]["first_queries"][1]["command"] == "agentic-workspace defaults --section startup --format json"
-    assert payload["startup"]["first_queries"][2]["field"] == "workspace.agent_instructions_file"
-    assert payload["startup"]["first_queries"][3]["field"] == "planning_record"
+    assert payload["startup"]["first_queries"][1]["command"] == (
+        'agentic-workspace implement --changed <paths> --task "<task>" --format json'
+    )
+    assert payload["startup"]["first_queries"][1]["field"] == "task_posture_packet"
     assert payload["startup"]["surface_roles"][0]["surface"] == "AGENTS.md"
     assert any(
         role.get("surface") == "docs/agentic-workspace-install.md" and role.get("role") == "public external install/adopt instructions"
@@ -536,12 +541,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["workflow_recovery"] == [
         (
             "When takeover or recovery is unclear, prefer "
-            '`agentic-workspace start --task "<task>" --format json`, then '
-            "`agentic-workspace preflight --format json`, "
-            "`agentic-workspace defaults --section startup --format json`, "
-            "`agentic-workspace config --target ./repo --format json`, and "
-            "`agentic-workspace summary --format json` before broader "
-            "prose or repo-local workaround guidance."
+            '`agentic-workspace start --task "<task>" --format json` and follow its routed '
+            "drill-down before broader prose or repo-local workaround guidance."
         ),
     ]
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
@@ -568,7 +569,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 
     text = capsys.readouterr().out
     assert "Startup:" in text
-    assert "agentic-workspace defaults --section startup --format json" in text
+    assert 'agentic-workspace start --task "<task>" --format json' in text
+    assert "routed drill-down" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
