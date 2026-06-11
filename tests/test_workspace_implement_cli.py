@@ -1223,9 +1223,19 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
     assert review["kind"] == "agentic-workspace/runtime-source-edit-review/v1"
     assert review["status"] == "classification-required"
     assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert review["inventory_source"] == "src/agentic_workspace/contracts/python_runtime_projection_inventory.json"
+    assert review["missing_inventory_paths"] == []
+    assert review["review_items"][0]["changed_path"] == "src/agentic_workspace/workspace_runtime_primitives.py"
+    assert review["review_items"][0]["status"] == "inventory-backed"
+    assert review["review_items"][0]["accepted_runtime_symbol_count"] > 0
+    accepted_symbol = review["review_items"][0]["sample_accepted_runtime_symbols"][0]
+    assert accepted_symbol["source_module"] == "agentic_workspace.workspace_runtime_primitives"
+    assert accepted_symbol["source_symbol"]
+    assert accepted_symbol["primitive_refs"]
+    assert accepted_symbol["direct_edit_reasons_allowed"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
     assert review["accepted_direct_edit_reasons"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
     assert "package-domain boundary" in review["rejected_vague_reasons"]
-    assert "final report states the edit reason" in review["completion_claim_rule"]
+    assert "inventory-backed symbol/primitive" in review["completion_claim_rule"]
     assert "proof.runtime_source_edit_review" in payload["drill_down"]["available_selectors"]
 
 
