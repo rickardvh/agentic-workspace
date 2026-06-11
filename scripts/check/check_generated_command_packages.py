@@ -130,7 +130,10 @@ PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
 }
 PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES = {"generic-deterministic-runtime-debt"}
 PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES = {
-    "front-door-dispatch": "candidate-route: reduce by generated dispatcher support only when the dispatch semantics are contract-stable.",
+    "front-door-dispatch": (
+        "hand-owned: cross-package module front-door dispatch remains a workspace runtime primitive until "
+        "command-generation has a stable optional-module dispatch primitive."
+    ),
     "generic-deterministic-runtime-debt": "move-to-command-generation: generic deterministic command behavior must not remain an accepted runtime boundary.",
     "live-workspace-inspection": "hand-owned: live repository inspection remains a package/runtime primitive until a stable IR contract exists.",
     "mutation-orchestration": "hand-owned: mutation, safety, conflict, and provenance policy remains a package/runtime primitive until safely decomposed.",
@@ -147,7 +150,7 @@ PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES = {
 PYTHON_RUNTIME_BOUNDARY_EXPECTED_MINIMIZATION = {
     "front-door-dispatch": {
         "minimization_category": "front-door-dispatch-extraction-candidate",
-        "minimization_route": "candidate-extract-when-contract-stable",
+        "minimization_route": "keep-as-hand-owned-primitive",
     },
     "live-workspace-inspection": {
         "minimization_category": "live-workspace-inspection",

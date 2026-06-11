@@ -370,6 +370,7 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert minimization["contract_stable_extraction_candidate_count"] == runtime_metrics[
         "accepted_runtime_symbol_count_by_minimization_route"
     ].get("candidate-extract-when-contract-stable", 0)
+    assert minimization["contract_stable_extraction_candidate_count"] == 0
     assert minimization["exact_runtime_boundary_inventory"]
     exact_entry = minimization["exact_runtime_boundary_inventory"][0]
     assert {
