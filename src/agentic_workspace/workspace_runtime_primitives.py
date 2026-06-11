@@ -1920,6 +1920,7 @@ class RegisteredSkill:
     source_kind: str
     scope: str
     stability: str
+    visibility: str
     summary: str
     activation_hints: SkillActivationHints
     registration: str
@@ -37165,6 +37166,7 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
                     source_kind=source.source_kind,
                     scope=source.default_scope,
                     stability=source.default_stability,
+                    visibility=_skill_visibility(scope=source.default_scope),
                     summary="unregistered skill discovered by directory scan",
                     activation_hints=SkillActivationHints(verbs=(), nouns=(), phrases=(), when=()),
                     registration="implicit-scan",
@@ -37213,6 +37215,7 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
                 source_kind=str(payload.get("source_kind", source.source_kind)),
                 scope=str(raw.get("scope", source.default_scope)),
                 stability=str(raw.get("stability", source.default_stability)),
+                visibility=str(raw.get("visibility", _skill_visibility(scope=str(raw.get("scope", source.default_scope))))),
                 summary=str(raw.get("summary", "")).strip(),
                 activation_hints=SkillActivationHints(
                     verbs=tuple((str(value).strip() for value in activation_hints.get("verbs", []) if str(value).strip())),
@@ -37234,6 +37237,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         "source_kind": skill.source_kind,
         "scope": skill.scope,
         "stability": skill.stability,
+        "visibility": skill.visibility,
         "summary": skill.summary,
         "activation_hints": {
             "verbs": list(skill.activation_hints.verbs),
@@ -37243,6 +37247,17 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         },
         "registration": skill.registration,
     }
+
+
+def _skill_visibility(*, scope: str) -> str:
+    normalized = scope.strip().lower()
+    if normalized in {"bundled", "repo-owned"}:
+        return "ordinary-default"
+    if normalized.startswith("routed"):
+        return "routed-on-demand"
+    if normalized.startswith("temporary"):
+        return "temporary"
+    return "catalogued"
 
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:

@@ -6,8 +6,9 @@
     {
       "id": "workspace-startup",
       "path": "workspace-startup/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
+      "scope": "routed-projection",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
       "summary": "orient through compact workspace commands before opening raw planning, memory, or docs surfaces",
       "activation_hints": {
         "verbs": ["start", "orient", "route", "preflight", "bootstrap", "closeout", "prove"],
@@ -31,6 +32,7 @@
       "path": "workspace-intent-discovery/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
+      "visibility": "ordinary-default",
       "summary": "run bounded human intent discovery before vague or high-stakes prompts become Planning or implementation",
       "activation_hints": {
         "verbs": ["ask", "clarify", "discover", "resolve", "brainstorm", "extract", "capture"],
@@ -68,6 +70,7 @@
       "path": "workspace-work-shape/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
+      "visibility": "ordinary-default",
       "summary": "decide work shape from AW facts, hard blockers, proof needs, and user intent before implementation",
       "activation_hints": {
         "verbs": ["classify", "triage", "shape", "route", "decide", "infer", "resolve"],
@@ -118,8 +121,9 @@
     {
       "id": "workspace-proof-selection",
       "path": "workspace-proof-selection/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
+      "scope": "routed-projection",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
       "summary": "select and interpret proof for task, slice, lane, or epic completion claims",
       "activation_hints": {
         "verbs": ["prove", "validate", "verify", "classify", "select"],
@@ -151,8 +155,9 @@
     {
       "id": "workspace-transition-gates",
       "path": "workspace-transition-gates/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
+      "scope": "routed-support",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
       "summary": "apply SkillSpec-backed gates to startup, planning, proof, memory, and closeout transitions",
       "activation_hints": {
         "verbs": ["gate", "transition", "route", "preserve", "fallback"],
@@ -183,8 +188,9 @@
     {
       "id": "workspace-operating-loop",
       "path": "workspace-operating-loop/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
+      "scope": "routed-projection",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
       "summary": "apply the core operating loop and module slot contract across workspace, planning, proof, closeout, and memory",
       "activation_hints": {
         "verbs": ["orchestrate", "slot", "route", "own", "preserve"],
@@ -215,8 +221,9 @@
     {
       "id": "workspace-setup-jumpstart",
       "path": "workspace-setup-jumpstart/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
+      "scope": "routed-support",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
       "summary": "route newly installed or adopted Agentic Workspace in a lived-in repo through bounded setup and jumpstart discovery before seeding durable surfaces",
       "activation_hints": {
         "verbs": ["setup", "jumpstart", "populate", "seed", "adopt", "install", "orient"],
