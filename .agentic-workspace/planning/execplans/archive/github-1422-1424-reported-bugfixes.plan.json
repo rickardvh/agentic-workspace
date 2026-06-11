@@ -1,0 +1,397 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Fix reported lifecycle and memory packaging bugs",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Fix reported bugs #1422, #1423, and #1424.",
+    "hard_constraints": "Keep scope bounded to local-only startup validation, memory generated-package contract packaging, and lifecycle upgrade command guidance.",
+    "agent_may_decide": "Implementation details inside the named package/runtime/test surfaces and exact regression test placement.",
+    "escalate_when": "A fix requires changing unrelated lifecycle semantics, broad command-generation architecture, or #1389 parent-epic closure.",
+    "next_action": "Complete the bounded bugfixes and run selected package/runtime proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_accepts_local_only_startup_indirection tests/test_workspace_doctor_status_cli.py::test_doctor_requires_local_only_state_for_local_startup_indirection tests/test_workspace_lifecycle_cli.py::test_upgrade_after_local_only_install_preserves_agents_indirection tests/test_workspace_lifecycle_cli.py::test_upgrade_local_only_full_install_does_not_request_root_agents_pointer -q",
+      "uv run pytest packages/memory/tests/test_packaging.py::test_memory_wheel_ships_generated_cli_package_import_dependency packages/memory/tests/test_packaging.py::test_memory_sdist_ships_generated_cli_package_import_dependency packages/memory/tests/test_packaging.py::test_installed_memory_wheel_imports_cli_module -q",
+      "make test-memory",
+      "make lint-memory",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "packages/memory/pyproject.toml",
+      "packages/memory/tests/test_packaging.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_doctor_status_cli.py",
+      "tests/test_workspace_lifecycle_cli.py"
+    ],
+    "completion_criteria": [
+      "#1422: local-only startup indirection is accepted only when LOCAL-ONLY.toml records mode = \"local-only\" and AGENTS.local.md contains the workflow block.",
+      "#1423: built agentic-memory wheel/sdist ship _generated_cli_package_impl/_contracts/payload_verification.memory.json and installed generated runtime can resolve it.",
+      "#1424: workspace upgrade lifecycle guidance no longer suggests unsupported --local-only while still preserving local-only state."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Fix reported lifecycle and memory packaging bugs."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Fix reported bugs #1422, #1423, and #1424.",
+      "constraints": "Keep scope bounded to local-only startup validation, memory generated-package contract packaging, and lifecycle upgrade command guidance.",
+      "latitude": "Implementation details inside the named package/runtime/test surfaces and exact regression test placement.",
+      "escalation": "Escalate when a fix requires changing unrelated lifecycle semantics, broad command-generation architecture, or #1389 parent-epic closure.",
+      "proof": "passed"
+    },
+    "execution": {
+      "milestone": "github-1422-1424-reported-bugfixes",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        "packages/memory/pyproject.toml",
+        "packages/memory/tests/test_packaging.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_doctor_status_cli.py",
+        "tests/test_workspace_lifecycle_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Fix reported bugs #1422, #1423, and #1424.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "All PRs are merged. Fix reported bugs #1422+",
+    "inferred intended outcome": "Fix open bug reports #1422, #1423, and #1424.",
+    "chosen concrete what": "Patch local-only startup validation, memory package artifact inclusion, and unsupported upgrade guidance.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/memory/pyproject.toml; packages/memory/tests/test_packaging.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; tests/test_workspace_lifecycle_cli.py; planning closeout fields for this execplan.",
+    "max changed files": "Up to seven files including planning state/execplan closeout.",
+    "required validation commands": "Focused regressions plus make test-memory, make lint-memory, make test-workspace, make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening into command-generation architecture, unrelated lifecycle semantics, or #1389 milestone work.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue the #1422-#1424 bugfix branch; validate packaging and lifecycle regressions before closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix reported bugs #1422, #1423, and #1424.",
+    "hard constraints": "Keep scope bounded to local-only startup validation, memory generated-package contract packaging, and lifecycle upgrade command guidance.",
+    "agent may decide locally": "Implementation details inside the named package/runtime/test surfaces and exact regression test placement.",
+    "escalate when": "A fix requires changing unrelated lifecycle semantics, broad command-generation architecture, or #1389 parent-epic closure."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1422-1424-reported-bugfixes",
+    "status": "completed",
+    "scope": "Fix #1422 local-only startup validation, #1423 memory packaging, and #1424 upgrade guidance.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Finish implementation and run focused regressions."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/memory/pyproject.toml",
+    "packages/memory/tests/test_packaging.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_doctor_status_cli.py",
+    "tests/test_workspace_lifecycle_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_accepts_local_only_startup_indirection tests/test_workspace_doctor_status_cli.py::test_doctor_requires_local_only_state_for_local_startup_indirection tests/test_workspace_lifecycle_cli.py::test_upgrade_after_local_only_install_preserves_agents_indirection tests/test_workspace_lifecycle_cli.py::test_upgrade_local_only_full_install_does_not_request_root_agents_pointer -q",
+    "uv run pytest packages/memory/tests/test_packaging.py::test_memory_wheel_ships_generated_cli_package_import_dependency packages/memory/tests/test_packaging.py::test_memory_sdist_ships_generated_cli_package_import_dependency packages/memory/tests/test_packaging.py::test_installed_memory_wheel_imports_cli_module -q",
+    "make test-memory",
+    "make lint-memory",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Fix reported lifecycle and memory packaging bugs is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Fixed the three open reported bugs: local-only startup validation now requires LOCAL-ONLY.toml mode, memory package artifacts ship generated _contracts, and upgrade guidance no longer emits unsupported --local-only.",
+    "scope touched": "bounded to the named runtime/package/test surfaces and this planning record",
+    "changed surfaces": "packages/memory/pyproject.toml; packages/memory/tests/test_packaging.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; tests/test_workspace_lifecycle_cli.py",
+    "validations run": "passed",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed within the three reported bugs and regression tests",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "passed; AW summary and doctor completed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest focused local-only and lifecycle regressions -q; uv run pytest focused memory packaging regressions -q; make test-memory; make lint-memory; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix reported bugs #1422, #1423, and #1424.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "passed",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "reported bugs #1422, #1423, and #1424 fixed",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "this execplan closeout",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "passed",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "#1422 local-only startup indirection validation was partially covered but should require actual local-only state",
+      "#1423 generated memory runtime expected _contracts but packaging omitted it",
+      "#1424 upgrade guidance reused local-only flag semantics from install/uninstall even though upgrade has no flag"
+    ],
+    "signals fixed": [
+      "Local-only validation now checks LOCAL-ONLY.toml mode before accepting AGENTS.local.md indirection",
+      "agentic-memory wheel/sdist now include generated _contracts",
+      "upgrade lifecycle command rendering skips --local-only"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Local-only validation now checks LOCAL-ONLY.toml mode before accepting AGENTS.local.md indirection",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "agentic-memory wheel/sdist now include generated _contracts",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "upgrade lifecycle command rendering skips --local-only",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-11: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Fix reported bugs #1422, #1423, and #1424.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: packages/memory/pyproject.toml; packages/memory/tests/test_packaging.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; tests/test_workspace_lifecycle_cli.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

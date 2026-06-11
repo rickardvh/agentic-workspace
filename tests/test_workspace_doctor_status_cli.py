@@ -107,6 +107,25 @@ def test_doctor_accepts_local_only_startup_indirection(tmp_path: Path, capsys) -
     assert not any(action["id"] == "restore-workspace-pointer-manually" for action in payload["manual_review_actions"])
 
 
+def test_doctor_requires_local_only_state_for_local_startup_indirection(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / "AGENTS.md", "Follow instructions in `AGENTS.local.md` if present.\n")
+    _write(target / "AGENTS.local.md", cli.workspace_pointer_block(cli_invoke=REPO_LOCAL_CLI_INVOKE) + "\n")
+    _write(target / ".agentic-workspace" / "WORKFLOW.md", "# Workflow\n")
+    _write(target / ".agentic-workspace" / "OWNERSHIP.toml", "schema_version = 1\n")
+    _write(target / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
+
+    assert cli.main(["doctor", "--modules", "planning", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    startup_action = next(action for action in workspace_report["actions"] if action["path"] == "AGENTS.md")
+    assert startup_action["kind"] == "warning"
+    assert startup_action["detail"] == "workspace workflow pointer block missing"
+
+
 def test_doctor_does_not_enforce_source_repo_absolute_path_policy_in_target_repo(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

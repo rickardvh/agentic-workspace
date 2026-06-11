@@ -45,6 +45,7 @@ packages = ["src/repo_memory_bootstrap"]
 "../../generated/memory/python/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/memory/python/commands" = "src/repo_memory_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/memory/python/primitives" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/memory/python/_contracts" = "src/repo_memory_bootstrap/_generated_cli_package_impl/_contracts"
 
 [tool.hatch.build.targets.wheel.hooks.custom]
 
@@ -64,6 +65,7 @@ include = [
 "../../generated/memory/python/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/memory/python/commands" = "src/repo_memory_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/memory/python/primitives" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/memory/python/_contracts" = "src/repo_memory_bootstrap/_generated_cli_package_impl/_contracts"
 
 [tool.pytest.ini_options]
 addopts = [
