@@ -642,7 +642,7 @@ def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() 
         "field": "format",
         "value": "yaml",
     }
-    assert "invalid choice" in cases["config.invalid-format.error"]["expected"]["stderr"]["contains"]
+    assert "--format" in cases["config.invalid-format.error"]["expected"]["stderr"]["contains"]
     parity = cases["memory.list-skills.parity"]
     assert {target["kind"] for target in parity["targets"]} == {"python", "typescript"}
     assert {artifact["adapter_id"] for artifact in parity["artifacts"]} == {"cli.process"}
@@ -692,8 +692,10 @@ def test_operation_conformance_test_ir_references_known_command_contracts() -> N
     bulk_preserving["migration_policy"]["do_not_preserve"] = ["old helper names"]
     assert any("one-for-one regression-test bulk" in error for error in module._validate_operation_conformance_test_ir(bulk_preserving))
     cli_default = copy.deepcopy(manifest)
-    cli_default["adapter_model"]["adapter_kinds"][-1]["default_for_semantic_proof"] = True
-    assert any("cli.process must not be the default" in error for error in module._validate_operation_conformance_test_ir(cli_default))
+    cli_default["initial_cases"][0]["artifacts"][0].pop("proof_role")
+    assert any(
+        "cli.process artifacts must declare wrapper-smoke" in error for error in module._validate_operation_conformance_test_ir(cli_default)
+    )
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
