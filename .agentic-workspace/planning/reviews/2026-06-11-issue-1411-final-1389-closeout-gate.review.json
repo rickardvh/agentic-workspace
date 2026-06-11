@@ -1,0 +1,119 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Final #1389 installed-product closeout gate",
+  "date": "2026-06-11",
+  "scope": [
+    "Post-#1437 #1411 closure decision for #1389"
+  ],
+  "classification": "installed-product-proof-gate",
+  "goal": [
+    "Decide whether #1389 can close after #1437 removed the final known ordinary output-shape blocker."
+  ],
+  "non_goals": [
+    "Do not claim Agentic Workspace has no remaining surface complexity.",
+    "Do not create speculative follow-up work without a concrete installed-product blocker."
+  ],
+  "review_mode": {
+    "mode": "installed-product-proof-gate",
+    "review question": "Is #1389 honestly closable from installed-product evidence after Milestones A-D and #1437?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run python scripts/run_agentic_workspace.py report --section operational_compression --format json; uv run python scripts/run_agentic_workspace.py start --task \"Final #1411 post-#1437 installed-path gate\" --select next_safe_action.next_safe_action,action_signals.allowed_next_action,action_signals.hard_blockers --format json; uv run python scripts/run_agentic_workspace.py summary --target . --select todo.active_count,planning_surface_health.status,warning_count --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "evidence sources": "Milestone A-D child issue closeouts; installed ordinary-path walkthrough review; #1437 ordinary output-shape compression fix; live operational_compression, start, summary, and planning doctor outputs."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1389",
+      "label": "Simplify agent-facing surfaces and workflows"
+    },
+    {
+      "kind": "issue",
+      "target": "#1411",
+      "label": "Gate #1389 closure with abstraction-ladder and installed-path proof"
+    },
+    {
+      "kind": "issue",
+      "target": "#1430",
+      "label": "Produce installed ordinary-path walkthrough for #1389"
+    },
+    {
+      "kind": "issue",
+      "target": "#1437",
+      "label": "Finish ordinary output-shape compression before #1389 closure"
+    },
+    {
+      "kind": "planning-review",
+      "target": ".agentic-workspace/planning/reviews/2026-06-11-issue-1430-installed-ordinary-path-walkthrough.review.json",
+      "label": "Milestone D installed ordinary-path walkthrough"
+    }
+  ],
+  "findings": [
+    {
+      "title": "#1389 installed-product simplification is satisfied",
+      "summary": "The ordinary installed path is now AGENTS.md -> start -> one routed next phase, with active work, proof, closeout, fallback, generated/reference surfaces, diagnostics, module ownership, and retained complexity routed or evidenced rather than exposed as a command/manual pile.",
+      "evidence": "Milestone C and D issues are closed. #1437 landed on master and operational_compression reports ordinary_output_shape_inventory.remaining_count=0, resolved_count=8, proven_count=1, retained_with_evidence_count=7, and no ordinary_output_shape_inventory signal. summary reports todo.active_count=0, planning_surface_health.status=clean, and warning_count=0. planning doctor reports health=healthy, warnings_count=0, and needs_review_count=0 after schema cleanup.",
+      "risk if unchanged": "Keeping #1389 open after the final known blocker is resolved would convert the epic into a vague umbrella for future friction rather than a bounded simplification lane.",
+      "suggested action": "Close #1411 as the satisfied gate and close #1389 as satisfied by installed-product proof. Route future friction as new issues.",
+      "promotion target": "GitHub #1389 and GitHub #1411",
+      "status": "accepted"
+    }
+  ],
+  "recommendation": {
+    "promote": "Close #1389 and #1411 with this review as the final gate evidence.",
+    "defer": "No deferred #1389-owned work remains.",
+    "dismiss": "Dismiss further speculative #1389 follow-up unless a concrete new installed-product blocker is discovered."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [],
+  "drift_log": [
+    "2026-06-11: Review record created by create-review.",
+    "2026-06-11: Final gate evidence recorded after #1437 landed on master."
+  ]
+}
