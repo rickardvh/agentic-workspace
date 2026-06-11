@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Github 1450 Workspace Modularize And Minimize Remaining Hand",
+  "plan_id": "github-1450-workspace-modularize-and-minimize-remaining-hand",
+  "created_at": "2026-06-11T20:07:32.269111+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1450-workspace-modularize-and-minimize-remaining-hand.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1450-workspace-modularize-and-minimize-remaining-hand.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1450-workspace-modularize-and-minimize-remaining-hand",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "#1450 slice satisfied: one representative large hand-owned primitive area is modularized by capability/ownership, the blocker report still distinguishes generated CLI completion from runtime primitive minimization, move-to-command-generation candidates remain zero, and #1452 records the larger dogfooding closeout-option issue.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Resolved #1450 by splitting generated-CLI-adjacent runtime-source review helpers out of the large workspace runtime primitive file into a dedicated runtime_source_review module.",
+    "scope touched": "Workspace runtime-source edit review primitive implementation and tiny generated-CLI/runtime-source review projections.",
+    "changed surfaces": "src/agentic_workspace/runtime_source_review.py; src/agentic_workspace/workspace_runtime_primitives.py; Planning state and closeout evidence.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Classified the runtime-source edit as new-primitive-implementation owned by AW primitive implementation; no command-generation sibling change was made because this split moves AW review policy into a smaller AW-owned module, not portable deterministic command behavior. Stale-reference sweep found no old private helper references.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q; uv run ruff check src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/runtime_source_review.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py; rg -n '_tiny_generated_cli_freshness_payload|_tiny_runtime_source_edit_review_payload|_runtime_source_edit_review_for_changed_paths|_runtime_source_inventory_entries_for_path|_GENERATED_CLI_RUNTIME_SOURCE' src tests returned no matches; rg -n 'tiny_generated_cli_freshness_payload|tiny_runtime_source_edit_review_payload|runtime_source_edit_review_for_changed_paths|runtime_source_inventory_entries_for_path|GENERATED_CLI_RUNTIME_SOURCE' src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/runtime_source_review.py confirmed only new module definitions and call sites; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Open upstream issue from refreshed external intent evidence; priority P2 inferred from inferred-slice.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1452 tracks the dogfooding closeout completion-option ambiguity; #1442 remains the milestone boundary..",
+    "motivation worth preserving": "Future agents should continue from GitHub #1452 tracks the dogfooding closeout completion-option ambiguity; #1442 remains the milestone boundary. rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1452 tracks the dogfooding closeout completion-option ambiguity; #1442 remains the milestone boundary.",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1450 slice satisfied: one representative large hand-owned primitive area is modularized by capability/ownership, the blocker report still distinguishes generated CLI completion from runtime primitive minimization, move-to-command-generation candidates remain zero, and #1452 records the larger dogfooding closeout-option issue.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Closeout routed issue residue to GitHub #1452 tracks the dogfooding closeout completion-option ambiguity; #1442 remains the milestone boundary..",
+          "owner": "GitHub #1452 tracks the dogfooding closeout completion-option ambiguity; #1442 remains the milestone boundary.",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ]
+    }
+  }
+}
