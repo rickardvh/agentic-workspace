@@ -401,6 +401,19 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert "package-domain boundary" in edit_policy["rejected_vague_reasons"]
     assert "source_symbol_or_primitive" in edit_policy["required_evidence"]
     assert "vague package-domain boundary wording is insufficient" in edit_policy["rule"]
+    migration = report["generated_command_migration_completion"]
+    assert migration["kind"] == "generated-command-migration-completion/v1"
+    assert migration["milestone"] == "Generated command migration completion"
+    assert migration["status"] == "satisfied"
+    assert migration["blocked_issues"] == []
+    assert migration["issue_statuses"]["#1356"]["status"] == "satisfied"
+    assert migration["issue_statuses"]["#1358"]["status"] == "satisfied"
+    assert migration["issue_statuses"]["#1442"]["status"] == "satisfied"
+    assert migration["hand_owned_runtime_inventory"]["accepted_runtime_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert migration["hand_owned_runtime_inventory"]["generic_debt_symbol_count"] == 0
+    assert "parent #1441" in migration["hand_owned_runtime_inventory"]["claim_boundary"]
+    assert "src/agentic_workspace/contracts/command_package_ir.json" in migration["command_generation_owner_surfaces"]
+    assert "IR-defined schema-coupled generated command tests" in migration["remaining_parent_scope"][0]
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
     assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
