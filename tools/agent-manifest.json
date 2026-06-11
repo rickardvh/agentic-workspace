@@ -9,7 +9,7 @@
       "AGENTS.md"
     ],
     "first_queries": [
-      "Use `agentic-workspace start --task \"<task>\" --format json` as the ordinary first-contact router.",
+      "Use `agentic-workspace start --task \"<task>\" --format json` before non-trivial work.",
       "Use `agentic-workspace implement --changed <paths> --task \"<task>\" --format json` when changed paths are already known.",
       "Use `summary`, `config`, `defaults`, `report`, or raw Planning files only when the router packet or explicit user request names that need."
     ],

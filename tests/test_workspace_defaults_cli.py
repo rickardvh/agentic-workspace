@@ -606,6 +606,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
             '`agentic-workspace start --task "<task>" --format json` and follow its routed '
             "drill-down before broader prose or repo-local workaround guidance."
         ),
+        (
+            "Use `.agentic-workspace/WORKFLOW.md` only after the effective CLI is unavailable or "
+            "compact JSON cannot be read; resume compact packets as soon as they work."
+        ),
     ]
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
@@ -633,6 +637,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Startup:" in text
     assert 'agentic-workspace start --task "<task>" --format json' in text
     assert "routed drill-down" in text
+    assert "recovery-only" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text

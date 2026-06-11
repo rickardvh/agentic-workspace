@@ -1111,13 +1111,14 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     required_agents_fragments = (
         "<!-- agentic-workspace:workflow:start -->",
-        "as the ordinary first-contact router",
+        "ordinary route:",
+        "before non-trivial answers",
         "start --task",
         "config.local.toml",
         "next_safe_action",
         "action_signals",
         "skills",
-        "do not open raw `.agentic-workspace` files before this command",
+        "before opening raw `.agentic-workspace` files",
         "do not try a bare `agentic-workspace` command first",
         "routed drill-down or recovery surfaces",
         ".agentic-workspace/workflow.md",
