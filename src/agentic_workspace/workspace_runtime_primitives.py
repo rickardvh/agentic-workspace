@@ -29835,17 +29835,22 @@ def _emit_proof(
         return
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
+        full_payload = {
+            "profile": "compact-contract-answer/v1",
+            "surface": "proof",
+            "target": target_root.as_posix(),
+            "selector": {"changed": normalized_paths},
+            "answer": answer,
+            **answer,
+        }
         payload = _tiny_proof_payload(
-            {
-                "profile": "compact-contract-answer/v1",
-                "target": target_root.as_posix(),
-                "selector": {"changed": normalized_paths},
-                "answer": answer,
-            },
+            full_payload,
             cli_invoke=config.cli_invoke,
         )
         if select:
-            payload = _select_payload_fields(payload, select=select, source_command="proof")
+            full_payload.setdefault("sufficiency", payload.get("sufficiency", answer.get("sufficiency")))
+            full_payload.setdefault("next", payload.get("next"))
+            payload = _select_payload_fields(full_payload, select=select, source_command="proof")
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
             return
@@ -30062,6 +30067,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["verification"] = full_payload["verification"]
         if routine_work_context_selected:
             payload["routine_work_context"] = full_payload["routine_work_context"]
+        if _selector_requests(getattr(args, "select", None), "proof.proof_adequacy") and isinstance(full_payload.get("proof"), dict):
+            payload.setdefault("proof", {})["proof_adequacy"] = full_payload["proof"].get("proof_adequacy", {})
         if _selector_requests(getattr(args, "select", None), "active_intent_contract"):
             payload["active_intent_contract"] = full_payload["active_intent_contract"]
         if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
@@ -33117,6 +33124,87 @@ def _proof_obligations_payload(
     }
 
 
+def _proof_adequacy_payload(
+    *,
+    required_commands: list[str],
+    optional_commands: list[str],
+    selected_lanes: list[dict[str, Any]],
+    verification: dict[str, Any],
+    proof_obligations: dict[str, Any],
+    proof_confidence: dict[str, Any],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    verification_active = bool(
+        int(verification.get("active_count", 0) or 0)
+        or _list_payload(verification.get("active_protocols"))
+        or _list_payload(verification.get("active_proof_routes"))
+        or _list_payload(verification.get("known_gaps"))
+    )
+    verification_route_reasons: list[str] = []
+    if verification_active:
+        verification_route_reasons.extend(
+            [
+                "changed paths, proof profile, workflow obligations, knowledge gates, or module manifests matched Verification",
+                "Verification contributes soft protocols, evidence bundles, stale/gap semantics, or proof route hints",
+            ]
+        )
+    else:
+        verification_route_reasons.append("no Verification activation signal matched this proof selection")
+    lane_ids = [str(lane.get("id", "")) for lane in selected_lanes if str(lane.get("id", "")).strip()]
+    return {
+        "kind": "agentic-workspace/proof-adequacy/v1",
+        "protocol": "Proof Adequacy",
+        "status": "proof-required" if required_commands or manual_verification is not None else "no-required-proof-selected",
+        "proof_surface_role": "proof selects evidence for the claim; it does not close work by itself",
+        "implement_surface_role": "implement --changed carries changed-path work context and proof hints; it does not replace proof selection",
+        "required_evidence": {
+            "commands": required_commands,
+            "manual_verification_required": manual_verification is not None,
+            "source": "proof_obligations.required_proof",
+        },
+        "confidence_evidence": {
+            "commands": optional_commands,
+            "source": "proof_obligations.recommended_confidence_checks",
+            "rule": "Recommended confidence checks may raise trust but do not replace required proof.",
+        },
+        "verification_enrichment": {
+            "status": "active" if verification_active else "not-routed",
+            "route_reasons": verification_route_reasons,
+            "active_protocol_count": len(_list_payload(verification.get("active_protocols"))),
+            "active_proof_route_count": len(_list_payload(verification.get("active_proof_routes"))),
+            "known_gap_count": len(_list_payload(verification.get("known_gaps"))),
+        },
+        "claim_boundary": {
+            "proof_success_authorizes": [
+                "proof execution evidence for the selected claim boundary",
+                "input to closeout and acceptance reconciliation",
+            ],
+            "does_not_authorize": [
+                "completion permission without closeout",
+                "semantic intent satisfaction",
+                "parent issue, lane, or epic closure",
+                "ignoring required residue or continuation ownership",
+            ],
+            "completion_rule": proof_obligations.get(
+                "completion_claim_rule",
+                "Completion claims remain blocked until proof, acceptance, and residue are reconciled.",
+            ),
+        },
+        "selected_lane_ids": lane_ids,
+        "proof_confidence": {
+            "confidence": proof_confidence.get("confidence"),
+            "claim_boundary": proof_confidence.get("claim_boundary"),
+            "residual_risk": proof_confidence.get("residual_risk"),
+        },
+        "agent_owned_decisions": [
+            "whether selected evidence is adequate for the actual claim",
+            "whether failures, skips, unavailable commands, or stale evidence lower the claim",
+            "whether extra task-specific validation is needed",
+        ],
+        "rule": "Proof Adequacy judges evidence against a claim boundary; closeout owns completion permission and intent satisfaction.",
+    }
+
+
 def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands: list[str] | None = None) -> dict[str, Any]:
     required = value.get("required_proof", {}) if isinstance(value.get("required_proof"), dict) else {}
     recommended = value.get("recommended_confidence_checks", {}) if isinstance(value.get("recommended_confidence_checks"), dict) else {}
@@ -33134,6 +33222,20 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "rule": recommended.get("rule", ""),
         },
         "completion_claim_rule": value.get("completion_claim_rule", ""),
+    }
+
+
+def _tiny_proof_adequacy_payload(value: dict[str, Any]) -> dict[str, Any]:
+    required = value.get("required_evidence", {}) if isinstance(value.get("required_evidence"), dict) else {}
+    verification = value.get("verification_enrichment", {}) if isinstance(value.get("verification_enrichment"), dict) else {}
+    required_commands = required.get("commands", []) if isinstance(required.get("commands"), list) else []
+    return {
+        "protocol": value.get("protocol", "Proof Adequacy"),
+        "status": value.get("status", "unknown"),
+        "required_command_count": len(required_commands),
+        "manual_verification_required": bool(required.get("manual_verification_required", False)),
+        "verification_status": verification.get("status", "unknown"),
+        "completion": "closeout-required",
     }
 
 
@@ -33843,6 +33945,19 @@ def _proof_selection_for_changed_paths(
         manual_verification=manual_verification,
     )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
+    proof_confidence = _proof_confidence_payload(
+        intent_proof=intent_proof,
+        proof_execution_evidence=proof_execution_evidence,
+    )
+    proof_adequacy = _proof_adequacy_payload(
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        selected_lanes=selected_lanes,
+        verification=verification,
+        proof_obligations=proof_obligations,
+        proof_confidence=proof_confidence,
+        manual_verification=manual_verification,
+    )
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -33893,10 +34008,8 @@ def _proof_selection_for_changed_paths(
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
         "intent_proof": intent_proof,
-        "proof_confidence": _proof_confidence_payload(
-            intent_proof=intent_proof,
-            proof_execution_evidence=proof_execution_evidence,
-        ),
+        "proof_confidence": proof_confidence,
+        "proof_adequacy": proof_adequacy,
         "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,

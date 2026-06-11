@@ -854,6 +854,7 @@ def test_implement_separates_required_proof_from_recommended_confidence_checks(t
     payload = json.loads(capsys.readouterr().out)
     proof = payload["proof"]
     obligations = proof["proof_obligations"]
+    adequacy = proof["proof_adequacy"]
     assert "make test-planning" in proof["required_commands"]
     assert "make lint-planning" in proof["required_commands"]
     assert "make typecheck-planning" in proof["required_commands"]
@@ -862,6 +863,10 @@ def test_implement_separates_required_proof_from_recommended_confidence_checks(t
     assert obligations["recommended_confidence_checks"]["commands"] != proof["required_commands"]
     assert obligations["agent_selected_extra_validation"]["status"] == "agent-owned"
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
+    assert adequacy["protocol"] == "Proof Adequacy"
+    assert adequacy["required_evidence"]["commands"] == proof["required_commands"]
+    assert "completion permission without closeout" in adequacy["claim_boundary"]["does_not_authorize"]
+    assert "semantic intent satisfaction" in adequacy["claim_boundary"]["does_not_authorize"]
     assert payload["required_validation_commands"] == proof["required_commands"]
 
 
