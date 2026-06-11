@@ -6542,6 +6542,23 @@ def _lifecycle_apply_command(
     return str(_command_with_cli_invoke(command=" ".join(parts), cli_invoke=cli_invoke))
 
 
+def _selected_module_reports(*, target_root: Path, selected_modules: list[str]) -> list[dict[str, Any]]:
+    reports: list[dict[str, Any]] = []
+    for module_name in selected_modules:
+        if module_name == "planning":
+            from repo_planning_bootstrap.installer import planning_report
+
+            module_report = planning_report(target=target_root)
+        elif module_name == "memory":
+            from repo_memory_bootstrap.installer import memory_report
+
+            module_report = memory_report(target=target_root)
+        else:
+            continue
+        reports.append(module_report)
+    return reports
+
+
 def _run_report_command(
     *,
     target_root: Path,
@@ -6550,9 +6567,6 @@ def _run_report_command(
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
-    from repo_memory_bootstrap.installer import memory_report
-    from repo_planning_bootstrap.installer import planning_report
-
     status_payload = _run_lifecycle_command(
         command_name="status",
         target_root=target_root,
@@ -6585,15 +6599,9 @@ def _run_report_command(
         module_name = str(report.get("module", ""))
         for warning in report.get("warnings", []):
             _add_finding(severity="warning", module=module_name, path=warning.get("path"), message=str(warning.get("message", "")))
-    module_reports: list[dict[str, Any]] = []
-    for module_name in selected_modules:
-        if module_name == "planning":
-            module_report = planning_report(target=target_root)
-        elif module_name == "memory":
-            module_report = memory_report(target=target_root)
-        else:
-            continue
-        module_reports.append(module_report)
+    module_reports = _selected_module_reports(target_root=target_root, selected_modules=selected_modules)
+    for module_report in module_reports:
+        module_name = str(module_report.get("module", ""))
         module_findings = cast(Any, module_report.get("findings"))
         if isinstance(module_findings, list):
             for finding in module_findings:
@@ -7712,6 +7720,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/external-evidence-safety/v1",
         "purpose": "external freshness, divergence, and closeout-safety decision support",
         "when_to_use": "before broad closeout when external issue, CI, scanner, or ticket evidence may be stale or divergent",
+    },
+    {
+        "section": "closeout_trust",
+        "kind": "agentic-workspace/closeout-trust/v1",
+        "purpose": "compact strict closeout gate, claim permission, proof, and residue routing posture",
+        "when_to_use": "before ordinary lane closeout or broad completion claims, without loading the full report",
     },
     {
         "section": "workflow_compliance_summary",
@@ -10246,6 +10260,15 @@ def _run_lazy_report_section_command(
 
     if normalized == "successful_completion_cost":
         payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "closeout_trust":
+        payload["closeout_trust"] = _report_closeout_trust_payload(
+            module_reports=_selected_module_reports(target_root=target_root, selected_modules=selected_modules),
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized in {
@@ -30511,6 +30534,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if profile == "tiny":
         profile = "router"
     section = getattr(args, "section", None)
+    select = getattr(args, "select", None)
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None and (args.format == "json"):
@@ -30521,6 +30545,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="report")
         payload = _rewrite_module_cli_commands(payload)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -30533,6 +30559,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             section=section,
         )
         if payload is not None:
+            if select:
+                payload = _select_payload_fields(payload, select=select, source_command="report")
             payload = _rewrite_module_cli_commands(payload)
             _emit_payload(payload=payload, format_name=args.format)
             return 0
@@ -30540,6 +30568,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         target_root=target_root, selected_modules=selected_modules, resolved_preset=resolved_preset, descriptors=descriptors, config=config
     )
     payload = _select_report_payload(payload, profile=profile, section=section)
+    if select:
+        payload = _select_payload_fields(payload, select=select, source_command="report")
     payload = _rewrite_module_cli_commands(payload)
     _emit_payload(payload=payload, format_name=args.format)
     return 0

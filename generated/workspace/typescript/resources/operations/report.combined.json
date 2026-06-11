@@ -14,7 +14,8 @@
     "Report must remain read-only even when module health warnings are found.",
     "The default profile should route to high-signal sections before exposing high-volume module detail.",
     "Operational-compression measures must remain descriptive and advisory, not a score, dashboard, workflow engine, or host-specific tracker policy.",
-    "Unknown sections should be treated as usage errors."
+    "Unknown sections should be treated as usage errors.",
+    "Exact field selectors must operate on the selected report payload and must not force a lazy section to build the full report."
   ],
   "id": "report.combined",
   "inputs": [
@@ -50,6 +51,11 @@
     },
     {
       "name": "section",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
       "required": false,
       "source": "cli-option"
     },
@@ -99,7 +105,8 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "report command tests remain compatible",
-    "operational-compression section selector returns compact advisory measures"
+    "operational-compression section selector returns compact advisory measures",
+    "sectioned exact field selection returns selected-output JSON without full-report assembly"
   ],
   "reads": [
     {
@@ -121,6 +128,10 @@
     {
       "required": false,
       "surface": "verbose flag for broad diagnostic output"
+    },
+    {
+      "required": false,
+      "surface": "section name and exact field selector for compact drill-down"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -146,8 +157,8 @@
       "uses": "workspace.report.assemble"
     },
     {
-      "description": "Emit the default router, verbose detail, or one top-level section.",
-      "id": "select_profile_or_section",
+      "description": "Emit the default router, verbose detail, one top-level section, or selected exact JSON fields.",
+      "id": "select_profile_section_or_fields",
       "uses": "workspace.report.select"
     },
     {
@@ -156,6 +167,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, and section access to deeper detail.",
+  "summary": "Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, section access, and exact field selection for deeper detail.",
   "writes": []
 }

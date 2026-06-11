@@ -2482,6 +2482,13 @@ const commandDefinitions = [
           ],
           "help": "Return one top-level full-report section in the compact contract profile.",
           "name": "section"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Comma-separated JSON fields to return from the selected report payload, such as answer.closeout_protocol.",
+          "name": "select"
         }
       ]
     },

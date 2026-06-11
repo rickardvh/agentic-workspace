@@ -308,6 +308,55 @@ def test_report_continuation_projection_sections_are_lazy(tmp_path: Path, capsys
         assert payload["answer"]["kind"] == kind
 
 
+def test_report_closeout_trust_section_is_lazy(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("sectioned closeout_trust report should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selector"] == {"section": "closeout_trust"}
+    assert payload["answer"]["completion_gate"]["kind"] == "agentic-workspace/completion-gate/v1"
+    assert "detail" in payload["answer"]
+
+
+def test_report_section_select_returns_exact_nested_field_without_full_report(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("sectioned report --select should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--select",
+                "answer.closeout_protocol",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "report"
+    selected = payload["values"]["answer.closeout_protocol"]
+    assert selected["protocol"] == "Completion Honesty / Residue Routing"
+    assert selected["source_surface"] == "closeout_trust"
+
+
 def test_report_section_catalog_lists_lazy_sections_without_full_report(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
 
@@ -323,8 +372,10 @@ def test_report_section_catalog_lists_lazy_sections_without_full_report(tmp_path
     assert answer["section_count"] == len(answer["lazy_sections"])
     sections = {item["section"]: item for item in answer["lazy_sections"]}
     assert "workflow_compliance_summary" in sections
+    assert "closeout_trust" in sections
     assert "automation_readiness" in sections
     assert sections["workflow_compliance_summary"]["payload_is_lazy"] is True
+    assert sections["closeout_trust"]["payload_is_lazy"] is True
     assert "--section workflow_compliance_summary" in sections["workflow_compliance_summary"]["command"]
     assert "--section section_catalog" in answer["default_router_policy"]["catalog_command"]
 
