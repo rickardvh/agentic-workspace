@@ -349,6 +349,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         durable_action = durable_action if isinstance(durable_action, dict) else {}
         completion_options = answer.get("completion_options", [])
         completion_options = completion_options if isinstance(completion_options, list) else []
+        closeout_protocol = answer.get("closeout_protocol", {})
+        closeout_protocol = closeout_protocol if isinstance(closeout_protocol, dict) else {}
         strict_gate = answer.get("strict_closeout_gate", {})
         strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
         completion_gate = answer.get("completion_gate", {})
@@ -384,6 +386,23 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,
             "completion_options": completion_options,
+            "closeout_protocol": {
+                key: closeout_protocol.get(key)
+                for key in (
+                    "kind",
+                    "protocol",
+                    "status",
+                    "source_surface",
+                    "readiness",
+                    "claim_boundary",
+                    "residue_routing",
+                    "knowledge_route_states",
+                    "closure_permission",
+                    "proof_dependency",
+                    "detail_command",
+                )
+                if key in closeout_protocol
+            },
             "assurance_requirements": {
                 "status": assurance_requirements.get("status", "absent"),
                 "configured_count": assurance_requirements.get("configured_count", 0),
