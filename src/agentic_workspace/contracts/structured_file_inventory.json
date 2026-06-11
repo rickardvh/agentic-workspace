@@ -1628,7 +1628,7 @@
       "named_consumer": "package-local generated target bridges and installed package import proof",
       "checked_in_justification": "Generated Python package metadata is kept as a peer target projection beside generated TypeScript outputs.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python metadata",
       "max_bytes": 250000
     },
@@ -1638,7 +1638,7 @@
       "named_consumer": "package-local generated target JSON resource loaders",
       "checked_in_justification": "Generated Python command-package resources are kept as files so executable adapters stay thin and do not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python resource files",
       "max_bytes": 250000
     },
@@ -1648,7 +1648,7 @@
       "named_consumer": "generated Python operation-contract resource loaders",
       "checked_in_justification": "Generated Python operation-contract resources are kept as files so runtime-consumed operations load from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged operation artifacts",
       "max_bytes": 250000
     },
@@ -1658,7 +1658,7 @@
       "named_consumer": "generated Workspace Python contract resource loaders",
       "checked_in_justification": "Generated Workspace contract mirrors are kept as files so runtime-consumed operations load workspace-owned policy IR from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Workspace contract artifacts",
       "max_bytes": 250000
     },
@@ -1668,7 +1668,7 @@
       "named_consumer": "generated Memory Python contract resource loaders",
       "checked_in_justification": "Generated Memory contract mirrors are kept as files so runtime-consumed operations load package-owned policy IR from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Memory contract artifacts",
       "max_bytes": 250000
     },
@@ -1678,7 +1678,7 @@
       "named_consumer": "generated Verification Python contract resource loaders",
       "checked_in_justification": "Generated Verification contract mirrors are kept as files so runtime-consumed operations load module-owned policy IR from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Verification contract artifacts",
       "max_bytes": 250000
     },
@@ -1688,7 +1688,7 @@
       "named_consumer": "generated Memory Python payload resource loaders",
       "checked_in_justification": "Generated Memory payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Memory payload artifacts",
       "max_bytes": 250000
     },
@@ -1698,7 +1698,7 @@
       "named_consumer": "generated Memory Python skill resource loaders",
       "checked_in_justification": "Generated Memory skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Memory skill artifacts",
       "max_bytes": 250000
     },
@@ -1708,7 +1708,7 @@
       "named_consumer": "generated Planning Python payload resource loaders",
       "checked_in_justification": "Generated Planning payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Planning payload artifacts",
       "max_bytes": 250000
     },
@@ -1718,7 +1718,7 @@
       "named_consumer": "generated Planning Python skill resource loaders",
       "checked_in_justification": "Generated Planning skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Planning skill artifacts",
       "max_bytes": 250000
     },
@@ -1728,7 +1728,7 @@
       "named_consumer": "generated adapter conformance and package proof loaders",
       "checked_in_justification": "Generated command adapter metadata is kept as JSON so proof can load it as data without package-local generated Python modules.",
       "freshness_check": "uv run python scripts/generate/generate_command_adapters.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated adapter proof no longer needs checked-in adapter metadata artifacts",
       "max_bytes": 250000
     },
@@ -1738,7 +1738,7 @@
       "named_consumer": "generated TypeScript package tests and package publishing preparation",
       "checked_in_justification": "Generated package metadata is kept as a reviewable adapter output while multi-language generation matures.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated package metadata",
       "max_bytes": 5000
     },
@@ -1748,7 +1748,7 @@
       "named_consumer": "generated TypeScript command-package resource loader",
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated TypeScript resource files",
       "max_bytes": 250000
     },
@@ -1758,7 +1758,7 @@
       "named_consumer": "generated TypeScript operation-contract resource loaders",
       "checked_in_justification": "Generated TypeScript operation-contract resources are kept as files so native runtime execution loads the declared operation IR from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged operation artifacts",
       "max_bytes": 250000
     },
@@ -1768,7 +1768,7 @@
       "named_consumer": "generated TypeScript contract resource loaders",
       "checked_in_justification": "Generated TypeScript contract mirrors are kept as files so runtime-consumed operations load package-owned policy IR from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged contract artifacts",
       "max_bytes": 250000
     },
@@ -1778,7 +1778,7 @@
       "named_consumer": "generated Memory TypeScript payload resource loaders",
       "checked_in_justification": "Generated Memory TypeScript payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Memory payload artifacts",
       "max_bytes": 250000
     },
@@ -1788,7 +1788,7 @@
       "named_consumer": "generated Memory TypeScript skill resource loaders",
       "checked_in_justification": "Generated Memory TypeScript skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Memory skill artifacts",
       "max_bytes": 250000
     },
@@ -1798,7 +1798,7 @@
       "named_consumer": "generated Planning TypeScript payload resource loaders",
       "checked_in_justification": "Generated Planning TypeScript payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Planning payload artifacts",
       "max_bytes": 250000
     },
@@ -1808,7 +1808,7 @@
       "named_consumer": "generated Planning TypeScript skill resource loaders",
       "checked_in_justification": "Generated Planning TypeScript skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Planning skill artifacts",
       "max_bytes": 250000
     },
@@ -1818,7 +1818,7 @@
       "named_consumer": "framework-native generated SkillSpec plugin target tests",
       "checked_in_justification": "Generated plugin metadata is kept as a reviewable native adapter output while SkillSpec target generation matures.",
       "freshness_check": "uv run python scripts/generate/generate_skillspec_targets.py --check",
-      "ordinary_agent_route": "agentic-workspace start --task \"<task>\" --format json",
+      "ordinary_agent_route": "plugin/catalogue drill-down only: generated plugin metadata is not an ordinary startup route",
       "removal_or_demotion_path": "demote to generated-on-demand only after framework-native discovery no longer needs checked-in plugin metadata",
       "max_bytes": 10000
     }

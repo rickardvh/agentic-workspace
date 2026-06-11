@@ -464,6 +464,30 @@ def test_generated_mirror_metadata_accepts_markdown_adapter() -> None:
     assert findings == []
 
 
+def test_generated_mirror_metadata_rejects_ordinary_routes_for_generated_outputs() -> None:
+    inventory = {
+        "entries": [],
+        "generated_mirrors": [
+            {
+                "pattern": "generated/workspace/python/cli.py",
+                "source_command": "uv run python scripts/generate/generate_command_packages.py",
+                "named_consumer": "generated package",
+                "checked_in_justification": "generated adapter",
+                "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+                "ordinary_agent_route": 'agentic-workspace start --task "<task>" --format json',
+                "removal_or_demotion_path": "demote when generated on demand",
+                "max_bytes": 500000,
+            }
+        ],
+    }
+
+    findings = check_structured_file_inventory.generated_mirror_policy_findings(["generated/workspace/python/cli.py"], inventory)
+
+    assert [finding.message for finding in findings] == [
+        "generated mirror ordinary_agent_route must be explicit drill-down only",
+    ]
+
+
 def test_reconstructable_snapshot_requires_size_or_count_guardrail() -> None:
     inventory = {
         "entries": [
