@@ -1,0 +1,102 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Github 1442 Workspace Finish Command Generation Migration Ow",
+  "plan_id": "github-1442-workspace-finish-command-generation-migration-ow",
+  "created_at": "2026-06-11T20:38:39.262696+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1442-workspace-finish-command-generation-migration-ow.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1442-workspace-finish-command-generation-migration-ow.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1442-workspace-finish-command-generation-migration-ow",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "#1442 milestone boundary satisfied in this stacked branch: #1356/#1358 landed earlier, #1449/#1450 are covered by #1451/#1453, generated-command migration blockers are zero, no move-to-command-generation candidates remain, runtime primitive inventory remains explicit, and the remaining IR/test hierarchy belongs to #1441.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Prepared final #1442 Milestone 6 closeout on top of the #1449/#1450 stack, incorporating the clarified migration standard.",
+    "scope touched": "Planning closeout evidence for #1442; no runtime implementation changes.",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans or closeout evidence for github-1442-workspace-finish-command-generation-migration-ow.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Closure is conditional on merge order: #1442 should close only after #1451 and #1453 merge. The claim preserves black-box behavior, contracts, source ownership, decomposition/reuse, and reduced accidental runtime surface; it does not preserve exact helper/file/code shape or bloated regression-test mass. Parent #1441 remains open for IR-defined generated command tests and IR hierarchy simplification.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json reported completion_claim_allowed=true, blocker_count=0, generated_command_migration_completion.status=satisfied, blocked_issues=[], remaining hand-owned symbols all keep-as-hand-owned-primitive, move_to_command_generation_candidate_count=0; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; gh issue list --milestone 'Generated command migration completion' --state open showed #1449, #1450, and #1442; gh pr view 1451 closes #1449 and is stacked first; gh pr view 1453 closes #1450 by body and is stacked on #1451; gh issue view 1441 showed parent remains open; rg sweep verified no unintended #1442/#1441 closing refs beyond this closeout plan; rg migration-standard sweep verified exact runtime code shape and bloated regression-test shape are not preservation requirements.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Open upstream issue from refreshed external intent evidence; priority P2 inferred from inferred-planning.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to Parent #1441 remains open for IR-defined generated command tests and IR hierarchy simplification; #1442 closes only after stacked prerequisites #1451/#1453 merge..",
+    "motivation worth preserving": "Future agents should continue from Parent #1441 remains open for IR-defined generated command tests and IR hierarchy simplification; #1442 closes only after stacked prerequisites #1451/#1453 merge. rather than rediscover this closeout residue.",
+    "canonical owner now": "Parent #1441 remains open for IR-defined generated command tests and IR hierarchy simplification; #1442 closes only after stacked prerequisites #1451/#1453 merge.",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1442 milestone boundary satisfied in this stacked branch: #1356/#1358 landed earlier, #1449/#1450 are covered by #1451/#1453, generated-command migration blockers are zero, no move-to-command-generation candidates remain, runtime primitive inventory remains explicit, and the remaining IR/test hierarchy belongs to #1441.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
