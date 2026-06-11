@@ -13,7 +13,7 @@ const nativeOperationIds = new Set(["config.report", "defaults.report", "delegat
 const commandDefinitions = [
   {
     "interface": {
-      "help": "List workspace modules available to the orchestrator.",
+      "help": "Show module inventory as explicit drill-down; ordinary agents should start from start/report routing.",
       "name": "modules",
       "options": [
         {
@@ -3131,7 +3131,7 @@ const commandDefinitions = [
   },
   {
     "interface": {
-      "help": "Report installed modules and workspace health summary.",
+      "help": "Show installed-module health for lifecycle checks; ordinary agents should use start/report routing first.",
       "name": "status",
       "options": [
         {
@@ -3193,7 +3193,7 @@ const commandDefinitions = [
   },
   {
     "interface": {
-      "help": "Report drift, missing surfaces, and recommended remediation.",
+      "help": "Show drift diagnostics for recovery or remediation; ordinary agents should use start/report routing first.",
       "name": "doctor",
       "options": [
         {
