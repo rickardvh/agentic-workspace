@@ -156,6 +156,7 @@ def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
     assert "repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json" in inventory
+    assert "repo_memory_bootstrap/_generated_cli_package_impl/_contracts/payload_verification.memory.json" in inventory
 
 
 def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
@@ -169,6 +170,7 @@ def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json" in inventory
+    assert "src/repo_memory_bootstrap/_generated_cli_package_impl/_contracts/payload_verification.memory.json" in inventory
 
 
 def test_installed_memory_wheel_imports_cli_module() -> None:
@@ -188,7 +190,13 @@ def test_installed_memory_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import repo_memory_bootstrap.cli; from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser",
+                (
+                    "import repo_memory_bootstrap.cli; "
+                    "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser; "
+                    "from repo_memory_bootstrap._generated_cli_package_impl.primitives.operation_executor import "
+                    "_handle_context_root_memory_contracts; "
+                    "assert (_handle_context_root_memory_contracts() / 'payload_verification.memory.json').is_file()"
+                ),
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

@@ -4133,6 +4133,8 @@ def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tu
 def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: Path, agents_text: str, cli_invoke: str) -> bool:
     if LOCAL_AGENT_REFERENCE_LINE not in agents_text:
         return False
+    if not _has_local_only_workspace_state(target_root=target_root):
+        return False
     local_agents_path = target_root / LOCAL_AGENT_INSTRUCTIONS_FILE
     if not local_agents_path.is_file():
         return False
@@ -4386,7 +4388,14 @@ def _local_only_state_path(*, target_root: Path) -> Path:
 
 
 def _has_local_only_workspace_state(*, target_root: Path) -> bool:
-    return _local_only_state_path(target_root=target_root).exists()
+    state_path = _local_only_state_path(target_root=target_root)
+    if not state_path.is_file():
+        return False
+    try:
+        state_text = state_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return re.search(r'^\s*mode\s*=\s*"local-only"\s*$', state_text, flags=re.MULTILINE) is not None
 
 
 def _local_agent_instructions_text(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
@@ -6534,7 +6543,7 @@ def _lifecycle_apply_command(
     parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
     for module_name in selected_modules:
         parts.extend(["--module", module_name])
-    if local_only:
+    if local_only and command_name != "upgrade":
         parts.append("--local-only")
     if dry_run:
         parts.append("--dry-run")

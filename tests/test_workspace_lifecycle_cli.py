@@ -281,6 +281,7 @@ def test_upgrade_after_local_only_install_preserves_agents_indirection(tmp_path:
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     assert any(action["path"] == "AGENTS.local.md" for action in workspace_report["actions"])
     assert payload["lifecycle_plan"]["mutation_safety"]["local_only_preservation"]["status"] == "explicit-local-only-target"
+    assert "--local-only" not in payload["lifecycle_plan"]["next_safe_command"]["command"]
 
 
 def test_upgrade_local_only_full_install_does_not_request_root_agents_pointer(tmp_path: Path, capsys) -> None:
@@ -296,6 +297,7 @@ def test_upgrade_local_only_full_install_does_not_request_root_agents_pointer(tm
     payload = json.loads(capsys.readouterr().out)
     assert (repo_root / "AGENTS.md").read_text(encoding="utf-8") == "Follow instructions in `AGENTS.local.md` if present.\n"
     assert "<!-- agentic-workspace:workflow:start -->" in (repo_root / "AGENTS.local.md").read_text(encoding="utf-8")
+    assert "--local-only" not in payload["lifecycle_plan"]["next_safe_command"]["command"]
     agent_actions = [
         action
         for report in payload["reports"]
