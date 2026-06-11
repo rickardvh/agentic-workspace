@@ -49,6 +49,39 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         'agentic-workspace start --target ./repo --task "<task>" --format json',
         'agentic-workspace implement --changed <paths> --task "<task>" --format json',
     ]
+    active_boundary = payload["startup"]["active_work_boundary"]
+    assert active_boundary["protocol"] == "Work Shaping plus Planning Autopilot"
+    assert active_boundary["surfaces"] == [
+        {
+            "surface": "start",
+            "owns": "ordinary first-contact routing, work-shape pressure, and the next safe action",
+            "may_do": "route to direct action, changed-path implementer context, active continuation, planning mutation, proof, knowledge, or recovery",
+            "must_not_do": "become an active-state editor or require a command-list tour before work begins",
+        },
+        {
+            "surface": "summary",
+            "owns": "active continuation, current Planning state projection, proof posture, and claim-boundary inspection",
+            "may_do": "tell the agent whether to continue, reconcile, promote, close out, or drill into the active execplan",
+            "must_not_do": "mutate Planning state or replace Planning closeout and promotion commands",
+        },
+        {
+            "surface": "implement --changed",
+            "owns": "known changed-path work context, task posture, proof hints, and changed-surface gates",
+            "may_do": "support bounded implementation when paths are known and surface blockers are clear",
+            "must_not_do": "select broad roadmap work, promote lanes, or claim parent intent completion",
+        },
+        {
+            "surface": "planning",
+            "owns": "routed Planning state mutation: new plans, promotions, handoffs, delegation decisions, closeout, and archive",
+            "may_do": "write checked-in active work state after compact routing or explicit user intent requires it",
+            "must_not_do": "appear as the ordinary first-contact workflow or be hand-edited when a command-owned mutation exists",
+        },
+    ]
+    assert active_boundary["planning_autopilot_applies_when"] == [
+        "active Planning state already owns the current continuation",
+        "the task needs durable handoff, lane sequencing, promotion, or closeout mutation",
+        "compact routing forbids implementation until a candidate or execplan is promoted",
+    ]
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
     vague_route = payload["startup"]["vague_outcome_route"]
     assert vague_route["status"] == "available"
@@ -100,6 +133,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["operating_questions"]["canonical_doc"] == "docs/which-package.md"
     assert payload["operating_questions"]["command"] == "agentic-workspace defaults --section operating_questions --format json"
     assert payload["operating_questions"]["questions"][0]["id"] == "startup_or_lifecycle_path"
+    assert payload["operating_questions"]["questions"][0]["ask_first"] == 'agentic-workspace start --task "<task>" --format json'
+    assert payload["operating_questions"]["questions"][0]["then_if_needed"][0] == (
+        "agentic-workspace defaults --section startup --format json"
+    )
     assert payload["operating_questions"]["questions"][1]["ask_first"] == "agentic-workspace summary --format json"
     assert payload["operating_questions"]["questions"][2]["ask_first"] == "agentic-workspace preflight --target ./repo --format json"
     assert payload["operating_questions"]["questions"][2]["then_if_needed"][0] == "agentic-workspace report --target ./repo --format json"
@@ -978,6 +1015,8 @@ def test_defaults_section_selector_returns_agent_configuration_queries_answer(ca
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["answer"]["query_classes"][1]["id"] == "active_behavior_modules"
+    assert payload["answer"]["query_classes"][0]["ask_first"] == 'agentic-workspace start --task "<task>" --format json'
+    assert payload["answer"]["query_classes"][0]["then_if_needed"][0] == ("agentic-workspace defaults --section startup --format json")
     assert payload["answer"]["query_classes"][2]["then_if_needed"][0] == "agentic-workspace defaults --section validation --format json"
     assert payload["answer"]["stop_rule"].startswith("Stop after the first compact answer")
     assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]

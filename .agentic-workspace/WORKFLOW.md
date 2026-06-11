@@ -30,6 +30,17 @@ Ordinary first contact is one routed decision, not a checklist of root commands:
 5. If the user asks you to prepare broad work for later continuation and does not ask you to implement, create or continue canonical checked-in Planning state now, verify it with summary, then stop. A proposal-only answer is not durable handoff.
 6. Open raw planning, memory, module, or workflow files only when compact output points there.
 
+## Active Work Boundary
+
+Active work is Work Shaping plus Planning Autopilot:
+
+- `start` owns ordinary first-contact routing, work-shape pressure, and the next safe action.
+- `summary` owns active continuation, Planning state projection, proof posture, and claim-boundary inspection after routing points there.
+- `implement --changed` owns known changed-path work context, task posture, proof hints, and changed-surface gates.
+- `planning` owns routed state mutation: new plans, promotions, handoffs, delegation decisions, closeout, and archive.
+
+The agent still owns semantic judgment about intent clarity, direct/bounded/lane/epic shape, proof proportionality, and completion claim level. Do not treat the command list as the workflow, and do not hand-edit Planning state when a command-owned mutation is available.
+
 ## Structured Priority
 
 - Use `start` or `implement --changed` before prose when the CLI is available; use `summary`, `planning`, `skills`, and `proof --changed` when routed by the packet or task shape; reserve `preflight`, `defaults`, `config`, `modules`, `ownership`, `--verbose`, and `report` for recovery or deeper detail.
@@ -53,9 +64,9 @@ Ordinary first contact is one routed decision, not a checklist of root commands:
 - Treat GitHub, Linear, Jira, Notion, and similar trackers as optional intake evidence. They are not the universal workflow and do not replace checked-in planning.
 - Use package skills when `start`/`implement` skill projection or `agentic-workspace skills --target . --task "<task>" --format json` recommends one; otherwise stay with compact CLI and this fallback.
 
-## Work Routing Gate
+## Fallback Work Shape
 
-Before implementation, decide the smallest workflow shape that fits the current request. This is required orientation, not a suggestion:
+Use this only when compact routing is unavailable or insufficient. Before implementation, decide the smallest workflow shape that fits the current request:
 
 - `direct`: one coherent local pass can finish safely and validation is obvious. No durable plan is required.
 - `bounded`: one slice needs explicit done-when, proof, or short restart state. Use the configured planning surface when restart cost matters and Planning is installed.
