@@ -14128,6 +14128,9 @@ def _closeout_evidence_record(
         "retention": {
             "state": "archive-retention-skipped",
             "reason": reason,
+            "canonical_evidence": "retained closeout evidence",
+            "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+            "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
             "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails.",
         },
     }
