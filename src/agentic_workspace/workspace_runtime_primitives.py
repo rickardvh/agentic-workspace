@@ -14146,19 +14146,21 @@ def _report_closeout_trust_payload(
                 adjusted.append(option)
                 continue
             updated = dict(option)
-            blockers = [blocker for blocker in _list_payload(updated.get("blocking_fields")) if str(blocker) != validation_proof_blocker]
-            if blockers:
-                updated["blocking_fields"] = blockers
-            else:
-                updated.pop("blocking_fields", None)
             if updated.get("id") == "run-proof":
                 updated["allowed"] = False
                 updated["why"] = "archived command-owned slice closeout proof is already visible"
+                updated.pop("blocking_fields", None)
                 updated["evidence_owner"] = slice_evidence.get("owner_surface", "")
             elif updated.get("id") == "claim-slice-complete":
+                blockers = [
+                    blocker for blocker in _list_payload(updated.get("blocking_fields")) if str(blocker) != validation_proof_blocker
+                ]
                 updated["allowed"] = True
                 updated["why"] = "archived command-owned slice closeout evidence supports a bounded slice completion claim"
-                updated.pop("blocking_fields", None)
+                if blockers:
+                    updated["blocking_fields"] = blockers
+                else:
+                    updated.pop("blocking_fields", None)
                 updated["evidence_owner"] = slice_evidence.get("owner_surface", "")
             adjusted.append(updated)
         return adjusted

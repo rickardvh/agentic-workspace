@@ -5762,7 +5762,7 @@ candidates = [
             },
             "closure_check": {
                 "slice status": "completed",
-                "larger-intent status": "closed",
+                "larger-intent status": "open",
                 "closure decision": "archive-and-close",
                 "why this decision is honest": "The slice is complete; parent epic closure remains separate.",
             },
@@ -5781,6 +5781,8 @@ candidates = [
     assert archived_slice["owner_surface"] == ".agentic-workspace/planning/execplans/archive/archived-slice.plan.json"
     assert archived_slice["proof_recorded"] is True
     assert archived_slice["slice_completed"] is True
+    assert archived_slice["parent_intent_status"] == "open"
+    assert archived_slice["parent_closure_blocked"] is True
 
     assert answer["trust"] == "lower-trust"
     assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
@@ -5790,9 +5792,9 @@ candidates = [
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["claim-slice-complete"]["evidence_owner"] == archived_slice["owner_surface"]
     assert options["claim-work-complete"]["allowed"] is False
-    assert "intent_satisfaction.closure_scope.validation_proof" not in options["claim-work-complete"]["blocking_fields"]
+    assert "intent_satisfaction.closure_scope.validation_proof" in options["claim-work-complete"]["blocking_fields"]
     assert options["close-parent-lane"]["allowed"] is False
-    assert "intent_satisfaction.closure_scope.validation_proof" not in options["close-parent-lane"]["blocking_fields"]
+    assert "intent_satisfaction.closure_scope.validation_proof" in options["close-parent-lane"]["blocking_fields"]
     assert options["keep-parent-open"]["allowed"] is True
     assert options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
     assert answer["closeout_protocol"]["closure_permission"]["keep_parent_open_allowed"] is True
