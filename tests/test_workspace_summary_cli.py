@@ -191,6 +191,12 @@ candidates = [
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    protocol = closeout["closeout_protocol"]
+    assert protocol["protocol"] == "Completion Honesty / Residue Routing"
+    assert protocol["status"] == "action-required"
+    assert protocol["residue_routing"]["required"] is True
+    assert "issue_closure" in protocol["claim_boundary"]["blocked_claim_classes"]
+    assert "promotion-required" in protocol["knowledge_route_states"]["state_vocabulary"]
     relative_target = os.path.relpath(tmp_path.resolve(), Path.cwd().resolve()).replace("\\", "/")
     assert closeout["required_next_inspection"] == (
         f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"

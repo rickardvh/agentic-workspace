@@ -273,6 +273,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["proof_selection"]["recommended_lanes"][0]["enough_proof"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_selection"]["recommended_lanes"][2]["id"] == "validation_lane"
     assert "Prefer the smallest queryable proof answer first." in payload["proof_selection"]["rule_of_thumb"]
+    closeout_protocol = payload["closeout_protocol"]
+    assert closeout_protocol["protocol"] == "Completion Honesty / Residue Routing"
+    assert closeout_protocol["report_surface"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    assert "completion permission" in closeout_protocol["owns"]
+    assert "proof selection" in closeout_protocol["does_not_own"]
+    assert "stale" in closeout_protocol["knowledge_route_state_vocabulary"]
+    assert "completion permission" in closeout_protocol["claim_boundary"]["proof_success_is_not"]
+    assert "report closeout_trust.closeout_protocol" in closeout_protocol["routed_outputs"]
     assert payload["assurance_onboarding"]["status"] == "absent"
     assert payload["assurance_onboarding"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
     assert payload["assurance_onboarding"]["states"]["usable"].startswith("at least one proof profile")

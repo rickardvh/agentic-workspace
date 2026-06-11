@@ -2885,6 +2885,64 @@
       "Use package-local tests or payload verification only when the trust question is package-specific."
     ]
   },
+  "closeout_protocol": {
+    "kind": "agentic-workspace/closeout-protocol-defaults/v1",
+    "protocol": "Completion Honesty / Residue Routing",
+    "command": "agentic-workspace defaults --section closeout_protocol --format json",
+    "report_surface": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+    "rule": "Closeout is a protocol phase over existing owners, not a new first-contact command.",
+    "owns": [
+      "completion permission",
+      "intent satisfaction reconciliation",
+      "claim-level boundary",
+      "residue owner routing",
+      "continuation owner",
+      "parent and issue closure permission"
+    ],
+    "does_not_own": [
+      "proof selection",
+      "proof execution",
+      "Memory note content",
+      "external tracker truth",
+      "parent epic completion without explicit authorization"
+    ],
+    "required_decisions": [
+      "what proof established",
+      "which claim class is allowed",
+      "whether slice, lane, parent, or full intent is satisfied",
+      "which residue state applies",
+      "where any required continuation is owned",
+      "whether issue or parent closure is authorized"
+    ],
+    "knowledge_route_state_vocabulary": [
+      "consulted",
+      "skipped",
+      "stale",
+      "unavailable",
+      "dismissed",
+      "captured",
+      "promotion-required"
+    ],
+    "claim_boundary": {
+      "proof_success_is": [
+        "evidence input to closeout",
+        "support for the selected claim boundary"
+      ],
+      "proof_success_is_not": [
+        "completion permission",
+        "issue closure permission",
+        "parent intent satisfaction",
+        "evidence that residue is absent"
+      ]
+    },
+    "routed_outputs": [
+      "summary closeout_trust_inspection",
+      "report closeout_trust.closeout_protocol",
+      "report closeout_report",
+      "planning closeout writer",
+      "memory capture or route surfaces when durable knowledge matters"
+    ]
+  },
   "recovery": {
     "canonical_doc": "docs/environment-recovery-contract.md",
     "effective_output_posture": {

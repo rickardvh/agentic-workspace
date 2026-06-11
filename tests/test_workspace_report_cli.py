@@ -2969,6 +2969,18 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert options["close-parent-lane"]["allowed"] is False
     assert options["route-residue"]["allowed"] is True
     assert options["stop-with-status"]["allowed"] is True
+    protocol = payload["closeout_trust"]["closeout_protocol"]
+    assert protocol["protocol"] == "Completion Honesty / Residue Routing"
+    assert protocol["status"] == "action-required"
+    assert protocol["readiness"]["trust"] == "lower-trust"
+    assert "claim-slice-complete" in protocol["readiness"]["blocking_option_ids"]
+    assert "strict_closeout_gate" in protocol["readiness"]["blocking_fields"]
+    assert "full_intent_complete" in protocol["claim_boundary"]["blocked_claim_classes"]
+    assert protocol["residue_routing"]["required"] is True
+    assert "promotion-required" in protocol["knowledge_route_states"]["state_vocabulary"]
+    assert protocol["closure_permission"]["keep_parent_open_allowed"] is True
+    assert protocol["closure_permission"]["close_parent_lane_allowed"] is False
+    assert "slice proof never closes parent intent" in protocol["closure_permission"]["parent_closure_rule"]
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
     compact_payload = json.loads(capsys.readouterr().out)
@@ -2977,6 +2989,8 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     compact_boundary = compact["checks"]["intent_satisfaction"]["completion_boundary"]
     assert compact_boundary["partial_pr_may_close"] == "no"
     assert compact_boundary["required_follow_up_owner"] == ".agentic-workspace/planning/state.toml"
+    assert compact["closeout_protocol"]["protocol"] == "Completion Honesty / Residue Routing"
+    assert compact["closeout_protocol"]["residue_routing"]["required"] is True
 
 
 def test_report_closeout_trust_request_review_for_ambiguous_intent(tmp_path: Path, capsys) -> None:

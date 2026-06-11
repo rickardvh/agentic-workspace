@@ -13327,6 +13327,122 @@ def _closeout_completion_options(
     ]
 
 
+def _closeout_protocol_payload(
+    *,
+    status: str,
+    trust: str,
+    strict_gate: dict[str, Any],
+    completion_gate: dict[str, Any],
+    completion_options: list[dict[str, Any]],
+    durable_residue_action: dict[str, Any],
+    knowledge_authority_review: dict[str, Any],
+    proof_confidence: dict[str, Any],
+    verification: dict[str, Any],
+    task_posture_followthrough: dict[str, Any] | None = None,
+    recommended_next_action: str = "",
+    cli_invoke: str,
+) -> dict[str, Any]:
+    strict_gate = _as_dict(strict_gate)
+    completion_gate = _as_dict(completion_gate)
+    durable_residue_action = _as_dict(durable_residue_action)
+    knowledge_authority_review = _as_dict(knowledge_authority_review)
+    proof_confidence = _as_dict(proof_confidence)
+    verification = _as_dict(verification)
+    task_posture_followthrough = _as_dict(task_posture_followthrough)
+    options_by_id = {str(option.get("id")): option for option in completion_options if isinstance(option, dict)}
+    claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    route_residue = _as_dict(options_by_id.get("route-residue"))
+    run_proof = _as_dict(options_by_id.get("run-proof"))
+    close_parent = _as_dict(options_by_id.get("close-parent-lane"))
+    claim_work = _as_dict(options_by_id.get("claim-work-complete"))
+    keep_parent = _as_dict(options_by_id.get("keep-parent-open"))
+    blocking_option_ids = [
+        option_id
+        for option_id, option in options_by_id.items()
+        if isinstance(option, dict) and option.get("allowed") is False and option.get("blocking_fields")
+    ]
+    blocking_fields = _dedupe(
+        str(field)
+        for option in options_by_id.values()
+        if isinstance(option, dict)
+        for field in _list_payload(option.get("blocking_fields"))
+        if str(field).strip()
+    )
+    readiness_status = (
+        "ready" if trust == "normal" and not bool(strict_gate.get("blocking")) and not blocking_option_ids else "action-required"
+    )
+    if status in {"unavailable", "invalid"}:
+        readiness_status = "unavailable"
+    return {
+        "kind": "agentic-workspace/closeout-protocol/v1",
+        "protocol": "Completion Honesty / Residue Routing",
+        "status": readiness_status,
+        "source_surface": "closeout_trust",
+        "readiness": {
+            "status": readiness_status,
+            "trust": trust,
+            "strict_gate_status": strict_gate.get("status"),
+            "blocking_option_ids": blocking_option_ids,
+            "blocking_fields": blocking_fields,
+            "required_next_action": recommended_next_action
+            or completion_gate.get("required_next_action")
+            or "reconcile proof, intent, residue, and closure permission before claiming completion",
+        },
+        "claim_boundary": {
+            "claim_level_allowed": completion_gate.get("claim_level_allowed"),
+            "allowed_claim_classes": claim_authorization.get("allowed_claim_classes", []),
+            "blocked_claim_classes": claim_authorization.get("blocked_claim_classes", []),
+            "rule": "Proof success, issue closure, and parent intent satisfaction are separate closeout decisions.",
+        },
+        "proof_dependency": {
+            "run_proof_allowed": run_proof.get("allowed"),
+            "proof_confidence": proof_confidence.get("confidence") or proof_confidence.get("status"),
+            "verification_status": verification.get("status", "absent"),
+            "verification_active_count": verification.get("active_count", 0),
+            "rule": "Closeout consumes proof evidence; it does not replace proof selection or execution.",
+        },
+        "residue_routing": {
+            "action": durable_residue_action.get("action"),
+            "required": route_residue.get("allowed"),
+            "owner": route_residue.get("owner") or durable_residue_action.get("owner"),
+            "visible_states": durable_residue_action.get("visible_states", ["none-found", "capture", "route-to-owner", "dismissed"]),
+            "destinations": durable_residue_action.get("destinations", []),
+            "rule": durable_residue_action.get("destination_rule"),
+        },
+        "knowledge_route_states": {
+            "state_vocabulary": [
+                "consulted",
+                "skipped",
+                "stale",
+                "unavailable",
+                "dismissed",
+                "captured",
+                "promotion-required",
+            ],
+            "matched_source_count": knowledge_authority_review.get("matched_source_count", 0),
+            "stale_source_count": knowledge_authority_review.get("stale_source_count", 0),
+            "promotion_candidate_count": knowledge_authority_review.get("promotion_candidate_count", 0),
+            "next_actions": knowledge_authority_review.get("next_actions", []),
+            "rule": "Knowledge state limits closeout only when the source was governing for interpretation, proof, or residue.",
+        },
+        "closure_permission": {
+            "claim_work_complete_allowed": claim_work.get("allowed"),
+            "keep_parent_open_allowed": keep_parent.get("allowed"),
+            "close_parent_lane_allowed": close_parent.get("allowed"),
+            "closure_actions": claim_authorization.get("closure_actions", []),
+            "parent_closure_rule": "Parent/epic closure requires explicit authorization; slice proof never closes parent intent by itself.",
+        },
+        "task_posture_followthrough": {
+            key: task_posture_followthrough.get(key)
+            for key in ("status", "required_next_action", "blocking_claims", "rule")
+            if key in task_posture_followthrough
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        ),
+    }
+
+
 def _completion_gate_claim_authorization(
     *,
     status: str,
@@ -13854,6 +13970,20 @@ def _report_closeout_trust_payload(
             applicable_intent_status={},
             durable_residue_action=residue_action,
         )
+        proof_confidence = _proof_confidence_payload(intent_proof=intent_proof_check)
+        completion_options = _closeout_completion_options(
+            status="unavailable",
+            trust="unavailable",
+            strict_gate=gate,
+            completion_gate=completion_gate,
+            intent_check=intent_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
+            assurance_requirements=assurance_requirements,
+            durable_residue_action=residue_action,
+            lower_trust_closeout_count=1,
+            cli_invoke=cli_invoke,
+        )
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
@@ -13865,7 +13995,7 @@ def _report_closeout_trust_payload(
             "active_intent_contract": active_intent_contract,
             "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
-            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+            "proof_confidence": proof_confidence,
             "assurance_requirements": assurance_requirements,
             "verification": verification,
             "knowledge_authority_review": knowledge_authority_review,
@@ -13877,17 +14007,18 @@ def _report_closeout_trust_payload(
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Install or run planning report before trusting closeout state."
             ),
-            "completion_options": _closeout_completion_options(
+            "completion_options": completion_options,
+            "closeout_protocol": _closeout_protocol_payload(
                 status="unavailable",
                 trust="unavailable",
                 strict_gate=gate,
                 completion_gate=completion_gate,
-                intent_check=intent_check,
-                acceptance_reconciliation=acceptance_reconciliation,
-                intent_proof_check=intent_proof_check,
-                assurance_requirements=assurance_requirements,
+                completion_options=completion_options,
                 durable_residue_action=residue_action,
-                lower_trust_closeout_count=1,
+                knowledge_authority_review=knowledge_authority_review,
+                proof_confidence=proof_confidence,
+                verification=verification,
+                recommended_next_action="Install or run planning report before trusting closeout state.",
                 cli_invoke=cli_invoke,
             ),
         }
@@ -13924,6 +14055,20 @@ def _report_closeout_trust_payload(
             applicable_intent_status={},
             durable_residue_action=residue_action,
         )
+        proof_confidence = _proof_confidence_payload(intent_proof=intent_proof_check)
+        completion_options = _closeout_completion_options(
+            status="unavailable",
+            trust="unavailable",
+            strict_gate=gate,
+            completion_gate=completion_gate,
+            intent_check=intent_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
+            assurance_requirements=assurance_requirements,
+            durable_residue_action=residue_action,
+            lower_trust_closeout_count=1,
+            cli_invoke=cli_invoke,
+        )
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
@@ -13935,7 +14080,7 @@ def _report_closeout_trust_payload(
             "active_intent_contract": active_intent_contract,
             "intent_satisfaction_matrix": intent_satisfaction_matrix,
             "intent_proof_check": intent_proof_check,
-            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+            "proof_confidence": proof_confidence,
             "assurance_requirements": assurance_requirements,
             "verification": verification,
             "knowledge_authority_review": knowledge_authority_review,
@@ -13947,17 +14092,18 @@ def _report_closeout_trust_payload(
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Inspect planning report before trusting closeout state."
             ),
-            "completion_options": _closeout_completion_options(
+            "completion_options": completion_options,
+            "closeout_protocol": _closeout_protocol_payload(
                 status="unavailable",
                 trust="unavailable",
                 strict_gate=gate,
                 completion_gate=completion_gate,
-                intent_check=intent_check,
-                acceptance_reconciliation=acceptance_reconciliation,
-                intent_proof_check=intent_proof_check,
-                assurance_requirements=assurance_requirements,
+                completion_options=completion_options,
                 durable_residue_action=residue_action,
-                lower_trust_closeout_count=1,
+                knowledge_authority_review=knowledge_authority_review,
+                proof_confidence=proof_confidence,
+                verification=verification,
+                recommended_next_action="Inspect planning report before trusting closeout state.",
                 cli_invoke=cli_invoke,
             ),
         }
@@ -14066,6 +14212,20 @@ def _report_closeout_trust_payload(
         durable_residue_action=residue_action,
     )
     task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
+    proof_confidence = _proof_confidence_payload(intent_proof=intent_proof_check)
+    completion_options = _closeout_completion_options(
+        status="present",
+        trust=trust,
+        strict_gate=gate,
+        completion_gate=completion_gate,
+        intent_check=intent_satisfaction_check,
+        acceptance_reconciliation=acceptance_reconciliation,
+        intent_proof_check=intent_proof_check,
+        assurance_requirements=assurance_requirements,
+        durable_residue_action=residue_action,
+        lower_trust_closeout_count=effective_lower_trust_count,
+        cli_invoke=cli_invoke,
+    )
     return {
         "status": "present",
         "trust": trust,
@@ -14086,7 +14246,7 @@ def _report_closeout_trust_payload(
         "active_intent_contract": active_intent_contract,
         "intent_satisfaction_matrix": intent_satisfaction_matrix,
         "intent_proof_check": intent_proof_check,
-        "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+        "proof_confidence": proof_confidence,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
         "knowledge_authority_review": knowledge_authority_review,
@@ -14096,17 +14256,19 @@ def _report_closeout_trust_payload(
         ),
         "durable_residue_action": residue_action,
         "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
-        "completion_options": _closeout_completion_options(
+        "completion_options": completion_options,
+        "closeout_protocol": _closeout_protocol_payload(
             status="present",
             trust=trust,
             strict_gate=gate,
             completion_gate=completion_gate,
-            intent_check=intent_satisfaction_check,
-            acceptance_reconciliation=acceptance_reconciliation,
-            intent_proof_check=intent_proof_check,
-            assurance_requirements=assurance_requirements,
+            completion_options=completion_options,
             durable_residue_action=residue_action,
-            lower_trust_closeout_count=effective_lower_trust_count,
+            knowledge_authority_review=knowledge_authority_review,
+            proof_confidence=proof_confidence,
+            verification=verification,
+            task_posture_followthrough=task_posture_followthrough,
+            recommended_next_action=recommended_next_action,
             cli_invoke=cli_invoke,
         ),
         "recommended_next_action": recommended_next_action,
@@ -17871,6 +18033,7 @@ def _completion_closeout_inspection_payload(
     )
     strict_gate = closeout.get("strict_closeout_gate", {}) if isinstance(closeout.get("strict_closeout_gate"), dict) else {}
     intent_check = closeout.get("intent_satisfaction_check", {}) if isinstance(closeout.get("intent_satisfaction_check"), dict) else {}
+    closeout_protocol = closeout.get("closeout_protocol", {}) if isinstance(closeout.get("closeout_protocol"), dict) else {}
     trust = str(closeout.get("trust") or closeout.get("status") or "unavailable")
     lower_trust_count = _as_int(closeout.get("lower_trust_closeout_count"))
     gate_blocking = bool(strict_gate.get("blocking"))
@@ -17889,6 +18052,21 @@ def _completion_closeout_inspection_payload(
             if key in intent_check
         },
         "sample_signals": closeout.get("sample_signals", [])[:2] if isinstance(closeout.get("sample_signals"), list) else [],
+        "closeout_protocol": {
+            key: closeout_protocol.get(key)
+            for key in (
+                "kind",
+                "protocol",
+                "status",
+                "readiness",
+                "claim_boundary",
+                "residue_routing",
+                "knowledge_route_states",
+                "closure_permission",
+                "detail_command",
+            )
+            if key in closeout_protocol
+        },
         "required_next_inspection": command,
         "detail_command": command,
         "rule": "Do not answer done/complete/closeable for lane, epic, or broad work without reconciling this surface when agent judgment says the user is asking for closeout status.",
@@ -29952,9 +30130,21 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         )
         if closeout_inspection["status"] in {"required", "clear"} and "closeout_trust_inspection" in getattr(args, "select"):
             payload.setdefault("values", {})
-            payload["values"]["closeout_trust_inspection"] = closeout_inspection
-            if "closeout_trust_inspection" in payload.get("missing", []):
-                payload["missing"] = [item for item in payload.get("missing", []) if item != "closeout_trust_inspection"]
+            closeout_source = {"closeout_trust_inspection": closeout_inspection}
+            resolved_closeout_selectors: list[str] = []
+            for selector in _selector_tokens(getattr(args, "select", None)):
+                if selector != "closeout_trust_inspection" and not selector.startswith("closeout_trust_inspection."):
+                    continue
+                found, value = _field_by_path(closeout_source, selector)
+                if found:
+                    payload["values"][selector] = value
+                    resolved_closeout_selectors.append(selector)
+            if resolved_closeout_selectors and payload.get("missing"):
+                payload["missing"] = [item for item in payload.get("missing", []) if item not in set(resolved_closeout_selectors)]
+                if not payload["missing"]:
+                    payload.pop("missing", None)
+                    payload.pop("selector_rule", None)
+                    payload.pop("available_selectors", None)
         _emit_payload(payload=payload, format_name=args.format)
     else:
         summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
