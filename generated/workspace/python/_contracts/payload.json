@@ -3971,6 +3971,7 @@
         "ci_relationship": "CI may repeat generated-package proof; local closeout should run this lane serially to avoid package-build contention.",
         "enough_proof": [
           "uv run python scripts/check/check_generated_command_packages.py",
+          "uv run python scripts/check/run_operation_conformance_tests.py --target all",
           "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
           "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
           "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",

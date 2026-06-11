@@ -129,6 +129,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["required_validation_commands"] == [
         "agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target python",
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
@@ -1192,7 +1193,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "inference_limits" not in payload
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
     assert len(json.dumps(payload["generated_surface_trust"])) < 700
-    assert len(encoded) < 15500
+    assert len(encoded) < 15850
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:

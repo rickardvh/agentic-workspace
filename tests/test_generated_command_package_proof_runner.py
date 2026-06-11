@@ -158,7 +158,7 @@ def test_operation_conformance_runner_executes_python_cases() -> None:
     assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
 
 
-def test_generated_command_test_ir_runner_reports_typescript_unavailable(monkeypatch) -> None:
+def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch) -> None:
     runner = _load_test_ir_runner()
     monkeypatch.setattr(runner.shutil, "which", lambda _command: None)
 

@@ -719,10 +719,11 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 18200
+    assert len(json.dumps(payload, sort_keys=True)) < 18450
     assert payload["proof"]["required_commands"] == [
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target python",
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
