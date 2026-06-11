@@ -215,6 +215,28 @@ Closeout must not claim the larger intent is complete merely because a local
 route was recorded. Parent epics, active Planning lanes, and tracker issues keep
 their own closure rules.
 
+## Operating Loop Integration
+
+Knowledge routing is implemented as a compact task-posture contribution across
+the ordinary loop, not as a parallel source workflow. The integration boundary
+is:
+
+| Loop surface | Integration behavior | Proof anchor |
+| --- | --- | --- |
+| Startup and summary | Emit `task_posture_packet` only when task facts, changed paths, configured obligations, or module participation change routing; otherwise omit knowledge gates from ordinary startup. | `tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet`; `tests/test_workspace_start_preflight_cli.py::test_summary_selector_surfaces_task_posture_packet` |
+| Implement | Match task text and changed paths to pre-work knowledge gates, blocked actions, proof boundaries, closeout boundaries, and authority provenance before edit claims. | `tests/test_workspace_implement_cli.py::test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task` |
+| Proof | Treat source consultation as part of proof adequacy only when the route can affect the claim boundary; proof selection remains the owner of validation commands. | `tests/test_workspace_implement_cli.py::test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task` |
+| Report and closeout | Project consulted, skipped, stale, unavailable, captured, and promotion-required states through `closeout_trust.closeout_protocol`; block broad claims when governing knowledge or residue is unresolved. | `tests/test_workspace_report_cli.py::test_report_closeout_trust_surfaces_package_workflow_evidence`; `tests/test_workspace_summary_cli.py::test_workspace_summary_completion_task_surfaces_closeout_trust` |
+| Memory residue | Keep Memory as durable anti-rediscovery context and route promotion pressure to Memory, docs, config, checks, ADRs, or Planning instead of active task state. | `tests/test_workspace_report_cli.py::test_report_closeout_trust_surfaces_memory_promotion_pressure_in_knowledge_review` |
+
+Missing source access, stale sources, or unavailable external evidence are not
+automatic blockers for every task. They lower or constrain the claim only when
+the selected source was governing for interpretation, proof, closeout, or
+residue ownership. The ordinary fallback is to record `not_checked`,
+`checked_none`, `stale`, `unavailable`, `dismissed`, or `follow_up_required`
+through the selected packet or owner surface rather than expanding startup with
+source contents.
+
 ## Memory Promotion And Demotion
 
 Memory is a durable anti-rediscovery owner, not a shadow documentation system.
