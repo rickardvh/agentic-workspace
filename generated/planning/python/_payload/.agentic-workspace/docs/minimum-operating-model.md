@@ -9,12 +9,12 @@ Use it when the goal is to start useful work without loading the repo's full int
 Start from:
 
 1. one repo startup entrypoint: `AGENTS.md` by default
-2. one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`
-3. conditional deeper reads only after those compact answers show that the task has crossed a real boundary
+2. one ordinary startup query: `agentic-workspace start --task "<task>" --format json`, or `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are known
+3. conditional deeper reads only after that routed packet shows that the task has crossed a real boundary
 
 The ordinary rule is:
 
-- do not open raw planning state, execplan prose, or broad routing docs until the compact startup answer is insufficient
+- do not open raw planning state, execplan prose, or broad routing docs until the Startup Router packet points there
 - do not front-load memory or deeper module doctrine unless the task has crossed that boundary
 - keep the first-contact model smaller than the repo's full internal concept set
 
@@ -41,7 +41,7 @@ Current advertisement pattern:
 
 | Module | Owns | Escalate when | Capability unlocked | Compact first surface |
 | --- | --- | --- | --- | --- |
-| `workspace` | startup, lifecycle, routing, and combined workspace reporting | the task crosses config, install/adopt, ownership, or cross-module coordination boundaries | compact defaults/config/report guidance plus authoritative workspace contracts | `agentic-workspace defaults --section startup --format json` |
+| `workspace` | startup, lifecycle, routing, and combined workspace reporting | the task crosses config, install/adopt, ownership, or cross-module coordination boundaries | routed defaults/config/report guidance plus authoritative workspace contracts | `agentic-workspace start --task "<task>" --format json` |
 | `planning` | active execution state, sequencing, proof expectations, and promotion-ready follow-through | the task needs milestones, blockers, queue updates, or explicit continuation semantics | summary, active queue state, execplans, and planning validation surfaces | `agentic-workspace summary --format json` |
 | `memory` | durable repo knowledge, routed decisions, failure modes, and anti-rediscovery context | relevant repo understanding should persist beyond the current chat or implementation slice | routed memory notes and memory workflow guidance | `.agentic-workspace/memory/repo/` |
 

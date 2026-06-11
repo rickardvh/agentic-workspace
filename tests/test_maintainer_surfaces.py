@@ -34,11 +34,12 @@ def _baseline_manifest() -> dict[str, object]:
         "bootstrap": {
             "first_reads": ["AGENTS.md"],
             "first_queries": [
-                "Use `agentic-workspace summary --format json` to recover planning state; use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
+                'Use `agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router.',
+                'Use `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are already known.',
             ],
             "tiny_safe_model": [
                 "Start from `AGENTS.md`.",
-                "Ask compact startup queries first.",
+                "Ask the Startup Router first.",
                 "Open deeper surfaces only when the small model stops being sufficient.",
             ],
             "surface_roles": [
@@ -90,7 +91,7 @@ def _baseline_manifest() -> dict[str, object]:
             ],
             "conditional_reads": [
                 "Read the roadmap in `state.toml` (authoritative) only when promoting work.",
-                "Read `agentic-workspace summary --format json` only when recovering planning state.",
+                "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery.",
                 "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
                 "Do not bulk-read all planning surfaces.",
             ],
@@ -121,6 +122,12 @@ def test_workspace_workflow_is_projection_not_primary_authority() -> None:
         assert "| Current next safe action | `next_safe_action`" in text
         assert "| Workflow transition data | `transition_gates`" in text
         assert "| Command surface facts | `src/agentic_workspace/contracts/cli_commands.json`" in text
+        assert "Ordinary first contact is one routed decision" in text
+        assert (
+            "Treat `preflight`, `summary`, `config`, `defaults`, `planning`, `skills`, `modules`, `ownership`, and `report` as routed drill-down"
+            in text
+        )
+        assert "## First Route" not in text
         assert "Mandatory CLI-first startup router" not in text
 
 
@@ -131,7 +138,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use `agentic-workspace` as the effective Agentic Workspace CLI invocation for this repo. This value is resolved from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; if `.agentic-workspace/config.local.toml` explicitly overrides it, use that local value. Run `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are known. When the user request already maps to a known dedicated Agentic Workspace command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first, run that dedicated command directly. Otherwise run `agentic-workspace start --task "<task>" --format json` using the user's request as `<task>` for unknown-shape first-contact context. Do not try a bare `agentic-workspace` command first when the effective invocation names a repo-local or dev-dependency command; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first when startup/implement was used. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the effective CLI is unavailable after trying it, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.
+Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, use `agentic-workspace start --task "<task>" --format json` as the ordinary first-contact router for this repo. This value is resolved from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; if `.agentic-workspace/config.local.toml` explicitly overrides it, use that local value. When changed paths are already known, use `agentic-workspace implement --changed <paths> --task "<task>" --format json` for bounded implementer posture. When the user request already maps to a known dedicated Agentic Workspace command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first, run that dedicated command directly. Do not try a bare `agentic-workspace` command first when the effective invocation names a repo-local or dev-dependency command; PATH may resolve a stale installed selector. Do not open raw `.agentic-workspace` files before this command; follow `next_safe_action`, `action_signals`, and `skills` first when startup/implement was used. Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop. Report repo-relative paths, not local absolute paths. If the effective CLI is unavailable after trying it, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.
 <!-- agentic-workspace:workflow:end -->
 """,
     )

@@ -16967,7 +16967,7 @@ def _read_only_allowance_packet(
         "allowed_read_only_actions": [
             "inspect files and planning state",
             "review issues, PRs, logs, docs, and command output",
-            "run read-only AW start, preflight, skills, summary, status, report, or doctor commands",
+            "run read-only AW commands only when named by next_safe_action, task posture, or drill-down selectors",
             "draft review, triage, evaluation, or implementation recommendations without editing source",
         ],
         "claim_boundary": {
@@ -17544,6 +17544,17 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         skill_routing=payload.get("skill_routing"),
         memory_consult=payload.get("memory_consult"),
     )
+    projected["action_signals"] = _compact_action_signals_payload(
+        surface="start",
+        allowed_next_action=str(projected["next_safe_action"].get("next_safe_action", "")),
+        hard_blockers=projected["next_safe_action"].get("closure_blockers", []),
+        implementation_allowed=bool(projected["next_safe_action"].get("implementation_allowed")),
+        read_only_allowed=bool(projected["next_safe_action"].get("read_only_allowed")),
+        proof_required=bool(projected["next_safe_action"].get("proof_required")),
+        proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
+        advisory_selectors=["skill_routing", "workflow_sufficiency"],
+        agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+    )
     return projected
 
 
@@ -17946,6 +17957,7 @@ def _compact_repair_plan_profile(*, changed_paths: list[str], task_text: str | N
 
 
 _START_TINY_ONLY_SELECTORS = {
+    "action_signals",
     "adaptive_routing",
     "active_state_summary",
     "active_plan_reliance",
@@ -17956,6 +17968,7 @@ _START_TINY_ONLY_SELECTORS = {
     "durable_intent",
     "immediate_next_allowed_action",
     "issue_reference_intent",
+    "next_safe_action",
     "planning_safety_gate",
     "planning_revision",
     "routine_work_context",
@@ -18689,6 +18702,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
     preferred = [
         "immediate_next_allowed_action",
         "active_state_summary",
+        "action_signals",
         "skill_routing",
         "task_intent",
         "acceptance",
@@ -34837,13 +34851,11 @@ def _product_managed_enclave_payload(*, target_root: Path, ownership_payload: di
         },
         "startup_quietness": {
             "status": "compact",
-            "rule": "ordinary startup reads AGENTS.md and compact commands; broad enclave scans are only for selected ownership, report, or module operations",
+            "rule": "ordinary startup reads AGENTS.md and follows one compact Startup Router packet; broad enclave scans and root command catalogues are only for selected ownership, report, or module operations",
             "ordinary_entrypoints": [
                 "AGENTS.md",
                 'agentic-workspace start --task "<task>" --format json',
                 "agentic-workspace implement --changed <paths> --format json",
-                "agentic-workspace summary --format json",
-                "agentic-workspace preflight --format json for takeover/recovery",
             ],
         },
         "local_only_state": {
