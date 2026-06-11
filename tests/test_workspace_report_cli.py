@@ -5861,6 +5861,10 @@ def test_report_memory_consult_distinguishes_checked_none_from_not_checked(tmp_p
     assert payload["memory_consult"]["status"] == "not-recommended"
     assert payload["memory_consult"]["consultation_state"] == "checked-none"
     assert payload["memory_consult"]["read_first"] == []
+    protocol = payload["memory_consult"]["consultation_protocol"]
+    assert protocol["consultation_state"] == "checked-none"
+    assert protocol["durable_residue_decision"] == "none_found"
+    assert protocol["ordinary_read_rule"].startswith("Read only routed notes")
 
     def _memory_report_not_checked(*, target=None):
         raise RuntimeError("memory unavailable")
@@ -5871,6 +5875,7 @@ def test_report_memory_consult_distinguishes_checked_none_from_not_checked(tmp_p
     consult = _memory_consult_payload(target_root=target)
     assert consult["status"] == "unavailable"
     assert consult["consultation_state"] == "not-checked"
+    assert consult["consultation_protocol"]["durable_residue_decision"] == "follow_up_required"
     assert "memory unavailable" in consult["reason"]
 
 

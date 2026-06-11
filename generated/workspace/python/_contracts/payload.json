@@ -2943,6 +2943,71 @@
       "memory capture or route surfaces when durable knowledge matters"
     ]
   },
+  "memory_consultation": {
+    "kind": "agentic-workspace/memory-consultation-defaults/v1",
+    "protocol": "Memory Consultation / Anti-Rediscovery",
+    "command": "agentic-workspace defaults --section memory_consultation --format json",
+    "ordinary_surface": "memory_consult.consultation_protocol",
+    "rule": "Memory routes the smallest durable anti-rediscovery context and residue owner; it must not become active state, task history, issue triage, or broad documentation storage.",
+    "consultation_states": [
+      "not_checked",
+      "checked_none",
+      "relevant_notes_found",
+      "capture_candidate",
+      "routed_elsewhere",
+      "dismissed",
+      "follow_up_required"
+    ],
+    "durable_residue_decisions": [
+      "memory",
+      "planning",
+      "docs",
+      "tests",
+      "contracts",
+      "config",
+      "review",
+      "issue",
+      "dismissed",
+      "none_found"
+    ],
+    "owner_routing": {
+      "memory": "durable anti-rediscovery lessons, invariants, routing hints, operator context, or recurring failure patterns",
+      "planning": "active intent, sequencing, continuation, issue linkage, and completion claims",
+      "docs_or_contracts": "stable canonical guidance, requirements, checks, or enforceable rules",
+      "verification_or_proof": "proof expectations, evidence routes, stale/gap semantics, or manual verification protocols",
+      "issue": "external follow-up work that should be routable outside checked-in Planning",
+      "dismissed": "one-off task detail, transcript residue, validation logs, or weak unrepeated signals"
+    },
+    "skill_posture": [
+      {
+        "skill": "memory-consultation-and-residue",
+        "posture": "reasoning-protocol",
+        "owns": "classification of consultation status, durable residue route, and improvement signal route"
+      },
+      {
+        "skill": "memory-capture",
+        "posture": "routed-mutation-protocol",
+        "owns": "writing compact durable knowledge only after the owner decision says Memory is correct"
+      },
+      {
+        "skill": "memory-router and command snippets",
+        "posture": "CLI aid/catalogue",
+        "owns": "deterministic route lookup and helper commands, not a parallel workflow manual"
+      }
+    ],
+    "ordinary_read_rule": "Surface Memory only when it can change interpretation, safe action, proof, closeout, rediscovery cost, or residue ownership.",
+    "capture_boundary": {
+      "allowed": "compact reusable knowledge with future route value",
+      "forbidden": [
+        "active task state",
+        "issue triage",
+        "broad documentation copies",
+        "chat transcripts",
+        "validation logs",
+        "plan history"
+      ]
+    }
+  },
   "recovery": {
     "canonical_doc": "docs/environment-recovery-contract.md",
     "effective_output_posture": {
