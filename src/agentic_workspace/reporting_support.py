@@ -345,6 +345,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         architecture_candidate = architecture_candidate if isinstance(architecture_candidate, dict) else {}
         terminal_action = answer.get("terminal_action", {})
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
+        archived_slice = answer.get("archived_slice_closeout_evidence", {})
+        archived_slice = archived_slice if isinstance(archived_slice, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
         durable_action = durable_action if isinstance(durable_action, dict) else {}
         completion_options = answer.get("completion_options", [])
@@ -363,6 +365,24 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         compact_answer = {
             "status": answer.get("status", ""),
             "trust": answer.get("trust", ""),
+            "archived_slice_closeout_evidence": {
+                key: archived_slice.get(key)
+                for key in (
+                    "status",
+                    "trust",
+                    "scope",
+                    "canonical_evidence",
+                    "owner_surface",
+                    "proof_recorded",
+                    "slice_completed",
+                    "slice_status",
+                    "closure_decision",
+                    "parent_intent_status",
+                    "parent_closure_blocked",
+                    "rule",
+                )
+                if key in archived_slice
+            },
             "strict_closeout_gate": strict_gate,
             "completion_gate": {
                 key: completion_gate.get(key)

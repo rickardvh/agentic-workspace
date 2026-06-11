@@ -14093,6 +14093,78 @@ def _report_closeout_trust_payload(
         action["run"] = action["command"]
         return action
 
+    def archived_slice_closeout_evidence() -> dict[str, Any]:
+        archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root)
+        if not archived_record:
+            return {"status": "absent", "trust": "not-applicable"}
+        evidence_source = _as_dict(archived_record.get("_closeout_evidence_source"))
+        proof_report = _as_dict(archived_record.get("proof_report"))
+        closure_check = _as_dict(archived_record.get("closure_check"))
+        proof_text = " ".join(
+            str(value)
+            for value in (
+                proof_report.get("validation proof"),
+                proof_report.get("proof achieved now"),
+                proof_report.get('evidence for "proof achieved" state'),
+            )
+            if value
+        ).lower()
+        proof_recorded = any(marker in proof_text for marker in ("passed", "yes", "satisfied", "achieved", "complete"))
+        slice_status = str(closure_check.get("slice status") or "").strip().lower()
+        closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
+        slice_completed = slice_status in {"complete", "completed", "done", "closed", "satisfied"}
+        command_owned = evidence_source.get("authority") in {"archived-planning-evidence", "retained-closeout-evidence"}
+        slice_trusted = bool(command_owned and proof_recorded and slice_completed and closure_decision)
+        parent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
+        parent_closure_blocked = parent_status not in {"closed", "complete", "completed", "done"}
+        return {
+            "status": "present",
+            "trust": "normal" if slice_trusted else "lower-trust",
+            "scope": "slice",
+            "canonical_evidence": evidence_source.get("authority", "archived-planning-evidence"),
+            "owner_surface": evidence_source.get("path", ""),
+            "source": evidence_source,
+            "proof_recorded": proof_recorded,
+            "slice_completed": slice_completed,
+            "slice_status": closure_check.get("slice status", ""),
+            "closure_decision": closure_check.get("closure decision", ""),
+            "parent_intent_status": closure_check.get("larger-intent status", ""),
+            "parent_closure_blocked": parent_closure_blocked,
+            "rule": (
+                "Archived closeout evidence may be trusted for the completed slice, but it does not restore active "
+                "planning state or authorize parent/epic closure."
+            ),
+        }
+
+    def allow_archived_slice_claim(options: list[dict[str, Any]], slice_evidence: dict[str, Any]) -> list[dict[str, Any]]:
+        if slice_evidence.get("trust") != "normal":
+            return options
+        validation_proof_blocker = "intent_satisfaction.closure_scope.validation_proof"
+        adjusted: list[dict[str, Any]] = []
+        for option in options:
+            if not isinstance(option, dict):
+                adjusted.append(option)
+                continue
+            updated = dict(option)
+            if updated.get("id") == "run-proof":
+                updated["allowed"] = False
+                updated["why"] = "archived command-owned slice closeout proof is already visible"
+                updated.pop("blocking_fields", None)
+                updated["evidence_owner"] = slice_evidence.get("owner_surface", "")
+            elif updated.get("id") == "claim-slice-complete":
+                blockers = [
+                    blocker for blocker in _list_payload(updated.get("blocking_fields")) if str(blocker) != validation_proof_blocker
+                ]
+                updated["allowed"] = True
+                updated["why"] = "archived command-owned slice closeout evidence supports a bounded slice completion claim"
+                if blockers:
+                    updated["blocking_fields"] = blockers
+                else:
+                    updated.pop("blocking_fields", None)
+                updated["evidence_owner"] = slice_evidence.get("owner_surface", "")
+            adjusted.append(updated)
+        return adjusted
+
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
@@ -14274,6 +14346,27 @@ def _report_closeout_trust_payload(
     sample_signals = [message for message in sample_signals if message][:3]
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
     intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
+    slice_closeout_evidence = {}
+    raw_active = planning_report.get("active", {}).get("planning_record", {}) if isinstance(planning_report.get("active"), dict) else {}
+    if not isinstance(raw_active, dict) or raw_active.get("status") != "present":
+        slice_closeout_evidence = archived_slice_closeout_evidence()
+        if slice_closeout_evidence.get("trust") == "normal":
+            intent_satisfaction_check = copy.deepcopy(intent_satisfaction_check)
+            intent_satisfaction_check["archived_slice_closeout_evidence"] = slice_closeout_evidence
+            closure_scope = _as_dict(intent_satisfaction_check.get("closure_scope"))
+            validation_proof = _as_dict(closure_scope.get("validation_proof"))
+            validation_proof.update(
+                {
+                    "status": "recorded",
+                    "proof_report": "archived command-owned closeout proof is available",
+                    "proof_achieved_now": "yes",
+                    "source": slice_closeout_evidence.get("owner_surface", ""),
+                    "claim_boundary": "slice only",
+                    "not_sufficient_for_closure": True,
+                }
+            )
+            closure_scope["validation_proof"] = validation_proof
+            intent_satisfaction_check["closure_scope"] = closure_scope
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
     architecture_decision_closeout = _architecture_decision_closeout_payload(
@@ -14380,9 +14473,11 @@ def _report_closeout_trust_payload(
         lower_trust_closeout_count=effective_lower_trust_count,
         cli_invoke=cli_invoke,
     )
+    completion_options = allow_archived_slice_claim(completion_options, slice_closeout_evidence)
     return {
         "status": "present",
         "trust": trust,
+        "archived_slice_closeout_evidence": slice_closeout_evidence or {"status": "absent", "trust": "not-applicable"},
         "strict_closeout_gate": gate,
         "completion_gate": completion_gate,
         "task_posture_followthrough": task_posture_followthrough,

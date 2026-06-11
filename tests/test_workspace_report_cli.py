@@ -5716,6 +5716,91 @@ candidates = [
     assert ".agentic-workspace/planning/state.toml" in compact_continuation["owner_surfaces"]
 
 
+def test_report_closeout_trust_trusts_archived_slice_while_parent_remains_open(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1389-parent", maturity = "candidate", status = "next", priority = "P1", refs = "#1389", title = "Continue parent epic", outcome = "Finish the parent epic.", reason = "Parent epic remains open after the slice.", promotion_signal = "Promote before parent closeout.", suggested_first_slice = "Run installed-product proof." },
+]
+""",
+    )
+    archive = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "archived-slice.plan.json"
+    _write_json(
+        archive,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Archived Slice",
+            "execution_run": {
+                "run status": "completed",
+                "what happened": "Implemented the bounded slice.",
+                "scope touched": "#1431 slice fixture",
+                "changed surfaces": "workspace_runtime_primitives.py; tests/test_workspace_report_cli.py",
+                "validations run": "uv run pytest tests/test_workspace_report_cli.py -q",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_workspace_report_cli.py -q passed",
+                "proof achieved now": "yes",
+            },
+            "closure_check": {
+                "slice status": "completed",
+                "larger-intent status": "open",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The slice is complete; parent epic closure remains separate.",
+            },
+            "delegated_judgment": {"requested outcome": "Complete the bounded slice without closing the parent epic."},
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    archived_slice = answer["archived_slice_closeout_evidence"]
+    assert archived_slice["status"] == "present"
+    assert archived_slice["trust"] == "normal"
+    assert archived_slice["scope"] == "slice"
+    assert archived_slice["canonical_evidence"] == "archived-planning-evidence"
+    assert archived_slice["owner_surface"] == ".agentic-workspace/planning/execplans/archive/archived-slice.plan.json"
+    assert archived_slice["proof_recorded"] is True
+    assert archived_slice["slice_completed"] is True
+    assert archived_slice["parent_intent_status"] == "open"
+    assert archived_slice["parent_closure_blocked"] is True
+
+    assert answer["trust"] == "lower-trust"
+    assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
+    options = {option["id"]: option for option in answer["completion_options"]}
+    assert options["run-proof"]["allowed"] is False
+    assert options["run-proof"]["evidence_owner"] == archived_slice["owner_surface"]
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-slice-complete"]["evidence_owner"] == archived_slice["owner_surface"]
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_satisfaction.closure_scope.validation_proof" in options["claim-work-complete"]["blocking_fields"]
+    assert options["close-parent-lane"]["allowed"] is False
+    assert "intent_satisfaction.closure_scope.validation_proof" in options["close-parent-lane"]["blocking_fields"]
+    assert options["keep-parent-open"]["allowed"] is True
+    assert options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert answer["closeout_protocol"]["closure_permission"]["keep_parent_open_allowed"] is True
+    assert answer["closeout_protocol"]["closure_permission"]["close_parent_lane_allowed"] is False
+
+
 def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
