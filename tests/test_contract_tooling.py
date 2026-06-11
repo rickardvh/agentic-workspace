@@ -618,6 +618,84 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert memory_targets["typescript"]["generation_status"] == "mutation-capable-adapter"
 
 
+def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() -> None:
+    manifest = contract_tooling.operation_conformance_test_ir_manifest()
+    schema = contract_tooling.contract_schema("operation_conformance_test_ir.schema.json")
+
+    assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
+    assert manifest["source_role"]["surface"] == "source/proof"
+    assert manifest["source_role"]["ordinary_startup_visibility"] == "not-startup-workflow"
+    assert "not become an ordinary agent startup surface" in manifest["source_role"]["rule"]
+
+    cases = {case["id"]: case for case in manifest["initial_cases"]}
+    assert {case["behavioral_class"] for case in cases.values()} >= {
+        "success",
+        "error",
+        "cross-target-parity",
+    }
+    assert cases["defaults.selected-output.success"]["operation_ref"]["conformance_ref"] == "defaults.selected-text.process"
+    assert cases["defaults.selected-output.success"]["artifacts"][0]["adapter_id"] == "cli.process"
+    assert cases["defaults.selected-output.success"]["artifacts"][0]["proof_role"] == "wrapper-smoke"
+    assert cases["config.invalid-format.error"]["expected"]["exit_code"] != 0
+    assert cases["config.invalid-format.error"]["expected"]["error"] == {
+        "kind": "invalid-choice",
+        "field": "format",
+        "value": "yaml",
+    }
+    assert "invalid choice" in cases["config.invalid-format.error"]["expected"]["stderr"]["contains"]
+    parity = cases["memory.list-skills.parity"]
+    assert {target["kind"] for target in parity["targets"]} == {"python", "typescript"}
+    assert {artifact["adapter_id"] for artifact in parity["artifacts"]} == {"cli.process"}
+    assert {artifact["proof_role"] for artifact in parity["artifacts"]} == {"wrapper-smoke"}
+    assert parity["expected"]["parity"]["compare"] == ["exit_code", "selected canonical result fields", "structured error absence"]
+
+
+def test_operation_conformance_test_ir_records_migration_and_composition_boundary() -> None:
+    manifest = contract_tooling.operation_conformance_test_ir_manifest()
+    policy = manifest["migration_policy"]
+
+    assert any("black-box operation behavior" in item for item in policy["preserve"])
+    assert any("one-for-one handwritten regression-test bulk" in item for item in policy["do_not_preserve"])
+    assert any("CLI invocation style" in item for item in policy["do_not_preserve"])
+    assert "Primitive behavior is tested once" in policy["composition_rule"]
+    assert "composite operation cases assume declared primitive contracts work" in policy["composition_rule"]
+    assert "runtime primitive implementation tests" in policy["handwritten_retention_boundary"]
+    assert "structured operation error contracts" in " ".join(policy["first_migration_tranche"])
+
+    adapter_model = manifest["adapter_model"]
+    adapter_kinds = {adapter["id"]: adapter for adapter in adapter_model["adapter_kinds"]}
+    assert adapter_kinds["python.function"]["default_for_semantic_proof"] is True
+    assert adapter_kinds["typescript.function"]["default_for_semantic_proof"] is True
+    assert adapter_kinds["cli.process"]["default_for_semantic_proof"] is False
+    assert "argv/stdout/stderr cases are wrapper-smoke proof" in adapter_model["default_semantic_path"]
+
+    parity_case = next(case for case in manifest["initial_cases"] if case["behavioral_class"] == "cross-target-parity")
+    assert parity_case["composition"]["assumes_primitives"]
+    assert "Composite parity assumes primitive executor behavior is tested by primitive cases" in parity_case["migration"]["rationale"]
+
+
+def test_operation_conformance_test_ir_references_known_command_contracts() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    manifest = contract_tooling.operation_conformance_test_ir_manifest()
+
+    assert module._validate_operation_conformance_test_ir(manifest) == []
+    missing_parity = copy.deepcopy(manifest)
+    parity_case = next(case for case in missing_parity["initial_cases"] if case["behavioral_class"] == "cross-target-parity")
+    parity_case["targets"] = [target for target in parity_case["targets"] if target["kind"] == "python"]
+    assert any("must cover all required targets" in error for error in module._validate_operation_conformance_test_ir(missing_parity))
+    bulk_preserving = copy.deepcopy(manifest)
+    bulk_preserving["migration_policy"]["do_not_preserve"] = ["old helper names"]
+    assert any("one-for-one regression-test bulk" in error for error in module._validate_operation_conformance_test_ir(bulk_preserving))
+    cli_default = copy.deepcopy(manifest)
+    cli_default["adapter_model"]["adapter_kinds"][-1]["default_for_semantic_proof"] = True
+    assert any("cli.process must not be the default" in error for error in module._validate_operation_conformance_test_ir(cli_default))
+
+
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     package_ir = contract_tooling.command_package_ir_manifest()
     adapter_manifest = contract_tooling.command_adapter_generation_manifest()

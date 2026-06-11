@@ -1,0 +1,613 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operation-conformance-test-ir.schema.json",
+  "title": "Operation Conformance Test IR",
+  "description": "Schema-coupled behavioral conformance cases for operation contracts and implementation artifacts.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "schema",
+    "source_role",
+    "source_contracts",
+    "migration_policy",
+    "adapter_model",
+    "semantic_coverage_classes",
+    "target_matrix",
+    "proof_output",
+    "initial_cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/operation-conformance-test-ir/v1",
+      "description": "Operation Conformance Test IR contract version."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short summary of the operation conformance test IR boundary."
+    },
+    "schema": {
+      "const": "schemas/operation_conformance_test_ir.schema.json",
+      "description": "Schema reference carried by the IR document."
+    },
+    "source_role": {
+      "type": "object",
+      "required": [
+        "surface",
+        "ordinary_startup_visibility",
+        "rule"
+      ],
+      "properties": {
+        "surface": {
+          "const": "source/proof",
+          "description": "Classifies the manifest as a source and proof surface, not ordinary workflow material."
+        },
+        "ordinary_startup_visibility": {
+          "const": "not-startup-workflow",
+          "description": "Confirms that generated test IR is hidden from ordinary first-contact startup routing."
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Routing rule for how agents and tooling should treat this manifest."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Declares the visibility and routing posture of this test IR."
+    },
+    "source_contracts": {
+      "$ref": "#/$defs/non_empty_strings",
+      "description": "Contracts that own or constrain operation conformance test cases."
+    },
+    "migration_policy": {
+      "type": "object",
+      "required": [
+        "preserve",
+        "do_not_preserve",
+        "composition_rule",
+        "first_migration_tranche",
+        "handwritten_retention_boundary"
+      ],
+      "properties": {
+        "preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Behavioral intent that migrated IR cases must preserve."
+        },
+        "do_not_preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Legacy regression-test shape that migration should not preserve as a goal."
+        },
+        "composition_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule for reusing lower-level primitive proof inside composite command cases."
+        },
+        "first_migration_tranche": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Existing behavior areas that should migrate first once the runner exists."
+        },
+        "handwritten_retention_boundary": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Test responsibilities that should remain handwritten unless a later contract can own them."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Policy for migrating from handwritten generated-command tests to IR-defined cases."
+    },
+    "adapter_model": {
+      "type": "object",
+      "required": [
+        "default_semantic_path",
+        "adapter_kinds",
+        "normalization_rule"
+      ],
+      "properties": {
+        "default_semantic_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Default proof path for operation semantics when a direct implementation adapter is available."
+        },
+        "adapter_kinds": {
+          "type": "array",
+          "minItems": 3,
+          "description": "Adapter kinds the operation conformance runner may use to invoke implementation artifacts or wrapper boundaries.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "boundary",
+              "default_for_semantic_proof",
+              "description"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "python.function",
+                  "typescript.function",
+                  "cli.process"
+                ]
+              },
+              "boundary": {
+                "enum": [
+                  "operation",
+                  "wrapper"
+                ]
+              },
+              "default_for_semantic_proof": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "normalization_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule for where result and error normalization should be declared."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Adapter boundary model for executing operation conformance cases without defaulting to CLI wrappers."
+    },
+    "semantic_coverage_classes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "intent",
+          "minimum_case_shape"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "success",
+              "error",
+              "cross-target-parity",
+              "boundary"
+            ]
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minimum_case_shape": {
+            "$ref": "#/$defs/non_empty_strings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Coverage classes the Operation Conformance Test IR can express."
+    },
+    "target_matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/target"
+      },
+      "description": "Generated operation artifacts that the IR-defined runner should be able to execute or compare."
+    },
+    "proof_output": {
+      "type": "object",
+      "required": [
+        "kind",
+        "states",
+        "required_case_fields",
+        "routing_rule"
+      ],
+      "properties": {
+        "kind": {
+          "const": "operation-conformance-proof/v1",
+          "description": "Machine-readable proof payload kind emitted by the future runner."
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "pass",
+              "fail",
+              "stale",
+              "unavailable",
+              "skipped"
+            ]
+          },
+          "minItems": 5,
+          "uniqueItems": true,
+          "description": "Allowed per-case result states in runner proof output."
+        },
+        "required_case_fields": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Fields each proof case result must expose for closeout and changed-path routing."
+        },
+        "routing_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule for selecting the runner as proof when operation contracts, artifacts, adapters, or wrapper surfaces change."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Compact proof shape expected from the future operation conformance runner."
+    },
+    "initial_cases": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/test_case"
+      },
+      "description": "Initial representative cases proving the IR can express success, error, and cross-target parity behavior."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "test_case": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "behavioral_class",
+        "operation_ref",
+        "artifacts",
+        "schema_refs",
+        "composition",
+        "targets",
+        "input",
+        "expected",
+        "freshness",
+        "migration"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "behavioral_class": {
+          "enum": [
+            "success",
+            "error",
+            "cross-target-parity",
+            "boundary"
+          ]
+        },
+        "operation_ref": {
+          "type": "object",
+          "required": [
+            "package_id",
+            "operation_id"
+          ],
+          "properties": {
+            "package_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "operation_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operation_path": {
+              "type": "string",
+              "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$"
+            },
+            "conformance_ref": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "artifact_id",
+              "target",
+              "adapter_id",
+              "source_ref",
+              "wrapper_refs"
+            ],
+            "properties": {
+              "artifact_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+              },
+              "target": {
+                "enum": [
+                  "python",
+                  "typescript"
+                ]
+              },
+              "adapter_id": {
+                "enum": [
+                  "python.function",
+                  "typescript.function",
+                  "cli.process"
+                ]
+              },
+              "proof_role": {
+                "enum": [
+                  "operation-conformance",
+                  "wrapper-smoke"
+                ],
+                "description": "Proof role for this artifact reference; cli.process artifacts use wrapper-smoke."
+              },
+              "source_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "wrapper_refs": {
+                "$ref": "#/$defs/strings"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "schema_refs": {
+          "type": "object",
+          "required": [
+            "operation_contract",
+            "input",
+            "output"
+          ],
+          "properties": {
+            "operation_contract": {
+              "type": "string",
+              "minLength": 1
+            },
+            "input": {
+              "$ref": "#/$defs/strings"
+            },
+            "output": {
+              "$ref": "#/$defs/strings"
+            }
+          },
+          "additionalProperties": false
+        },
+        "composition": {
+          "type": "object",
+          "required": [
+            "case_focus",
+            "assumes_primitives"
+          ],
+          "properties": {
+            "case_focus": {
+              "type": "string",
+              "minLength": 1
+            },
+            "assumes_primitives": {
+              "$ref": "#/$defs/strings"
+            },
+            "reuses_case_ids": {
+              "$ref": "#/$defs/strings"
+            }
+          },
+          "additionalProperties": false
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/case_target"
+          }
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "fixture_id"
+          ],
+          "properties": {
+            "json": {
+              "type": "object"
+            },
+            "argv": {
+              "$ref": "#/$defs/strings"
+            },
+            "fixture_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fixture_files": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "expected": {
+          "type": "object",
+          "required": [
+            "exit_code"
+          ],
+          "properties": {
+            "exit_code": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "result": {
+              "$ref": "#/$defs/output_assertions"
+            },
+            "error": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "stdout": {
+              "$ref": "#/$defs/output_assertions"
+            },
+            "stderr": {
+              "$ref": "#/$defs/output_assertions"
+            },
+            "parity": {
+              "type": "object",
+              "required": [
+                "compare",
+                "normalization"
+              ],
+              "properties": {
+                "compare": {
+                  "$ref": "#/$defs/non_empty_strings"
+                },
+                "normalization": {
+                  "$ref": "#/$defs/non_empty_strings"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "freshness": {
+          "type": "object",
+          "required": [
+            "source_refs",
+            "stale_when"
+          ],
+          "properties": {
+            "source_refs": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "stale_when": {
+              "$ref": "#/$defs/non_empty_strings"
+            }
+          },
+          "additionalProperties": false
+        },
+        "migration": {
+          "type": "object",
+          "required": [
+            "replaces_handwritten_tests",
+            "retain_handwritten_tests",
+            "rationale"
+          ],
+          "properties": {
+            "replaces_handwritten_tests": {
+              "$ref": "#/$defs/strings"
+            },
+            "retain_handwritten_tests": {
+              "$ref": "#/$defs/strings"
+            },
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "adapter_id",
+        "runner"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "python",
+            "typescript"
+          ]
+        },
+        "status": {
+          "enum": [
+            "required",
+            "optional",
+            "unavailable"
+          ]
+        },
+        "adapter_id": {
+          "enum": [
+            "python.function",
+            "typescript.function",
+            "cli.process"
+          ]
+        },
+        "fallback_adapter_id": {
+          "enum": [
+            "python.function",
+            "typescript.function",
+            "cli.process"
+          ]
+        },
+        "runner": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "case_target": {
+      "type": "object",
+      "required": [
+        "kind",
+        "mode"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "python",
+            "typescript"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "run",
+            "compare"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "output_assertions": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "json",
+            "text",
+            "none"
+          ]
+        },
+        "selected_fields": {
+          "type": "object"
+        },
+        "contains": {
+          "$ref": "#/$defs/strings"
+        },
+        "allow_non_empty": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

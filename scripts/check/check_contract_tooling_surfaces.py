@@ -26,6 +26,7 @@ from agentic_workspace.contract_tooling import (
     improvement_signal_contract_manifest,
     lifecycle_generation_readiness_manifest,
     module_registry_manifest,
+    operation_conformance_test_ir_manifest,
     operation_contracts_manifest,
     operation_manifest,
     operation_primitives_manifest,
@@ -1002,6 +1003,141 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _validate_operation_conformance_test_ir(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/operation-conformance-test-ir/v1":
+        return ["operation_conformance_test_ir.json has unexpected schema_version"]
+    package_ir = command_package_ir_manifest()
+    packages = {str(package.get("id", "")): package for package in package_ir.get("packages", []) if isinstance(package, dict)}
+    conformance_refs = {str(contract["id"]): contract for contract in conformance_contracts_manifest()["contracts"]}
+    target_matrix = {
+        str(target.get("kind", "")): str(target.get("status", ""))
+        for target in payload.get("target_matrix", [])
+        if isinstance(target, dict)
+    }
+    required_classes = {"success", "error", "cross-target-parity"}
+    seen_classes = {
+        str(case.get("behavioral_class", ""))
+        for case in payload.get("initial_cases", [])
+        if isinstance(case, dict)
+    }
+    missing_classes = sorted(required_classes - seen_classes)
+    if missing_classes:
+        errors.append("operation_conformance_test_ir.json missing behavioral class(es): " + ", ".join(missing_classes))
+    source_role = payload.get("source_role", {})
+    if not isinstance(source_role, dict) or source_role.get("ordinary_startup_visibility") != "not-startup-workflow":
+        errors.append("operation_conformance_test_ir.json must stay out of ordinary startup workflow visibility")
+    migration_policy = payload.get("migration_policy", {})
+    if not isinstance(migration_policy, dict):
+        errors.append("operation_conformance_test_ir.json migration_policy must be an object")
+    else:
+        do_not_preserve = " ".join(str(item).lower() for item in migration_policy.get("do_not_preserve", []))
+        composition_rule = str(migration_policy.get("composition_rule", "")).lower()
+        if "one-for-one" not in do_not_preserve or "regression-test bulk" not in do_not_preserve:
+            errors.append("operation_conformance_test_ir.json must reject one-for-one regression-test bulk preservation")
+        if "primitive behavior is tested once" not in composition_rule or "composite operation cases assume" not in composition_rule:
+            errors.append("operation_conformance_test_ir.json must record compositional primitive reuse for composite cases")
+    adapter_model = payload.get("adapter_model", {})
+    if not isinstance(adapter_model, dict):
+        errors.append("operation_conformance_test_ir.json adapter_model must be an object")
+    else:
+        adapter_kinds = {
+            str(adapter.get("id", "")): adapter
+            for adapter in adapter_model.get("adapter_kinds", [])
+            if isinstance(adapter, dict)
+        }
+        for required_adapter in ("python.function", "typescript.function", "cli.process"):
+            if required_adapter not in adapter_kinds:
+                errors.append(f"operation_conformance_test_ir.json missing adapter kind {required_adapter}")
+        cli_adapter = adapter_kinds.get("cli.process", {})
+        if isinstance(cli_adapter, dict) and cli_adapter.get("default_for_semantic_proof") is not False:
+            errors.append("operation_conformance_test_ir.json cli.process must not be the default semantic proof adapter")
+    proof_output = payload.get("proof_output", {})
+    if not isinstance(proof_output, dict):
+        errors.append("operation_conformance_test_ir.json proof_output must be an object")
+    else:
+        states = set(proof_output.get("states", []))
+        if {"pass", "fail", "stale", "unavailable", "skipped"} - states:
+            errors.append("operation_conformance_test_ir.json proof_output must include pass/fail/stale/unavailable/skipped states")
+    seen_case_ids: set[str] = set()
+    for case in payload.get("initial_cases", []):
+        if not isinstance(case, dict):
+            errors.append("operation_conformance_test_ir.json initial_cases entries must be objects")
+            continue
+        case_id = str(case.get("id", ""))
+        if case_id in seen_case_ids:
+            errors.append(f"operation_conformance_test_ir.json duplicate case id {case_id}")
+        seen_case_ids.add(case_id)
+        operation_ref = case.get("operation_ref", {})
+        if not isinstance(operation_ref, dict):
+            errors.append(f"operation_conformance_test_ir.json case {case_id} has malformed operation_ref")
+            continue
+        package_id = str(operation_ref.get("package_id", ""))
+        operation_id = str(operation_ref.get("operation_id", ""))
+        package = packages.get(package_id)
+        if package is None:
+            errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown package {package_id}")
+            continue
+        commands = {str(command.get("adapter_id", "")): command for command in package.get("commands", []) if isinstance(command, dict)}
+        matching_commands = [
+            command
+            for command in commands.values()
+            if isinstance(command.get("operation_ref"), dict) and command["operation_ref"].get("id") == operation_id
+        ]
+        if not matching_commands:
+            errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown operation {operation_id}")
+        if operation_ref.get("operation_path"):
+            matching_paths = {
+                str(command.get("operation_ref", {}).get("path", ""))
+                for command in matching_commands
+                if isinstance(command.get("operation_ref"), dict)
+            }
+            if str(operation_ref.get("operation_path")) not in matching_paths:
+                errors.append(f"operation_conformance_test_ir.json case {case_id} operation_path drifted from command_package_ir.json")
+        conformance_ref = operation_ref.get("conformance_ref")
+        if conformance_ref is not None:
+            conformance = conformance_refs.get(str(conformance_ref))
+            if conformance is None:
+                errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown conformance {conformance_ref}")
+            elif conformance.get("operation_id") != operation_id:
+                errors.append(f"operation_conformance_test_ir.json case {case_id} conformance operation drifted from operation_ref")
+        artifacts = case.get("artifacts", [])
+        if not isinstance(artifacts, list) or not artifacts:
+            errors.append(f"operation_conformance_test_ir.json case {case_id} must declare artifact refs")
+            artifacts = []
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                errors.append(f"operation_conformance_test_ir.json case {case_id} has malformed artifact ref")
+                continue
+            adapter_id = str(artifact.get("adapter_id", ""))
+            if adapter_id == "cli.process" and artifact.get("proof_role") != "wrapper-smoke":
+                errors.append(f"operation_conformance_test_ir.json case {case_id} cli.process artifacts must declare wrapper-smoke proof_role")
+            wrapper_refs = {str(ref) for ref in artifact.get("wrapper_refs", [])}
+            unknown_wrappers = sorted(wrapper_refs - set(commands))
+            if unknown_wrappers:
+                errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}")
+        case_targets = {str(target.get("kind", "")) for target in case.get("targets", []) if isinstance(target, dict)}
+        unknown_targets = sorted(case_targets - set(target_matrix))
+        if unknown_targets:
+            errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown target(s): {', '.join(unknown_targets)}")
+        required_targets = {kind for kind, status in target_matrix.items() if status == "required"}
+        if case.get("behavioral_class") == "cross-target-parity" and not required_targets <= case_targets:
+            errors.append(f"operation_conformance_test_ir.json parity case {case_id} must cover all required targets")
+        expected = case.get("expected", {})
+        if case.get("behavioral_class") == "error" and isinstance(expected, dict) and int(expected.get("exit_code", 0)) == 0:
+            errors.append(f"operation_conformance_test_ir.json error case {case_id} must expect a non-zero exit")
+        if case.get("behavioral_class") == "cross-target-parity" and isinstance(expected, dict) and "parity" not in expected:
+            errors.append(f"operation_conformance_test_ir.json parity case {case_id} must declare parity comparison")
+        composition = case.get("composition", {})
+        if isinstance(composition, dict) and case.get("behavioral_class") == "cross-target-parity":
+            if not composition.get("assumes_primitives"):
+                errors.append(f"operation_conformance_test_ir.json parity case {case_id} must declare assumed primitives")
+        migration = case.get("migration", {})
+        if not isinstance(migration, dict) or not migration.get("rationale"):
+            errors.append(f"operation_conformance_test_ir.json case {case_id} must declare migration rationale")
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -1834,6 +1970,11 @@ def main(argv: list[str] | None = None) -> int:
             "command package IR",
             _validate(command_package_ir_manifest(), "command_package_ir.schema.json")
             + _validate_command_package_ir(command_package_ir_manifest()),
+        ),
+        (
+            "Operation Conformance Test IR",
+            _validate(operation_conformance_test_ir_manifest(), "operation_conformance_test_ir.schema.json")
+            + _validate_operation_conformance_test_ir(operation_conformance_test_ir_manifest()),
         ),
         (
             "command-generation schema boundary",
