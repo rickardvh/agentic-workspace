@@ -2796,6 +2796,47 @@
     "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
     "command": "agentic-workspace defaults --section proof_selection --format json",
     "construction_boundary": "Proof and validation confirm correct construction; repeated construction repair loops should route to interface/scaffold improvements instead of more validation prose.",
+    "proof_adequacy": {
+      "kind": "agentic-workspace/proof-adequacy/v1",
+      "protocol": "Proof Adequacy",
+      "rule": "Judge evidence against the claim boundary before completion; proof success is input to closeout, not completion permission by itself.",
+      "surface_roles": [
+        {
+          "surface": "proof",
+          "owns": "proof selection, required evidence, manual-verification fallback, and Verification enrichment"
+        },
+        {
+          "surface": "implement --changed",
+          "owns": "changed-path work context and proof hints for known paths"
+        },
+        {
+          "surface": "Verification",
+          "owns": "routed soft protocols, evidence bundles, stale/gap semantics, and proof route hints"
+        },
+        {
+          "surface": "closeout",
+          "owns": "completion permission, intent satisfaction, residue routing, and parent closure boundary"
+        }
+      ],
+      "claim_boundary": {
+        "proof_success_authorizes": [
+          "proof execution evidence for the selected claim boundary",
+          "input to closeout and acceptance reconciliation"
+        ],
+        "does_not_authorize": [
+          "completion permission without closeout",
+          "semantic intent satisfaction",
+          "parent issue, lane, or epic closure",
+          "ignoring required residue or continuation ownership"
+        ]
+      },
+      "verification_routes_when": [
+        "changed paths match Verification protocols or proof routes",
+        "active Planning proof profiles or workflow obligations request soft evidence",
+        "knowledge gates or module manifests make stale/gap semantics relevant"
+      ],
+      "cli_mirror_posture": "Proof route snippets and command lists are generated/catalogue candidates; the reasoning protocol is Proof Adequacy."
+    },
     "recommended_lanes": [
       {
         "broaden_when": "The current workspace proof answer is not specific enough for the trust question.",

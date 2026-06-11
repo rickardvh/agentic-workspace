@@ -1744,6 +1744,16 @@ def test_proof_changed_verbose_surfaces_proof_confidence(capsys) -> None:
     assert proof_confidence["proven_dimensions"] == []
     assert proof_confidence["unproven_dimensions"]
     assert "Selected proof" in proof_confidence["residual_risk"]
+    proof_adequacy = answer["proof_adequacy"]
+    assert proof_adequacy["protocol"] == "Proof Adequacy"
+    assert proof_adequacy["proof_surface_role"] == "proof selects evidence for the claim; it does not close work by itself"
+    assert proof_adequacy["implement_surface_role"].startswith("implement --changed carries changed-path work context")
+    assert proof_adequacy["required_evidence"]["commands"] == answer["required_commands"]
+    assert proof_adequacy["confidence_evidence"]["commands"] == answer["optional_commands"]
+    assert "completion permission without closeout" in proof_adequacy["claim_boundary"]["does_not_authorize"]
+    assert "semantic intent satisfaction" in proof_adequacy["claim_boundary"]["does_not_authorize"]
+    assert "parent issue, lane, or epic closure" in proof_adequacy["claim_boundary"]["does_not_authorize"]
+    assert proof_adequacy["proof_confidence"]["claim_boundary"] == "slice"
 
 
 def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:
@@ -1795,6 +1805,8 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(cap
     assert obligations["recommended_confidence_checks"]["commands"] != answer["required_commands"]
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
+    assert answer["proof_adequacy"]["claim_boundary"]["completion_rule"] == obligations["completion_claim_rule"]
+    assert answer["proof_adequacy"]["selected_lane_ids"][0] == "planning_package"
     assert obligations["compatibility"]["required_commands"] == "unchanged hard-gate field for existing callers"
     typecheck_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "planning_source_typecheck_ci_parity")
     assert typecheck_lane["matched_paths"] == ["packages/planning/src/repo_planning_bootstrap/installer.py"]

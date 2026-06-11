@@ -258,6 +258,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["proof_selection"]["rule"] == (
         "Make proof choice cheap by naming the narrowest lane that still answers the trust question."
     )
+    proof_adequacy = payload["proof_selection"]["proof_adequacy"]
+    assert proof_adequacy["protocol"] == "Proof Adequacy"
+    assert proof_adequacy["surface_roles"] == [
+        {"surface": "proof", "owns": "proof selection, required evidence, manual-verification fallback, and Verification enrichment"},
+        {"surface": "implement --changed", "owns": "changed-path work context and proof hints for known paths"},
+        {"surface": "Verification", "owns": "routed soft protocols, evidence bundles, stale/gap semantics, and proof route hints"},
+        {"surface": "closeout", "owns": "completion permission, intent satisfaction, residue routing, and parent closure boundary"},
+    ]
+    assert "completion permission without closeout" in proof_adequacy["claim_boundary"]["does_not_authorize"]
+    assert "semantic intent satisfaction" in proof_adequacy["claim_boundary"]["does_not_authorize"]
+    assert "Proof route snippets and command lists are generated/catalogue candidates" in proof_adequacy["cli_mirror_posture"]
     assert payload["proof_selection"]["recommended_lanes"][0]["id"] == "workspace_proof"
     assert payload["proof_selection"]["recommended_lanes"][0]["enough_proof"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_selection"]["recommended_lanes"][2]["id"] == "validation_lane"
