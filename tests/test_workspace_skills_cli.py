@@ -101,6 +101,16 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
+    workspace_entries = {entry["id"]: entry for entry in payload["skills"] if entry["source_kind"] == "installed-workspace-skills"}
+    assert {skill_id for skill_id, entry in workspace_entries.items() if entry["visibility"] == "ordinary-default"} == {
+        "workspace-intent-discovery",
+        "workspace-work-shape",
+    }
+    assert workspace_entries["workspace-startup"]["scope"] == "routed-projection"
+    assert workspace_entries["workspace-proof-selection"]["visibility"] == "routed-on-demand"
+    assert workspace_entries["workspace-transition-gates"]["visibility"] == "routed-on-demand"
+    assert workspace_entries["workspace-operating-loop"]["scope"] == "routed-projection"
+    assert workspace_entries["workspace-setup-jumpstart"]["scope"] == "routed-support"
     workspace_startup = next(entry for entry in payload["skills"] if entry["id"] == "workspace-startup")
     assert workspace_startup["source_kind"] == "installed-workspace-skills"
     assert "workspace startup" in workspace_startup["activation_hints"]["phrases"]
@@ -302,6 +312,7 @@ def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: P
     payload = json.loads(capsys.readouterr().out)
     assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
     assert payload["recommendations"][0]["score"] > 10
+    assert payload["recommendations"][0]["visibility"] == "routed-on-demand"
     assert "workspace setup jumpstart route" in payload["recommendations"][0]["reasons"][0]
 
 
@@ -331,6 +342,7 @@ def test_skills_command_recommends_setup_jumpstart_for_mature_repo_seeding(tmp_p
     payload = json.loads(capsys.readouterr().out)
     assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
     assert payload["recommendations"][0]["source_kind"] == "installed-workspace-skills"
+    assert payload["recommendations"][0]["scope"] == "routed-support"
     assert "pre-write and pre-seed discovery" in Path("docs/jumpstart-contract.md").read_text(encoding="utf-8")
 
 
