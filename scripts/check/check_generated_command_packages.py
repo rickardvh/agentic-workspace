@@ -4291,6 +4291,17 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     completion_claim_allowed = current_state == "full-generated-cli-complete" and gate_state == "satisfied" and not blockers
     runtime_metrics = _python_runtime_boundary_metrics()
     generated_target_freshness = _generated_target_freshness_report(ir)
+    runtime_source_edit_policy = _runtime_source_edit_policy_payload()
+    lifecycle_dry_run_metrics = _lifecycle_dry_run_metrics()
+    extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
+    generated_command_migration_completion = _generated_command_migration_completion_report(
+        blockers=blockers,
+        runtime_metrics=runtime_metrics,
+        generated_target_freshness=generated_target_freshness,
+        runtime_source_edit_policy=runtime_source_edit_policy,
+        lifecycle_dry_run_metrics=lifecycle_dry_run_metrics,
+        extraction_readiness_errors=extraction_readiness_errors,
+    )
     return {
         "kind": "python-completion-blockers/v1",
         "current_state": current_state,
@@ -4302,8 +4313,9 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "accepted_runtime_boundary_metrics": runtime_metrics,
         "runtime_boundary_minimization": _runtime_boundary_minimization_report(runtime_metrics),
         "generated_target_freshness": generated_target_freshness,
-        "runtime_source_edit_policy": _runtime_source_edit_policy_payload(),
-        "lifecycle_dry_run_metrics": _lifecycle_dry_run_metrics(),
+        "runtime_source_edit_policy": runtime_source_edit_policy,
+        "lifecycle_dry_run_metrics": lifecycle_dry_run_metrics,
+        "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
     }
@@ -4328,6 +4340,115 @@ def _runtime_source_edit_policy_payload() -> dict[str, object]:
         "rule": (
             "Runtime-source edits adjacent to generated CLI behavior require explicit primitive bugfix/new primitive evidence; "
             "vague package-domain boundary wording is insufficient."
+        ),
+    }
+
+
+def _generated_command_migration_completion_report(
+    *,
+    blockers: list[str],
+    runtime_metrics: dict[str, object],
+    generated_target_freshness: dict[str, object],
+    runtime_source_edit_policy: dict[str, object],
+    lifecycle_dry_run_metrics: dict[str, object],
+    extraction_readiness_errors: list[str],
+) -> dict[str, object]:
+    freshness_families = generated_target_freshness.get("target_families", [])
+    freshness_satisfied = (
+        generated_target_freshness.get("status") == "fresh"
+        and freshness_families == ["python", "typescript"]
+        and not generated_target_freshness.get("missing_target_families")
+        and not generated_target_freshness.get("stale_output_count_by_family")
+    )
+    runtime_policy_satisfied = (
+        runtime_source_edit_policy.get("status") == "available"
+        and runtime_source_edit_policy.get("accepted_direct_edit_reasons") == list(RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS)
+        and "package-domain boundary" in runtime_source_edit_policy.get("rejected_vague_reasons", [])
+        and "source_symbol_or_primitive" in runtime_source_edit_policy.get("required_evidence", [])
+    )
+    accepted_symbols = int(runtime_metrics.get("accepted_runtime_symbol_count", 0) or 0)
+    generic_debt_symbols = int(runtime_metrics.get("generic_debt_symbol_count", 0) or 0)
+    hand_owned_inventory_satisfied = (
+        runtime_metrics.get("status") == "available"
+        and accepted_symbols >= 0
+        and generic_debt_symbols == 0
+        and runtime_metrics.get("baseline_symbol_count") == accepted_symbols
+        and runtime_metrics.get("new_symbols_since_baseline") == []
+    )
+    lifecycle_dry_run_satisfied = (
+        lifecycle_dry_run_metrics.get("status") == "available"
+        and int(lifecycle_dry_run_metrics.get("package_runtime_default_dry_run_operation_count", 0) or 0) == 0
+    )
+    command_generation_ownership_satisfied = not extraction_readiness_errors
+    issue_statuses = {
+        "#1356": {
+            "title": "runtime-source edit gate",
+            "status": "satisfied" if runtime_policy_satisfied else "blocked",
+            "evidence": [
+                "runtime_source_edit_policy requires existing-primitive-bugfix or new-primitive-implementation",
+                "changed-path runtime-source review is inventory-backed by exact source symbols",
+                "vague package-domain boundary wording is rejected",
+            ],
+        },
+        "#1358": {
+            "title": "Python/TypeScript generated target parity and freshness",
+            "status": "satisfied" if freshness_satisfied else "blocked",
+            "evidence": [
+                "generated_target_freshness.status is fresh",
+                "target_families are exactly python and typescript",
+                "generate_command_packages.py --check is the cheap stale-output detector",
+            ],
+        },
+        "#1442": {
+            "title": "command-generation migration ownership boundary",
+            "status": "satisfied"
+            if (
+                not blockers
+                and runtime_policy_satisfied
+                and freshness_satisfied
+                and hand_owned_inventory_satisfied
+                and lifecycle_dry_run_satisfied
+                and command_generation_ownership_satisfied
+            )
+            else "blocked",
+            "evidence": [
+                "Python CLI completion gate is satisfied with no generated-package blockers",
+                "remaining hand-owned runtime symbols are exact-symbol inventoried and generic debt is zero",
+                "command-generation extraction readiness has no uninventoried product coupling",
+                "lifecycle dry-run behavior is generated or operation-runtime owned, not broad package-runtime default behavior",
+            ],
+        },
+    }
+    blocked_issues = [issue for issue, payload in issue_statuses.items() if payload["status"] != "satisfied"]
+    remaining_parent_scope = [
+        "IR-defined schema-coupled generated command tests remain parent #1441 follow-up scope.",
+        "IR hierarchy simplification remains parent #1441 follow-up scope after test IR migration.",
+    ]
+    return {
+        "kind": "generated-command-migration-completion/v1",
+        "milestone": "Generated command migration completion",
+        "status": "satisfied" if not blocked_issues else "blocked",
+        "blocked_issues": blocked_issues,
+        "issue_statuses": issue_statuses,
+        "hand_owned_runtime_inventory": {
+            "status": "explicit-inventory-not-minimized",
+            "accepted_runtime_symbol_count": accepted_symbols,
+            "generic_debt_symbol_count": generic_debt_symbols,
+            "claim_boundary": (
+                "The milestone proves the remaining runtime primitive inventory is explicit and justified; "
+                "it does not claim parent #1441 runtime surfaces are fully simplified."
+            ),
+        },
+        "command_generation_owner_surfaces": [
+            "src/agentic_workspace/contracts/command_package_ir.json",
+            "scripts/generate/workspace_command_generation.py",
+            "scripts/generate/generate_command_packages.py",
+            "scripts/check/check_generated_command_packages.py",
+            "command-generation package render/freshness/conformance APIs",
+        ],
+        "remaining_parent_scope": remaining_parent_scope,
+        "closeout_rule": (
+            "Close milestone 1 only when #1356, #1358, and #1442 are all satisfied; keep parent #1441 open for test IR and hierarchy simplification."
         ),
     }
 
@@ -4366,6 +4487,10 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
             "Runtime source edit policy: explicit primitive bugfix/new primitive evidence required; "
             "vague package-domain boundary wording is insufficient"
         )
+    migration_completion = report.get("generated_command_migration_completion", {})
+    if isinstance(migration_completion, dict) and migration_completion.get("status"):
+        print(f"Generated command migration completion: {migration_completion.get('status')}")
+        print(f"Milestone blocked issues: {migration_completion.get('blocked_issues')}")
     lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
     if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
         print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")
