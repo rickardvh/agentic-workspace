@@ -1,0 +1,108 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Installed ordinary-path walkthrough for #1389 Milestone D",
+  "date": "2026-06-11",
+  "classification": "installed-ordinary-path-walkthrough",
+  "goal": "Produce installed-product evidence for #1430 and #1411, then decide whether #1389 can honestly close or whether a final routable gap remains.",
+  "scope": [
+    "root startup adapter",
+    "ordinary start route",
+    "active continuation route",
+    "known changed-path implement route",
+    "proof selection route",
+    "closeout and residue route",
+    "fallback/no-CLI projection",
+    "skill payload and generated/reference surface posture",
+    "abstraction-ladder closure decision for #1389"
+  ],
+  "non_goals": [
+    "implement broad lower-surface cleanup inside the walkthrough",
+    "close #1389 without installed-path command evidence",
+    "treat package docs or command inventory as the ordinary workflow"
+  ],
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1430",
+      "label": "Produce installed ordinary-path walkthrough for #1389"
+    },
+    {
+      "kind": "issue",
+      "target": "#1411",
+      "label": "Gate #1389 closure with abstraction-ladder and installed-path proof"
+    },
+    {
+      "kind": "issue",
+      "target": "#1389",
+      "label": "Simplify agent-facing surfaces and workflows"
+    },
+    {
+      "kind": "issue",
+      "target": "#1437",
+      "label": "Finish ordinary output-shape compression before #1389 closure"
+    },
+    {
+      "kind": "doc",
+      "target": "AGENTS.md",
+      "label": "installed startup adapter"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "label": "no-CLI fallback projection"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/package/ordinary-continuity-loop.md",
+      "label": "target ordinary loop"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/package/installed-surfaces.md",
+      "label": "installed surface classes"
+    }
+  ],
+  "summary": "Milestone D evidence shows the installed ordinary path is materially simpler than the pre-epic surface model: first contact is AGENTS.md to start, active work routes through summary or implement, proof routes through proof selection, and closeout exposes parent/residue boundaries. #1389 should not close yet because operational_compression still reports seven ordinary output surfaces whose primary decision objects need separate compression/audit slices.",
+  "validation_commands": [
+    "gh issue view 1430 --json number,title,state,body,labels,milestone,url",
+    "gh issue view 1411 --json number,title,state,body,labels,milestone,url",
+    "gh issue view 1389 --json number,title,state,body,labels,milestone,url",
+    "gh issue reopen 1389 --comment \"Reopening parent epic...\"",
+    "uv run python scripts/run_agentic_workspace.py start --task \"Milestone D installed ordinary-path walkthrough for #1430/#1411/#1389\" --select next_safe_action.next_safe_action,next_safe_action.why,action_signals.hard_blockers,action_signals.allowed_next_action --format json",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --select todo.active_items,planning_surface_health.status,warning_count --format json",
+    "uv run python scripts/run_agentic_workspace.py implement --changed .agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json --task \"Record installed ordinary-path walkthrough evidence for #1430 and #1411\" --select action_signals,next,proof,context.scope,context.acceptance_reconciliation,context.parent_intent_status --format json",
+    "uv run python scripts/run_agentic_workspace.py proof --changed .agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json --format json",
+    "uv run python scripts/run_agentic_workspace.py report --section closeout_trust --select answer.trust,answer.completion_options,answer.checks.intent_satisfaction,answer.closeout_protocol.closure_permission,answer.closeout_protocol.residue_routing --format json",
+    "uv run python scripts/run_agentic_workspace.py report --section operational_compression --format json",
+    "uv run python scripts/run_agentic_workspace.py skills --target . --task \"Milestone D installed ordinary-path walkthrough for #1430/#1411/#1389\" --format json"
+  ],
+  "review_method": {
+    "walkthrough": "{\"startup_adapter\":{\"surface\":\"AGENTS.md\",\"result\":\"The managed block is a compact adapter. It routes non-trivial work to start, known changed paths to implement --changed, and names preflight/config/defaults/skills/modules/ownership/report as routed drill-down or recovery surfaces.\"},\"fallback_no_cli\":{\"surface\":\".agentic-workspace/WORKFLOW.md\",\"result\":\"Fallback text explicitly says it is a conservative projection, not independent workflow authority. It instructs agents to resume through start, implement --changed, summary, or proof once CLI output is available.\"},\"ordinary_start\":{\"command\":\"uv run python scripts/run_agentic_workspace.py start --task \\\"Milestone D installed ordinary-path walkthrough for #1430/#1411/#1389\\\" --select next_safe_action.next_safe_action,next_safe_action.why,action_signals.hard_blockers,action_signals.allowed_next_action --format json\",\"observed\":{\"next_safe_action\":\"continue-active-planning-record\",\"allowed_next_action\":\"continue-active-planning-record\",\"hard_blockers\":[\"claim completion\",\"open raw planning files before compact summary\"]},\"interpretation\":\"Startup produced one ordinary next phase and blocked raw planning reads before compact summary.\"},\"active_continuation\":{\"command\":\"uv run python scripts/run_agentic_workspace.py summary --target . --select todo.active_items,planning_surface_health.status,warning_count --format json\",\"observed\":{\"active_item\":\"lane-1389-installed-workflow-closeout-review\",\"planning_surface_health\":\"not-clean before evidence artifact is committed\",\"warning_count\":1},\"interpretation\":\"Summary exposed the active lane and health without requiring manual state assembly.\"},\"known_changed_path\":{\"command\":\"uv run python scripts/run_agentic_workspace.py implement --changed .agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json --task \\\"Record installed ordinary-path walkthrough evidence for #1430 and #1411\\\" --select action_signals,next,proof,context.scope,context.acceptance_reconciliation,context.parent_intent_status --format json\",\"observed\":{\"implementation_allowed\":true,\"allowed_next_action\":\"Inspect only the listed files and run the required validation commands.\",\"proof_commands\":[\"uv run python scripts/run_agentic_workspace.py summary --target . --format json\",\"uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json\"],\"parent_intent_status\":\"open\"},\"interpretation\":\"Known-path work is routed to one changed-path context card with proof expectations and parent-intent boundary.\"},\"proof_selection\":{\"command\":\"uv run python scripts/run_agentic_workspace.py proof --changed .agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json --format json\",\"observed\":{\"next_action\":\"run-validation-command\",\"required_commands\":[\"uv run python scripts/run_agentic_workspace.py summary --target . --format json\",\"uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json\"],\"intent_proof_status\":\"needs-agent-judgment\"},\"interpretation\":\"Proof selection is deterministic about required commands and honest about remaining semantic judgment.\"},\"closeout_and_residue\":{\"command\":\"uv run python scripts/run_agentic_workspace.py report --section closeout_trust --select answer.trust,answer.completion_options,answer.checks.intent_satisfaction,answer.closeout_protocol.closure_permission,answer.closeout_protocol.residue_routing --format json\",\"observed\":{\"trust\":\"lower-trust before lane proof is recorded\",\"claim_work_complete_allowed\":false,\"keep_parent_open_allowed\":true,\"close_parent_lane_allowed\":false,\"residue_required\":true},\"interpretation\":\"Closeout correctly separates slice proof, broad work completion, parent closure, and residue routing.\"},\"skill_payload\":{\"command\":\"uv run python scripts/run_agentic_workspace.py skills --target . --task \\\"Milestone D installed ordinary-path walkthrough for #1430/#1411/#1389\\\" --format json\",\"observed\":{\"skill_count\":34,\"ordinary_default_count\":29,\"routed_on_demand_count\":5,\"top_recommendation\":\"planning-autopilot\"},\"interpretation\":\"The full skill catalogue is still large, but ordinary startup does not require browsing it. Skills are reached through compact routing or explicit catalogue inspection.\"},\"generated_and_reference_surfaces\":{\"command\":\"uv run python scripts/run_agentic_workspace.py report --section operational_compression --format json\",\"observed\":{\"generated_output_ordinary_startup_surface\":false,\"large_docs_or_package_surfaces_count\":0,\"first_line_startup_read_surface_count\":4},\"interpretation\":\"Generated/reference surfaces are mostly behind routing and are not ordinary startup surfaces.\"}}",
+    "abstraction_ladder": "[{\"layer\":\"Product model\",\"status\":\"satisfied\",\"evidence\":\"Installed path presents a repo-native continuity loop; lifecycle, diagnostics, generated references, and module CLIs are routed, not first-contact doctrine.\"},{\"layer\":\"Operating model\",\"status\":\"mostly-satisfied\",\"evidence\":\"AGENTS.md to start to one routed next phase works. Remaining output-shape compression gaps mean some routed phases still carry overlapping fields.\"},{\"layer\":\"Module participation\",\"status\":\"satisfied\",\"evidence\":\"Installed surfaces document open participation seams; Planning, Memory, and Verification are examples rather than hard-coded outer limits.\"},{\"layer\":\"Task posture / obligations\",\"status\":\"satisfied\",\"evidence\":\"start and implement emit task posture, action signals, proof obligations, and closeout boundaries dynamically.\"},{\"layer\":\"Knowledge routing\",\"status\":\"satisfied\",\"evidence\":\"Knowledge appears as routed task posture and closeout residue; it is not a separate first-contact reading list.\"},{\"layer\":\"Phase ownership\",\"status\":\"mostly-satisfied\",\"evidence\":\"Startup, active work, proof, and closeout have clear owners; remaining output-shape work should reduce overlap between summary, proof, report, planning, and memory projections.\"},{\"layer\":\"Command surfaces\",\"status\":\"not-yet-closed\",\"evidence\":\"operational_compression reports ordinary_output_shape_inventory.remaining_count = 7. start is proven, but implement, summary, preflight, report, proof, planning report/summary, and memory report/promotion-report still need primary-decision-object compression slices.\"},{\"layer\":\"Skill payload\",\"status\":\"acceptable-with-routing\",\"evidence\":\"The skill catalogue remains large, but startup did not force catalogue browsing and skills are reached through compact routing.\"},{\"layer\":\"Installed adapters/fallback\",\"status\":\"satisfied\",\"evidence\":\"AGENTS.md is a compact adapter and WORKFLOW.md is an explicit no-CLI fallback/projection.\"},{\"layer\":\"Docs/reference/catalogue\",\"status\":\"satisfied\",\"evidence\":\"Package docs and generated references are routed reference surfaces, not ordinary first-contact workflow.\"},{\"layer\":\"State owners\",\"status\":\"satisfied\",\"evidence\":\"Planning owns active execution, Memory owns durable knowledge, Verification owns proof protocols, generated artifacts are derived, and local-only state stays local.\"},{\"layer\":\"Real workflow proof\",\"status\":\"partial\",\"evidence\":\"The walkthrough proves startup, continuation, known-path implement, proof, and closeout routing. It also finds unresolved output-shape compression before parent closure.\"}]",
+    "ordinary_output_shape_gap": "{\"source\":\"report --section operational_compression\",\"status\":\"blocking-parent-closure\",\"proven_count\":1,\"remaining_count\":7,\"remaining_surfaces\":[\"implement\",\"summary\",\"preflight\",\"report\",\"proof\",\"planning report/summary\",\"memory report/promotion-report\"],\"required_follow_up\":\"#1437 compresses/audits primary decision objects for the remaining routed ordinary outputs before #1389 closure.\"}"
+  },
+  "findings": [
+    {
+      "title": "installed ordinary path is materially simpler and routed",
+      "summary": "First contact is AGENTS.md to start, active work routes through summary or implement, proof routes through proof selection, and closeout exposes parent/residue boundaries.",
+      "evidence": "start selected continue-active-planning-record; implement --changed selected a scoped changed-path card and proof commands; proof --changed selected required validation; closeout_trust blocked broad/parent closure while routing residue.",
+      "suggested action": "Use this as #1430 installed-path evidence for #1411, but keep #1389 open until the remaining output-shape gap is resolved.",
+      "confidence": "high"
+    },
+    {
+      "title": "ordinary output-shape compression remains the final #1389 gap",
+      "summary": "operational_compression reports ordinary_output_shape_inventory.remaining_count = 7; start is proven but implement, summary, preflight, report, proof, planning report/summary, and memory report/promotion-report still need primary-decision-object compression or retention evidence.",
+      "evidence": "{\"source\":\"report --section operational_compression\",\"status\":\"blocking-parent-closure\",\"proven_count\":1,\"remaining_count\":7,\"remaining_surfaces\":[\"implement\",\"summary\",\"preflight\",\"report\",\"proof\",\"planning report/summary\",\"memory report/promotion-report\"],\"required_follow_up\":\"#1437 compresses/audits primary decision objects for the remaining routed ordinary outputs before #1389 closure.\"}",
+      "suggested action": "Route #1437 as the final Milestone D follow-up and keep #1411/#1389 open until it lands or is explicitly dismissed with evidence.",
+      "confidence": "high"
+    }
+  ],
+  "recommendation": {
+    "issue_1430": "satisfied once this evidence is linked; final output-shape follow-up #1437 has been created",
+    "issue_1411": "not complete yet; it should remain open as the #1389 closure gate until the final follow-up lands or is explicitly dismissed",
+    "issue_1389": "must remain open; current GitHub state was corrected by reopening it during this walkthrough",
+    "close_parent_now": "false",
+    "why": "The installed path is visibly simpler and correctly routed, but command-surface abstraction-ladder coverage is not complete while seven ordinary outputs still need primary-decision-object compression or explicit retention evidence.",
+    "required_follow_up": "#1437"
+  }
+}

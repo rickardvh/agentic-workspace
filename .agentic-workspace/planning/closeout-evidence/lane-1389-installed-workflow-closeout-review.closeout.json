@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Review installed ordinary workflow and parent closeout evidence",
+  "plan_id": "lane-1389-installed-workflow-closeout-review",
+  "created_at": "2026-06-11T16:09:30.461963+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1389-installed-workflow-closeout-review.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1389-installed-workflow-closeout-review",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json lane lane-1389-installed-workflow-closeout-review.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Ran #1430 installed ordinary-path walkthrough for Milestone D, recorded the evidence bundle, used it to evaluate #1411, reopened #1389, and created #1437 for the final ordinary output-shape compression gap.",
+    "scope touched": "Installed ordinary-path evidence, #1389 closure decision, and Milestone D continuation routing.",
+    "changed surfaces": ".agentic-workspace/planning/reviews/2026-06-11-issue-1430-installed-ordinary-path-walkthrough.review.json; .agentic-workspace/planning/decompositions/workspace-agent-facing-simplification.decomposition.json; .agentic-workspace/planning/state.toml; GitHub issues #1389 and #1437.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+    "next step": "promote the next bounded slice from GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "#1430 evidence is satisfied, but #1411/#1389 cannot close yet because operational_compression reports seven remaining ordinary output-shape gaps; #1437 now owns that final gap.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open"
+  },
+  "proof_report": {
+    "validation proof": "Passed: installed ordinary-path walkthrough commands recorded in .agentic-workspace/planning/reviews/2026-06-11-issue-1430-installed-ordinary-path-walkthrough.review.json; summary healthy; planning doctor healthy; planning surface checker clean; #1389 reopened; #1437 created in Milestone D.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Simplify agent-facing surfaces and workflows from the highest abstraction downward while preserving AW as a repo-native continuity and execution layer for intent, context, proof, and handoff.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Milestone D discovered a final small gap instead of authorizing #1389 closure.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+          "owner": "GitHub #1437; #1411 remains the #1389 closure gate; #1389 remains open",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

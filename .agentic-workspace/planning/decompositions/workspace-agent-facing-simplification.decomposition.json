@@ -84,9 +84,9 @@
     {
       "id": "lane-1389-installed-workflow-closeout-review",
       "title": "Review installed ordinary workflow and parent closeout evidence",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "The final #1389 review demonstrates that the primary agent path is smaller or more clearly routed, ownership boundaries remain sharp, and ordinary agents can start, continue, prove, and close out without assembling the system from broad manuals or command lists.",
-      "owner_surface": "Installed host-repo perspective, before/after agent-facing surface inventory, fallback docs, CLI aid outputs, skill/protocol payloads, Planning/Memory/Verification ownership evidence, and a realistic startup or continuation walkthrough.",
+      "owner_surface": ".agentic-workspace/planning/execplans/lane-1389-installed-workflow-closeout-review.plan.json",
       "proof": "Before/after inventory, review findings, and walkthrough evidence satisfy #1389 final completion requirements.",
       "slice_contribution_to_parent": "Provides the parent-closure evidence and prevents local simplifications from being mistaken for full lane satisfaction.",
       "residual_parent_intent": "None only if all parent acceptance targets are satisfied or explicitly rejected/deferred with owner.",
