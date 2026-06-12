@@ -23,7 +23,12 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 import check_contract_tooling_surfaces as contract_tooling_check  # noqa: E402
 import check_generated_command_packages as generated_package_check  # noqa: E402
-from command_generation import materialize_case_fixture  # noqa: E402
+from command_generation import (  # noqa: E402
+    FunctionConformanceTarget,
+    OperationConformanceCase,
+    materialize_case_fixture,
+    run_function_conformance_case,
+)
 from command_generation.conformance import ProcessConformanceCase  # noqa: E402
 
 from agentic_workspace.contract_tooling import (  # noqa: E402
@@ -74,11 +79,41 @@ def _case_process_fixture(case: Mapping[str, object]) -> ProcessConformanceCase:
     )
 
 
+def _case_function_fixture(case: Mapping[str, object]) -> OperationConformanceCase:
+    operation_ref = case.get("operation_ref", {})
+    if not isinstance(operation_ref, Mapping):
+        raise ValueError(f"case {case.get('id')} has malformed operation_ref")
+    expected = case.get("expected", {})
+    if not isinstance(expected, Mapping):
+        raise ValueError(f"case {case.get('id')} has malformed expected block")
+    result = expected.get("result", {})
+    case_input = case.get("input", {})
+    if not isinstance(case_input, Mapping):
+        raise ValueError(f"case {case.get('id')} has malformed input block")
+    result_fields = result.get("selected_fields", {}) if isinstance(result, Mapping) else {}
+    error = expected.get("error", {})
+    error_contains = error.get("contains", []) if isinstance(error, Mapping) else []
+    return OperationConformanceCase(
+        conformance_ref=str(operation_ref.get("conformance_ref") or case.get("id", "")),
+        label=str(case.get("title", case.get("id", ""))),
+        input_values=dict(case_input.get("json", {})) if isinstance(case_input.get("json", {}), Mapping) else {},
+        selected_fields=lambda output, expected_fields=result_fields: _select_expected_result_fields(output, expected_fields),
+        expected_fields=dict(result_fields) if isinstance(result_fields, Mapping) else {},
+        expected_error_contains=tuple(str(item) for item in error_contains if isinstance(item, str)),
+    )
+
+
 def _select_expected_fields(stdout_text: str, expected_fields: object) -> dict[str, object]:
     if not isinstance(expected_fields, Mapping) or not expected_fields:
         return {}
     payload = json.loads(stdout_text)
     return {str(field): _selected_field(payload, str(field)) for field in expected_fields}
+
+
+def _select_expected_result_fields(output: object, expected_fields: object) -> dict[str, object]:
+    if not isinstance(expected_fields, Mapping) or not expected_fields:
+        return {}
+    return {str(field): _selected_field(output, str(field)) for field in expected_fields}
 
 
 def _package_by_id(manifest: Mapping[str, object]) -> dict[str, Mapping[str, object]]:
@@ -118,6 +153,9 @@ def _run_case_target(
     package = _package_by_id(command_package_ir).get(package_id)
     if package is None:
         return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message=f"unknown package {package_id!r}")
+    adapter_id = str(artifact.get("adapter_id", "cli.process"))
+    if target_kind == "python" and adapter_id == "python.function":
+        return _run_python_function_case(case=case, artifact=artifact)
     process_case = _case_process_fixture(case)
     fixture_root = materialize_case_fixture(
         case=process_case,
@@ -155,6 +193,68 @@ def _run_case_target(
         "exit_code": completed.returncode,
         "selected_fields": _selected_fields_or_empty(process_case, completed.stdout) if not failures else {},
         "message": "; ".join(failures) if failures else "",
+    }
+
+
+def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[str, object]) -> dict[str, object]:
+    operation_ref = case.get("operation_ref", {})
+    if not isinstance(operation_ref, Mapping):
+        return _function_result(case=case, artifact=artifact, state="fail", message="malformed operation_ref")
+    function_target = _python_function_target_for_artifact(artifact)
+    if function_target is None:
+        return _function_result(case=case, artifact=artifact, state="unavailable", message="python.function artifact has no importable symbol")
+    function_case = _case_function_fixture(case)
+    result, failures = run_function_conformance_case(case=function_case, target=function_target)
+    return {
+        "case_id": str(case.get("id", "")),
+        "behavioral_class": str(case.get("behavioral_class", "")),
+        "operation_id": str(operation_ref.get("operation_id", "")),
+        "artifact_id": str(artifact.get("artifact_id", "")),
+        "adapter_id": str(artifact.get("adapter_id", "python.function")),
+        "conformance_ref": str(operation_ref.get("conformance_ref", "")),
+        "target": "python",
+        "state": "fail" if failures else "pass",
+        "selected_fields": result.selected_fields if result is not None and result.selected_fields is not None else {},
+        "message": "; ".join(failure.message for failure in failures),
+    }
+
+
+def _python_function_target_for_artifact(artifact: Mapping[str, object]) -> FunctionConformanceTarget | None:
+    symbol = str(artifact.get("symbol", ""))
+    if ":" not in symbol:
+        return None
+    module_name, function_name = symbol.rsplit(":", 1)
+    if not module_name or not function_name:
+        return None
+
+    def invoke(values: Mapping[str, object]) -> object:
+        module = __import__(module_name, fromlist=[function_name])
+        function = getattr(module, function_name)
+        return function(dict(values))
+
+    return FunctionConformanceTarget(label=str(artifact.get("artifact_id", "python.function")), invoke=invoke)
+
+
+def _function_result(
+    *,
+    case: Mapping[str, object],
+    artifact: Mapping[str, object],
+    state: str,
+    message: str,
+) -> dict[str, object]:
+    operation_ref = case.get("operation_ref", {})
+    operation_id = operation_ref.get("operation_id", "") if isinstance(operation_ref, Mapping) else ""
+    conformance_ref = operation_ref.get("conformance_ref", "") if isinstance(operation_ref, Mapping) else ""
+    return {
+        "case_id": str(case.get("id", "")),
+        "behavioral_class": str(case.get("behavioral_class", "")),
+        "operation_id": str(operation_id),
+        "artifact_id": str(artifact.get("artifact_id", "")),
+        "adapter_id": str(artifact.get("adapter_id", "python.function")),
+        "conformance_ref": str(conformance_ref),
+        "target": "python",
+        "state": state,
+        "message": message,
     }
 
 
