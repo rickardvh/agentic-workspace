@@ -6,7 +6,7 @@ This inventory is the #1374 AW-side implementation record for replacing generate
 
 #1374 is complete for the AW repository when this inventory is current: stable generated-command success behavior has a contract-owned conformance owner, duplicate ordinary success-path regressions have been merged or deleted, and the remaining ordinary tests are explicitly retained because they cover runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or command-generation-owned primitive behavior.
 
-This inventory does not close `rickardvh/command-generation#9`; portable primitive and command-generation package test replacement remains owned by that repository.
+This inventory now consumes the `rickardvh/command-generation#9` replacement surface from `rickardvh/command-generation#13`: package-owned reusable conformance case resources exposed by `contract_conformance_cases_manifest()` and `load_contract_conformance_case(...)`.
 
 The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage because the shared `command-generation` conformance runner only compared JSON fields. `rickardvh/command-generation#10` adds required stdout substring checks, and this AW branch pins that dependency revision so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
 
@@ -39,7 +39,7 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | `tests/test_generated_tool_conformance.py` | Conformance harness, registry, and forbidden-write mechanics. These tests validate the runner itself rather than generated command behavior. | Keep ordinary unless a runner contract format is introduced. |
 | `tests/test_generated_command_package_proof_runner.py` | Proof-step selection, crash classification, retry recovery, Docker routing, static drift checks, and checker internals. | Convert only stable command-output examples; keep proof/checker orchestration ordinary. |
 | `tests/test_workspace_proof_generated_packages_cli.py` | AW proof routing and verification-lane semantics for generated package proof. | Keep ordinary because it tests AW proof selection, not generated command behavior. |
-| `tests/test_command_generation_primitive_executor.py` | AW dependency wiring and temporary mirror coverage for command-generation primitive behavior. | Move portable primitive behavior upstream under `rickardvh/command-generation#9`; keep only AW integration wiring here. |
+| `tests/test_command_generation_primitive_executor.py` | AW dependency wiring and former temporary mirror coverage for command-generation primitive behavior. | Portable generic cases now live upstream under `rickardvh/command-generation#9` / `rickardvh/command-generation#13`; keep only AW integration wiring here. |
 | `tests/test_command_generation_artifacts.py` | Artifact ownership, freshness, and operation fragment support checks. | Keep ordinary as contract/generator integrity checks. |
 | `tests/test_workspace_cli_blackbox.py` | Remaining cases cover invalid target usage errors, near-miss command guidance, selector conflicts, and memory-route misuse. | Keep ordinary because these are adapter error classification and recovery-message surfaces. |
 | `tests/test_workspace_cli.py` | Mixed CLI compatibility, selectors, and orchestration behavior. | Convert stable command-output examples only after operation owners are explicit and the case can name a contract owner. |
@@ -53,6 +53,12 @@ The June 2026 audit found additional stable text-output tests that could not be 
 ## Boundary
 
 This inventory does not claim every ordinary test should disappear. Ordinary tests remain legitimate when they prove runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or a narrow bug repro that cannot yet be expressed as a stable operational contract.
+
+## #1446 Simplification Closeout
+
+The AW-side simplification pass removes the remaining ambiguous handoff around command-generation-owned behavior by pinning the command-generation revision that exposes package-owned reusable conformance resources. AW keeps product-specific operation contracts, proof routing, generated package freshness, lifecycle behavior, wrapper boundary tests, and installed-product checks.
+
+Parent #1441 should remain open until the stacked PRs for #1452, #1459, #1457, this #1446 slice, and the command-generation #13 dependency are all merged. Once they are merged, the remaining parent decision is review/proof: confirm that no generated-behavior test group remains uncategorized as migrated, moved, retained, or rejected.
 
 ## Drift Guard
 
