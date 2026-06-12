@@ -153,6 +153,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "operation_artifact_registry.json",
+      "schema": "operation_artifact_registry.schema.json",
+      "loader": "operation_artifact_registry_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "workflow_definition_format.json",
       "schema": "workflow_definition_format.schema.json",
       "loader": "workflow_definition_format_manifest",

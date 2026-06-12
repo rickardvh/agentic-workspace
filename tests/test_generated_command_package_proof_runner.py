@@ -148,6 +148,7 @@ def test_operation_conformance_runner_executes_python_cases() -> None:
     payload = runner.run_ir_cases(target_selection="python", case_filter=set(), require_node=False)
 
     assert payload["kind"] == "operation-conformance-proof/v1"
+    assert payload["artifact_registry"] == "operation_artifact_registry.json"
     assert payload["summary"]["state"] == "pass"
     assert payload["summary"]["fail_count"] == 0
     assert payload["summary"]["pass_count"] == 3
@@ -170,10 +171,10 @@ def test_generated_command_test_ir_runner_reports_typescript_unavailable(monkeyp
     assert strict["summary"]["fail_count"] == 2
 
 
-def test_generated_command_test_ir_runner_compares_parity(monkeypatch) -> None:
+def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 
-    def fake_run_case_target(*, case, target_kind, temp_root, require_node):
+    def fake_run_case_target(*, case, artifact_registry, target_kind, temp_root, require_node):
         return {
             "case_id": case["id"],
             "behavioral_class": case["behavioral_class"],
