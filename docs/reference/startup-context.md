@@ -157,12 +157,15 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `closeout_obligations` | object | no |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
+| `repo_posture` | object | no |  | Compact effective repo posture ref, digest, reminder, provenance route, and reorientation triggers. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
 | `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls, including acceptance expectations when task text is present. |  |  |
 | `acceptance` | object | no |  | Definition-of-done expectations inferred from task intent for selector-first startup drill-down. |  |  |
 | `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
 | `intent_evidence` | object | no |  | Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture. |  |  |
+| `intent_elicitation_protocol` | object | no |  | Routed natural-language intent elicitation protocol for task, initiative, repo/system, completion-boundary, anti-goal, and unresolved-assumption intent. |  |  |
+| `intent_custody` | object | no |  | Compact custody projection for active intent refs, completion boundaries, anti-goals, provenance, freshness, and routing. |  |  |
 | `active_intent_contract` | object | no |  | Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims. |  |  |
 | `intent_satisfaction_matrix` | object | no |  | Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |

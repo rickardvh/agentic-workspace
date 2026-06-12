@@ -556,6 +556,58 @@ def test_start_keeps_routine_work_context_quiet_without_active_pressure(tmp_path
     assert "knowledge_authority_review" not in routine
 
 
+def test_start_selects_repo_posture_and_intent_custody_without_broad_startup(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Make onboarding better without expanding the whole docs system",
+                "--select",
+                "repo_posture,intent_elicitation_protocol,intent_custody",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    values = payload["values"]
+    posture = values["repo_posture"]
+    assert posture["kind"] == "agentic-workspace/repo-posture/v1"
+    assert posture["ref"].startswith("repo-posture/")
+    assert "basis" in posture
+    assert "context-compression" in posture["reorientation_triggers"]
+    assert posture["adherence_visibility"]["closeout_field"] == "task_posture_packet.posture_adherence"
+
+    protocol = values["intent_elicitation_protocol"]
+    assert protocol["skill"] == "workspace-intent-discovery"
+    assert protocol["intent_levels"] == [
+        "task",
+        "initiative",
+        "repo",
+        "system",
+        "completion-boundary",
+        "anti-goal",
+        "unresolved-assumption",
+    ]
+    assert protocol["output_shape"]["routing_target"].startswith("intent_custody")
+
+    custody = values["intent_custody"]
+    assert custody["kind"] == "agentic-workspace/intent-custody/v1"
+    assert "task/current-request" in custody["active_intent_refs"]
+    assert custody["routing"]["missing_or_ambiguous"] == "intent_elicitation_protocol"
+    assert "Task records may support task/slice closure only" in custody["claim_rule"]
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

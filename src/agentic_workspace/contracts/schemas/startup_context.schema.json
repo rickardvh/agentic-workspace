@@ -345,6 +345,10 @@
       "type": "object",
       "description": "Compact statement of the current operating mode and risk posture."
     },
+    "repo_posture": {
+      "type": "object",
+      "description": "Compact effective repo posture ref, digest, reminder, provenance route, and reorientation triggers."
+    },
     "delegation_decision": {
       "type": "object",
       "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals.",
@@ -373,6 +377,16 @@
     "intent_evidence": {
       "type": "object",
       "description": "Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture.",
+      "additionalProperties": true
+    },
+    "intent_elicitation_protocol": {
+      "type": "object",
+      "description": "Routed natural-language intent elicitation protocol for task, initiative, repo/system, completion-boundary, anti-goal, and unresolved-assumption intent.",
+      "additionalProperties": true
+    },
+    "intent_custody": {
+      "type": "object",
+      "description": "Compact custody projection for active intent refs, completion boundaries, anti-goals, provenance, freshness, and routing.",
       "additionalProperties": true
     },
     "active_intent_contract": {
