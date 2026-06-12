@@ -23,6 +23,8 @@ The root package currently depends on the first-party Planning and Memory packag
 
 Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md). The reviewed ordinary operating model and surface classification live in [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md). Knowledge routing, source authority, and pre-work gates are defined in [Knowledge routing and source authority](knowledge-routing.md) and [Pre-work knowledge gates](knowledge-gates.md).
 
+Generated command behavior test ownership is accounted for in [Generated behavior test inventory](generated-behavior-test-inventory.md). That inventory distinguishes operation conformance cases, shared command-generation ownership, AW wrapper/proof/lifecycle tests, and intentionally rejected regression-test bulk.
+
 ## Runtime Model
 
 Installed repositories get a `.agentic-workspace/` directory plus small adapter files. The adapters route agents to compact CLI answers instead of becoming a second handbook.

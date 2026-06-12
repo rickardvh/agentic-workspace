@@ -231,9 +231,9 @@
     {
       "id": "tier-7-command-generation-extraction-readiness",
       "title": "Prepare command-generation extraction",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "After honest Python completion, command-generation is made extraction-ready: no agentic_workspace imports, no memory/planning/workspace product constants, no package-specific primitive code, no dependency on repo-local generated paths, clean fixture-package examples, and independent primitive execution and target rendering tests.",
-      "owner_surface": "packages/command-generation/schemas, packages/command-generation/primitives, packages/command-generation/python/primitives, packages/command-generation/typescript/primitives, packages/command-generation/generator, packages/command-generation/conformance, and command-generation tests",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-7-command-generation-extraction-readiness.plan.json",
       "proof": "Independent command-generation tests and extraction-readiness audit pass after Tier 6 promotion.",
       "depends_on": [
         "tier-6-final-python-completion-promotion"

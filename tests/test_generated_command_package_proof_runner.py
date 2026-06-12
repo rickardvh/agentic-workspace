@@ -202,6 +202,55 @@ def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     assert parity_result["state"] == "pass"
 
 
+def test_operation_conformance_runner_executes_python_function_artifact(monkeypatch) -> None:
+    runner = _load_test_ir_runner()
+    case = {
+        "id": "todo.list.operation",
+        "title": "Todo list function adapter",
+        "behavioral_class": "success",
+        "operation_ref": {"operation_id": "todo.list.report", "conformance_ref": "todo.list.operation"},
+        "input": {"json": {"format": "json"}},
+        "expected": {"result": {"selected_fields": {"kind": "todo-list/v1", "item_count": 2}}},
+    }
+    artifact = {
+        "artifact_id": "todo.list.python",
+        "adapter_id": "python.function",
+        "symbol": "todo_runtime:list_todos",
+    }
+
+    monkeypatch.setattr(
+        runner,
+        "_python_function_target_for_artifact",
+        lambda _artifact: runner.FunctionConformanceTarget(
+            label="todo.list.python",
+            invoke=lambda values: {"kind": "todo-list/v1", "item_count": 2, "format": values["format"]},
+        ),
+    )
+
+    result = runner._run_python_function_case(case=case, artifact=artifact)
+
+    assert result["state"] == "pass"
+    assert result["adapter_id"] == "python.function"
+    assert result["selected_fields"] == {"kind": "todo-list/v1", "item_count": 2}
+
+
+def test_operation_conformance_runner_reports_missing_python_function_symbol() -> None:
+    runner = _load_test_ir_runner()
+    case = {
+        "id": "todo.list.operation",
+        "behavioral_class": "success",
+        "operation_ref": {"operation_id": "todo.list.report"},
+        "input": {"json": {}},
+        "expected": {"result": {"selected_fields": {}}},
+    }
+    artifact = {"artifact_id": "todo.list.python", "adapter_id": "python.function"}
+
+    result = runner._run_python_function_case(case=case, artifact=artifact)
+
+    assert result["state"] == "unavailable"
+    assert result["message"] == "python.function artifact has no importable symbol"
+
+
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
     checker = _load_checker()
 

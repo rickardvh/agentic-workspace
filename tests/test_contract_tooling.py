@@ -15,6 +15,10 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
 
+GENERATOR_SCRIPT_ROOT = Path(__file__).resolve().parents[1] / "scripts" / "generate"
+if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
+
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
     operation_ref = command.get("operation_ref", {})
@@ -674,6 +678,25 @@ def test_operation_conformance_test_ir_records_migration_and_composition_boundar
     assert "Composite parity assumes primitive executor behavior is tested by primitive cases" in parity_case["migration"]["rationale"]
     assert any("run_operation_conformance_tests.py" in item for item in parity_case["migration"]["replaces_handwritten_tests"])
     assert any("conformance-registry projection coverage" in item for item in parity_case["migration"]["retain_handwritten_tests"])
+
+
+def test_generated_behavior_test_inventory_accounts_for_migration_owners() -> None:
+    inventory = (Path(__file__).resolve().parents[1] / "docs" / "package" / "generated-behavior-test-inventory.md").read_text(
+        encoding="utf-8"
+    )
+
+    for required in [
+        "Migrated To Operation Conformance",
+        "Moved To Command-Generation Ownership",
+        "Retained In AW With Narrow Owners",
+        "Rejected Or Not Migrated",
+        "defaults.selected-output.success",
+        "FunctionConformanceTarget",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_command_generation_integration.py",
+        "Former duplicate AW primitive tests were removed",
+    ]:
+        assert required in inventory
 
 
 def test_operation_conformance_test_ir_references_known_command_contracts() -> None:
