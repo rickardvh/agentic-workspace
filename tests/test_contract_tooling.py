@@ -695,8 +695,34 @@ def test_generated_behavior_test_inventory_accounts_for_migration_owners() -> No
         "tests/test_generated_command_package_proof_runner.py",
         "tests/test_command_generation_integration.py",
         "Former duplicate AW primitive tests were removed",
+        "CLI boundary tests",
     ]:
         assert required in inventory
+
+
+def test_cli_boundary_tests_doc_separates_wrappers_from_operation_conformance() -> None:
+    boundary = (Path(__file__).resolve().parents[1] / "docs" / "package" / "cli-boundary-tests.md").read_text(encoding="utf-8")
+    overview = (Path(__file__).resolve().parents[1] / "docs" / "package" / "overview.md").read_text(encoding="utf-8")
+    docs_index = (Path(__file__).resolve().parents[1] / "docs" / "index.md").read_text(encoding="utf-8")
+
+    for required in [
+        "CLI boundary tests are wrapper tests",
+        "Operation conformance owns",
+        "CLI boundary tests own",
+        "argv parsing and option wiring",
+        "help text and user-facing error text",
+        "exit codes",
+        "stdout and stderr presentation",
+        "command-name dispatch to the operation adapter",
+        "should not duplicate the operation case matrix through argv",
+        "cli.process",
+        "wrapper-smoke",
+        "python.function",
+        "typescript.function",
+    ]:
+        assert required in boundary
+    assert "CLI boundary tests](cli-boundary-tests.md)" in overview
+    assert "CLI boundary tests](package/cli-boundary-tests.md)" in docs_index
 
 
 def test_operation_conformance_test_ir_references_known_command_contracts() -> None:

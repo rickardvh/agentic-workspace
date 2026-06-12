@@ -4,6 +4,8 @@ This inventory closes the generated-behavior migration question for #1445. It ac
 
 The rule is behavioral, not filename based. Tests stay in AW when they prove AW-specific operation contracts, proof routing, packaging, lifecycle behavior, wrapper boundaries, or runtime primitives. Generic generated-artifact conformance machinery belongs to `command-generation`.
 
+The CLI wrapper boundary is defined in [CLI boundary tests](cli-boundary-tests.md). Use that page when deciding whether a CLI-heavy regression should remain as argv/help/error/exit/stdout proof or move to operation conformance.
+
 ## Migrated To Operation Conformance
 
 These behaviors are represented as JSON operation conformance cases in `src/agentic_workspace/contracts/operation_conformance_test_ir.json` and executed by `scripts/check/run_operation_conformance_tests.py`.
