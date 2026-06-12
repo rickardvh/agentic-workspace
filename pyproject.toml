@@ -37,7 +37,7 @@ package = true
 agentic-memory = { workspace = true }
 agentic-planning = { workspace = true }
 agentic-verification = { workspace = true }
-command-generation = { git = "https://github.com/rickardvh/command-generation.git", rev = "2ece5d410bacaedc5eb0b050b731dd57fc7ddce6" }
+command-generation = { git = "https://github.com/rickardvh/command-generation.git", rev = "4b4547cecc2193810e40f6918a387369a6c1c26a" }
 
 [tool.uv.workspace]
 members = [
