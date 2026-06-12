@@ -143,7 +143,7 @@
       "state",
       "failure classification or skip reason"
     ],
-    "routing_rule": "Changed operation contract, schema, conformance, implementation artifact, adapter, or generated target paths should route to the operation conformance runner once #1444 installs it; wrapper-shaped cases remain wrapper-smoke proof and must not be presented as default semantic operation proof."
+    "routing_rule": "Changed operation contract, schema, conformance, implementation artifact, adapter, or generated target paths should route to scripts/check/run_operation_conformance_tests.py before closeout when they touch migrated operation behavior; wrapper-shaped cases remain wrapper-smoke proof and must not be presented as default semantic operation proof."
   },
   "initial_cases": [
     {
@@ -243,11 +243,12 @@
       },
       "migration": {
         "replaces_handwritten_tests": [
-          "selected-output broad assertions that only restate this operation contract"
+          "selected-output operation behavior assertions for defaults.selected-text.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
         ],
         "retain_handwritten_tests": [
           "selector parser unit tests",
-          "runtime defaults payload assembly tests"
+          "runtime defaults payload assembly tests",
+          "tests/test_generated_command_package_proof_runner.py::test_generated_python_conformance_uses_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
         "rationale": "This case preserves black-box selected-output behavior without carrying every current test helper or payload assembly assertion into operation conformance IR."
       }
@@ -348,10 +349,11 @@
       },
       "migration": {
         "replaces_handwritten_tests": [
-          "duplicated invalid-format parser tests for generated config command targets"
+          "generated config invalid-format behavior is represented by this IR case for Python and TypeScript targets"
         ],
         "retain_handwritten_tests": [
-          "handwritten root CLI fallback parser tests"
+          "handwritten root CLI fallback parser tests",
+          "target adapter parser mechanics tests that do not assert the config command behavior contract"
         ],
         "rationale": "The case protects the structured operation error directly while avoiding a one-to-one copy of parser regression cases."
       }
@@ -471,11 +473,12 @@
       },
       "migration": {
         "replaces_handwritten_tests": [
-          "duplicated Python/TypeScript list-skills selected-field parity assertions"
+          "Python/TypeScript memory.list-skills selected-field parity behavior is represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
         ],
         "retain_handwritten_tests": [
           "memory skill catalog fixture rendering tests",
-          "primitive executor tests for filesystem and payload assembly"
+          "primitive executor tests for filesystem and payload assembly",
+          "tests/test_generated_command_package_proof_runner.py::test_generated_typescript_conformance_cases_come_from_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
         "rationale": "Composite parity assumes primitive executor behavior is tested by primitive cases and checks only the higher-level generated operation behavior."
       }

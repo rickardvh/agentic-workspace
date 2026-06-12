@@ -28,6 +28,7 @@ from command_generation.conformance import ProcessConformanceCase  # noqa: E402
 
 from agentic_workspace.contract_tooling import (  # noqa: E402
     contract_schema,
+    operation_artifact_registry_manifest,
     operation_conformance_test_ir_manifest,
 )
 
@@ -101,6 +102,7 @@ def _typescript_command_for_package(package: Mapping[str, object]) -> tuple[str,
 def _run_case_target(
     *,
     case: Mapping[str, object],
+    artifact_registry: Mapping[str, Mapping[str, object]],
     target_kind: str,
     temp_root: Path,
     require_node: bool,
@@ -108,17 +110,19 @@ def _run_case_target(
     operation_ref = case.get("operation_ref", {})
     if not isinstance(operation_ref, Mapping):
         return _result(case=case, target_kind=target_kind, state="fail", message="malformed operation_ref")
-    package_id = str(operation_ref.get("package_id", ""))
+    artifact = _artifact_for_target(case, target_kind, artifact_registry)
+    if artifact is None:
+        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message="no registry artifact for target")
+    package_id = str(artifact.get("package_id", operation_ref.get("package_id", "")))
     command_package_ir = generated_package_check.load_workspace_command_package_ir(repo_root=REPO_ROOT)
     package = _package_by_id(command_package_ir).get(package_id)
     if package is None:
-        return _result(case=case, target_kind=target_kind, state="fail", message=f"unknown package {package_id!r}")
+        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message=f"unknown package {package_id!r}")
     process_case = _case_process_fixture(case)
     fixture_root = materialize_case_fixture(
         case=process_case,
         root=temp_root / str(case.get("id", "case")).replace(".", "-") / target_kind,
     )
-    artifact = _artifact_for_target(case, target_kind)
     if target_kind == "python":
         command = generated_package_check._python_command_for_package(package_id)
         env = generated_package_check._conformance_env()
@@ -126,10 +130,10 @@ def _run_case_target(
         status, command = _typescript_command_for_package(package)
         if command is None:
             state = "fail" if require_node else "unavailable"
-            return _result(case=case, target_kind=target_kind, state=state, message=status)
+            return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state=state, message=status)
         env = generated_package_check._conformance_env(runtime="")
     else:
-        return _result(case=case, target_kind=target_kind, state="skipped", message="target not selected")
+        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="skipped", message="target not selected")
     completed = subprocess.run(
         [*command, *process_case.success_args],
         cwd=fixture_root,
@@ -154,12 +158,23 @@ def _run_case_target(
     }
 
 
-def _artifact_for_target(case: Mapping[str, object], target_kind: str) -> Mapping[str, object] | None:
+def _artifact_by_id(registry: Mapping[str, object]) -> dict[str, Mapping[str, object]]:
+    return {
+        str(artifact.get("artifact_id", "")): artifact
+        for artifact in registry.get("artifacts", [])
+        if isinstance(artifact, Mapping)
+    }
+
+
+def _artifact_for_target(
+    case: Mapping[str, object],
+    target_kind: str,
+    artifact_registry: Mapping[str, Mapping[str, object]],
+) -> Mapping[str, object] | None:
     for artifact in case.get("artifacts", []):
         if isinstance(artifact, Mapping) and artifact.get("target") == target_kind:
-            return artifact
+            return artifact_registry.get(str(artifact.get("artifact_id", "")))
     return None
-
 
 def _evaluate_process_result(
     *,
@@ -201,11 +216,18 @@ def _selected_fields_or_empty(process_case: ProcessConformanceCase, stdout: str)
         return {}
 
 
-def _result(*, case: Mapping[str, object], target_kind: str, state: str, message: str) -> dict[str, object]:
+def _result(
+    *,
+    case: Mapping[str, object],
+    artifact_registry: Mapping[str, Mapping[str, object]],
+    target_kind: str,
+    state: str,
+    message: str,
+) -> dict[str, object]:
     operation_ref = case.get("operation_ref", {})
     operation_id = operation_ref.get("operation_id", "") if isinstance(operation_ref, Mapping) else ""
     conformance_ref = operation_ref.get("conformance_ref", "") if isinstance(operation_ref, Mapping) else ""
-    artifact = _artifact_for_target(case, target_kind)
+    artifact = _artifact_for_target(case, target_kind, artifact_registry)
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
@@ -228,60 +250,73 @@ def _case_targets(case: Mapping[str, object], target_selection: str) -> list[str
     return [target_selection] if target_selection in declared else []
 
 
-def _append_parity_results(results: list[dict[str, object]], case: Mapping[str, object], selected_targets: list[str]) -> None:
+def _append_parity_results(
+    results: list[dict[str, object]],
+    case: Mapping[str, object],
+    selected_targets: list[str],
+    artifact_registry: Mapping[str, Mapping[str, object]],
+) -> None:
     if case.get("behavioral_class") != "cross-target-parity" or len(selected_targets) < 2:
         return
     case_id = str(case.get("id", ""))
     target_results = [result for result in results if result.get("case_id") == case_id and result.get("target") in selected_targets]
     if any(result.get("state") == "fail" for result in target_results):
-        results.append(_result(case=case, target_kind="parity", state="fail", message="one or more target runs failed"))
+        results.append(_result(case=case, artifact_registry=artifact_registry, target_kind="parity", state="fail", message="one or more target runs failed"))
         return
     unavailable = [result for result in target_results if result.get("state") == "unavailable"]
     if unavailable:
-        results.append(_result(case=case, target_kind="parity", state="unavailable", message="one or more targets unavailable"))
+        results.append(
+            _result(case=case, artifact_registry=artifact_registry, target_kind="parity", state="unavailable", message="one or more targets unavailable")
+        )
         return
     comparable = [(result.get("exit_code"), result.get("selected_fields")) for result in target_results]
     state = "pass" if len(set(json.dumps(item, sort_keys=True) for item in comparable)) == 1 else "fail"
     message = "" if state == "pass" else f"parity drift across targets: {comparable!r}"
-    results.append(_result(case=case, target_kind="parity", state=state, message=message))
+    results.append(_result(case=case, artifact_registry=artifact_registry, target_kind="parity", state=state, message=message))
 
 
 def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: bool) -> dict[str, object]:
     manifest = operation_conformance_test_ir_manifest()
+    registry = operation_artifact_registry_manifest()
     schema_errors = sorted(Draft202012Validator(contract_schema("operation_conformance_test_ir.schema.json")).iter_errors(manifest), key=str)
-    semantic_errors = contract_tooling_check._validate_operation_conformance_test_ir(manifest)
-    if schema_errors or semantic_errors:
+    registry_schema_errors = sorted(Draft202012Validator(contract_schema("operation_artifact_registry.schema.json")).iter_errors(registry), key=str)
+    semantic_errors = contract_tooling_check._validate_operation_conformance_test_ir(manifest) + contract_tooling_check._validate_operation_artifact_registry(registry)
+    all_schema_errors = schema_errors + registry_schema_errors
+    if all_schema_errors or semantic_errors:
         return {
             "kind": "operation-conformance-proof/v1",
-            "summary": {"state": "fail", "failure_count": len(schema_errors) + len(semantic_errors)},
+            "summary": {"state": "fail", "failure_count": len(all_schema_errors) + len(semantic_errors)},
             "cases": [],
-            "validation_errors": [error.message for error in schema_errors] + semantic_errors,
+            "validation_errors": [error.message for error in all_schema_errors] + semantic_errors,
         }
     cases = [case for case in manifest["initial_cases"] if not case_filter or str(case["id"]) in case_filter]
+    artifact_registry = _artifact_by_id(registry)
     results: list[dict[str, object]] = []
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-operation-conformance-test-ir-") as tmp:
         temp_root = Path(tmp)
         for case in cases:
             selected_targets = _case_targets(case, target_selection)
             if not selected_targets:
-                results.append(_result(case=case, target_kind=target_selection, state="skipped", message="case not selected"))
+                results.append(_result(case=case, artifact_registry=artifact_registry, target_kind=target_selection, state="skipped", message="case not selected"))
                 continue
             for target_kind in selected_targets:
                 results.append(
                     _run_case_target(
                         case=case,
+                        artifact_registry=artifact_registry,
                         target_kind=target_kind,
                         temp_root=temp_root,
                         require_node=require_node,
                     )
                 )
-            _append_parity_results(results, case, selected_targets)
+            _append_parity_results(results, case, selected_targets, artifact_registry)
     fail_count = sum(1 for result in results if result.get("state") == "fail")
     unavailable_count = sum(1 for result in results if result.get("state") == "unavailable")
     skipped_count = sum(1 for result in results if result.get("state") == "skipped")
     return {
         "kind": "operation-conformance-proof/v1",
         "target_selection": target_selection,
+        "artifact_registry": "operation_artifact_registry.json",
         "case_count": len(cases),
         "summary": {
             "state": "fail" if fail_count else "pass",

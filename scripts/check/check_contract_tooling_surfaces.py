@@ -26,6 +26,7 @@ from agentic_workspace.contract_tooling import (
     improvement_signal_contract_manifest,
     lifecycle_generation_readiness_manifest,
     module_registry_manifest,
+    operation_artifact_registry_manifest,
     operation_conformance_test_ir_manifest,
     operation_contracts_manifest,
     operation_manifest,
@@ -1138,6 +1139,94 @@ def _validate_operation_conformance_test_ir(payload: dict[str, object]) -> list[
     return errors
 
 
+def _validate_operation_artifact_registry(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/operation-artifact-registry/v1":
+        return ["operation_artifact_registry.json has unexpected schema_version"]
+    conformance_ir = operation_conformance_test_ir_manifest()
+    case_by_id = {
+        str(case.get("id", "")): case
+        for case in conformance_ir.get("initial_cases", [])
+        if isinstance(case, dict)
+    }
+    package_ir = command_package_ir_manifest()
+    packages = {str(package.get("id", "")): package for package in package_ir.get("packages", []) if isinstance(package, dict)}
+    seen_artifacts: set[str] = set()
+    artifacts_by_case: dict[str, set[str]] = {}
+    for artifact in payload.get("artifacts", []):
+        if not isinstance(artifact, dict):
+            errors.append("operation_artifact_registry.json artifacts entries must be objects")
+            continue
+        artifact_id = str(artifact.get("artifact_id", ""))
+        if artifact_id in seen_artifacts:
+            errors.append(f"operation_artifact_registry.json duplicate artifact id {artifact_id}")
+        seen_artifacts.add(artifact_id)
+        package_id = str(artifact.get("package_id", ""))
+        operation_id = str(artifact.get("operation_id", ""))
+        adapter_id = str(artifact.get("adapter_id", ""))
+        proof_role = str(artifact.get("proof_role", ""))
+        package = packages.get(package_id)
+        if package is None:
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} references unknown package {package_id}")
+            continue
+        commands = {str(command.get("adapter_id", "")): command for command in package.get("commands", []) if isinstance(command, dict)}
+        matching_commands = [
+            command
+            for command in commands.values()
+            if isinstance(command.get("operation_ref"), dict) and command["operation_ref"].get("id") == operation_id
+        ]
+        if not matching_commands:
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} references unknown operation {operation_id}")
+        wrapper_refs = {str(ref) for ref in artifact.get("wrapper_refs", [])}
+        unknown_wrappers = sorted(wrapper_refs - set(commands))
+        if unknown_wrappers:
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}")
+        if adapter_id == "cli.process" and proof_role != "wrapper-smoke":
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} cli.process must be wrapper-smoke")
+        if adapter_id.endswith(".function") and proof_role != "operation-conformance":
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} direct function adapters must be operation-conformance")
+        if adapter_id.endswith(".function") and not artifact.get("symbol"):
+            errors.append(f"operation_artifact_registry.json artifact {artifact_id} direct function adapters must declare symbol")
+        for case_id in artifact.get("case_ids", []):
+            case_id = str(case_id)
+            case = case_by_id.get(case_id)
+            if case is None:
+                errors.append(f"operation_artifact_registry.json artifact {artifact_id} references unknown case {case_id}")
+                continue
+            operation_ref = case.get("operation_ref", {})
+            if isinstance(operation_ref, dict) and operation_ref.get("operation_id") != operation_id:
+                errors.append(f"operation_artifact_registry.json artifact {artifact_id} operation drifted from case {case_id}")
+            artifacts_by_case.setdefault(case_id, set()).add(artifact_id)
+    for case_id, case in case_by_id.items():
+        declared_artifacts = {
+            str(artifact.get("artifact_id", ""))
+            for artifact in case.get("artifacts", [])
+            if isinstance(artifact, dict)
+        }
+        missing_from_registry = sorted(declared_artifacts - seen_artifacts)
+        if missing_from_registry:
+            errors.append(f"operation_artifact_registry.json missing artifact(s) declared by case {case_id}: {', '.join(missing_from_registry)}")
+        if not artifacts_by_case.get(case_id):
+            errors.append(f"operation_artifact_registry.json no artifacts route to case {case_id}")
+    proof_routing = payload.get("proof_routing", {})
+    if not isinstance(proof_routing, dict):
+        errors.append("operation_artifact_registry.json proof_routing must be an object")
+    else:
+        changed_surfaces = {
+            str(route.get("changed_surface", ""))
+            for route in proof_routing.get("routes", [])
+            if isinstance(route, dict)
+        }
+        required_surfaces = {"operation-contract", "implementation-artifact", "implementation-adapter", "cli-wrapper", "schema", "generated-artifact-freshness"}
+        missing_surfaces = sorted(required_surfaces - changed_surfaces)
+        if missing_surfaces:
+            errors.append("operation_artifact_registry.json proof_routing missing surface(s): " + ", ".join(missing_surfaces))
+        rule = str(proof_routing.get("rule", "")).lower()
+        if "do not use wrapper execution as the default" not in rule:
+            errors.append("operation_artifact_registry.json proof_routing must reject wrapper-default semantic proof")
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -1975,6 +2064,11 @@ def main(argv: list[str] | None = None) -> int:
             "Operation Conformance Test IR",
             _validate(operation_conformance_test_ir_manifest(), "operation_conformance_test_ir.schema.json")
             + _validate_operation_conformance_test_ir(operation_conformance_test_ir_manifest()),
+        ),
+        (
+            "operation artifact registry",
+            _validate(operation_artifact_registry_manifest(), "operation_artifact_registry.schema.json")
+            + _validate_operation_artifact_registry(operation_artifact_registry_manifest()),
         ),
         (
             "command-generation schema boundary",

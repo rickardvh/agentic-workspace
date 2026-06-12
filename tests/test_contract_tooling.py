@@ -672,6 +672,8 @@ def test_operation_conformance_test_ir_records_migration_and_composition_boundar
     parity_case = next(case for case in manifest["initial_cases"] if case["behavioral_class"] == "cross-target-parity")
     assert parity_case["composition"]["assumes_primitives"]
     assert "Composite parity assumes primitive executor behavior is tested by primitive cases" in parity_case["migration"]["rationale"]
+    assert any("run_operation_conformance_tests.py" in item for item in parity_case["migration"]["replaces_handwritten_tests"])
+    assert any("conformance-registry projection coverage" in item for item in parity_case["migration"]["retain_handwritten_tests"])
 
 
 def test_operation_conformance_test_ir_references_known_command_contracts() -> None:
@@ -696,6 +698,38 @@ def test_operation_conformance_test_ir_references_known_command_contracts() -> N
     assert any(
         "cli.process artifacts must declare wrapper-smoke" in error for error in module._validate_operation_conformance_test_ir(cli_default)
     )
+
+
+def test_operation_artifact_registry_routes_cases_and_proof_layers() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = contract_tooling.operation_artifact_registry_manifest()
+    schema = contract_tooling.contract_schema("operation_artifact_registry.schema.json")
+
+    assert list(Draft202012Validator(schema).iter_errors(registry)) == []
+    assert module._validate_operation_artifact_registry(registry) == []
+    artifacts = {artifact["artifact_id"]: artifact for artifact in registry["artifacts"]}
+    assert artifacts["root-workspace.defaults.python"]["adapter_id"] == "cli.process"
+    assert artifacts["root-workspace.defaults.python"]["proof_role"] == "wrapper-smoke"
+    assert "symbol" not in artifacts["root-workspace.defaults.python"]
+    assert artifacts["root-workspace.config.python"]["proof_role"] == "wrapper-smoke"
+    assert "do not use wrapper execution as the default" in registry["proof_routing"]["rule"]
+    assert {route["changed_surface"] for route in registry["proof_routing"]["routes"]} >= {
+        "operation-contract",
+        "implementation-artifact",
+        "implementation-adapter",
+        "cli-wrapper",
+        "schema",
+        "generated-artifact-freshness",
+    }
+
+    broken = copy.deepcopy(registry)
+    broken["artifacts"][0]["proof_role"] = "operation-conformance"
+    assert any("cli.process must be wrapper-smoke" in error for error in module._validate_operation_artifact_registry(broken))
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:

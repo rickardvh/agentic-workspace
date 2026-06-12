@@ -1,0 +1,178 @@
+{
+  "schema_version": "agentic-workspace/operation-artifact-registry/v1",
+  "summary": "Registry mapping operation contracts to implementation artifacts, adapters, wrapper surfaces, conformance cases, and proof-routing rules.",
+  "schema": "schemas/operation_artifact_registry.schema.json",
+  "source_role": {
+    "surface": "source/proof",
+    "ordinary_startup_visibility": "not-startup-workflow",
+    "rule": "Operation artifact registry is consumed by conformance proof and changed-path routing; it must not become ordinary startup workflow."
+  },
+  "artifacts": [
+    {
+      "artifact_id": "root-workspace.defaults.python",
+      "operation_id": "defaults.report",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/defaults",
+      "wrapper_refs": [
+        "defaults.report.cli"
+      ],
+      "case_ids": [
+        "defaults.selected-output.success"
+      ],
+      "path_refs": [
+        "generated/workspace/python/commands/defaults_report.py",
+        "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
+      ],
+      "stale_when": [
+        "defaults.report operation contract changes",
+        "root-workspace defaults generated Python artifact changes",
+        "defaults.selected-text.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.config.python",
+      "operation_id": "config.report",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/config",
+      "wrapper_refs": [
+        "config.report.cli"
+      ],
+      "case_ids": [
+        "config.invalid-format.error"
+      ],
+      "path_refs": [
+        "generated/workspace/python/cli.py",
+        "src/agentic_workspace/contracts/operations/config.report.json"
+      ],
+      "stale_when": [
+        "config.report operation contract changes",
+        "config CLI wrapper option semantics change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.config.typescript",
+      "operation_id": "config.report",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/config",
+      "wrapper_refs": [
+        "config.report.cli"
+      ],
+      "case_ids": [
+        "config.invalid-format.error"
+      ],
+      "path_refs": [
+        "generated/workspace/typescript/src/cli.mjs",
+        "src/agentic_workspace/contracts/operations/config.report.json"
+      ],
+      "stale_when": [
+        "config.report operation contract changes",
+        "config TypeScript wrapper option semantics change"
+      ]
+    },
+    {
+      "artifact_id": "memory-bootstrap.list-skills.python",
+      "operation_id": "memory.list-skills.report",
+      "package_id": "memory-bootstrap",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:memory-bootstrap/list-skills",
+      "wrapper_refs": [
+        "memory.list-skills.cli"
+      ],
+      "case_ids": [
+        "memory.list-skills.parity"
+      ],
+      "path_refs": [
+        "generated/memory/python/cli.py",
+        "src/agentic_workspace/contracts/conformance/memory.list-skills.process.json"
+      ],
+      "stale_when": [
+        "memory.list-skills operation contract changes",
+        "memory list-skills Python wrapper changes",
+        "memory.list-skills.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "memory-bootstrap.list-skills.typescript",
+      "operation_id": "memory.list-skills.report",
+      "package_id": "memory-bootstrap",
+      "target": "typescript",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:memory-bootstrap/list-skills",
+      "wrapper_refs": [
+        "memory.list-skills.cli"
+      ],
+      "case_ids": [
+        "memory.list-skills.parity"
+      ],
+      "path_refs": [
+        "generated/memory/typescript/src/cli.mjs",
+        "src/agentic_workspace/contracts/conformance/memory.list-skills.process.json"
+      ],
+      "stale_when": [
+        "memory.list-skills operation contract changes",
+        "memory list-skills TypeScript wrapper changes",
+        "memory.list-skills.process conformance expectations change"
+      ]
+    }
+  ],
+  "proof_routing": {
+    "rule": "Select the cheapest proof layer that covers the changed surface; do not use wrapper execution as the default proof for operation semantics.",
+    "routes": [
+      {
+        "changed_surface": "operation-contract",
+        "proof": [
+          "validate affected operation conformance cases",
+          "run affected operation conformance artifacts"
+        ]
+      },
+      {
+        "changed_surface": "implementation-artifact",
+        "proof": [
+          "run adapter checks",
+          "run representative operation cases for affected artifacts"
+        ]
+      },
+      {
+        "changed_surface": "implementation-adapter",
+        "proof": [
+          "run adapter checks",
+          "run a small artifact conformance smoke set"
+        ]
+      },
+      {
+        "changed_surface": "cli-wrapper",
+        "proof": [
+          "run CLI boundary tests",
+          "run operation cases only when operation semantics changed"
+        ]
+      },
+      {
+        "changed_surface": "schema",
+        "proof": [
+          "validate affected cases",
+          "run affected operation cases"
+        ]
+      },
+      {
+        "changed_surface": "generated-artifact-freshness",
+        "proof": [
+          "run generated freshness and parity checks",
+          "run affected conformance cases"
+        ]
+      }
+    ]
+  }
+}

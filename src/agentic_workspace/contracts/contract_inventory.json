@@ -402,6 +402,17 @@
       "notes": "Schema-coupled behavioral cases define the operation conformance migration target. They preserve black-box operation behavior, not exact handwritten regression-test bulk, and keep CLI/process execution as a wrapper-boundary adapter rather than the default semantic proof path."
     },
     {
+      "area": "operation_artifact_registry",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/operation_artifact_registry.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "scripts/check/run_operation_conformance_tests.py",
+        "future proof selection routing"
+      ],
+      "notes": "Explicit operation artifact registry maps operation contracts to executable artifacts, adapters, wrapper surfaces, conformance cases, stale conditions, and changed-path proof routing so the runner does not infer artifacts from layout."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
