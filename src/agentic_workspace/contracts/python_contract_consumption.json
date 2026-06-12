@@ -147,6 +147,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "operation_conformance_test_ir.json",
+      "schema": "operation_conformance_test_ir.schema.json",
+      "loader": "operation_conformance_test_ir_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "workflow_definition_format.json",
       "schema": "workflow_definition_format.schema.json",
       "loader": "workflow_definition_format_manifest",

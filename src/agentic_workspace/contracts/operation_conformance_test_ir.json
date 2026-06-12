@@ -1,0 +1,485 @@
+{
+  "schema_version": "agentic-workspace/operation-conformance-test-ir/v1",
+  "summary": "Schema-coupled behavioral conformance cases for operation contracts and their implementation artifacts.",
+  "schema": "schemas/operation_conformance_test_ir.schema.json",
+  "source_role": {
+    "surface": "source/proof",
+    "ordinary_startup_visibility": "not-startup-workflow",
+    "rule": "Operation conformance test IR is consumed by proof and migration tooling only; it must not become an ordinary agent startup surface."
+  },
+  "source_contracts": [
+    "command_package_ir.json",
+    "operation_contracts.json",
+    "operation_primitives.json",
+    "conformance_contracts.json",
+    "contracts/conformance/*.process.json"
+  ],
+  "migration_policy": {
+    "preserve": [
+      "black-box operation behavior",
+      "operation and schema expectations",
+      "representative success, error, and cross-target parity semantics",
+      "user-visible output and failure contracts"
+    ],
+    "do_not_preserve": [
+      "one-for-one handwritten regression-test bulk",
+      "old fixture helper names",
+      "target-specific implementation details when a simpler IR case preserves the contract",
+      "duplicate primitive assertions inside composite operation tests",
+      "CLI invocation style when a direct implementation adapter can preserve the same contract"
+    ],
+    "composition_rule": "Primitive behavior is tested once at its own level; composite operation cases assume declared primitive contracts work and assert only the higher-level composition, routing, selection, aggregation, ordering, and boundary behavior.",
+    "first_migration_tranche": [
+      "selected-output operation cases already represented by conformance contracts",
+      "structured operation error contracts for declared inputs",
+      "Python/TypeScript parity for generated operation artifacts with stable JSON output"
+    ],
+    "handwritten_retention_boundary": [
+      "runtime primitive implementation tests",
+      "live workspace inspection and mutation orchestration tests",
+      "generator internals and target adapter mechanics",
+      "CLI boundary tests whose behavior is wrapper-specific rather than operation conformance"
+    ]
+  },
+  "adapter_model": {
+    "default_semantic_path": "direct implementation adapters execute JSON-shaped operation inputs and normalize JSON results before comparison; argv/stdout/stderr cases are wrapper-smoke proof until a generated operation-shaped callable exists.",
+    "adapter_kinds": [
+      {
+        "id": "python.function",
+        "boundary": "operation",
+        "default_for_semantic_proof": true,
+        "description": "Import a generated Python function, call it with JSON-shaped data, and normalize the return value or structured error."
+      },
+      {
+        "id": "typescript.function",
+        "boundary": "operation",
+        "default_for_semantic_proof": true,
+        "description": "Invoke a generated TypeScript/JavaScript function through Node and normalize the returned JSON or structured error."
+      },
+      {
+        "id": "cli.process",
+        "boundary": "wrapper",
+        "default_for_semantic_proof": false,
+        "description": "Invoke argv/stdout/stderr only when the CLI wrapper boundary is the artifact under test."
+      }
+    ],
+    "normalization_rule": "Normalization is declared by the case or operation contract where possible; adapters remain thin invocation and serialization shims."
+  },
+  "semantic_coverage_classes": [
+    {
+      "id": "success",
+      "intent": "An operation artifact accepts declared JSON-shaped input and returns schema-coupled canonical JSON output.",
+      "minimum_case_shape": [
+        "operation_ref",
+        "input",
+        "fixture",
+        "expected canonical result"
+      ]
+    },
+    {
+      "id": "error",
+      "intent": "An operation artifact rejects invalid declared input through a structured JSON error contract.",
+      "minimum_case_shape": [
+        "operation_ref",
+        "input",
+        "expected structured error"
+      ]
+    },
+    {
+      "id": "cross-target-parity",
+      "intent": "Implementation artifacts preserve the same operation-level behavior after target-specific normalization.",
+      "minimum_case_shape": [
+        "operation_ref",
+        "two or more artifacts",
+        "normalization rule",
+        "canonical JSON fields compared for parity"
+      ]
+    },
+    {
+      "id": "boundary",
+      "intent": "An operation or wrapper artifact respects safety, freshness, or ownership boundaries without retesting primitive internals.",
+      "minimum_case_shape": [
+        "operation_ref",
+        "artifact refs",
+        "boundary assertion",
+        "freshness source",
+        "explicit retained handwritten-test rationale when not migrated"
+      ]
+    }
+  ],
+  "target_matrix": [
+    {
+      "kind": "python",
+      "status": "required",
+      "adapter_id": "python.function",
+      "fallback_adapter_id": "cli.process",
+      "runner": "scripts/check/run_operation_conformance_tests.py --target python"
+    },
+    {
+      "kind": "typescript",
+      "status": "required",
+      "adapter_id": "typescript.function",
+      "fallback_adapter_id": "cli.process",
+      "runner": "scripts/check/run_operation_conformance_tests.py --target typescript --require-node"
+    }
+  ],
+  "proof_output": {
+    "kind": "operation-conformance-proof/v1",
+    "states": [
+      "pass",
+      "fail",
+      "stale",
+      "unavailable",
+      "skipped"
+    ],
+    "required_case_fields": [
+      "case id",
+      "behavioral class",
+      "operation id",
+      "artifact id",
+      "adapter id",
+      "conformance ref when present",
+      "targets attempted",
+      "state",
+      "failure classification or skip reason"
+    ],
+    "routing_rule": "Changed operation contract, schema, conformance, implementation artifact, adapter, or generated target paths should route to the operation conformance runner once #1444 installs it; wrapper-shaped cases remain wrapper-smoke proof and must not be presented as default semantic operation proof."
+  },
+  "initial_cases": [
+    {
+      "id": "defaults.selected-output.success",
+      "title": "Root defaults selected text output preserves selected-output contract",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "defaults.report",
+        "operation_path": "operations/defaults.report.json",
+        "conformance_ref": "defaults.selected-text.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.defaults.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/defaults",
+          "wrapper_refs": [
+            "defaults.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/defaults.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Selected-output operation behavior and user-visible text projection.",
+        "assumes_primitives": [
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "section": "root_cli_authority",
+          "select": "answer.command",
+          "format": "text"
+        },
+        "argv": [
+          "defaults",
+          "--section",
+          "root_cli_authority",
+          "--select",
+          "answer.command",
+          "--format",
+          "text"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "text",
+          "contains": [
+            "Kind: agentic-workspace/selected-output/v1",
+            "Source command: defaults",
+            "\"answer.command\": \"agentic-workspace defaults --section root_cli_authority --format json\""
+          ]
+        },
+        "stdout": {
+          "format": "text",
+          "contains": [
+            "Kind: agentic-workspace/selected-output/v1",
+            "Source command: defaults",
+            "\"answer.command\": \"agentic-workspace defaults --section root_cli_authority --format json\""
+          ]
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
+        ],
+        "stale_when": [
+          "defaults.report operation or artifact mapping changes",
+          "defaults.selected-text.process expectations change",
+          "selected-output envelope changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "selected-output broad assertions that only restate this operation contract"
+        ],
+        "retain_handwritten_tests": [
+          "selector parser unit tests",
+          "runtime defaults payload assembly tests"
+        ],
+        "rationale": "This case preserves black-box selected-output behavior without carrying every current test helper or payload assembly assertion into operation conformance IR."
+      }
+    },
+    {
+      "id": "config.invalid-format.error",
+      "title": "Root config rejects invalid generated option choice",
+      "behavioral_class": "error",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "config.report",
+        "operation_path": "operations/config.report.json"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.config.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/config",
+          "wrapper_refs": [
+            "config.report.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.config.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/config",
+          "wrapper_refs": [
+            "config.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/config.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Structured invalid-format operation error for a declared input.",
+        "assumes_primitives": [],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "format": "yaml"
+        },
+        "argv": [
+          "config",
+          "--target",
+          ".",
+          "--format",
+          "yaml"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 2,
+        "error": {
+          "kind": "invalid-choice",
+          "field": "format",
+          "value": "yaml"
+        },
+        "stderr": {
+          "format": "text",
+          "contains": [
+            "invalid choice",
+            "yaml"
+          ],
+          "allow_non_empty": true
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/operations/config.report.json"
+        ],
+        "stale_when": [
+          "config.report operation input choices change",
+          "operation error normalization changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "duplicated invalid-format parser tests for generated config command targets"
+        ],
+        "retain_handwritten_tests": [
+          "handwritten root CLI fallback parser tests"
+        ],
+        "rationale": "The case protects the structured operation error directly while avoiding a one-to-one copy of parser regression cases."
+      }
+    },
+    {
+      "id": "memory.list-skills.parity",
+      "title": "Memory list-skills returns stable JSON fields across generated targets",
+      "behavioral_class": "cross-target-parity",
+      "operation_ref": {
+        "package_id": "memory-bootstrap",
+        "operation_id": "memory.list-skills.report",
+        "operation_path": "operations/memory.list-skills.report.json",
+        "conformance_ref": "memory.list-skills.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "memory-bootstrap.list-skills.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:memory-bootstrap/list-skills",
+          "wrapper_refs": [
+            "memory.list-skills.cli"
+          ]
+        },
+        {
+          "artifact_id": "memory-bootstrap.list-skills.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:memory-bootstrap/list-skills",
+          "wrapper_refs": [
+            "memory.list-skills.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/memory.list-skills.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Higher-level target parity for the generated operation artifact and stable selected JSON fields.",
+        "assumes_primitives": [
+          "filesystem.read",
+          "json.parse",
+          "payload.assemble",
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "compare"
+        },
+        {
+          "kind": "typescript",
+          "mode": "compare"
+        }
+      ],
+      "input": {
+        "json": {
+          "format": "json"
+        },
+        "argv": [
+          "list-skills",
+          "--format",
+          "json"
+        ],
+        "fixture_id": "memory-list-skills-process",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "json",
+          "selected_fields": {
+            "mode": "skills"
+          }
+        },
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "mode": "skills"
+          }
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
+        "parity": {
+          "compare": [
+            "exit_code",
+            "selected canonical result fields",
+            "structured error absence"
+          ],
+          "normalization": [
+            "ignore target-specific path separators",
+            "compare declared selected fields instead of full payload ordering"
+          ]
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/memory.list-skills.process.json"
+        ],
+        "stale_when": [
+          "memory.list-skills operation or primitive sequence changes",
+          "memory.list-skills.process selected fields change",
+          "target matrix gains or loses a required generated target"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "duplicated Python/TypeScript list-skills selected-field parity assertions"
+        ],
+        "retain_handwritten_tests": [
+          "memory skill catalog fixture rendering tests",
+          "primitive executor tests for filesystem and payload assembly"
+        ],
+        "rationale": "Composite parity assumes primitive executor behavior is tested by primitive cases and checks only the higher-level generated operation behavior."
+      }
+    }
+  ]
+}

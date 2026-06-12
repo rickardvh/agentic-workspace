@@ -300,6 +300,10 @@ def command_package_ir_manifest() -> dict[str, Any]:
     return load_validated_contract_json("command_package_ir.json", "command_package_ir.schema.json")
 
 
+def operation_conformance_test_ir_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("operation_conformance_test_ir.json", "operation_conformance_test_ir.schema.json")
+
+
 def lifecycle_generation_readiness_manifest() -> dict[str, Any]:
     return load_validated_contract_json("lifecycle_generation_readiness.json", "lifecycle_generation_readiness.schema.json")
 

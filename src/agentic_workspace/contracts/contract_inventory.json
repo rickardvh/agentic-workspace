@@ -392,6 +392,16 @@
       "notes": "Implementation-independent package view joins generated command adapters into target package definitions so Python and TypeScript outputs can derive from the same contract without reading CLI implementation code."
     },
     {
+      "area": "operation_conformance_test_ir",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future operation conformance test runner"
+      ],
+      "notes": "Schema-coupled behavioral cases define the operation conformance migration target. They preserve black-box operation behavior, not exact handwritten regression-test bulk, and keep CLI/process execution as a wrapper-boundary adapter rather than the default semantic proof path."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
