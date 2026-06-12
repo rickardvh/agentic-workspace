@@ -12,6 +12,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
 CHECK_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+TEST_IR_RUNNER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_operation_conformance_tests.py"
 _CHECKER_CASE_PREFIX = "__checker_case_result__="
 
 
@@ -27,6 +28,16 @@ def _load_runner():
 
 def _load_checker():
     spec = importlib.util.spec_from_file_location("check_generated_command_packages", CHECK_SCRIPT_PATH)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_test_ir_runner():
+    spec = importlib.util.spec_from_file_location("run_operation_conformance_tests", TEST_IR_RUNNER_PATH)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -129,6 +140,65 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
     assert "[ok] generated command package proof (8 steps," in capsys.readouterr().out
+
+
+def test_operation_conformance_runner_executes_python_cases() -> None:
+    runner = _load_test_ir_runner()
+
+    payload = runner.run_ir_cases(target_selection="python", case_filter=set(), require_node=False)
+
+    assert payload["kind"] == "operation-conformance-proof/v1"
+    assert payload["summary"]["state"] == "pass"
+    assert payload["summary"]["fail_count"] == 0
+    assert payload["summary"]["pass_count"] == 3
+    cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
+    assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
+    assert cases[("config.invalid-format.error", "python")]["exit_code"] == 2
+    assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
+
+
+def test_generated_command_test_ir_runner_reports_typescript_unavailable(monkeypatch) -> None:
+    runner = _load_test_ir_runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _command: None)
+
+    soft = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=False)
+    strict = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=True)
+
+    assert soft["summary"]["state"] == "pass"
+    assert soft["summary"]["unavailable_count"] == 2
+    assert strict["summary"]["state"] == "fail"
+    assert strict["summary"]["fail_count"] == 2
+
+
+def test_generated_command_test_ir_runner_compares_parity(monkeypatch) -> None:
+    runner = _load_test_ir_runner()
+
+    def fake_run_case_target(*, case, target_kind, temp_root, require_node):
+        return {
+            "case_id": case["id"],
+            "behavioral_class": case["behavioral_class"],
+            "operation_id": case["operation_ref"]["operation_id"],
+            "artifact_id": f"{target_kind}.artifact",
+            "adapter_id": f"{target_kind}.function",
+            "conformance_ref": case["operation_ref"].get("conformance_ref", ""),
+            "target": target_kind,
+            "state": "pass",
+            "exit_code": 0,
+            "selected_fields": {"mode": "skills"},
+            "message": "",
+        }
+
+    monkeypatch.setattr(runner, "_run_case_target", fake_run_case_target)
+
+    payload = runner.run_ir_cases(
+        target_selection="parity",
+        case_filter={"memory.list-skills.parity"},
+        require_node=True,
+    )
+
+    parity_result = next(case for case in payload["cases"] if case["target"] == "parity")
+    assert payload["summary"]["state"] == "pass"
+    assert parity_result["state"] == "pass"
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:

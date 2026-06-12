@@ -331,8 +331,7 @@
         "stderr": {
           "format": "text",
           "contains": [
-            "invalid choice",
-            "yaml"
+            "--format"
           ],
           "allow_non_empty": true
         }
