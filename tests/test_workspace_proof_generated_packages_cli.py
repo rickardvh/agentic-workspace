@@ -4,26 +4,23 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def _proof_select(capsys, *args: str, select: str) -> dict[str, object]:
+    assert cli.main(["proof", *args, "--select", select, "--format", "json"]) == 0
+    return json.loads(capsys.readouterr().out)["values"]
+
+
 def test_proof_routes_generated_adapter_path_to_repo_verification_protocol(capsys) -> None:
     repo_root = Path(__file__).resolve().parents[1]
 
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(repo_root),
-                "--changed",
-                "src/agentic_workspace/contracts/command_package_ir.json",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
+    answer = _proof_select(
+        capsys,
+        "--target",
+        str(repo_root),
+        "--changed",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        select="verification,selected_lanes",
     )
 
-    answer = json.loads(capsys.readouterr().out)["answer"]
     assert answer["verification"]["active_protocols"][0]["id"] == "generated_adapter_conformance"
     lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
     assert "verification:generated_adapter_conformance" in lanes
@@ -33,22 +30,13 @@ def test_proof_routes_generated_adapter_path_to_repo_verification_protocol(capsy
 
 
 def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--verbose",
-                "--changed",
-                "generated/workspace/typescript/src/commandPackage.ts",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
+    answer = _proof_select(
+        capsys,
+        "--changed",
+        "generated/workspace/typescript/src/commandPackage.ts",
+        select="selected_lanes,required_commands,validation_plan,generated_cli_freshness,selected_commands,cli_authority_review",
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    answer = payload["answer"]
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
     assert answer["selected_lanes"][0]["proof_responsibility"] == "local-serial"
     assert answer["selected_lanes"][0]["execution_mode"] == "serial"
@@ -114,23 +102,14 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
 
 
 def test_proof_changed_selector_routes_python_generated_packages_to_python_docker(capsys) -> None:
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--verbose",
-                "--changed",
-                "generated/workspace/python/__init__.py",
-                "scripts/check/check_generated_command_packages.py",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
+    answer = _proof_select(
+        capsys,
+        "--changed",
+        "generated/workspace/python/__init__.py",
+        "scripts/check/check_generated_command_packages.py",
+        select="selected_lanes,required_commands,validation_plan,selected_commands",
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    answer = payload["answer"]
     focused_proof = "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "generated_command_packages",
@@ -166,24 +145,15 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
 
 
 def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(capsys) -> None:
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--verbose",
-                "--changed",
-                "src/agentic_workspace/contracts/structured_file_inventory.json",
-                "scripts/check/check_structured_file_inventory.py",
-                "tests/test_structured_file_inventory.py",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
+    answer = _proof_select(
+        capsys,
+        "--changed",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "scripts/check/check_structured_file_inventory.py",
+        "tests/test_structured_file_inventory.py",
+        select="selected_lanes,required_commands",
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    answer = payload["answer"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling"]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
