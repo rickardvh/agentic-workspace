@@ -13146,6 +13146,7 @@ def closeout_execplan(
         warning for warning in result.warnings if str(warning.get("warning_class", "")) not in retention_skip_warning_classes
     ]
     blocked = bool(blocking_warnings) or any(action.kind == "manual review" for action in result.actions)
+    larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
     non_blocking_retention_note = (
         "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
     )
@@ -13173,17 +13174,21 @@ def closeout_execplan(
             },
             {
                 "id": "keep-larger-intent-open",
-                "allowed": closure_decision == "archive-but-keep-lane-open" and not blocked,
-                "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else "",
+                "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
+                "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
                 "why": "intent-status keeps continuation explicit"
                 if closure_decision == "archive-but-keep-lane-open"
+                else "slice closeout does not authorize larger-intent closure"
+                if normalized_claim == "slice"
                 else "larger intent was marked satisfied",
             },
             {
                 "id": "close-larger-intent",
-                "allowed": closure_decision == "archive-and-close" and not blocked,
-                "why": "intent-status satisfied was recorded"
-                if closure_decision == "archive-and-close"
+                "allowed": larger_intent_close_allowed,
+                "why": f"{normalized_claim} claim with intent-status satisfied was recorded"
+                if larger_intent_close_allowed
+                else "slice closeout does not authorize larger-intent closure"
+                if normalized_claim == "slice"
                 else "parent or larger intent remains open",
             },
         ]

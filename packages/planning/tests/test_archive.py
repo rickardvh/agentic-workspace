@@ -955,8 +955,10 @@ candidates = []
     assert archived["task_intent_promotion"]["needs review"] is True
     options = {option["id"]: option for option in payload["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
-    assert options["close-larger-intent"]["allowed"] is True
-    assert options["keep-larger-intent-open"]["allowed"] is False
+    assert options["close-larger-intent"]["allowed"] is False
+    assert options["close-larger-intent"]["why"] == "slice closeout does not authorize larger-intent closure"
+    assert options["keep-larger-intent-open"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
     assert any(
         action["kind"] == "dogfooding reflection" and "issues, Memory, planning" in action["detail"] for action in payload["actions"]
     )
