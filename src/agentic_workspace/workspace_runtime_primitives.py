@@ -33909,6 +33909,7 @@ def _proof_selection_for_changed_paths(
             if lane["id"] == "generated_command_packages":
                 lane["enough_proof"] = [
                     "uv run python scripts/check/check_generated_command_packages.py",
+                    "uv run python scripts/check/run_operation_conformance_tests.py --target python",
                     "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
                     "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
                     "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",

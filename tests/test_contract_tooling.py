@@ -672,6 +672,8 @@ def test_operation_conformance_test_ir_records_migration_and_composition_boundar
     parity_case = next(case for case in manifest["initial_cases"] if case["behavioral_class"] == "cross-target-parity")
     assert parity_case["composition"]["assumes_primitives"]
     assert "Composite parity assumes primitive executor behavior is tested by primitive cases" in parity_case["migration"]["rationale"]
+    assert any("run_operation_conformance_tests.py" in item for item in parity_case["migration"]["replaces_handwritten_tests"])
+    assert any("conformance-registry projection coverage" in item for item in parity_case["migration"]["retain_handwritten_tests"])
 
 
 def test_operation_conformance_test_ir_references_known_command_contracts() -> None:

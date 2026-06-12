@@ -72,6 +72,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     focused_proof = "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target all",
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
@@ -81,6 +82,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py --require-node",
     ]
     assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
+        "generated_command_packages",
         "generated_command_packages",
         "generated_command_packages",
         "generated_command_packages",
@@ -138,6 +140,7 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
     ]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target python",
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         focused_proof,
