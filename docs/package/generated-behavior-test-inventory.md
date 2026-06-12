@@ -25,6 +25,7 @@ The shared package now owns the generic machinery that AW should not duplicate:
 | CLI/process contract execution | `process_case_from_contract`, `CliConformanceTarget`, `run_cli_conformance_case` | Used for wrapper-smoke execution of AW-specific cases. |
 | Direct JSON-shaped function execution | `operation_case_from_contract`, `FunctionConformanceTarget`, `run_function_conformance_case` | Used by AW runner for `python.function` artifacts when the registry declares an importable symbol. |
 | Shared ownership/accounting | `conformance_ownership_inventory` | Records which conformance surfaces are generic and which remain consumer-owned. |
+| Package-owned reusable conformance cases | `contract_conformance_cases_manifest`, `load_contract_conformance_case` from `rickardvh/command-generation#13` | Replaces repeated inline generic conformance payloads in command-generation tests; AW consumes the pinned revision instead of carrying generic cases. |
 | Generated output staleness by target family | `generated_output_freshness_report` | AW consumes it for generated package freshness instead of owning generic hashing semantics. |
 | Portable operation IR execution and composition | `run_operation_steps`, `PrimitiveRegistry`, `CommandGenerationHostManifest` | AW pins and tests the dependency; product primitives stay in AW. |
 | Canonical generated command artifact projection | `canonical_command_artifacts` plus command-generation fixture tests | Former AW artifact tests were moved out of `tests/test_command_generation_artifacts.py`. |
@@ -51,7 +52,7 @@ No current test group was copied into operation conformance solely because it me
 - runtime primitive and product integration tests;
 - generated freshness and structured inventory checks whose subject is source-of-truth integrity rather than command behavior.
 
-The previous AW-local generic command-generation primitive and artifact tests were not preserved as duplicate regression mass. Their generic behavior is now covered in command-generation, and AW retains only the dependency-integration checks named above.
+The previous AW-local generic command-generation primitive and artifact tests were not preserved as duplicate regression mass. Their generic behavior is now covered in command-generation, including package-owned reusable conformance case resources from `rickardvh/command-generation#13`, and AW retains only the dependency-integration checks named above.
 
 ## Remaining Trigger
 

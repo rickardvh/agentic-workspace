@@ -502,7 +502,9 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "replacement contract id and case id" in replacement_plan
     assert "rickardvh/command-generation#9" in replacement_plan
     assert "#1374 is complete for the AW repository" in aw_inventory
-    assert "This inventory does not close `rickardvh/command-generation#9`" in aw_inventory
+    assert "consumes the `rickardvh/command-generation#9` replacement surface" in aw_inventory
+    assert "rickardvh/command-generation#13" in aw_inventory
+    assert "contract_conformance_cases_manifest()" in aw_inventory
     assert "test_blackbox_root_generated_command_executes_through_console_script" in aw_inventory
     assert "test_blackbox_root_generated_command_executes_primitive_ir_through_console_script" in aw_inventory
     assert "test_defaults_tiny_text_uses_generated_output" in aw_inventory
@@ -517,6 +519,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "delegation-outcome.append-text.process" in aw_inventory
     assert "stdout.contains" in aw_inventory
     assert "rickardvh/command-generation#10" in aw_inventory
+    assert "rickardvh/command-generation#13" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
     assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory

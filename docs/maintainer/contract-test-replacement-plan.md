@@ -91,6 +91,6 @@ If that mapping cannot be written, do not delete the test.
 
 #1374 owns AW-side implementation using this plan.
 
-`rickardvh/command-generation#9` owns command-generation implementation using this plan.
+`rickardvh/command-generation#9` owns command-generation implementation using this plan. `rickardvh/command-generation#13` implements the current package-owned reusable conformance case resource surface consumed by AW's #1446 simplification slice.
 
 When either issue closes, its PR body should include an inventory table with `keep`, `convert`, `merge`, and `delete` rows plus proof that generated Python and TypeScript conformance remain green.

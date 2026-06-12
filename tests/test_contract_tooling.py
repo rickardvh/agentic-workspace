@@ -695,9 +695,23 @@ def test_generated_behavior_test_inventory_accounts_for_migration_owners() -> No
         "tests/test_generated_command_package_proof_runner.py",
         "tests/test_command_generation_integration.py",
         "Former duplicate AW primitive tests were removed",
+        "contract_conformance_cases_manifest",
+        "rickardvh/command-generation#13",
         "CLI boundary tests",
     ]:
         assert required in inventory
+
+
+def test_command_generation_dependency_exposes_package_owned_conformance_cases() -> None:
+    from command_generation import contract_conformance_cases_manifest, load_contract_conformance_case
+
+    manifest = contract_conformance_cases_manifest()
+    cases = {entry["id"]: entry for entry in manifest["contracts"]}
+
+    assert manifest["schema_version"] == "command-generation/conformance-cases/v1"
+    assert cases["todo.list.process"]["owner"] == "command-generation"
+    assert cases["todo.list.operation"]["category"] == "convert"
+    assert load_contract_conformance_case("todo.list-error.operation")["operation_id"] == "todo.list.report"
 
 
 def test_cli_boundary_tests_doc_separates_wrappers_from_operation_conformance() -> None:
