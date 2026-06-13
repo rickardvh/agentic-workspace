@@ -43,6 +43,7 @@ from agentic_workspace.contract_tooling import (
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
+    target_support_manifest,
     workflow_artifact_profiles_manifest,
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
@@ -50,7 +51,12 @@ from agentic_workspace.contract_tooling import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-from command_generation import command_package_schema_path  # noqa: E402
+from command_generation import (  # noqa: E402
+    TargetExtensionContractError,
+    command_package_schema_path,
+    target_support_matrix_entries,
+    validate_target_extension_contract,
+)
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
@@ -1280,6 +1286,40 @@ def _validate_generated_behavior_stratification(payload: dict[str, object]) -> l
     return errors
 
 
+def _validate_target_support(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    contracts = payload.get("contracts", [])
+    if not isinstance(contracts, list):
+        return ["target_support.json contracts must be a list"]
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            errors.append("target_support.json contracts must be objects")
+            continue
+        try:
+            validate_target_extension_contract(contract)
+        except TargetExtensionContractError as exc:
+            errors.append(f"target_support.json contract {contract.get('target_id', '<unknown>')} invalid: {exc}")
+    if errors:
+        return errors
+    target_ids = {str(contract.get("target_id", "")) for contract in contracts if isinstance(contract, dict)}
+    if not {"python", "typescript"} <= target_ids:
+        errors.append("target_support.json must declare python and typescript target support posture")
+    matrix_entries = target_support_matrix_entries(
+        [contract for contract in contracts if isinstance(contract, dict)],
+        operation_id="defaults.report",
+        case_id="defaults.selected-output.success",
+    )
+    matrix_by_target = {entry["target_id"]: entry for entry in matrix_entries}
+    if matrix_by_target.get("python", {}).get("adapter_id") != "python.function":
+        errors.append("target_support.json implemented python target must project python.function into the semantic matrix")
+    if "typescript" in matrix_by_target:
+        errors.append("target_support.json planned typescript target must not project into implemented semantic matrix yet")
+    rule = str(payload.get("rule", "")).lower()
+    if "must not own product operation semantics" not in rule or "per-operation feature maintenance" not in rule:
+        errors.append("target_support.json rule must reject product semantics and per-operation feature maintenance in targets")
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -2127,6 +2167,10 @@ def main(argv: list[str] | None = None) -> int:
             "generated behavior stratification",
             _validate(generated_behavior_stratification_manifest(), "generated_behavior_stratification.schema.json")
             + _validate_generated_behavior_stratification(generated_behavior_stratification_manifest()),
+        ),
+        (
+            "target support",
+            _validate(target_support_manifest(), "target_support.schema.json") + _validate_target_support(target_support_manifest()),
         ),
         (
             "command-generation schema boundary",

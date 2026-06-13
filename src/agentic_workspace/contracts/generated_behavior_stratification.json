@@ -56,13 +56,13 @@
       "id": "target-extension",
       "title": "Target extension contract",
       "authority_class": "reusable-target-machinery",
-      "source_of_truth": "rickardvh/command-generation#14 target-extension machinery consumed through AW support declarations",
+      "source_of_truth": "src/agentic_workspace/contracts/target_support.json consumed through command-generation target-extension machinery (#14)",
       "owned_by": "command-generation for reusable target mechanics; AW for target support consumption and product-specific declarations",
       "direct_edit_policy": "Do not add target-specific per-operation product semantics in AW; express target projection, dependencies, packaging, and conformance execution through reusable machinery.",
-      "proof_route": "Target support declaration plus generated package static/conformance proof once command-generation#14 machinery is consumed.",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py validates AW target support through command-generation target-extension contracts and matrix projection.",
       "allowed_hand_owned_code": "AW may keep only product runtime primitives or adapter-boundary declarations, not reusable target execution logic.",
       "allowed_handwritten_tests": "Consumer integration tests that prove AW consumes target support declarations and rejects per-operation target maintenance.",
-      "conversion_or_retirement_condition": "Retire AW-side scaffolding when command-generation#14 supplies the reusable declaration and matrix checks.",
+      "conversion_or_retirement_condition": "Retire any AW-side scaffolding once all implemented targets are declared through target_support.json and reusable command-generation matrix checks.",
       "next_lane_refs": [
         "#1480",
         "#1481"

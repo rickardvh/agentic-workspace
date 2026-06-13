@@ -1,0 +1,129 @@
+{
+  "kind": "agentic-workspace/target-support/v1",
+  "schema_version": "agentic-workspace/target-support/v1",
+  "parent_issue": "#1476",
+  "external_dependency": "rickardvh/command-generation#14",
+  "rule": "AW consumes command-generation target-extension contracts; target-specific code must not own product operation semantics or per-operation feature maintenance.",
+  "contracts": [
+    {
+      "schema_version": "command-generation/target-extension/v1",
+      "target_id": "python",
+      "implementation_status": "implemented",
+      "projection_rules": {
+        "source": "operation-ir",
+        "target_owns": [
+          "Python syntax projection",
+          "generated operation function module layout",
+          "runtime import binding"
+        ]
+      },
+      "runtime_dependencies": {
+        "boundary": [
+          "Python standard library",
+          "generated package resources",
+          "explicit host runtime primitive bindings"
+        ]
+      },
+      "operation_callable_surface": {
+        "adapter_id": "python.function",
+        "input_model": "operation-values"
+      },
+      "wrapper_adapter_shape": {
+        "owns": [
+          "argparse projection",
+          "exit-code mapping",
+          "stdout and stderr presentation"
+        ]
+      },
+      "packaging_output_layout": {
+        "owns": [
+          "generated Python package module paths",
+          "generated resource copy layout",
+          "entrypoint wrapper placement"
+        ]
+      },
+      "conformance_execution": {
+        "runner": "FunctionConformanceTarget",
+        "case_model": "input-output-error"
+      },
+      "support_declaration": {
+        "matrix_inclusion": "automatic-when-target-implemented",
+        "adapter_ids": [
+          "python.function"
+        ]
+      },
+      "product_semantics_boundary": {
+        "target_owns_product_semantics": false,
+        "rule": "AW product behavior remains in operation IR, primitive refs, schemas, host runtime primitive boundaries, and input-output-error conformance cases."
+      },
+      "maintenance_boundary": {
+        "per_operation_feature_maintenance": false,
+        "allowed": [
+          "Python runtime dependency updates",
+          "Python target compatibility fixes",
+          "Python projection or runtime-adapter bugs"
+        ]
+      }
+    },
+    {
+      "schema_version": "command-generation/target-extension/v1",
+      "target_id": "typescript",
+      "implementation_status": "planned",
+      "projection_rules": {
+        "source": "operation-ir",
+        "target_owns": [
+          "TypeScript syntax projection",
+          "native runtime resource loading",
+          "runtime support binding"
+        ]
+      },
+      "runtime_dependencies": {
+        "boundary": [
+          "Node.js runtime APIs",
+          "generated package resources",
+          "explicit host runtime support module"
+        ]
+      },
+      "operation_callable_surface": {
+        "adapter_id": "typescript.function",
+        "input_model": "operation-values"
+      },
+      "wrapper_adapter_shape": {
+        "owns": [
+          "native CLI option parsing",
+          "exit-code mapping",
+          "stdout and stderr presentation"
+        ]
+      },
+      "packaging_output_layout": {
+        "owns": [
+          "generated TypeScript package paths",
+          "resources directory layout",
+          "package.json wrapper metadata"
+        ]
+      },
+      "conformance_execution": {
+        "runner": "typescript function conformance",
+        "case_model": "input-output-error"
+      },
+      "support_declaration": {
+        "matrix_inclusion": "automatic-when-target-implemented",
+        "adapter_ids": [
+          "typescript.function"
+        ]
+      },
+      "product_semantics_boundary": {
+        "target_owns_product_semantics": false,
+        "rule": "TypeScript target support must consume the same operation IR and cases as Python; wrapper execution is not final semantic proof."
+      },
+      "maintenance_boundary": {
+        "per_operation_feature_maintenance": false,
+        "allowed": [
+          "Node runtime dependency updates",
+          "TypeScript target compatibility fixes",
+          "TypeScript projection or runtime-adapter bugs"
+        ]
+      }
+    }
+  ]
+}

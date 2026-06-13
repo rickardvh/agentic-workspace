@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/target_support.schema.json",
+  "title": "Agentic Workspace target support",
+  "description": "Workspace-owned target support declarations consumed through the command-generation target-extension contract.",
+  "x-agentic-workspace-doc-role": "target support contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "parent_issue",
+    "external_dependency",
+    "rule",
+    "contracts"
+  ],
+  "properties": {
+    "kind": {
+      "description": "Stable envelope kind for the AW target support contract.",
+      "const": "agentic-workspace/target-support/v1"
+    },
+    "schema_version": {
+      "description": "Schema version for this AW target support envelope.",
+      "const": "agentic-workspace/target-support/v1"
+    },
+    "parent_issue": {
+      "description": "Parent AW issue that owns the operation/test IR target-support lane.",
+      "const": "#1476"
+    },
+    "external_dependency": {
+      "description": "Sibling command-generation issue that owns reusable target-extension machinery.",
+      "const": "rickardvh/command-generation#14"
+    },
+    "rule": {
+      "description": "Human-readable ownership rule enforced by contract tooling checks.",
+      "type": "string",
+      "minLength": 1
+    },
+    "contracts": {
+      "description": "Command-generation target-extension contracts declared for AW-supported targets.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
