@@ -813,21 +813,32 @@ function executeTypescriptDomainOperation(operationId, values) {
   return { command: values._command_path?.join(' ') ?? operationId, target_root: target, dry_run: Boolean(values.dry_run), message: operationId };
 }
 
-export function runGeneratedOperation({ operationId, operationPath, values }) {
+function executeGeneratedOperationValues({ operationId, operationPath, values }) {
   if (!operationId) throw new RuntimeError('generated command has no operation id');
   if (values.strict_preflight === true && !values.preflight_token) {
-    writeSync(2, 'Strict preflight gate is enabled. Provide --preflight-token to continue.\n');
-    return 2;
+    throw new RuntimeError('Strict preflight gate is enabled. Provide --preflight-token to continue.');
   }
-  let output;
   if (!operationPath) throw new RuntimeError(`operation ${operationId} has no operation resource path`);
   const resourcePath = resolveInside(resourcesRoot, operationPath);
   if (!existsSync(resourcePath)) throw new RuntimeError(`operation resource is missing: ${operationPath}`);
   const operation = loadJsonResource(operationPath);
   const steps = operation?.ir_plan?.steps;
   if (!Array.isArray(steps) || steps.length === 0) throw new RuntimeError(`operation ${operationId} has no executable ir_plan.steps`);
-  const finalValues = runSteps(operation, { ...values });
-  output = finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
+  return runSteps(operation, { ...values });
+}
+
+export function invokeGeneratedOperation({ operationId, operationPath, values }) {
+  const finalValues = executeGeneratedOperationValues({ operationId, operationPath, values });
+  return finalValues.result ?? finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
+}
+
+export function runGeneratedOperation({ operationId, operationPath, values }) {
+  if (values.strict_preflight === true && !values.preflight_token) {
+    writeSync(2, 'Strict preflight gate is enabled. Provide --preflight-token to continue.\n');
+    return 2;
+  }
+  const finalValues = executeGeneratedOperationValues({ operationId, operationPath, values });
+  let output = finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
   if (typeof output !== 'string') output = `${JSON.stringify(output, null, 2)}\n`;
   writeSync(1, output);
   return 0;

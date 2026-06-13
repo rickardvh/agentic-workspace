@@ -26,8 +26,10 @@ import check_generated_command_packages as generated_package_check  # noqa: E402
 from command_generation import (  # noqa: E402
     FunctionConformanceTarget,
     OperationConformanceCase,
+    TypescriptFunctionConformanceTarget,
     materialize_case_fixture,
     run_function_conformance_case,
+    run_typescript_function_conformance_case,
 )
 from command_generation.conformance import ProcessConformanceCase  # noqa: E402
 
@@ -281,33 +283,20 @@ def _run_typescript_function_case(
         case=process_case,
         root=temp_root / str(case.get("id", "case")).replace(".", "-") / "typescript-function",
     )
-    runner = temp_root / "typescript_function_runner.mjs"
-    runner.write_text(
-        "import { pathToFileURL } from 'node:url';\n"
-        "const runtime = await import(pathToFileURL(process.argv[2]).href);\n"
-        "const functionName = process.argv[3];\n"
-        "const payload = JSON.parse(process.argv[4]);\n"
-        "if (typeof runtime[functionName] !== 'function') {\n"
-        "  throw new Error(`missing TypeScript operation function: ${functionName}`);\n"
-        "}\n"
-        "const exitCode = runtime[functionName](payload);\n"
-        "process.exitCode = Number.isInteger(exitCode) ? exitCode : 0;\n",
-        encoding="utf-8",
+    function_case = _case_function_fixture(case)
+    result, failures = run_typescript_function_conformance_case(
+        case=function_case,
+        target=TypescriptFunctionConformanceTarget(
+            label=str(artifact.get("artifact_id", "typescript.function")),
+            runtime_path=runtime_path,
+            operation_id=str(operation_ref.get("operation_id", "")),
+            operation_path=str(operation_ref.get("operation_path", "")),
+            cwd=fixture_root,
+            node_command=node,
+            function_name=function_name,
+            env=generated_package_check._conformance_env(runtime=""),
+        ),
     )
-    payload = {
-        "operationId": str(operation_ref.get("operation_id", "")),
-        "operationPath": str(operation_ref.get("operation_path", "")),
-        "values": dict(case_input.get("json", {})) if isinstance(case_input.get("json", {}), Mapping) else {},
-    }
-    completed = subprocess.run(
-        [node, str(runner), str(runtime_path), function_name, json.dumps(payload, sort_keys=True)],
-        cwd=fixture_root,
-        env=generated_package_check._conformance_env(runtime=""),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    failures = _evaluate_process_result(case=case, process_case=process_case, completed=completed)
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
@@ -317,9 +306,8 @@ def _run_typescript_function_case(
         "conformance_ref": str(operation_ref.get("conformance_ref", "")),
         "target": "typescript",
         "state": "fail" if failures else "pass",
-        "exit_code": completed.returncode,
-        "selected_fields": _selected_fields_or_empty(process_case, completed.stdout) if not failures else {},
-        "message": "; ".join(failures) if failures else "",
+        "selected_fields": result.selected_fields if result is not None and result.selected_fields is not None else {},
+        "message": "; ".join(failure.message for failure in failures),
     }
 
 

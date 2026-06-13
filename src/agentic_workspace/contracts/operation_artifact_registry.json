@@ -65,7 +65,7 @@
       "target": "typescript",
       "adapter_id": "typescript.function",
       "proof_role": "operation-conformance",
-      "symbol": "generated/workspace/typescript/src/runtime.mjs:runGeneratedOperation",
+      "symbol": "generated/workspace/typescript/src/runtime.mjs:invokeGeneratedOperation",
       "source_ref": "command_package_ir:root-workspace/defaults",
       "wrapper_refs": [
         "defaults.report.cli"
