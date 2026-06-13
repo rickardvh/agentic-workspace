@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -13,6 +14,11 @@ assert _SPEC is not None and _SPEC.loader is not None
 issue_body = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = issue_body
 _SPEC.loader.exec_module(issue_body)
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def test_issue_templates_include_completion_boundary_fields() -> None:
@@ -136,3 +142,176 @@ def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
     assert rendered["title_prefix"] == "[Review]:"
     assert rendered["normalized_title"] == "Template friction"
     assert rendered["duplicate_prefix_normalized"] is True
+
+
+def test_issue_body_renders_typed_structured_request() -> None:
+    rendered = issue_body.render_issue_request(
+        {
+            "kind": "agentic-workspace/issue-body-request/v1",
+            "template": "direction",
+            "title": "Structured lane body",
+            "fields": {
+                "problem_intent": {
+                    "kind": "markdown",
+                    "value": "Create issue bodies from typed request data instead of shell-composed strings.",
+                },
+                "intended_outcome": {
+                    "kind": "markdown",
+                    "value": "Planning-derived issue bodies render from structured data.",
+                },
+                "acceptance": {
+                    "kind": "markdown",
+                    "value": "The generated body carries template headings and source refs.",
+                },
+            },
+            "source_refs": [
+                {
+                    "kind": "planning-lane",
+                    "id": "lane-example",
+                    "path": ".agentic-workspace/planning/lanes/lane-example.lane.json",
+                }
+            ],
+        }
+    )
+
+    assert rendered["request_kind"] == "agentic-workspace/issue-body-request/v1"
+    assert rendered["title"] == "[Workspace]: Structured lane body"
+    assert rendered["source_refs"][0]["id"] == "lane-example"
+    assert "## Problem / intent\nCreate issue bodies from typed request data" in rendered["body"]
+    assert "## Final satisfaction\nFinal completion requires satisfying: Planning-derived issue bodies" in rendered["body"]
+
+
+def test_issue_body_request_rejects_untyped_fields() -> None:
+    try:
+        issue_body.render_issue_request(
+            {
+                "kind": "agentic-workspace/issue-body-request/v1",
+                "template": "direction",
+                "title": "Untyped body",
+                "fields": {"problem_intent": "shell-composed scalar"},
+            }
+        )
+    except ValueError as exc:
+        assert "schema error" in str(exc)
+        assert "problem_intent" in str(exc)
+    else:
+        raise AssertionError("render_issue_request should require typed field objects")
+
+
+def test_issue_body_renders_from_archived_lane_record(tmp_path: Path) -> None:
+    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "archive" / "lane-example.lane.json"
+    _write_json(
+        lane_path,
+        {
+            "kind": "planning-lane/v1",
+            "id": "lane-example",
+            "title": "Example Lane",
+            "lane_outcome": "The lane issue body is rendered from structured lane data.",
+            "purpose_for_parent": "Avoid shell property extraction from lane objects.",
+            "proof_strategy": "Issue-body tests prove source loading.",
+            "residual_lane_work": "Remaining lane work stays routed to Planning.",
+            "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/example.decomposition.json",
+        },
+    )
+
+    rendered = issue_body.render_issue_request(issue_body.request_from_lane(target_root=tmp_path, lane_id="lane-example"))
+
+    assert rendered["title"] == "[Workspace]: Example Lane"
+    assert rendered["source_refs"] == [
+        {
+            "kind": "planning-lane",
+            "id": "lane-example",
+            "path": ".agentic-workspace/planning/lanes/archive/lane-example.lane.json",
+        },
+        {
+            "kind": "planning-decomposition",
+            "path": ".agentic-workspace/planning/decompositions/example.decomposition.json",
+        },
+    ]
+    assert "## Problem / intent\nAvoid shell property extraction from lane objects." in rendered["body"]
+    assert "## Acceptance / success signal\nIssue-body tests prove source loading." in rendered["body"]
+
+
+def test_issue_body_renders_from_decomposition_candidate_lane(tmp_path: Path) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "example.decomposition.json"
+    _write_json(
+        decomposition_path,
+        {
+            "kind": "planning-decomposition/v1",
+            "larger_intended_outcome": "Create GitHub issues from Planning decomposition data.",
+            "parent_acceptance": {"parent_proof_required": "All candidate lane issue bodies render from structured fields."},
+            "candidate_lanes": [
+                {
+                    "id": "lane-one",
+                    "title": "Lane One",
+                    "outcome": "Wrong lane.",
+                    "owner_surface": "wrong",
+                    "proof": "wrong",
+                },
+                {
+                    "id": "lane-two",
+                    "title": "Lane Two",
+                    "outcome": "The selected decomposition lane renders an issue body.",
+                    "owner_surface": ".agentic-workspace/planning/lanes/lane-two.lane.json",
+                    "proof": "The source-loading test selects lane-two.",
+                    "slice_contribution_to_parent": "Directly addresses Planning-derived issue generation.",
+                    "residual_parent_intent": "Further lanes remain in the decomposition.",
+                },
+            ],
+        },
+    )
+
+    rendered = issue_body.render_issue_request(
+        issue_body.request_from_decomposition(
+            target_root=tmp_path,
+            decomposition=".agentic-workspace/planning/decompositions/example.decomposition.json",
+            lane_id="lane-two",
+        )
+    )
+
+    assert rendered["title"] == "[Workspace]: Lane Two"
+    assert rendered["source_refs"] == [
+        {
+            "kind": "planning-decomposition",
+            "id": "lane-two",
+            "path": ".agentic-workspace/planning/decompositions/example.decomposition.json",
+        }
+    ]
+    assert "## Problem / intent\nDirectly addresses Planning-derived issue generation." in rendered["body"]
+    assert "## Required residual intent\nFurther lanes remain in the decomposition." in rendered["body"]
+
+
+def test_issue_body_cli_rejects_mixed_structured_and_field_modes(tmp_path: Path) -> None:
+    request_path = tmp_path / "request.json"
+    _write_json(
+        request_path,
+        {
+            "kind": "agentic-workspace/issue-body-request/v1",
+            "template": "direction",
+            "fields": {"problem_intent": {"kind": "markdown", "value": "Example"}},
+        },
+    )
+
+    try:
+        issue_body.main(["--input-json", str(request_path), "--kind", "direction"])
+    except SystemExit as exc:
+        assert "--input-json" in str(exc) or "structured source modes" in str(exc)
+    else:
+        raise AssertionError("input-json must be mutually exclusive with --kind")
+
+    try:
+        issue_body.main(["--from-decomposition", "example.json", "--field", "problem_intent=Example"])
+    except SystemExit as exc:
+        assert "structured source modes" in str(exc)
+    else:
+        raise AssertionError("source loading must be mutually exclusive with raw --field")
+
+
+def test_issue_body_aid_validation_uses_structured_input_not_semantic_shell_fields() -> None:
+    payload = json.loads(
+        (_REPO_ROOT / ".agentic-workspace" / "agent-aids" / "scripts" / "github-issue-body" / "manifest.json").read_text(encoding="utf-8")
+    )
+    commands = payload["validation"]["commands"]
+
+    assert any("--input-json" in command or "--from-lane" in command or "--from-decomposition" in command for command in commands)
+    assert not any("--field" in command for command in commands)

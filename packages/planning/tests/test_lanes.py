@@ -150,13 +150,44 @@ def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_cle
     assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
     active_lane = state["roadmap"]["lanes"][0]
+    assert active_lane["status"] == "active"
+    assert active_lane["maturity"] == "active"
     assert active_lane["current_slice"] == "slice-one"
     assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    assert active_lane["next_action"] == "execute the slice."
+    assert active_lane["done_when"] == "slice proof passes."
 
     summary = planning_summary(target=tmp_path, profile="compact")
     warnings = summary["planning_surface_health"]["warnings"]
     assert not [warning for warning in warnings if warning["warning_class"] == "execplan_unregistered"]
     assert not [warning for warning in warnings if warning["warning_class"] == "historical_work_in_live_planning_state"]
+    doctor = doctor_bootstrap(target=tmp_path)
+    assert doctor.warnings == []
+
+
+def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_minimal(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    _write_execplan_fixture(
+        tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json",
+        item_id="slice-one",
+        status="planned",
+    )
+
+    result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-one")
+
+    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_lane = state["roadmap"]["lanes"][0]
+    assert active_lane["status"] == "active"
+    assert active_lane["current_slice"] == "slice-one"
+    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    assert active_lane["next_action"] == "execute the slice."
+    assert active_lane["done_when"] == "slice proof passes."
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert not [warning for warning in warnings if warning["warning_class"] == "execplan_unregistered"]
     doctor = doctor_bootstrap(target=tmp_path)
     assert doctor.warnings == []
 

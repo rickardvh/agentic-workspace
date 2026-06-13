@@ -1,0 +1,33 @@
+{
+  "kind": "agentic-workspace/issue-body-request/v1",
+  "template": "direction",
+  "title": "Example structured issue body",
+  "fields": {
+    "problem_intent": {
+      "kind": "markdown",
+      "value": "Render issue bodies from structured request data."
+    },
+    "intended_outcome": {
+      "kind": "markdown",
+      "value": "The issue-body aid validates typed fields before rendering."
+    },
+    "larger_picture": {
+      "kind": "markdown",
+      "value": "Nontrivial issue bodies avoid shell-composed semantic fields."
+    },
+    "scope": {
+      "kind": "markdown",
+      "value": "In scope: structured request rendering."
+    },
+    "acceptance": {
+      "kind": "markdown",
+      "value": "The rendered body preserves the repository issue template headings."
+    }
+  },
+  "source_refs": [
+    {
+      "kind": "example",
+      "id": "structured-request"
+    }
+  ]
+}

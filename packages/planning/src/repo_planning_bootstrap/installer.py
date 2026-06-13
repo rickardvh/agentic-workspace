@@ -9824,7 +9824,7 @@ def _default_lane_record(
     }
 
 
-def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dict[str, Any]:
+def _lane_state_projection(record: dict[str, Any], *, target_root: Path, lane_relative: str) -> dict[str, Any]:
     references = record.get("references", [])
     current_slice = str(record.get("current_slice", "")).strip()
     current_slice_record = next(
@@ -9836,8 +9836,30 @@ def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dic
         {},
     )
     execplan_ref = ""
+    next_action = ""
+    done_when = ""
     if isinstance(current_slice_record, dict):
         execplan_ref = str(current_slice_record.get("execplan_ref") or current_slice_record.get("execplan") or "").strip()
+        next_action = str(current_slice_record.get("next_action") or "").strip()
+        done_when = str(current_slice_record.get("done_when") or "").strip()
+    if current_slice and not execplan_ref:
+        inferred_execplan = (Path(".agentic-workspace") / "planning" / "execplans" / f"{_slugify(current_slice)}.plan.json").as_posix()
+        if (target_root / inferred_execplan).exists():
+            execplan_ref = inferred_execplan
+    if execplan_ref and (not next_action or not done_when):
+        execplan_record = _load_execplan_record(target_root / execplan_ref)
+        if isinstance(execplan_record, dict):
+            canonical_core = execplan_record.get("canonical_core", {})
+            if isinstance(canonical_core, dict):
+                next_action = next_action or str(canonical_core.get("next_action") or "").strip()
+                done_when = done_when or str(canonical_core.get("done_when") or "").strip()
+                completion_criteria = canonical_core.get("completion_criteria")
+                if not done_when and isinstance(completion_criteria, list) and completion_criteria:
+                    done_when = str(completion_criteria[0] or "").strip()
+            if not next_action:
+                immediate_next_action = execplan_record.get("immediate_next_action")
+                if isinstance(immediate_next_action, list) and immediate_next_action:
+                    next_action = str(immediate_next_action[0] or "").strip()
     projection = {
         "id": str(record.get("id", "")).strip(),
         "title": str(record.get("title", "")).strip(),
@@ -9858,6 +9880,10 @@ def _lane_state_projection(record: dict[str, Any], *, lane_relative: str) -> dic
         projection["current_slice"] = current_slice
     if execplan_ref:
         projection["execplan"] = execplan_ref
+    if next_action:
+        projection["next_action"] = next_action
+    if done_when:
+        projection["done_when"] = done_when
     return projection
 
 
@@ -9878,7 +9904,7 @@ def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lan
     if not isinstance(lanes, list):
         lanes = []
     lane_id = str(record.get("id", "")).strip()
-    projection = _lane_state_projection(record, lane_relative=lane_relative)
+    projection = _lane_state_projection(record, target_root=target_root, lane_relative=lane_relative)
     updated = False
     next_lanes: list[Any] = []
     for raw in lanes:
