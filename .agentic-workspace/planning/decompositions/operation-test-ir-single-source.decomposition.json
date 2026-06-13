@@ -70,9 +70,9 @@
     {
       "id": "lane-1476-typescript-direct-operation-adapter",
       "title": "Add or route TypeScript direct operation conformance",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "TypeScript direct operation conformance is implemented through command-generation machinery, or a precise follow-up owns the adapter boundary with proof that wrapper execution is not treated as final semantic substitute.",
-      "owner_surface": "command-generation#14 TypeScript function adapter machinery and AW target support declaration",
+      "owner_surface": ".agentic-workspace/planning/closeout-evidence/lane-1476-typescript-direct-operation-adapter.closeout.json",
       "proof": "Applicable cases can run through typescript.function or a durable owner-approved adapter-boundary follow-up exists with closure impact recorded on #1476.",
       "slice_contribution_to_parent": "Advances generated implementation, target-extension, and conformance layers beyond Python.",
       "residual_parent_intent": "Wrapper demotion, ordinary-test inventory, and final closure guardrails remain unless already satisfied.",

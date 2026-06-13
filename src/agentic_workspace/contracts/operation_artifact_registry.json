@@ -59,6 +59,33 @@
       ]
     },
     {
+      "artifact_id": "root-workspace.defaults.typescript",
+      "operation_id": "defaults.report",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "typescript.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated/workspace/typescript/src/runtime.mjs:runGeneratedOperation",
+      "source_ref": "command_package_ir:root-workspace/defaults",
+      "wrapper_refs": [
+        "defaults.report.cli"
+      ],
+      "case_ids": [
+        "defaults.selected-output.success"
+      ],
+      "path_refs": [
+        "generated/workspace/typescript/src/runtime.mjs",
+        "generated/workspace/typescript/resources/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
+      ],
+      "stale_when": [
+        "defaults.report operation contract changes",
+        "root-workspace defaults generated TypeScript runtime artifact changes",
+        "defaults.selected-text.process conformance expectations change"
+      ]
+    },
+    {
       "artifact_id": "root-workspace.config.typescript",
       "operation_id": "config.report",
       "package_id": "root-workspace",

@@ -68,7 +68,7 @@
     {
       "schema_version": "command-generation/target-extension/v1",
       "target_id": "typescript",
-      "implementation_status": "planned",
+      "implementation_status": "implemented",
       "projection_rules": {
         "source": "operation-ir",
         "target_owns": [
@@ -103,7 +103,7 @@
         ]
       },
       "conformance_execution": {
-        "runner": "typescript function conformance",
+        "runner": "run_operation_conformance_tests.py typescript.function",
         "case_model": "input-output-error"
       },
       "support_declaration": {

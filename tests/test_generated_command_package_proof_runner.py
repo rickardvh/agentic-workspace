@@ -9,6 +9,8 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
 CHECK_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
@@ -168,9 +170,27 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     strict = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=True)
 
     assert soft["summary"]["state"] == "pass"
-    assert soft["summary"]["unavailable_count"] == 2
+    assert soft["summary"]["unavailable_count"] == 3
     assert strict["summary"]["state"] == "fail"
-    assert strict["summary"]["fail_count"] == 2
+    assert strict["summary"]["fail_count"] == 3
+
+
+def test_operation_conformance_runner_executes_typescript_function_case() -> None:
+    runner = _load_test_ir_runner()
+    if runner.shutil.which("node") is None:
+        pytest.skip("node is required for typescript.function proof")
+
+    payload = runner.run_ir_cases(
+        target_selection="typescript",
+        case_filter={"defaults.selected-output.success"},
+        require_node=True,
+    )
+
+    assert payload["summary"]["state"] == "pass"
+    result = payload["cases"][0]
+    assert result["artifact_id"] == "root-workspace.defaults.typescript"
+    assert result["adapter_id"] == "typescript.function"
+    assert result["state"] == "pass"
 
 
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
