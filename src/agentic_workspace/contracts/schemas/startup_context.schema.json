@@ -190,6 +190,11 @@
       "description": "Lossy continuation/re-grounding view projected from existing owner surfaces so a low-context agent can identify preserved intent, allowed claim class, next safe action, source freshness, omissions, and drill-down routes without treating startup as a durable state owner.",
       "additionalProperties": true
     },
+    "continuation_reorientation": {
+      "type": "object",
+      "description": "Stronger continuation/compression-risk reorientation packet emitted only when a concrete continuation trigger is present, carrying repo posture, active intent refs, completion boundary, anti-goals, proof/claim boundary, and next safe action as a startup projection rather than a durable store.",
+      "additionalProperties": true
+    },
     "package_boundary": {
       "$ref": "#/$defs/package_boundary",
       "description": "Current package/root boundary information for the command invocation."
@@ -345,6 +350,10 @@
       "type": "object",
       "description": "Compact statement of the current operating mode and risk posture."
     },
+    "repo_posture": {
+      "type": "object",
+      "description": "Compact effective repo posture ref, digest, reminder, provenance route, and reorientation triggers."
+    },
     "delegation_decision": {
       "type": "object",
       "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals.",
@@ -373,6 +382,16 @@
     "intent_evidence": {
       "type": "object",
       "description": "Compact provenance and assumption evidence for the current task intent, including source chain, correction point, and clarification/proceed posture.",
+      "additionalProperties": true
+    },
+    "intent_elicitation_protocol": {
+      "type": "object",
+      "description": "Routed natural-language intent elicitation protocol for task, initiative, repo/system, completion-boundary, anti-goal, and unresolved-assumption intent.",
+      "additionalProperties": true
+    },
+    "intent_custody": {
+      "type": "object",
+      "description": "Compact custody projection for active intent refs, completion boundaries, anti-goals, provenance, freshness, and routing.",
       "additionalProperties": true
     },
     "active_intent_contract": {

@@ -72,6 +72,9 @@ def test_critical_skills_include_anti_rationalization_and_behavior_evidence() ->
     assert "candidate_interpretations" in intent_discovery
     assert "Stop the dialogue after one bounded clarification" in intent_discovery
     assert "`task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue" in intent_discovery
+    assert "`completion-boundary`" in intent_discovery
+    assert "`unresolved-assumption`" in intent_discovery
+    assert "Prefer `intent_custody` when compact refs" in intent_discovery
     assert "Tests passed, so completion is claimable" in proof
     assert "Behavior-Impact Evidence" in proof
     assert "Archive or close is safe because validation passed" in closeout

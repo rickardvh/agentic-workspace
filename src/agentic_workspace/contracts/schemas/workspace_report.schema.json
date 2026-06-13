@@ -18,6 +18,7 @@
     "report_profile",
     "output_contract",
     "operating_posture",
+    "repo_posture",
     "maintainer_mode",
     "config_enforcement",
     "config_effect_audit",
@@ -33,6 +34,8 @@
     "assurance_requirements",
     "verification",
     "durable_intent",
+    "intent_elicitation_protocol",
+    "intent_custody",
     "applicable_intent",
     "product_managed_enclave",
     "ownership_diagnostics",
@@ -165,6 +168,10 @@
       "type": "object",
       "description": "Current operating posture for agent work in this repository."
     },
+    "repo_posture": {
+      "type": "object",
+      "description": "Effective repo posture ref, digest, provenance route, reorientation triggers, and closeout/report adherence visibility."
+    },
     "task_posture_packet": {
       "$ref": "#/$defs/task_posture_packet",
       "description": "Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance."
@@ -220,6 +227,16 @@
     "durable_intent": {
       "type": "object",
       "description": "Compact decision projection for durable task, subsystem, and system intent pressure."
+    },
+    "intent_elicitation_protocol": {
+      "type": "object",
+      "description": "Routed natural-language intent elicitation protocol and compact intent-record shape.",
+      "additionalProperties": true
+    },
+    "intent_custody": {
+      "type": "object",
+      "description": "Compact active intent refs, completion boundaries, anti-goals, provenance, freshness, and routing.",
+      "additionalProperties": true
     },
     "applicable_intent": {
       "$ref": "#/$defs/applicable_intent",

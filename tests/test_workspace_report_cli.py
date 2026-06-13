@@ -1458,6 +1458,50 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
 
 
+def test_report_routes_repo_posture_and_intent_custody(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    router = json.loads(capsys.readouterr().out)
+    context = _report_context(router)
+    assert "repo_posture" not in context
+    assert "intent_custody" not in context
+    assert _report_drill_down(router)["deeper_detail"]["lazy_section_catalog"] == "section_catalog"
+
+    assert cli.main(["report", "--target", str(target), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    catalog_sections = {section["section"] for section in catalog["lazy_sections"]}
+    assert {"repo_posture", "intent_elicitation_protocol", "intent_custody"} <= catalog_sections
+
+    assert cli.main(["report", "--target", str(target), "--section", "repo_posture", "--format", "json"]) == 0
+    posture = json.loads(capsys.readouterr().out)["answer"]
+    assert posture["basis"]["agent_instructions_file"] == "AGENTS.md"
+    assert "posture-digest-changed" in posture["reorientation_triggers"]
+    assert posture["adherence_visibility"]["ignored_or_overridden_rule"].startswith("Record any ignored")
+
+    assert cli.main(["report", "--target", str(target), "--section", "intent_elicitation_protocol", "--format", "json"]) == 0
+    protocol = json.loads(capsys.readouterr().out)["answer"]
+    assert protocol["intent_levels"] == [
+        "task",
+        "initiative",
+        "repo",
+        "system",
+        "completion-boundary",
+        "anti-goal",
+        "unresolved-assumption",
+    ]
+    assert protocol["output_shape"]["record"]["freshness"] == "current|stale|unknown"
+
+    assert cli.main(["report", "--target", str(target), "--section", "intent_custody", "--format", "json"]) == 0
+    custody = json.loads(capsys.readouterr().out)["answer"]
+    assert custody["owner_rule"].endswith("it is not a new intent store.")
+    assert custody["claim_rule"].startswith("Task records may support task/slice closure only")
+
+
 def test_report_closeout_report_guidance_only_without_active_closeout_claim(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

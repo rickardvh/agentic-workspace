@@ -56,6 +56,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
+| `repo_posture` | object | yes |  | Effective repo posture ref, digest, provenance route, reorientation triggers, and closeout/report adherence visibility. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
@@ -90,6 +91,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `agent_configuration_queries` | object | yes |  | Compact queries agents should ask before opening broader configuration docs. |  |  |
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
 | `durable_intent` | object | yes |  | Compact decision projection for durable task, subsystem, and system intent pressure. |  |  |
+| `intent_elicitation_protocol` | object | yes |  | Routed natural-language intent elicitation protocol and compact intent-record shape. |  |  |
+| `intent_custody` | object | yes |  | Compact active intent refs, completion boundaries, anti-goals, provenance, freshness, and routing. |  |  |
 | `applicable_intent` | ref `#/$defs/applicable_intent` | yes |  | Compact applicable-intent source, authority, freshness, conflict, durable-outcome, and manual-verification evidence. |  |  |
 | `applicable_intent.kind` | const `"agentic-workspace/applicable-intent-sources/v1"` | yes |  | Discriminator for the applicable-intent source projection. |  |  |
 | `applicable_intent.status` | string | yes |  | Whether source evidence is present, guidance-only, or requires attention. |  |  |

@@ -2570,6 +2570,241 @@ def _operating_posture_payload(*, config: WorkspaceConfig, surface: str, compact
     return payload
 
 
+def _repo_posture_payload(*, config: WorkspaceConfig, surface: str, compact: bool = True) -> dict[str, Any]:
+    posture_basis = {
+        "agent_instructions_file": config.agent_instructions_file,
+        "improvement_latitude": config.improvement_latitude,
+        "improvement_latitude_source": config.improvement_latitude_source,
+        "optimization_bias": config.optimization_bias,
+        "optimization_bias_source": config.optimization_bias_source,
+        "workflow_artifact_profile": config.workflow_artifact_profile,
+        "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+        "assurance": {
+            "default_level": config.assurance.default_level,
+            "strict_closeout": config.assurance.strict_closeout,
+            "agent_may_escalate": config.assurance.agent_may_escalate,
+            "agent_may_deescalate": config.assurance.agent_may_deescalate,
+        },
+    }
+    digest = hashlib.sha256(json.dumps(posture_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/repo-posture/v1",
+        "status": "present",
+        "surface": surface,
+        "ref": f"repo-posture/{digest}",
+        "digest": digest,
+        "reminder": "Preserve intent; route owners; match claims to proof.",
+        "source_provenance": [
+            {
+                "source": ".agentic-workspace/config.toml",
+                "fields": [
+                    "workspace.improvement_latitude",
+                    "workspace.optimization_bias",
+                    "workspace.workflow_artifact_profile",
+                    "assurance",
+                ],
+            },
+            {"source": config.agent_instructions_file, "fields": ["startup adapter instruction"]},
+            {"source": ".agentic-workspace/system-intent/intent.toml", "fields": ["repo/system intent"], "required": False},
+        ],
+        "normal_startup_rule": "Carry this ref, digest, and reminder by default; expand operating_posture or repo_posture only when posture can change the next safe action or closeout claim.",
+        "reorientation_triggers": [
+            "context-compression",
+            "session-resume",
+            "closeout-or-completion-claim",
+            "posture-digest-changed",
+            "owner-boundary-crossing",
+            "new-visible-surface-proposed",
+        ],
+        "continuation_packet_fields": [
+            "repo_posture.ref",
+            "repo_posture.digest",
+            "active intent refs",
+            "completion boundary",
+            "anti-goals",
+            "proof boundary",
+            "next safe action",
+        ],
+        "adherence_visibility": {
+            "closeout_field": "task_posture_packet.posture_adherence",
+            "report_sections": ["operating_posture", "task_posture_packet", "closeout_trust"],
+            "ignored_or_overridden_rule": "Record any ignored, overridden, or superseded posture in closeout/report before broad completion claims.",
+        },
+    }
+    if not compact:
+        payload["basis"] = posture_basis
+        payload["expand_when"] = [
+            "config task asks about posture",
+            "completion claim depends on posture adherence",
+            "continuation packet digest differs from current startup digest",
+            "module or owner boundary changes the safe next action",
+        ]
+    return payload
+
+
+def _compact_repo_posture_projection(value: Any) -> dict[str, Any]:
+    posture = _as_dict(value)
+    return {
+        "ref": posture.get("ref", ""),
+        "digest": posture.get("digest", ""),
+        "reminder": "Intent; owners; proof.",
+    }
+
+
+def _intent_elicitation_protocol_payload(*, task_text: str | None, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    task = str(task_text or "").strip()
+    return {
+        "kind": "agentic-workspace/intent-elicitation-protocol/v1",
+        "status": "available",
+        "skill": "workspace-intent-discovery",
+        "skill_command": _command_with_cli_invoke(
+            command=f"agentic-workspace skills --target . --task {_shell_quote(task or '<task>')} --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "trigger_conditions": [
+            "task is outcome-shaped, broad, or initiative-like",
+            "completion boundary is unclear",
+            "anti-goals or acceptable first slice are missing",
+            "repo/system intent might change interpretation",
+            "contradictory, stale, or missing intent evidence would change the next safe action",
+        ],
+        "intent_levels": ["task", "initiative", "repo", "system", "completion-boundary", "anti-goal", "unresolved-assumption"],
+        "output_shape": {
+            "record": {
+                "intent_ref": "stable compact identifier",
+                "level": "task|initiative|repo|system|completion-boundary|anti-goal|unresolved-assumption",
+                "statement": "plain-language intent or boundary",
+                "completion_boundary": "what must be true before closure at this level",
+                "anti_goals": ["scope that must not be silently included"],
+                "unresolved_assumptions": ["assumptions that remain visible if work proceeds"],
+                "provenance": ["chat", "issue", "Planning", "Memory", "config", "system-intent"],
+                "freshness": "current|stale|unknown",
+            },
+            "routing_target": "intent_custody when compact refs are enough; Planning/Memory/issue only when durability is needed",
+        },
+        "ask_user_when": [
+            "two plausible interpretations would produce materially different work",
+            "silent first-slice choice could close or defer the wrong intent",
+            "anti-goals are likely but unstated",
+        ],
+        "proceed_with_assumptions_when": [
+            "the first slice is low-risk and reversible",
+            "the visible intent record states assumptions and correction point",
+            "completion claims stay limited to the selected slice",
+        ],
+    }
+
+
+def _intent_custody_payload(
+    *,
+    task_text: str | None,
+    task_intent: dict[str, Any] | None = None,
+    intent_evidence: dict[str, Any] | None = None,
+    active_intent_contract: dict[str, Any] | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+    durable_intent: dict[str, Any] | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    task_intent = _as_dict(task_intent)
+    intent_evidence = _as_dict(intent_evidence)
+    active_intent_contract = _as_dict(active_intent_contract)
+    active_planning_record = _as_dict(active_planning_record)
+    durable_intent = _as_dict(durable_intent)
+    records: list[dict[str, Any]] = []
+
+    if str(task_text or "").strip() or task_intent.get("status") == "present":
+        acceptance = _as_dict(task_intent.get("acceptance"))
+        requested = [str(item) for item in _list_payload(task_intent.get("requested_outcomes")) if str(item).strip()]
+        records.append(
+            {
+                "intent_ref": "task/current-request",
+                "level": "task",
+                "statement": requested[0] if requested else str(task_text or "").strip()[:240],
+                "completion_boundary": "satisfy acceptance for the stated current task; do not claim parent or initiative closure from this record alone",
+                "anti_goals": [str(item) for item in _list_payload(intent_evidence.get("likely_non_goals")) if str(item).strip()],
+                "unresolved_assumptions": [
+                    str(item) for item in _list_payload(intent_evidence.get("visible_assumptions")) if str(item).strip()
+                ],
+                "provenance": _list_payload(intent_evidence.get("source_chain")) or ["current task text"],
+                "freshness": "current",
+                "acceptance_refs": sorted(str(key) for key in acceptance if isinstance(acceptance, dict)),
+            }
+        )
+
+    if active_intent_contract.get("status") == "present":
+        records.append(
+            {
+                "intent_ref": "active-intent-contract",
+                "level": "initiative",
+                "statement": active_intent_contract.get("summary", "active controlling intent"),
+                "completion_boundary": active_intent_contract.get(
+                    "completion_boundary",
+                    "use active_intent_contract and intent_satisfaction_matrix before broad completion claims",
+                ),
+                "anti_goals": _list_payload(active_intent_contract.get("negative_intent")),
+                "unresolved_assumptions": [],
+                "provenance": ["active_intent_contract"],
+                "freshness": "current",
+            }
+        )
+
+    if active_planning_record:
+        records.append(
+            {
+                "intent_ref": "planning/active",
+                "level": "initiative",
+                "statement": str(
+                    active_planning_record.get("title")
+                    or active_planning_record.get("why_now")
+                    or active_planning_record.get("summary")
+                    or "active Planning record"
+                ),
+                "completion_boundary": "Planning closeout must reconcile parent intent, proof, residue, and issue closure before closing the initiative.",
+                "anti_goals": [],
+                "unresolved_assumptions": [],
+                "provenance": [".agentic-workspace/planning/state.toml"],
+                "freshness": "current",
+            }
+        )
+
+    if durable_intent.get("status") == "present":
+        records.append(
+            {
+                "intent_ref": "durable-intent",
+                "level": "repo",
+                "statement": "durable subsystem or system intent may constrain interpretation, proof, or closeout",
+                "completion_boundary": "do not override applicable durable intent without explicit supersession or residue routing",
+                "anti_goals": [],
+                "unresolved_assumptions": [],
+                "provenance": ["durable_intent"],
+                "freshness": "current",
+            }
+        )
+
+    return {
+        "kind": "agentic-workspace/intent-custody/v1",
+        "status": "present" if records else "available",
+        "owner_rule": "This is a compact custody and routing projection over chat, Planning, Memory, issues, config, and system intent; it is not a new intent store.",
+        "records": records,
+        "active_intent_refs": [record["intent_ref"] for record in records],
+        "startup_projection": {
+            "completion_boundaries": [record["completion_boundary"] for record in records if record.get("completion_boundary")],
+            "anti_goals": _dedupe(
+                [str(item) for record in records for item in _list_payload(record.get("anti_goals")) if str(item).strip()]
+            ),
+            "freshness": "current" if records else "unknown",
+        },
+        "routing": {
+            "missing_or_ambiguous": "intent_elicitation_protocol",
+            "closeout": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+            ),
+            "durable_promotion": ["Planning", "Memory", "issue", "durable_intent"],
+        },
+        "claim_rule": "Task records may support task/slice closure only; initiative, repo, or system closure requires matching records and proof.",
+    }
+
+
 def _command_target_arg(target_root: Path | None) -> str:
     if target_root is None:
         return "."
@@ -6661,6 +6896,7 @@ def _run_report_command(
     )
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
+    repo_posture = _repo_posture_payload(config=config, surface="report", compact=False)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(
@@ -6704,6 +6940,12 @@ def _run_report_command(
         cli_invoke=config.cli_invoke,
     )
     workflow_obligations = _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record)
+    intent_custody = _intent_custody_payload(
+        task_text=None,
+        active_planning_record=raw_active_planning_record or active_planning_record,
+        durable_intent=durable_intent,
+        cli_invoke=config.cli_invoke,
+    )
     task_posture_packet = _task_posture_packet_payload(
         config=config,
         surface="report",
@@ -6737,6 +6979,7 @@ def _run_report_command(
             surface="report",
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
+        "repo_posture": repo_posture,
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
@@ -6747,6 +6990,8 @@ def _run_report_command(
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
         "durable_intent": durable_intent,
+        "intent_elicitation_protocol": _intent_elicitation_protocol_payload(task_text=None, cli_invoke=config.cli_invoke),
+        "intent_custody": _compact_intent_custody_projection(intent_custody),
         "agent_configuration_system": _agent_configuration_report_payload(config=config, installed_modules=installed_modules),
         "agent_configuration_queries": _agent_configuration_queries_report_payload(
             installed_modules=installed_modules, active_direction=_effective_active_direction_payload(module_reports=module_reports)
@@ -7699,6 +7944,24 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/applicable-intent-sources/v1",
         "purpose": "compact applicable intent source, authority, conflict, durable-outcome, and manual-verification evidence",
         "when_to_use": "before broad, subsystem-affecting, architectural, compliance-relevant, or soft-intent closeout decisions",
+    },
+    {
+        "section": "repo_posture",
+        "kind": "agentic-workspace/repo-posture/v1",
+        "purpose": "effective repo posture ref, digest, provenance, reorientation triggers, and closeout adherence routing",
+        "when_to_use": "on continuation, context compression, closeout, posture drift, or config/posture questions",
+    },
+    {
+        "section": "intent_elicitation_protocol",
+        "kind": "agentic-workspace/intent-elicitation-protocol/v1",
+        "purpose": "bounded natural-language intent elicitation protocol and custody record shape",
+        "when_to_use": "when task, initiative, repo/system, completion-boundary, anti-goal, or unresolved-assumption intent is unclear",
+    },
+    {
+        "section": "intent_custody",
+        "kind": "agentic-workspace/intent-custody/v1",
+        "purpose": "compact active intent refs, completion boundaries, anti-goals, freshness, and routing",
+        "when_to_use": "before completion claims or continuation when compact owner refs are enough and new Planning state would duplicate ownership",
     },
     {
         "section": "successful_completion_cost",
@@ -10227,6 +10490,24 @@ def _run_lazy_report_section_command(
 
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
 
+    if normalized == "repo_posture":
+        payload["repo_posture"] = _repo_posture_payload(config=config, surface="report", compact=False)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "intent_elicitation_protocol":
+        payload["intent_elicitation_protocol"] = _intent_elicitation_protocol_payload(task_text=None, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "intent_custody":
+        durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
+        payload["intent_custody"] = _intent_custody_payload(
+            task_text=None,
+            active_planning_record=active_planning_record,
+            durable_intent=durable_intent,
+            cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized in {"assurance_requirements", "verification", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
@@ -10722,6 +11003,7 @@ def _run_report_router_command(
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
         "durable_intent": durable_intent,
+        "intent_elicitation_protocol": _intent_elicitation_protocol_payload(task_text=None, cli_invoke=config.cli_invoke),
         "applicable_intent": applicable_intent,
         "effective_authority": _effective_authority_payload(
             target_root=target_root, config=config, installed_modules=installed_modules, module_reports=[]
@@ -17693,6 +17975,98 @@ def _compact_start_continuation_view(view: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in compact.items() if value not in ({}, [], "", None)}
 
 
+def _continuation_reorientation_payload(
+    *,
+    config: WorkspaceConfig,
+    target_root: Path,
+    active_planning_present: bool,
+    payload: dict[str, Any],
+    task_text: str | None,
+    active_planning_record: dict[str, Any] | None = None,
+    active_intent_contract: dict[str, Any] | None = None,
+    intent_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    repo_posture = _compact_repo_posture_projection(_repo_posture_payload(config=config, surface="start", compact=True))
+    if not active_planning_present:
+        return {
+            "kind": "agentic-workspace/continuation-reorientation/v1",
+            "status": "not-triggered",
+            "trigger": {
+                "source": "planning.continuation_view",
+                "condition": "active-planning-present",
+                "present": False,
+            },
+            "repo_posture": repo_posture,
+            "normal_startup_rule": "Normal first-contact startup carries only repo_posture ref/digest/reminder unless continuation pressure is present or the selector is requested.",
+        }
+
+    active_planning_record = _as_dict(active_planning_record)
+    active_intent_contract = _as_dict(active_intent_contract)
+    continuation_view = _as_dict(payload.get("continuation_view"))
+    claim_boundary = _as_dict(continuation_view.get("claim_boundary"))
+    answers = _as_dict(continuation_view.get("answers"))
+    custody = _intent_custody_payload(
+        task_text=task_text,
+        task_intent=_as_dict(payload.get("task_intent")),
+        intent_evidence=_as_dict(intent_evidence) or _as_dict(payload.get("intent_evidence")),
+        active_intent_contract=active_intent_contract,
+        active_planning_record=active_planning_record,
+        durable_intent=_as_dict(payload.get("durable_intent")),
+        cli_invoke=config.cli_invoke,
+    )
+    completion_boundaries = _list_payload(_as_dict(custody.get("startup_projection")).get("completion_boundaries"))
+    anti_goals = _list_payload(_as_dict(custody.get("startup_projection")).get("anti_goals"))
+    if not anti_goals:
+        anti_goals = [
+            "do not claim parent, issue, or initiative closure from startup projection alone",
+            "do not treat this packet as a durable intent store",
+        ]
+    immediate = _as_dict(payload.get("immediate_next_allowed_action"))
+    proof = _as_dict(payload.get("proof"))
+    proof_boundary = (
+        proof.get("summary") or proof.get("next_proof") or immediate.get("next_proof") or "select proof after changed paths are known"
+    )
+    next_safe_action = {
+        key: immediate.get(key)
+        for key in ("action", "summary", "command", "risk", "next_proof")
+        if immediate.get(key) not in ("", None, [], {})
+    }
+    return {
+        "kind": "agentic-workspace/continuation-reorientation/v1",
+        "status": "required",
+        "trigger": {
+            "source": "planning.continuation_view",
+            "condition": "active-planning-present",
+            "present": True,
+            "rule": "Active Planning continuation/resume state upgrades startup from compact posture reminder to explicit reorientation packet.",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace summary --select continuation_view --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "repo_posture": repo_posture,
+        "active_intent_refs": _list_payload(custody.get("active_intent_refs")),
+        "completion_boundary": completion_boundaries[:4],
+        "anti_goals_or_omissions": anti_goals[:4],
+        "proof_claim_boundary": {
+            "proof": proof_boundary,
+            "claim_boundary": {
+                key: claim_boundary.get(key)
+                for key in ("status", "claim_level_allowed", "required_next_action", "active_intent_satisfied")
+                if claim_boundary.get(key) not in ("", None)
+            },
+            "claim_allowed": answers.get("claim_allowed"),
+        },
+        "next_safe_action": next_safe_action,
+        "startup_role": "projection-routing-only",
+        "not_durable_store": True,
+        "routing": {
+            "detail_selectors": ["continuation_view", "repo_posture", "intent_custody", "active_intent_contract"],
+            "owner_surface": "Planning active state and summary continuation_view",
+        },
+    }
+
+
 def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any]) -> dict[str, Any]:
     compact = {
         "kind": task_posture_packet.get("kind"),
@@ -17818,11 +18192,18 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
         },
         **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
+        **(
+            {"continuation_reorientation": payload["continuation_reorientation"]}
+            if isinstance(payload.get("continuation_reorientation"), dict)
+            and payload["continuation_reorientation"].get("status") == "required"
+            else {}
+        ),
         "routine_work_context": payload.get("routine_work_context", {}),
         "operating_posture": {
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
             "required_behavior_summary": payload.get("operating_posture", {}).get("required_behavior_summary", ""),
         },
+        "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
@@ -18439,13 +18820,17 @@ _START_TINY_ONLY_SELECTORS = {
     "cli_invocation",
     "context_router",
     "closeout_trust_inspection",
+    "continuation_reorientation",
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
     "issue_reference_intent",
+    "intent_custody",
+    "intent_elicitation_protocol",
     "next_safe_action",
     "planning_safety_gate",
     "planning_revision",
+    "repo_posture",
     "routine_work_context",
     "read_only_response",
     "skill_routing",
@@ -19061,6 +19446,11 @@ def _hydrate_selected_start_advisory_payloads(
                 cli_invoke=config.cli_invoke,
             ),
         )
+    if _selector_requests(select, "intent_elicitation_protocol"):
+        payload.setdefault(
+            "intent_elicitation_protocol",
+            _intent_elicitation_protocol_payload(task_text=task_text, cli_invoke=config.cli_invoke),
+        )
     if _selector_requests(select, "intent_acknowledgement"):
         if vague_orientation is None:
             vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
@@ -19072,6 +19462,42 @@ def _hydrate_selected_start_advisory_payloads(
                 execution_posture=execution_posture,
                 vague_orientation=vague_orientation,
             ),
+        )
+    if _selector_requests(select, "repo_posture"):
+        payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
+    if _selector_requests(select, "intent_custody"):
+        payload["intent_custody"] = _intent_custody_payload(
+            task_text=task_text,
+            task_intent=_as_dict(payload.get("task_intent")),
+            intent_evidence=_as_dict(payload.get("intent_evidence")),
+            active_intent_contract=_as_dict(payload.get("active_intent_contract")),
+            active_planning_record=_active_planning_record_for_report_section(target_root=target_root),
+            durable_intent=_as_dict(payload.get("durable_intent")),
+            cli_invoke=config.cli_invoke,
+        )
+    if _selector_requests(select, "continuation_reorientation"):
+        active_summary = _as_dict(payload.get("active_state_summary"))
+        active_planning_present = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
+        active_planning_record = (
+            _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root) if active_planning_present else {}
+        )
+        active_intent_contract = _as_dict(payload.get("active_intent_contract"))
+        if active_planning_present and active_intent_contract.get("status") != "present":
+            active_intent_contract = _active_intent_contract_payload(
+                task_text=task_text,
+                acceptance=_as_dict(payload.get("acceptance")),
+                active_planning_record=active_planning_record,
+            )
+        if active_planning_present and not isinstance(payload.get("continuation_view"), dict):
+            payload["continuation_view"] = _startup_continuation_view_payload(target_root=target_root)
+        payload["continuation_reorientation"] = _continuation_reorientation_payload(
+            config=config,
+            target_root=target_root,
+            active_planning_present=active_planning_present,
+            payload=payload,
+            task_text=task_text,
+            active_planning_record=active_planning_record,
+            active_intent_contract=active_intent_contract,
         )
     if _selector_requests(select, "closeout_trust_inspection"):
         payload.setdefault(
@@ -19185,9 +19611,12 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "acceptance",
         "durable_intent_promotion",
         "delegation_decision",
+        "repo_posture",
         "intent_discovery_dialogue",
+        "intent_elicitation_protocol",
         "intent_acknowledgement",
         "intent_evidence",
+        "intent_custody",
         "active_intent_contract",
         "intent_satisfaction_matrix",
         "issue_reference_intent",
@@ -19211,6 +19640,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "closeout_obligations",
         "routine_work_context",
         "continuation_view",
+        "continuation_reorientation",
         "read_only_response",
         "proof",
         "repair_plan_profile",
@@ -19221,9 +19651,13 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.acceptance",
         "context.durable_intent_promotion",
         "context.delegation_decision",
+        "context.repo_posture",
         "context.intent_discovery_dialogue",
+        "context.intent_elicitation_protocol",
         "context.intent_acknowledgement",
         "context.intent_evidence",
+        "context.intent_custody",
+        "context.continuation_reorientation",
         "context.active_intent_contract",
         "context.intent_satisfaction_matrix",
         "context.issue_reference_intent",
@@ -19624,6 +20058,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     if isinstance(payload.get("continuation_view"), dict):
         selected["continuation_view"] = payload["continuation_view"]
+    if isinstance(payload.get("continuation_reorientation"), dict) and payload["continuation_reorientation"].get("status") == "required":
+        selected["continuation_reorientation"] = payload["continuation_reorientation"]
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
         if (
@@ -19663,6 +20099,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "routine_work_context",
         "closeout_trust_inspection",
         "closeout_report_route",
+        "repo_posture",
+        "continuation_reorientation",
+        "intent_elicitation_protocol",
         "intent_discovery_dialogue",
         "vague_outcome_orientation",
         "intent_acknowledgement",
@@ -19795,6 +20234,7 @@ def _start_tiny_payload_fast(
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
+        "repo_posture": _compact_repo_posture_projection(_repo_posture_payload(config=config, surface="start", compact=True)),
         "skill_routing": _guidance_with_cli_invoke(
             value=_startup_skill_routing_payload(
                 cli_invoke=config.cli_invoke,
@@ -19909,6 +20349,17 @@ def _start_tiny_payload_fast(
     if active_intent_contract["status"] == "present":
         payload["active_intent_contract"] = active_intent_contract
         payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
+    if active_planning_present:
+        payload["continuation_reorientation"] = _continuation_reorientation_payload(
+            config=config,
+            target_root=target_root,
+            active_planning_present=True,
+            payload=payload,
+            task_text=task_text,
+            active_planning_record=active_parent_record,
+            active_intent_contract=active_intent_contract,
+            intent_evidence=payload.get("intent_evidence", {}),
+        )
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present
@@ -21647,6 +22098,24 @@ def _compact_intent_evidence(value: Any) -> dict[str, Any]:
     }
     compact["source_count"] = len(_list_payload(value.get("source_chain")))
     return compact
+
+
+def _compact_intent_custody_projection(value: Any) -> dict[str, Any]:
+    custody = _as_dict(value)
+    startup = _as_dict(custody.get("startup_projection"))
+    routing = _as_dict(custody.get("routing"))
+    compact = {
+        "kind": custody.get("kind", "agentic-workspace/intent-custody/v1"),
+        "status": custody.get("status", "available"),
+        "active_intent_refs": custody.get("active_intent_refs", []),
+        "completion_boundary_count": len(_list_payload(startup.get("completion_boundaries"))),
+        "anti_goals": _list_payload(startup.get("anti_goals"))[:3],
+        "freshness": startup.get("freshness", "unknown"),
+        "missing_or_ambiguous_route": routing.get("missing_or_ambiguous", "intent_elicitation_protocol"),
+        "detail_selector": "intent_custody",
+        "claim_rule": "Task/slice closure only unless matching initiative/repo/system records and proof are present.",
+    }
+    return {key: item for key, item in compact.items() if item not in ({}, [], "", None)}
 
 
 def _closeout_intent_evidence_payload(
@@ -26842,6 +27311,7 @@ def _task_posture_packet_payload(
         proof_boundaries = [str(item) for item in _list_payload(proof.get("proof_commands")) if str(item).strip()]
     if not proof_boundaries and planning_safety_gate.get("workflow_sufficient") is False:
         proof_boundaries = ["create or promote active Planning before selecting implementation proof"]
+    repo_posture = _repo_posture_payload(config=config, surface=surface, compact=True)
     closeout_boundaries = [
         str(planning_safety_gate.get("claim_boundary", {}).get("completion_claim") or ""),
         str(completion_gate.get("status") or ""),
@@ -26961,6 +27431,9 @@ def _task_posture_packet_payload(
                 "agent_may_deescalate": config.assurance.agent_may_deescalate,
             },
             "delegation_posture": delegation_posture,
+            "repo_posture_ref": repo_posture["ref"],
+            "repo_posture_digest": repo_posture["digest"],
+            "repo_posture_reminder": repo_posture["reminder"],
         },
         "workflow_obligations": relevant_obligations,
         "skill_routes": skill_routes,
@@ -26997,6 +27470,7 @@ def _task_posture_packet_payload(
             "proof_boundaries",
             "closeout_boundaries",
             "module_contributions",
+            "repo_posture_ref",
         ],
         "provenance_preserved": True,
     }
@@ -29513,8 +29987,11 @@ def _intent_discovery_dialogue_payload(
             "proceed_without_answer_when",
             "captured_intent_after_reply",
             "promotion_target",
+            "intent_records",
         ],
+        "intent_record_levels": ["task", "initiative", "repo", "system", "completion-boundary", "anti-goal", "unresolved-assumption"],
         "promotion_targets": ["task_intent", "acceptance", "durable_intent", "Memory", "Planning", "issue"],
+        "compact_custody_target": "intent_custody",
         "residue_rule": "Promote only the clarified intent, non-goals, first slice, and proof expectations; do not store raw brainstorming unless it materially helps continuation.",
     }
     examples = [
@@ -29571,6 +30048,18 @@ def _intent_discovery_dialogue_payload(
             "uncertainty": "agent-owned",
             "question_to_user": "",
             "proceed_without_answer_when": "After one bounded question, proceed only if the first slice is low-risk, reversible, and the stated assumptions are visible.",
+            "intent_records": [
+                {
+                    "intent_ref": "<stable compact identifier>",
+                    "level": "task|initiative|repo|system|completion-boundary|anti-goal|unresolved-assumption",
+                    "statement": "<intent or boundary>",
+                    "completion_boundary": "<closure condition>",
+                    "anti_goals": [],
+                    "unresolved_assumptions": [],
+                    "provenance": ["chat|issue|Planning|Memory|config|system-intent"],
+                    "freshness": "current|stale|unknown",
+                }
+            ],
         },
         "output_shape": output_shape,
         "loop_control": {
@@ -29585,6 +30074,7 @@ def _intent_discovery_dialogue_payload(
             "first_slice",
             "correction_point",
             "promotion_target",
+            "intent_records",
         ],
         "examples": examples,
         "authority_boundary": _authority_boundary_payload(
