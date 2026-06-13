@@ -1,0 +1,42 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1476-generated-python-operation-callables",
+  "title": "Promote migrated AW cases to generated Python operation callables",
+  "status": "completed",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+  "lane_outcome": "Applicable migrated AW conformance cases expose generated operation-shaped Python callable surfaces with registry symbol entries and python.function artifacts, replacing wrapper-smoke or cli.process as semantic proof where behavior is operation semantics.",
+  "purpose_for_parent": "Advances primitive, operation IR, generated implementation, wrapper, and conformance layers for the Python specimen target.",
+  "subsystems": [],
+  "technical_strategy": "Generated Python operation callables are supplied by command-generation and consumed by AW generated command packages as direct invoke(values) callables.",
+  "technology_choices": [],
+  "slice_sequence": [],
+  "current_slice": "lane-1476-generated-python-operation-callables",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Conformance runner uses python.function for applicable migrated AW cases; non-promoted cases have explicit wrapper-only or runtime-boundary rationale.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      ".agentic-workspace/planning/closeout-evidence/lane-1476-generated-python-operation-callables.closeout.json"
+    ],
+    "known_gaps": []
+  },
+  "residual_lane_work": "TypeScript direct operation support, target-extension contract, broader case conversion, wrapper demotion, ordinary-test inventory, and guardrails remain.",
+  "lane_to_epic_contribution": "Advances primitive, operation IR, generated implementation, wrapper, and conformance layers for the Python specimen target.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "completed",
+    "summary": "Applicable migrated AW defaults conformance now uses generated Python callable proof through python.function registry metadata.",
+    "residual_work": "Continue parent #1476 from the decomposition for target-extension, TypeScript adapter, broader case conversion, wrapper demotion, ordinary-test inventory, and guardrail lanes.",
+    "next_owner": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+      "label": "lane-1476-generated-python-operation-callables",
+      "role": "parent",
+      "locator": "candidate_lanes[1]"
+    }
+  ],
+  "notes": ""
+}

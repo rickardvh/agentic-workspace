@@ -13,8 +13,9 @@
       "operation_id": "defaults.report",
       "package_id": "root-workspace",
       "target": "python",
-      "adapter_id": "cli.process",
-      "proof_role": "wrapper-smoke",
+      "adapter_id": "python.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated.workspace.python.commands.defaults_report:invoke",
       "source_ref": "command_package_ir:root-workspace/defaults",
       "wrapper_refs": [
         "defaults.report.cli"
@@ -24,12 +25,13 @@
       ],
       "path_refs": [
         "generated/workspace/python/commands/defaults_report.py",
+        "generated/workspace/python/primitives/operation_executor.py",
         "src/agentic_workspace/contracts/operations/defaults.report.json",
         "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
       ],
       "stale_when": [
         "defaults.report operation contract changes",
-        "root-workspace defaults generated Python artifact changes",
+        "root-workspace defaults generated Python callable artifact changes",
         "defaults.selected-text.process conformance expectations change"
       ]
     },

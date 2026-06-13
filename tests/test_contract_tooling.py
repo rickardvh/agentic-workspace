@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -678,8 +679,12 @@ def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() 
         "cross-target-parity",
     }
     assert cases["defaults.selected-output.success"]["operation_ref"]["conformance_ref"] == "defaults.selected-text.process"
-    assert cases["defaults.selected-output.success"]["artifacts"][0]["adapter_id"] == "cli.process"
-    assert cases["defaults.selected-output.success"]["artifacts"][0]["proof_role"] == "wrapper-smoke"
+    assert cases["defaults.selected-output.success"]["artifacts"][0]["adapter_id"] == "python.function"
+    assert cases["defaults.selected-output.success"]["artifacts"][0]["proof_role"] == "operation-conformance"
+    assert cases["defaults.selected-output.success"]["expected"]["result"]["selected_fields"] == {
+        "kind": "agentic-workspace/selected-output/v1",
+        "source_command": "defaults",
+    }
     assert cases["config.invalid-format.error"]["expected"]["exit_code"] != 0
     assert cases["config.invalid-format.error"]["expected"]["error"] == {
         "kind": "invalid-choice",
@@ -797,7 +802,7 @@ def test_operation_conformance_test_ir_references_known_command_contracts() -> N
     bulk_preserving["migration_policy"]["do_not_preserve"] = ["old helper names"]
     assert any("one-for-one regression-test bulk" in error for error in module._validate_operation_conformance_test_ir(bulk_preserving))
     cli_default = copy.deepcopy(manifest)
-    cli_default["initial_cases"][0]["artifacts"][0].pop("proof_role")
+    cli_default["initial_cases"][1]["artifacts"][0].pop("proof_role")
     assert any(
         "cli.process artifacts must declare wrapper-smoke" in error for error in module._validate_operation_conformance_test_ir(cli_default)
     )
@@ -816,9 +821,9 @@ def test_operation_artifact_registry_routes_cases_and_proof_layers() -> None:
     assert list(Draft202012Validator(schema).iter_errors(registry)) == []
     assert module._validate_operation_artifact_registry(registry) == []
     artifacts = {artifact["artifact_id"]: artifact for artifact in registry["artifacts"]}
-    assert artifacts["root-workspace.defaults.python"]["adapter_id"] == "cli.process"
-    assert artifacts["root-workspace.defaults.python"]["proof_role"] == "wrapper-smoke"
-    assert "symbol" not in artifacts["root-workspace.defaults.python"]
+    assert artifacts["root-workspace.defaults.python"]["adapter_id"] == "python.function"
+    assert artifacts["root-workspace.defaults.python"]["proof_role"] == "operation-conformance"
+    assert artifacts["root-workspace.defaults.python"]["symbol"] == "generated.workspace.python.commands.defaults_report:invoke"
     assert artifacts["root-workspace.config.python"]["proof_role"] == "wrapper-smoke"
     assert "do not use wrapper execution as the default" in registry["proof_routing"]["rule"]
     assert {route["changed_surface"] for route in registry["proof_routing"]["routes"]} >= {
@@ -831,8 +836,13 @@ def test_operation_artifact_registry_routes_cases_and_proof_layers() -> None:
     }
 
     broken = copy.deepcopy(registry)
-    broken["artifacts"][0]["proof_role"] = "operation-conformance"
+    broken["artifacts"][1]["proof_role"] = "operation-conformance"
     assert any("cli.process must be wrapper-smoke" in error for error in module._validate_operation_artifact_registry(broken))
+    missing_symbol = copy.deepcopy(registry)
+    missing_symbol["artifacts"][0].pop("symbol")
+    assert any(
+        "direct function adapters must declare symbol" in error for error in module._validate_operation_artifact_registry(missing_symbol)
+    )
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
@@ -1151,15 +1161,22 @@ def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypa
 
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
     repo_root = Path(__file__).resolve().parents[1]
+    pyproject = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+    command_generation_rev = pyproject["tool"]["uv"]["sources"]["command-generation"]["rev"]
     python_dockerfile = repo_root / "generated" / "python" / "Dockerfile.conformance"
     python_text = python_dockerfile.read_text(encoding="utf-8")
+    primitive_python_text = (repo_root / "generated" / "python" / "Dockerfile.primitive-conformance").read_text(encoding="utf-8")
     dockerfile = repo_root / "generated" / "typescript.conformance.Dockerfile"
     text = dockerfile.read_text(encoding="utf-8")
 
     assert "scripts/check/check_generated_command_packages.py" in python_text
     assert "--python-conformance" in python_text
+    assert f"command-generation.git@{command_generation_rev}" in python_text
+    assert f"command-generation.git@{command_generation_rev}" in primitive_python_text
+    assert "ENV PYTHONPATH=/work:" in python_text
     assert "COPY src ./src" in python_text
     assert "COPY generated ./generated" in python_text
+    assert "COPY pyproject.toml ./pyproject.toml" in python_text
     assert "scripts/check/check_generated_command_packages.py" in text
     assert "--conformance" in text
     assert "--require-node" in text

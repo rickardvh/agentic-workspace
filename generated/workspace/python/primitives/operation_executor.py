@@ -8,6 +8,9 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -27,24 +30,10 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") not in {
-        'config.report',
-        'defaults.report',
-        'delegation-outcome.append',
-        'prompt.init',
-        'prompt.uninstall',
-        'prompt.upgrade',
-        'system-intent.sync'
-    }:
-        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
-    if operation.get("migration_status") != "runtime-consumed":
-        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
-
-    try:
-        values = run_operation_steps(
-            operation,
-            initial_values={
-                "operation_id": operation.get("id"),
+    values = run_operation_values(
+        operation,
+        initial_values={
+            "operation_id": operation.get("id"),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),
                 'adopt': getattr(args, 'adopt', False),
@@ -63,7 +52,61 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'sync': getattr(args, 'sync', False),
                 'target': getattr(args, 'target', None),
                 'task_class': getattr(args, 'task_class', None),
+        },
+    )
+    emitted = values.get('emitted')
+    if isinstance(emitted, str):
+        print(emitted, end='')
+    return 0
+
+
+def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any]) -> object:
+    with contextlib.redirect_stdout(io.StringIO()):
+        result = run_operation_values(
+            operation,
+            initial_values={
+                "operation_id": operation.get("id"),
+                'format': values.get('format', 'text'),
+                'verbose': values.get('verbose', False),
+                'adopt': values.get('adopt', False),
+                'agent_instructions_file': values.get('agent_instructions_file', None),
+                'delegation_target': values.get('delegation_target', None),
+                'escalation_required': values.get('escalation_required', False),
+                'handoff_sufficiency': values.get('handoff_sufficiency', None),
+                'module': values.get('module', None),
+                'non_interactive': values.get('non_interactive', False),
+                'outcome': values.get('outcome', None),
+                'prompt_command': values.get('prompt_command', None),
+                'preset': values.get('preset', None),
+                'review_burden': values.get('review_burden', None),
+                'section': values.get('section', None),
+                'select': values.get('select', None),
+                'sync': values.get('sync', False),
+                'target': values.get('target', None),
+                'task_class': values.get('task_class', None),
             },
+        ).get('result')
+    return result
+
+
+def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[str, Any]) -> dict[str, Any]:
+    if operation.get("id") not in {
+        'config.report',
+        'defaults.report',
+        'delegation-outcome.append',
+        'prompt.init',
+        'prompt.uninstall',
+        'prompt.upgrade',
+        'system-intent.sync'
+    }:
+        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
+    if operation.get("migration_status") != "runtime-consumed":
+        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
+
+    try:
+        return run_operation_steps(
+            operation,
+            initial_values=dict(initial_values),
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
                 'workspace.root.resolve': _handle_workspace_root_resolve,
@@ -82,12 +125,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'workspace.config.emit': _handle_workspace_config_emit,
             },
         )
-        emitted = values.get('emitted')
-        if isinstance(emitted, str):
-            print(emitted, end='')
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
-    return 0
 
 
 def _handle_workspace_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

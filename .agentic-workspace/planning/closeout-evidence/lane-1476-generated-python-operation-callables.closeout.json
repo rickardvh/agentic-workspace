@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Promote migrated AW cases to generated Python operation callables",
+  "plan_id": "lane-1476-generated-python-operation-callables",
+  "created_at": "2026-06-13T18:17:08.589974+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1476-generated-python-operation-callables.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1476-generated-python-operation-callables.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1476-generated-python-operation-callables",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json lane lane-1476-generated-python-operation-callables.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Generated Python command modules now expose operation-shaped invoke(values) callables from command-generation, AW pins that generator commit, defaults operation conformance uses python.function registry proof, and wrapper-only migrated cases retain explicit rationale.",
+    "scope touched": "command-generation generator commit pin, generated Python command packages, operation conformance contracts, generated package static/Docker proof, tiny startup/implement dogfood compactness",
+    "changed surfaces": "pyproject.toml; uv.lock; generated/**/python/**; generated/python/Dockerfile*; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/operation_*.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Slice implementation is complete: Python direct operation callable path is proven for the applicable migrated AW case. Parent #1476 remains represented by the decomposition for target-extension, TypeScript adapter, broader case conversion, wrapper demotion, ordinary-test inventory, and guardrail lanes.",
+    "proof status": "passed",
+    "intent served": "slice served; parent #1476 intent remains partial and routed to the decomposition.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+  },
+  "proof_report": {
+    "validation proof": "run_operation_conformance_tests.py --target python; check_generated_command_packages.py --python-conformance; check_generated_command_packages.py --python-docker-conformance --require-docker; generate_command_packages.py --check; check_contract_tooling_surfaces.py --quiet-success; check_structured_file_inventory.py --quiet-success; ruff check; pytest tests/test_workspace_cli.py -q; make lint-workspace; make test-workspace",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "#1476 requires an enforced end-to-end model where operation/primitive IR, contracts, and input-output cases generate implementation artifacts, wrappers, and conformance executors, while ordinary feature work changes IR/contracts/cases rather than generated executable code or one-off behavior regressions.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Applicable migrated AW conformance case defaults now has a generated Python callable symbol and python.function proof path; stdout wrapper leakage is guarded.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+          "owner": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

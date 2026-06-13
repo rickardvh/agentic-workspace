@@ -8,6 +8,9 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -27,44 +30,10 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") not in {
-        'planning.adopt.lifecycle',
-        'planning.archive-plan.lifecycle',
-        'planning.close-item.lifecycle',
-        'planning.closeout.lifecycle',
-        'planning.create-review.lifecycle',
-        'planning.delegation-decision.lifecycle',
-        'planning.doctor.report',
-        'planning.handoff.report',
-        'planning.init.lifecycle',
-        'planning.install.lifecycle',
-        'planning.intake-artifact.lifecycle',
-        'planning.lane-activate.lifecycle',
-        'planning.lane-archive.lifecycle',
-        'planning.lane-close.lifecycle',
-        'planning.lane-create.lifecycle',
-        'planning.lane-promote.lifecycle',
-        'planning.list-files.report',
-        'planning.new-plan.lifecycle',
-        'planning.promote-to-plan.lifecycle',
-        'planning.prompt.render',
-        'planning.reconcile.report',
-        'planning.report.report',
-        'planning.status.report',
-        'planning.summary.report',
-        'planning.uninstall.lifecycle',
-        'planning.upgrade.lifecycle',
-        'planning.verify-payload.report'
-    }:
-        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
-    if operation.get("migration_status") != "runtime-consumed":
-        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
-
-    try:
-        values = run_operation_steps(
-            operation,
-            initial_values={
-                "operation_id": operation.get("id"),
+    values = run_operation_values(
+        operation,
+        initial_values={
+            "operation_id": operation.get("id"),
                 'target': getattr(args, 'target', None),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),
@@ -141,7 +110,139 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'decomposition_adjustment': getattr(args, 'decomposition_adjustment', ''),
                 'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),
                 'paths': getattr(args, 'paths', []),
+        },
+    )
+    emitted = values.get('emitted')
+    if isinstance(emitted, str):
+        print(emitted, end='')
+    return 0
+
+
+def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any]) -> object:
+    with contextlib.redirect_stdout(io.StringIO()):
+        result = run_operation_values(
+            operation,
+            initial_values={
+                "operation_id": operation.get("id"),
+                'target': values.get('target', None),
+                'format': values.get('format', 'text'),
+                'verbose': values.get('verbose', False),
+                'task': values.get('task', None),
+                'changed': values.get('changed', []),
+                'apply_safe_prune': values.get('apply_safe_prune', False),
+                'dry_run': values.get('dry_run', False),
+                'item': values.get('item', ''),
+                'reason': values.get('reason', ''),
+                'issue': values.get('issue', ''),
+                'slug': values.get('slug', ''),
+                'title': values.get('title', ''),
+                'scope': values.get('scope', None),
+                'classification': values.get('classification', 'review'),
+                'render_markdown': values.get('render_markdown', False),
+                'prompt_command': values.get('prompt_command', ''),
+                'force': values.get('force', False),
+                'local': values.get('local', False),
+                'include_optional': values.get('include_optional', False),
+                'id': values.get('id', ''),
+                'source': values.get('source', ''),
+                'artifact': values.get('artifact', ''),
+                'activate': values.get('activate', False),
+                'queue': values.get('queue', False),
+                'switch_active': values.get('switch_active', False),
+                'prep_only': values.get('prep_only', False),
+                'overwrite': values.get('overwrite', False),
+                'remove_source': values.get('remove_source', False),
+                'item_id': values.get('item_id', ''),
+                'plan_slug': values.get('plan_slug', None),
+                'lane': values.get('lane', ''),
+                'parent_decomposition': values.get('parent_decomposition', ''),
+                'outcome': values.get('outcome', ''),
+                'purpose': values.get('purpose', ''),
+                'proof_strategy': values.get('proof_strategy', ''),
+                'current_slice': values.get('current_slice', ''),
+                'proof': values.get('proof', ''),
+                'residual_work': values.get('residual_work', ''),
+                'parent_contribution': values.get('parent_contribution', ''),
+                'parent_close_permission': values.get('parent_close_permission', 'may-advance-parent'),
+                'next_owner': values.get('next_owner', ''),
+                'plan': values.get('plan', None),
+                'apply_cleanup': values.get('apply_cleanup', False),
+                'prepare_closeout': values.get('prepare_closeout', False),
+                'retain_archive': values.get('retain_archive', False),
+                'parent_lane_closeout': values.get('parent_lane_closeout', None),
+                'closure_decision': values.get('closure_decision', None),
+                'intent_satisfied': values.get('intent_satisfied', None),
+                'unsolved_intent': values.get('unsolved_intent', None),
+                'intent_evidence': values.get('intent_evidence', None),
+                'closure_reason': values.get('closure_reason', None),
+                'closure_evidence': values.get('closure_evidence', None),
+                'reopen_trigger': values.get('reopen_trigger', None),
+                'discard_summary': values.get('discard_summary', None),
+                'continuation_summary': values.get('continuation_summary', None),
+                'claim_level': values.get('claim_level', 'slice'),
+                'intent_status': values.get('intent_status', 'satisfied'),
+                'residue': values.get('residue', 'none'),
+                'proof_from': values.get('proof_from', 'last'),
+                'proof_file': values.get('proof_file', None),
+                'residue_owner': values.get('residue_owner', None),
+                'what_happened': values.get('what_happened', None),
+                'scope_touched': values.get('scope_touched', None),
+                'changed_surfaces': values.get('changed_surfaces', None),
+                'review_summary': values.get('review_summary', None),
+                'outcome_summary': values.get('outcome_summary', None),
+                'discard_archive': values.get('discard_archive', False),
+                'route': values.get('route', ''),
+                'skipped_reason': values.get('skipped_reason', ''),
+                'expected_savings': values.get('expected_savings', ''),
+                'actual_friction': values.get('actual_friction', ''),
+                'proof_result': values.get('proof_result', ''),
+                'quality_concern': values.get('quality_concern', ''),
+                'decomposition_adjustment': values.get('decomposition_adjustment', ''),
+                'expect_planning_revision': values.get('expect_planning_revision', ''),
+                'paths': values.get('paths', []),
             },
+        ).get('result')
+    return result
+
+
+def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[str, Any]) -> dict[str, Any]:
+    if operation.get("id") not in {
+        'planning.adopt.lifecycle',
+        'planning.archive-plan.lifecycle',
+        'planning.close-item.lifecycle',
+        'planning.closeout.lifecycle',
+        'planning.create-review.lifecycle',
+        'planning.delegation-decision.lifecycle',
+        'planning.doctor.report',
+        'planning.handoff.report',
+        'planning.init.lifecycle',
+        'planning.install.lifecycle',
+        'planning.intake-artifact.lifecycle',
+        'planning.lane-activate.lifecycle',
+        'planning.lane-archive.lifecycle',
+        'planning.lane-close.lifecycle',
+        'planning.lane-create.lifecycle',
+        'planning.lane-promote.lifecycle',
+        'planning.list-files.report',
+        'planning.new-plan.lifecycle',
+        'planning.promote-to-plan.lifecycle',
+        'planning.prompt.render',
+        'planning.reconcile.report',
+        'planning.report.report',
+        'planning.status.report',
+        'planning.summary.report',
+        'planning.uninstall.lifecycle',
+        'planning.upgrade.lifecycle',
+        'planning.verify-payload.report'
+    }:
+        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
+    if operation.get("migration_status") != "runtime-consumed":
+        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
+
+    try:
+        return run_operation_steps(
+            operation,
+            initial_values=dict(initial_values),
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'planning.package-payload': _handle_context_root_planning_package_payload(),
                 'planning.package-skills': _handle_context_root_planning_package_skills(),
@@ -176,12 +277,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.verify-payload.load': _handle_planning_verify_payload_load,
             },
         )
-        emitted = values.get('emitted')
-        if isinstance(emitted, str):
-            print(emitted, end='')
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
-    return 0
 
 
 def _handle_context_root_planning_package_payload() -> Path:
