@@ -314,11 +314,14 @@ The package ships these payload files:
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/lanes/README.md`
+- `.agentic-workspace/planning/lanes/TEMPLATE.lane.json`
 - `.agentic-workspace/planning/schemas/planning-decomposition.schema.json`
 - `.agentic-workspace/planning/schemas/planning-execplan.schema.json`
 - `.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json`
 - `.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json`
 - `.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json`
+- `.agentic-workspace/planning/schemas/planning-lane.schema.json`
 - `.agentic-workspace/planning/schemas/planning-review.schema.json`
 
 The package also ships optional payload files that are not copied by default. Use `--include-optional` with `install`, `adopt`, or `upgrade` to copy them on purpose:

@@ -288,7 +288,9 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     (tmp_path / ".agentic-workspace").mkdir(parents=True)
     _write((tmp_path / ".agentic-workspace" / "WORKFLOW.md"), "# Workflow\n")
     _write((tmp_path / ".agentic-workspace" / "OWNERSHIP.toml"), "schema_version = 1\n")
+    _write((tmp_path / ".agentic-workspace" / "docs" / "jumpstart-contract.md"), "# Jumpstart Contract\n")
     _write((tmp_path / ".agentic-workspace" / "docs" / "module-map.md"), "# Installed Module Map\n")
+    _write((tmp_path / ".agentic-workspace" / "docs" / "setup-findings-contract.md"), "# Setup Findings Contract\n")
     _write(
         (tmp_path / ".agentic-workspace" / "skills" / "REGISTRY.json"),
         '{"schema_version":"skill-registry.v1","owner":"agentic-workspace","source_kind":"installed-workspace-skills","skills":[]}\n',
@@ -394,6 +396,7 @@ def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_p
         and ".agentic-workspace/memory/UPGRADE-SOURCE.toml" in action["detail"]
         for action in memory_report["actions"]
     )
+    assert not any(action["path"] == "AGENTS.md" and "--apply-local-entrypoint" in action["detail"] for action in memory_report["actions"])
 
 
 def test_doctor_text_output_shows_package_contract_shortlists(tmp_path: Path, capsys) -> None:
