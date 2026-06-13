@@ -2,6 +2,6 @@ FROM python:3.12
 
 WORKDIR /work
 
-RUN python -m pip install --no-cache-dir "command-generation @ git+https://github.com/rickardvh/command-generation.git@70392e88b1f4ce627c9e4d844869d1a1ea623723"
+RUN python -m pip install --no-cache-dir "command-generation @ git+https://github.com/rickardvh/command-generation.git@7a965c98dc978010ba810e006b9654f51434f3b7"
 
 CMD ["python", "-m", "command_generation.primitive_conformance"]
