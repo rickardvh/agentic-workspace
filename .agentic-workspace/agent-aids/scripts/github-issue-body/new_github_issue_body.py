@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ISSUE_TEMPLATE_ROOT = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
@@ -31,11 +32,50 @@ COMPLETION_BOUNDARY_FIELDS = {
     "evidence_required_for_final_completion",
 }
 
-SHELL_INTERPOLATION_RESIDUE_MARKERS = (
-    "$(@{",
-    "@{",
-    "System.Object[]",
-)
+ISSUE_BODY_REQUEST_SCHEMA = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["kind", "template", "fields"],
+    "additionalProperties": False,
+    "properties": {
+        "kind": {"const": "agentic-workspace/issue-body-request/v1"},
+        "template": {"enum": sorted(TEMPLATE_BY_KIND)},
+        "title": {"type": "string"},
+        "fields": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+                "type": "object",
+                "required": ["kind", "value"],
+                "additionalProperties": False,
+                "properties": {
+                    "kind": {"enum": ["markdown", "text", "scalar"]},
+                    "value": {"type": "string"},
+                },
+            },
+        },
+        "source_refs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["kind"],
+                "additionalProperties": {"type": ["string", "number", "boolean"]},
+                "properties": {
+                    "kind": {"type": "string", "minLength": 1},
+                    "id": {"type": "string"},
+                    "path": {"type": "string"},
+                    "url": {"type": "string"},
+                },
+                "anyOf": [
+                    {"required": ["id"]},
+                    {"required": ["path"]},
+                    {"required": ["url"]},
+                ],
+            },
+        },
+    },
+}
+ISSUE_BODY_REQUEST_VALIDATOR = Draft202012Validator(ISSUE_BODY_REQUEST_SCHEMA)
 
 
 def _parse_field(value: str) -> tuple[str, str]:
@@ -48,27 +88,16 @@ def _parse_field(value: str) -> tuple[str, str]:
     return key, field_value
 
 
-def _shell_interpolation_residue(value: str) -> str:
-    for marker in SHELL_INTERPOLATION_RESIDUE_MARKERS:
-        if marker in value:
-            return marker
-    return ""
-
-
-def _validate_field_values(fields: dict[str, str]) -> None:
-    for field_id, value in fields.items():
-        marker = _shell_interpolation_residue(value)
-        if marker:
-            raise ValueError(
-                f"field {field_id!r} contains shell interpolation residue {marker!r}; "
-                "render the value from structured data before publishing the issue body"
-            )
-
-
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render a GitHub issue body from this repo's issue-form templates.")
-    parser.add_argument("--kind", required=True, choices=sorted(TEMPLATE_BY_KIND), help="Issue template kind to render.")
+    parser.add_argument("--kind", choices=sorted(TEMPLATE_BY_KIND), help="Issue template kind to render.")
     parser.add_argument("--title", default="", help="Issue title without the template prefix.")
+    parser.add_argument(
+        "--input-json",
+        default="",
+        metavar="PATH",
+        help="Read an agentic-workspace/issue-body-request/v1 JSON request from PATH, or '-' for stdin.",
+    )
     parser.add_argument(
         "--field",
         action="append",
@@ -175,8 +204,64 @@ def _completion_boundary_default(*, field_id: str, fields: dict[str, str]) -> st
     return ""
 
 
+def _load_request(path: str) -> dict[str, Any]:
+    try:
+        raw = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8")
+        payload = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read issue body request JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("issue body request must be a JSON object")
+    return payload
+
+
+def _request_fields(payload: dict[str, Any]) -> dict[str, str]:
+    raw_fields = payload.get("fields")
+    if not isinstance(raw_fields, dict):
+        raise ValueError("issue body request must contain object field 'fields'")
+    fields: dict[str, str] = {}
+    for field_id, field_payload in raw_fields.items():
+        normalized_id = str(field_id).strip()
+        if not normalized_id:
+            raise ValueError("issue body request field ids must not be blank")
+        if not isinstance(field_payload, dict):
+            raise ValueError(f"field {normalized_id!r} must be an object with kind and value")
+        field_kind = str(field_payload.get("kind", "")).strip()
+        if field_kind not in {"markdown", "text", "scalar"}:
+            raise ValueError(f"field {normalized_id!r} kind must be one of markdown, text, or scalar")
+        value = field_payload.get("value")
+        if not isinstance(value, str):
+            raise ValueError(f"field {normalized_id!r} value must be a string")
+        fields[normalized_id] = value
+    return fields
+
+
+def validate_issue_body_request(payload: dict[str, Any]) -> dict[str, Any]:
+    schema_errors = sorted(ISSUE_BODY_REQUEST_VALIDATOR.iter_errors(payload), key=lambda error: list(error.path))
+    if schema_errors:
+        error = schema_errors[0]
+        location = ".".join(str(part) for part in error.path) or "<root>"
+        raise ValueError(f"issue body request schema error at {location}: {error.message}")
+    template = str(payload["template"]).strip()
+    title = str(payload.get("title", ""))
+    source_refs = payload.get("source_refs", [])
+    return {
+        "template": template,
+        "title": title,
+        "fields": _request_fields(payload),
+        "source_refs": source_refs,
+    }
+
+
+def render_issue_request(payload: dict[str, Any]) -> dict[str, Any]:
+    request = validate_issue_body_request(payload)
+    rendered = render_issue(kind=request["template"], title=request["title"], fields=request["fields"])
+    rendered["request_kind"] = "agentic-workspace/issue-body-request/v1"
+    rendered["source_refs"] = request["source_refs"]
+    return rendered
+
+
 def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, Any]:
-    _validate_field_values(fields)
     template = _load_template(kind)
     title_prefix = str(template.get("title", "")).strip()
     labels = template.get("labels", [])
@@ -217,9 +302,16 @@ def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    fields = dict(args.field)
     try:
-        rendered = render_issue(kind=args.kind, title=args.title, fields=fields)
+        if args.input_json:
+            if args.kind or args.field:
+                raise ValueError("--input-json must not be combined with --kind or --field")
+            rendered = render_issue_request(_load_request(args.input_json))
+        else:
+            if not args.kind:
+                raise ValueError("--kind is required unless --input-json is supplied")
+            fields = dict(args.field)
+            rendered = render_issue(kind=args.kind, title=args.title, fields=fields)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if args.format == "json":

@@ -22,7 +22,7 @@
   },
   "validation": {
     "commands": [
-      "uv run python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --kind direction --field problem_intent=Example --field intended_outcome=Example --field larger_picture=Example --field scope=Example --field acceptance=Example --format json"
+      "uv run python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --input-json .agentic-workspace/agent-aids/scripts/github-issue-body/examples/direction-request.json --format json"
     ]
   },
   "promotion": {

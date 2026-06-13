@@ -138,18 +138,55 @@ def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
     assert rendered["duplicate_prefix_normalized"] is True
 
 
-def test_issue_body_rejects_shell_interpolation_residue() -> None:
-    try:
-        issue_body.render_issue(
-            kind="direction",
-            title="Malformed lane body",
-            fields={
-                "problem_intent": "Lane id: $(@{id=lane-example; readiness=ready}.id)",
-                "intended_outcome": "Avoid publishing shell residue.",
+def test_issue_body_renders_typed_structured_request() -> None:
+    rendered = issue_body.render_issue_request(
+        {
+            "kind": "agentic-workspace/issue-body-request/v1",
+            "template": "direction",
+            "title": "Structured lane body",
+            "fields": {
+                "problem_intent": {
+                    "kind": "markdown",
+                    "value": "Create issue bodies from typed request data instead of shell-composed strings.",
+                },
+                "intended_outcome": {
+                    "kind": "markdown",
+                    "value": "Planning-derived issue bodies render from structured data.",
+                },
+                "acceptance": {
+                    "kind": "markdown",
+                    "value": "The generated body carries template headings and source refs.",
+                },
             },
+            "source_refs": [
+                {
+                    "kind": "planning-lane",
+                    "id": "lane-example",
+                    "path": ".agentic-workspace/planning/lanes/lane-example.lane.json",
+                }
+            ],
+        }
+    )
+
+    assert rendered["request_kind"] == "agentic-workspace/issue-body-request/v1"
+    assert rendered["title"] == "[Workspace]: Structured lane body"
+    assert rendered["source_refs"][0]["id"] == "lane-example"
+    assert "## Problem / intent\nCreate issue bodies from typed request data" in rendered["body"]
+    assert "## Final satisfaction\nFinal completion requires satisfying: Planning-derived issue bodies" in rendered["body"]
+
+
+def test_issue_body_request_rejects_untyped_fields() -> None:
+    try:
+        issue_body.render_issue_request(
+            {
+                "kind": "agentic-workspace/issue-body-request/v1",
+                "template": "direction",
+                "title": "Untyped body",
+                "fields": {"problem_intent": "shell-composed scalar"},
+            }
         )
     except ValueError as exc:
-        assert "shell interpolation residue" in str(exc)
+        assert "schema error" in str(exc)
         assert "problem_intent" in str(exc)
     else:
-        raise AssertionError("render_issue should reject unevaluated shell interpolation residue")
+        raise AssertionError("render_issue_request should require typed field objects")
