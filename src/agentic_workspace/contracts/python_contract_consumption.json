@@ -165,6 +165,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "target_support.json",
+      "schema": "target_support.schema.json",
+      "loader": "target_support_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "workflow_definition_format.json",
       "schema": "workflow_definition_format.schema.json",
       "loader": "workflow_definition_format_manifest",

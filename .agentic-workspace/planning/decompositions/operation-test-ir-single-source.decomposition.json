@@ -52,9 +52,9 @@
     {
       "id": "lane-1476-target-extension-contract",
       "title": "Consume target-extension contract from command-generation",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "AW records and proves that new targets declare projection rules, runtime dependencies, adapter or wrapper shape, packaging, conformance execution, support declaration, and target-runtime quirks without owning product operation semantics or per-operation feature logic.",
-      "owner_surface": "command-generation#14 target-extension contract and AW target-support consumption/guardrail surfaces",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-1476-target-extension-contract.lane.json",
       "proof": "A target-support declaration can place a target into applicable generated artifacts and conformance cases once implementation exists; checks prevent targets from becoming per-operation maintenance surfaces.",
       "slice_contribution_to_parent": "Clarifies the target-extension layer and keeps reusable target machinery out of AW-specific runtime code.",
       "residual_parent_intent": "Actual TypeScript direct operation adapter and broader conformance case conversion may remain after the contract is consumed.",

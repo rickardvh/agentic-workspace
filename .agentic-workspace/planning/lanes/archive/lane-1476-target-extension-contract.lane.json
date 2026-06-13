@@ -1,0 +1,107 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1476-target-extension-contract",
+  "title": "Consume target-extension contract from command-generation",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+  "lane_outcome": "AW records and proves that new targets declare projection rules, runtime dependencies, adapter or wrapper shape, packaging, conformance execution, support declaration, and target-runtime quirks without owning product operation semantics or per-operation feature logic.",
+  "purpose_for_parent": "Clarifies the target-extension layer and keeps reusable target machinery out of AW-specific runtime code.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [],
+  "current_slice": "",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "A target-support declaration can place a target into applicable generated artifacts and conformance cases once implementation exists; checks prevent targets from becoming per-operation maintenance surfaces.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "AW target_support.json consumes command-generation target-extension contracts; contract tooling validates CG API consumption, implemented Python projection, planned TypeScript exclusion, and semantic-ownership rejection. Proof: doctor planning healthy; tests/test_contract_tooling.py 71 passed; contract tooling check passed; structured inventory passed after staging; generated command package and schema-reference checks passed; maintainer surfaces, lint-workspace, and test-workspace passed."
+    ],
+    "known_gaps": [
+      "No residual work for #1480. Remaining #1476 work stays in the decomposition lanes for TypeScript direct operation conformance, IR-backed conformance cases, wrapper demotion/test boundary, and closure guardrails."
+    ]
+  },
+  "residual_lane_work": "No residual work for #1480. Remaining #1476 work stays in the decomposition lanes for TypeScript direct operation conformance, IR-backed conformance cases, wrapper demotion/test boundary, and closure guardrails.",
+  "lane_to_epic_contribution": "Clarifies the target-extension layer and proves AW consumes reusable command-generation target support without target-specific product operation semantics or per-operation feature maintenance.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Clarifies the target-extension layer and proves AW consumes reusable command-generation target support without target-specific product operation semantics or per-operation feature maintenance.",
+    "residual_work": "No residual work for #1480. Remaining #1476 work stays in the decomposition lanes for TypeScript direct operation conformance, IR-backed conformance cases, wrapper demotion/test boundary, and closure guardrails.",
+    "next_owner": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+      "label": "lane-1476-target-extension-contract",
+      "role": "parent",
+      "locator": "candidate_lanes[2]"
+    }
+  ],
+  "notes": "",
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "lane-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+      "created_or_required": true,
+      "reason": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  }
+}

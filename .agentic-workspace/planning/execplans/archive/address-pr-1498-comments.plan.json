@@ -1,0 +1,382 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Address PR 1498 dependency review comment",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Address the PR #1498 dependency review comment by repinning AW to the current command-generation target-extension contract head after the CG review fix.",
+    "hard_constraints": "Do not merge upstream PRs. Keep #1476 parent continuity unchanged and avoid claiming the stable merged CG repin until command-generation#17 is actually merged.",
+    "agent_may_decide": "Update the temporary CG pin to the current PR head, refresh the lockfile, run target-extension proof, and record remaining dependency state.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Update the command-generation pin to 70392e88b1f4ce627c9e4d844869d1a1ea623723 and rerun contract/tooling proof.",
+    "proof_expectations": [
+      "Contract tooling validates target-support consumption against the updated command-generation pin.",
+      "Focused tests and generated freshness checks pass after lockfile refresh.",
+      "Planning closeout records that final stable merged repin remains dependent on command-generation#17 merging."
+    ],
+    "touched_scope": [
+      "pyproject.toml",
+      "uv.lock",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/address-pr-1498-comments.plan.json"
+    ],
+    "completion_criteria": [
+      "Address PR 1498 dependency review comment is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Address the PR #1498 dependency review comment by repinning AW to the current command-generation target-extension contract head after the CG review fix."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Address the PR #1498 dependency review comment by repinning AW to the current command-generation target-extension contract head after the CG review fix.",
+      "constraints": "Do not merge upstream PRs. Keep #1476 parent continuity unchanged and avoid claiming the stable merged CG repin until command-generation#17 is actually merged.",
+      "latitude": "Update the temporary CG pin to the current PR head, refresh the lockfile, run target-extension proof, and record remaining dependency state.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "address-pr-1498-comments",
+      "status": "completed",
+      "next_step": "Continue via command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "pyproject.toml",
+        "uv.lock",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/address-pr-1498-comments.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Address the PR #1498 dependency review comment while keeping the final stable repin dependent on command-generation#17 being merged.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "activation trigger": "when the continuation owner promotes the next slice"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs."
+  },
+  "intent_interpretation": {
+    "literal request": "Address PR 1498 dependency review comment",
+    "inferred intended outcome": "Both PRs have review-comment updates pushed or ready to push; AW still requires a follow-up repin after CG #17 is merged if the merged SHA differs.",
+    "chosen concrete what": "Update pyproject/uv.lock to the current CG PR head and rerun contract/tooling proof.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "pyproject.toml, uv.lock, and the narrow Planning execplan/state records for this review-fix slice.",
+    "max changed files": "4 files unless lockfile refresh requires deterministic dependency metadata.",
+    "required validation commands": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Repin AW to current CG PR head; after CG #17 merges, repin again to the merged commit if it differs.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Address the PR #1498 dependency review comment by repinning AW to the current command-generation target-extension contract head after the CG review fix.",
+    "hard constraints": "Do not merge upstream PRs. Keep #1476 parent continuity unchanged and avoid claiming the stable merged CG repin until command-generation#17 is actually merged.",
+    "agent may decide locally": "Update the temporary CG pin to the current PR head, refresh the lockfile, run target-extension proof, and record remaining dependency state.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "address-pr-1498-comments",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Update the command-generation pin to 70392e88b1f4ce627c9e4d844869d1a1ea623723 and rerun contract/tooling proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "pyproject.toml",
+    "uv.lock",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/address-pr-1498-comments.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Address PR 1498 dependency review comment is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "CG PR #17 now has a schema-copy regression test proving schemas/target_extension.schema.json matches the packaged src/command_generation/schemas copy. AW PR #1498 is repinned from b178a980 to the new CG PR head 70392e88 and generated conformance Docker install refs match.",
+    "scope touched": "CG tests/test_public_api.py; AW pyproject.toml, uv.lock, generated conformance Dockerfiles, and Planning review-fix closeout.",
+    "changed surfaces": "CG schema-copy test; AW command-generation pin and generated conformance install refs.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "next step": "promote the next bounded slice from command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "CG review comment is addressed by drift-proofing the duplicate schema copies. AW dependency comment is addressed up to the current PR-head repin; final stable merged-commit repin remains intentionally owned by command-generation#17 merge state.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=deferred-with-owner keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "CG: uv run pytest tests/test_public_api.py -q; uv run ruff check src tests; uv run pytest -q. AW: uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; make lint-workspace; make test-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Address the PR #1498 dependency review comment while preserving the dependency boundary on command-generation#17.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+  },
+  "execution_summary": {
+    "outcome delivered": "Both PRs have review-comment updates pushed or ready to push; AW still requires a follow-up repin after CG #17 is merged if the merged SHA differs.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs.",
+    "motivation worth preserving": "Future agents should continue from command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs rather than rediscover this closeout residue.",
+    "canonical owner now": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "proposed durable intent": "Future agents should continue from command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status deferred-with-owner.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+          "owner": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-13: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+    },
+    "continuation": {
+      "owner_surface": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs",
+      "created_or_required": true,
+      "reason": "command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Address the PR #1498 dependency review comment while preserving the dependency boundary on command-generation#17.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: CG: uv run pytest tests/test_public_api.py -q; uv run ruff check src tests; uv run pytest -q. AW: uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; make lint-workspace; make test-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json\nChanged surfaces: CG schema-copy test; AW command-generation pin and generated conformance install refs.\nDurable residue: planning (command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs)\nMemory learning: route_to_planning\nFollow-up: command-generation#17 merge, then AW PR #1498 repin to merged CG commit if it differs\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+  }
+}

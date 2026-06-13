@@ -11,6 +11,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from command_generation import target_support_matrix_entries, validate_target_extension_contract
 from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 from jsonschema import Draft202012Validator
 
@@ -178,6 +179,40 @@ def test_generated_behavior_stratification_declares_layers_and_retained_boundari
         assert entry["conversion_or_retirement_condition"]
         assert entry["accepted_direct_edit_reasons"]
         assert entry["stale_when"]
+
+
+def test_target_support_consumes_command_generation_extension_contract() -> None:
+    manifest = contract_tooling.target_support_manifest()
+    schema = contract_tooling.contract_schema("target_support.schema.json")
+    assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
+
+    contracts = {contract["target_id"]: contract for contract in manifest["contracts"]}
+    for contract in contracts.values():
+        validate_target_extension_contract(contract)
+        assert contract["product_semantics_boundary"]["target_owns_product_semantics"] is False
+        assert contract["maintenance_boundary"]["per_operation_feature_maintenance"] is False
+
+    matrix_entries = target_support_matrix_entries(
+        manifest["contracts"],
+        operation_id="defaults.report",
+        case_id="defaults.selected-output.success",
+    )
+    assert [entry["target_id"] for entry in matrix_entries] == ["python"]
+    assert matrix_entries[0]["adapter_id"] == "python.function"
+    assert contracts["typescript"]["implementation_status"] == "planned"
+
+
+def test_target_support_checker_rejects_semantic_target_ownership() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    manifest = copy.deepcopy(contract_tooling.target_support_manifest())
+    manifest["contracts"][0]["product_semantics_boundary"]["target_owns_product_semantics"] = True
+
+    assert any("target_owns_product_semantics" in error for error in module._validate_target_support(manifest))
 
 
 def test_proof_selection_contract_owns_supplemental_lanes() -> None:

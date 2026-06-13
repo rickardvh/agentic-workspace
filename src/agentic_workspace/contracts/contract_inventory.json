@@ -430,6 +430,17 @@
       "notes": "Authoritative #1476 layer model defines primitive, operation IR, generated implementation, target-extension, wrapper/adapter, conformance-case, and retained ordinary-test boundaries, including the required owner/proof/keep/retirement fields for retained hand-owned code and tests."
     },
     {
+      "area": "target_support",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/target_support.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "command-generation target-extension contract",
+        "future #1481 TypeScript direct-operation support"
+      ],
+      "notes": "AW target-support declarations consume command-generation target-extension contracts so implemented targets can enter the semantic conformance matrix without target-specific product semantics or per-operation feature maintenance."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
