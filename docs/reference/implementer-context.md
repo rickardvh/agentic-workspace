@@ -18,6 +18,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
 | `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
+| `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
 | `task_posture_packet.allowed_actions` | array of string | yes |  | Actions allowed under the resolved posture. |  |  |
 | `task_posture_packet.forbidden_actions` | array of string | yes |  | Actions forbidden under the resolved posture. |  |  |

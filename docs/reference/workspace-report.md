@@ -61,6 +61,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
 | `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
+| `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
 | `task_posture_packet.allowed_actions` | array of string | yes |  | Actions allowed under the resolved posture. |  |  |
 | `task_posture_packet.forbidden_actions` | array of string | yes |  | Actions forbidden under the resolved posture. |  |  |
@@ -211,6 +212,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `discovery` | object | yes |  | Discovery hints for relevant repo surfaces and compact commands. |  |  |
 | `standing_intent` | object | yes |  | Standing intent details used by this contract. |  |  |
 | `improvement_intake` | object | yes |  | Improvement intake details used by this contract. |  |  |
+| `improvement_pressure` | object | yes |  | Derived improvement-pressure lifecycle records and active posture obligations compiled from improvement intake. |  |  |
 | `repo_friction` | object | yes |  | Repo friction details used by this contract. |  |  |
 | `registry` | array | yes |  | Ordered registry entries used by this contract. |  |  |
 | `config` | object | yes |  | Config details used by this contract. |  |  |

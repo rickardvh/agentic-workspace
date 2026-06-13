@@ -18,6 +18,9 @@
     "correct_by_design_review",
     "confidence",
     "recurrence",
+    "lifecycle_states",
+    "lifecycle_rule",
+    "retirement_criteria_fields",
     "immediate_actions",
     "retention",
     "destinations",
@@ -218,6 +221,36 @@
         "description": "One entry in the recurrence list."
       },
       "description": "Ordered recurrence entries used by this contract."
+    },
+    "lifecycle_states": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "active",
+          "mitigated",
+          "accepted-risk",
+          "promoted-to-issue",
+          "obsolete"
+        ],
+        "description": "One entry in the lifecycle states list."
+      },
+      "description": "Ordered lifecycle states entries used by this contract."
+    },
+    "lifecycle_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Policy rule that explains how improvement pressure lifecycle state affects routing."
+    },
+    "retirement_criteria_fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "One entry in the retirement criteria fields list."
+      },
+      "description": "Fields that explain what retires or promotes an improvement pressure record."
     },
     "immediate_actions": {
       "type": "array",

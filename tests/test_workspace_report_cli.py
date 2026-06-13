@@ -7365,6 +7365,8 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
+    (target / "src").mkdir()
+    (target / "src" / "large_surface.py").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n")
     (target / "tools").mkdir()
     (target / "tools" / "setup-findings.json").write_text(
         json.dumps(
@@ -7384,6 +7386,21 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                         "recurrence": "repeated",
                         "validation_failure_class": "interface_design_error",
                         "refs": [".agentic-workspace/docs/reporting-contract.md"],
+                    },
+                    {
+                        "class": "repo_friction_evidence",
+                        "summary": "Old validation pressure was mitigated by a writer helper.",
+                        "confidence": 0.9,
+                        "path": "generated/workspace/python/review_writer.py",
+                        "observed_during": "uv run pytest tests/test_workspace_cli.py",
+                        "signal_kind": "validation_friction",
+                        "cost": "Previously repeated hand-authored shape repair.",
+                        "suspected_owner": "agentic-workspace review writer",
+                        "likely_remediation": "writer_helper",
+                        "recurrence": "repeated",
+                        "validation_failure_class": "interface_design_error",
+                        "pressure_state": "mitigated",
+                        "retire_when": "writer helper constructs the required shape",
                     },
                     {
                         "class": "repo_friction_evidence",
@@ -7414,16 +7431,41 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     assert setup_findings["items"][0]["validation_failure_class"] == "interface_design_error"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
     signal = payload["improvement_intake"]["improvement_signal_candidates"][0]
+    signals_by_owner = {signal["suspected_owner"]: signal for signal in payload["improvement_intake"]["improvement_signal_candidates"]}
+    signal = signals_by_owner["agentic-workspace create-review"]
     assert signal["kind"] == "validation_friction"
     assert signal["observed_during"] == "uv run pytest tests/test_workspace_cli.py"
-    assert signal["suspected_owner"] == "agentic-workspace create-review"
     assert signal["likely_remediation"] == "scaffold"
     assert signal["recurrence"] == "repeated"
     assert signal["validation_failure_class"] == "interface_design_error"
+    assert signals_by_owner["agentic-workspace review writer"]["pressure_state"] == "mitigated"
     assert payload["improvement_intake"]["setup_findings"]["status"] == "loaded"
-    assert payload["improvement_intake"]["setup_findings"]["loaded_count"] == 2
-    assert payload["improvement_intake"]["setup_findings"]["promotable_counts"]["repo_friction_evidence"] == 1
+    assert payload["improvement_intake"]["setup_findings"]["loaded_count"] == 3
+    assert payload["improvement_intake"]["setup_findings"]["promotable_counts"]["repo_friction_evidence"] == 2
     assert payload["improvement_intake"]["setup_findings"]["transient_count"] == 1
+    pressure = payload["improvement_pressure"]
+    assert pressure["lifecycle_states"] == ["active", "mitigated", "accepted-risk", "promoted-to-issue", "obsolete"]
+    assert pressure["status"] == "active"
+    active_obligations = {item["id"]: item for item in pressure["posture_obligations"]}
+    assert len(active_obligations) >= 2
+    assert any(
+        item["effect"] == "require correct-by-design assessment before broad completion claim" for item in active_obligations.values()
+    )
+    assert any(
+        item["effect"] == "route or dismiss owner before treating the friction signal as closed" for item in active_obligations.values()
+    )
+    mitigated = [record for record in pressure["records"] if record["state"] == "mitigated"]
+    assert mitigated
+    assert mitigated[0]["id"] not in pressure["active_record_refs"]
+    packet = payload["task_posture_packet"]
+    assert packet["improvement_obligations"] == pressure["posture_obligations"]
+    assert "claim completion before improvement obligation is resolved" in packet["forbidden_actions"]
+    assert packet["next_allowed_action"] in {
+        "record improvement obligation adherence",
+        "route active improvement pressure or record accepted-risk",
+    }
+    assert any("correct_by_design_assessment" in boundary for boundary in packet["proof_boundaries"])
+    assert packet["posture_adherence"]["improvement_obligation_adherence"][0]["status"] == "unresolved"
 
 
 def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, capsys) -> None:

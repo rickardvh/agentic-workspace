@@ -135,6 +135,21 @@
     "repeated",
     "human_confirmed"
   ],
+  "lifecycle_states": [
+    "active",
+    "mitigated",
+    "accepted-risk",
+    "promoted-to-issue",
+    "obsolete"
+  ],
+  "lifecycle_rule": "Only active pressure may compile into posture obligations or next-action pressure; mitigated, accepted-risk, promoted, and obsolete pressure remains quiet except for compact provenance and audit detail.",
+  "retirement_criteria_fields": [
+    "state",
+    "retire_when",
+    "resulting_owner",
+    "posture_obligation_ref",
+    "evidence_ref"
+  ],
   "immediate_actions": [
     "fix_now",
     "route",
