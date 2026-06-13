@@ -1,0 +1,105 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1476-authoritative-stratification-contract",
+  "title": "Define authoritative generated-behavior stratification",
+  "status": "archived",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+  "lane_outcome": "A checked AW contract, schema, inventory, or equivalent durable surface defines primitive, operation IR, generated artifact, target-extension, wrapper, conformance case, and ordinary-test layers, including allowed ownership of executable code and ordinary tests.",
+  "purpose_for_parent": "Creates the authority model needed before promotion of operation callables, conformance cases, wrapper demotion, and closure inventory.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [],
+  "current_slice": "lane-1476-authoritative-stratification-contract",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Contract/schema/inventory validation plus tests or checks showing retained hand-owned primitives/tests have owner, proof route, keep reason, and conversion or retirement condition.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "Schema-backed generated_behavior_stratification manifest plus contract-tooling semantic validation, focused tests, structured inventory, ruff, schema-reference docs, lint-workspace, maintainer-surfaces, and full workspace tests after lane deactivation."
+    ],
+    "known_gaps": []
+  },
+  "residual_lane_work": "none; parent #1476 residual work remains routed to #1479, #1480, #1481, #1482, #1483, and #1484.",
+  "lane_to_epic_contribution": "Defines the authoritative #1476 layer model for primitive, operation IR, generated implementation, target-extension, wrapper/adapter, conformance-case, and retained ordinary-test boundaries, including required owner/proof/keep/retirement fields for retained hand-owned runtime/test boundaries.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "closed",
+    "summary": "Defines the authoritative #1476 layer model for primitive, operation IR, generated implementation, target-extension, wrapper/adapter, conformance-case, and retained ordinary-test boundaries, including required owner/proof/keep/retirement fields for retained hand-owned runtime/test boundaries.",
+    "residual_work": "none for this lane; parent #1476 residual work remains routed to #1479, #1480, #1481, #1482, #1483, and #1484.",
+    "next_owner": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+      "label": "lane-1476-authoritative-stratification-contract",
+      "role": "parent",
+      "locator": "candidate_lanes[0]"
+    }
+  ],
+  "notes": "",
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "lane-complete",
+    "claim_level_allowed": "lane-complete",
+    "required_next_action": "promote-next-parent-lane-when-ready",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete"
+      ],
+      "blocked_claim_classes": [
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "Parent #1476 remains routed to #1479/#1480/#1481/#1482/#1483/#1484.",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "The lane outcome is satisfied by the checked stratification contract and proof; the parent epic has separate residual lanes."
+    },
+    "continuation": {
+      "owner_surface": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+      "created_or_required": true,
+      "reason": "Parent #1476 residual work remains outside this lane."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  }
+}

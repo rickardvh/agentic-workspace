@@ -308,6 +308,10 @@ def operation_artifact_registry_manifest() -> dict[str, Any]:
     return load_validated_contract_json("operation_artifact_registry.json", "operation_artifact_registry.schema.json")
 
 
+def generated_behavior_stratification_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("generated_behavior_stratification.json", "generated_behavior_stratification.schema.json")
+
+
 def lifecycle_generation_readiness_manifest() -> dict[str, Any]:
     return load_validated_contract_json("lifecycle_generation_readiness.json", "lifecycle_generation_readiness.schema.json")
 

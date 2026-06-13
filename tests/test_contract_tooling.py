@@ -134,9 +134,49 @@ def test_contract_inventory_declares_owner_choice_model() -> None:
         "generated_adapter_output",
         "package_payload",
         "runtime_primitive_implementation",
+        "generated_behavior_stratification",
     } <= concern_classes.keys()
     assert concern_classes["contract_schema_authority"]["owner_surface"] == "src/agentic_workspace/contracts/"
+    assert (
+        concern_classes["generated_behavior_stratification"]["owner_surface"]
+        == "src/agentic_workspace/contracts/generated_behavior_stratification.json"
+    )
     assert concern_classes["review_evidence"]["authority_class"] == "historical-evidence"
+
+
+def test_generated_behavior_stratification_declares_layers_and_retained_boundaries() -> None:
+    manifest = contract_tooling.generated_behavior_stratification_manifest()
+    schema = contract_tooling.contract_schema("generated_behavior_stratification.schema.json")
+    assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
+
+    assert [layer["id"] for layer in manifest["layers"]] == [
+        "primitive",
+        "operation-ir",
+        "generated-implementation",
+        "target-extension",
+        "wrapper-adapter",
+        "conformance-case",
+        "ordinary-test-boundary",
+    ]
+    layers = {layer["id"]: layer for layer in manifest["layers"]}
+    assert "Do not hand-edit generated implementation artifacts" in layers["generated-implementation"]["direct_edit_policy"]
+    assert "default semantic proof" in layers["wrapper-adapter"]["direct_edit_policy"]
+    assert "#1484" in layers["ordinary-test-boundary"]["next_lane_refs"]
+
+    retained = {entry["id"]: entry for entry in manifest["retained_hand_owned_boundaries"]}
+    assert {
+        "package-domain-runtime-primitives",
+        "root-runtime-authority-audit",
+        "wrapper-boundary-tests",
+        "aw-proof-routing-and-integration-tests",
+    } == retained.keys()
+    for entry in retained.values():
+        assert entry["owner_surface"]
+        assert entry["proof_route"]
+        assert entry["keep_reason"]
+        assert entry["conversion_or_retirement_condition"]
+        assert entry["accepted_direct_edit_reasons"]
+        assert entry["stale_when"]
 
 
 def test_proof_selection_contract_owns_supplemental_lanes() -> None:

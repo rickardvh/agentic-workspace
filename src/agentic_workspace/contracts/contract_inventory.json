@@ -64,6 +64,13 @@
         "authority_class": "procedural-owned",
         "route_when": "The concern needs imperative behavior, live repo inspection, subprocess execution, or mutation sequencing.",
         "avoid_when": "The concern can be expressed as a declarative contract, schema, or package payload."
+      },
+      {
+        "id": "generated_behavior_stratification",
+        "owner_surface": "src/agentic_workspace/contracts/generated_behavior_stratification.json",
+        "authority_class": "authoritative-stratification",
+        "route_when": "The concern decides whether behavior belongs to primitive contracts, operation IR, generated artifacts, target-extension machinery, wrapper adapters, conformance cases, or retained ordinary tests.",
+        "avoid_when": "The concern is a specific operation behavior, generated artifact content, active lane state, or historical proof record."
       }
     ]
   },
@@ -411,6 +418,16 @@
         "future proof selection routing"
       ],
       "notes": "Explicit operation artifact registry maps operation contracts to executable artifacts, adapters, wrapper surfaces, conformance cases, stale conditions, and changed-path proof routing so the runner does not infer artifacts from layout."
+    },
+    {
+      "area": "generated_behavior_stratification",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/generated_behavior_stratification.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future #1476 lane closeouts"
+      ],
+      "notes": "Authoritative #1476 layer model defines primitive, operation IR, generated implementation, target-extension, wrapper/adapter, conformance-case, and retained ordinary-test boundaries, including the required owner/proof/keep/retirement fields for retained hand-owned code and tests."
     },
     {
       "area": "python_extraction_map",

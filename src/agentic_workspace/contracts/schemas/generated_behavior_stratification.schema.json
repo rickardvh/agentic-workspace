@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/generated_behavior_stratification.schema.json",
+  "title": "Generated behavior stratification",
+  "description": "Authoritative layer model for generated behavior, operation IR, adapters, conformance cases, wrappers, and retained handwritten test/runtime boundaries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "parent_issue",
+    "rule",
+    "layers",
+    "retained_hand_owned_boundaries",
+    "lane_sequence",
+    "closure_rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/generated-behavior-stratification/v1",
+      "description": "Stable document kind for the generated behavior stratification manifest."
+    },
+    "schema_version": {
+      "const": "agentic-workspace/generated-behavior-stratification/v1",
+      "description": "Schema version for this stratification manifest."
+    },
+    "parent_issue": {
+      "const": "#1476",
+      "description": "Parent epic that owns this stratification model."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Top-level rule for where stable generated behavior changes must be expressed."
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "$ref": "#/$defs/layer"
+      },
+      "description": "Ordered generated-behavior strata from primitive contracts through retained ordinary-test boundaries."
+    },
+    "retained_hand_owned_boundaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/retained_boundary"
+      },
+      "description": "Hand-owned runtime or test boundaries that remain allowed only with owner, proof, keep reason, and conversion criteria."
+    },
+    "lane_sequence": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "string",
+        "pattern": "^#\\d+$"
+      },
+      "uniqueItems": true,
+      "description": "Issue sequence for the decomposed #1476 lanes."
+    },
+    "closure_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rule for when the parent epic can be resolved."
+    }
+  },
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "authority_class",
+        "source_of_truth",
+        "owned_by",
+        "direct_edit_policy",
+        "proof_route",
+        "allowed_hand_owned_code",
+        "allowed_handwritten_tests",
+        "conversion_or_retirement_condition",
+        "next_lane_refs"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "primitive",
+            "operation-ir",
+            "generated-implementation",
+            "target-extension",
+            "wrapper-adapter",
+            "conformance-case",
+            "ordinary-test-boundary"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_class": {
+          "enum": [
+            "portable-primitive-contract",
+            "operation-contract-source",
+            "derived-generated-artifact",
+            "reusable-target-machinery",
+            "transport-boundary",
+            "behavior-proof-case",
+            "retained-handwritten-boundary"
+          ]
+        },
+        "source_of_truth": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owned_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direct_edit_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_hand_owned_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_handwritten_tests": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conversion_or_retirement_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_lane_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^#\\d+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "retained_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_kind",
+        "owner_surface",
+        "proof_route",
+        "keep_reason",
+        "conversion_or_retirement_condition",
+        "accepted_direct_edit_reasons",
+        "stale_when"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "boundary_kind": {
+          "enum": [
+            "runtime-primitive",
+            "wrapper-test",
+            "ordinary-test",
+            "proof-routing-test",
+            "integration-test"
+          ]
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keep_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conversion_or_retirement_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accepted_direct_edit_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "stale_when": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}
