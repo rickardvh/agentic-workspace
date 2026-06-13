@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Define authoritative generated-behavior stratification",
+  "plan_id": "lane-1476-authoritative-stratification-contract",
+  "created_at": "2026-06-13T15:14:04.492587+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1476-authoritative-stratification-contract.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1476-authoritative-stratification-contract.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1476-authoritative-stratification-contract",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json lane lane-1476-authoritative-stratification-contract.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added a schema-backed generated behavior stratification manifest, wired it into contract tooling validation and contract inventories, added tests for layer order and retained hand-owned boundary requirements, generated schema reference docs, and corrected the first lane to use a .lane.json owner with the execplan as its current slice.",
+    "scope touched": "#1478 authoritative generated-behavior stratification contract only.",
+    "changed surfaces": "generated_behavior_stratification contract/schema/reference; contract tooling loader/checker; contract inventory and Python consumption inventory; focused tests; Planning lane/execplan state.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from #1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+    "next step": "promote the next bounded slice from #1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed inside #1478. Residual #1476 intent remains routed to #1479-#1484. Dogfooding found lane-promote/activate projection friction around roadmap lane fields.",
+    "proof status": "passed",
+    "intent served": "yes for #1478 lane; parent #1476 remains open through #1479-#1484.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes"
+  },
+  "proof_report": {
+    "validation proof": "Passed: contract tooling, structured file inventory, tests/test_contract_tooling.py, ruff, schema-reference docs, lint-workspace, maintainer-surfaces, planning summary/doctor, and full workspace tests after active planning cleanup.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "#1476 requires an enforced end-to-end model where operation/primitive IR, contracts, and input-output cases generate implementation artifacts, wrappers, and conformance executors, while ordinary feature work changes IR/contracts/cases rather than generated executable code or one-off behavior regressions.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when #1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to #1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes.",
+    "motivation worth preserving": "Future agents should continue from #1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes rather than rediscover this closeout residue.",
+    "canonical owner now": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "A checked stratification contract now defines the seven generated-behavior layers and retained hand-owned runtime/test boundary requirements.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+          "owner": "#1479/#1480/#1481/#1482/#1483/#1484 remaining #1476 lanes",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

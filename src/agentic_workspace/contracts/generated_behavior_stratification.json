@@ -1,0 +1,185 @@
+{
+  "kind": "agentic-workspace/generated-behavior-stratification/v1",
+  "schema_version": "agentic-workspace/generated-behavior-stratification/v1",
+  "parent_issue": "#1476",
+  "rule": "Stable generated behavior must be changed through operation/primitive IR, contracts, and input-output cases first. Generated implementations and wrapper adapters are projections or boundary smoke unless this manifest names an explicit hand-owned runtime or test boundary.",
+  "layers": [
+    {
+      "id": "primitive",
+      "title": "Portable primitive contract",
+      "authority_class": "portable-primitive-contract",
+      "source_of_truth": "src/agentic_workspace/contracts/operation_primitives.json and src/agentic_workspace/contracts/schemas/primitives/*.schema.json",
+      "owned_by": "AW contracts for product primitives; command-generation for reusable primitive execution machinery",
+      "direct_edit_policy": "Edit primitive contracts or accepted package-domain runtime primitive implementations only; do not encode ordinary generated command behavior in hand-owned code.",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "allowed_hand_owned_code": "Only live integration, mutation policy, provider/runtime boundary, package-specific judgment, or temporary extraction gaps with a retirement path.",
+      "allowed_handwritten_tests": "Primitive-boundary and package-domain runtime tests that prove behavior not expressible as portable IR yet.",
+      "conversion_or_retirement_condition": "Move to command-generation primitives or operation IR when behavior is deterministic, portable, and not package-domain policy.",
+      "next_lane_refs": [
+        "#1479",
+        "#1482"
+      ]
+    },
+    {
+      "id": "operation-ir",
+      "title": "Operation IR and operation contracts",
+      "authority_class": "operation-contract-source",
+      "source_of_truth": "src/agentic_workspace/contracts/operations/*.json plus package-owned contracts/operations/*.json",
+      "owned_by": "AW and module operation contract owners",
+      "direct_edit_policy": "Ordinary behavior changes should update operation contracts, primitive references, schemas, or conformance cases before generated artifacts.",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/run_operation_conformance_tests.py --target python",
+      "allowed_hand_owned_code": "Runtime primitive implementation may exist only behind named primitive refs and accepted retained boundaries.",
+      "allowed_handwritten_tests": "Operation-contract checks may stay when they validate source-of-truth integrity rather than duplicate generated behavior.",
+      "conversion_or_retirement_condition": "A handwritten behavior regression should become an IR-backed input-output case when the behavior is stable and adapter-independent.",
+      "next_lane_refs": [
+        "#1479",
+        "#1482"
+      ]
+    },
+    {
+      "id": "generated-implementation",
+      "title": "Generated implementation artifacts",
+      "authority_class": "derived-generated-artifact",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json and command-generation generated package renderers",
+      "owned_by": "command-generation renderers consumed by AW",
+      "direct_edit_policy": "Do not hand-edit generated implementation artifacts for product behavior; update source contracts, IR, cases, or command-generation renderers.",
+      "proof_route": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py",
+      "allowed_hand_owned_code": "None for generated behavior; only explicitly accepted runtime primitive call boundaries may remain outside generated artifacts.",
+      "allowed_handwritten_tests": "Freshness, packaging, importability, and adapter conformance tests that prove generated output matches source contracts.",
+      "conversion_or_retirement_condition": "Direct behavior assertions over generated code should move to conformance cases unless they prove packaging/freshness/import mechanics.",
+      "next_lane_refs": [
+        "#1479",
+        "#1480"
+      ]
+    },
+    {
+      "id": "target-extension",
+      "title": "Target extension contract",
+      "authority_class": "reusable-target-machinery",
+      "source_of_truth": "rickardvh/command-generation#14 target-extension machinery consumed through AW support declarations",
+      "owned_by": "command-generation for reusable target mechanics; AW for target support consumption and product-specific declarations",
+      "direct_edit_policy": "Do not add target-specific per-operation product semantics in AW; express target projection, dependencies, packaging, and conformance execution through reusable machinery.",
+      "proof_route": "Target support declaration plus generated package static/conformance proof once command-generation#14 machinery is consumed.",
+      "allowed_hand_owned_code": "AW may keep only product runtime primitives or adapter-boundary declarations, not reusable target execution logic.",
+      "allowed_handwritten_tests": "Consumer integration tests that prove AW consumes target support declarations and rejects per-operation target maintenance.",
+      "conversion_or_retirement_condition": "Retire AW-side scaffolding when command-generation#14 supplies the reusable declaration and matrix checks.",
+      "next_lane_refs": [
+        "#1480",
+        "#1481"
+      ]
+    },
+    {
+      "id": "wrapper-adapter",
+      "title": "Wrapper and transport adapter",
+      "authority_class": "transport-boundary",
+      "source_of_truth": "src/agentic_workspace/contracts/operation_artifact_registry.json and docs/package/cli-boundary-tests.md",
+      "owned_by": "AW wrapper boundary owners",
+      "direct_edit_policy": "Wrapper code/tests may own argv, help, errors, stdout, stderr, exit codes, and transport behavior; they must not be the default semantic proof when direct operation artifacts exist.",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success plus focused wrapper tests for changed transports.",
+      "allowed_hand_owned_code": "Transport/wrapper glue and runtime boundary adapters only.",
+      "allowed_handwritten_tests": "CLI/MCP/transport smoke tests that prove boundary semantics, not underlying operation behavior.",
+      "conversion_or_retirement_condition": "Demote semantic wrapper assertions after direct operation conformance covers the behavior.",
+      "next_lane_refs": [
+        "#1483"
+      ]
+    },
+    {
+      "id": "conformance-case",
+      "title": "IR-backed conformance case",
+      "authority_class": "behavior-proof-case",
+      "source_of_truth": "src/agentic_workspace/contracts/operation_conformance_test_ir.json and src/agentic_workspace/contracts/operation_artifact_registry.json",
+      "owned_by": "AW conformance case owners with generic execution supplied by command-generation",
+      "direct_edit_policy": "Represent stable behavior as input, fixtures/effects, expected result or structured error, operation ref, and adapter target.",
+      "proof_route": "uv run python scripts/check/run_operation_conformance_tests.py --target python; target-specific conformance when target support exists.",
+      "allowed_hand_owned_code": "Only runner orchestration or AW-specific fixtures not yet expressible by reusable command-generation case machinery.",
+      "allowed_handwritten_tests": "Minimal higher-order tests for case selection, proof routing, and runner integration.",
+      "conversion_or_retirement_condition": "Replace one-off regression tests with minimal conceptually named cases when primitive and operation semantics are available.",
+      "next_lane_refs": [
+        "#1482"
+      ]
+    },
+    {
+      "id": "ordinary-test-boundary",
+      "title": "Retained ordinary handwritten test boundary",
+      "authority_class": "retained-handwritten-boundary",
+      "source_of_truth": "docs/package/generated-behavior-test-inventory.md plus this manifest's retained_hand_owned_boundaries",
+      "owned_by": "AW test owners named by retained boundary records",
+      "direct_edit_policy": "Keep ordinary tests only for runner internals, wrapper behavior, live integration, mutation policy, provider/runtime boundaries, high-risk workflow trust semantics, or narrow not-yet-expressible bug repros.",
+      "proof_route": "Focused pytest or package checks named by the retained boundary owner.",
+      "allowed_hand_owned_code": "Not applicable; ordinary tests can only justify retained proof, not product implementation ownership.",
+      "allowed_handwritten_tests": "Allowed only when the retained boundary record names owner, proof route, keep reason, and conversion or retirement condition.",
+      "conversion_or_retirement_condition": "Move stable behavior into operation conformance cases when equivalent black-box behavior can be expressed in simplified IR.",
+      "next_lane_refs": [
+        "#1482",
+        "#1483",
+        "#1484"
+      ]
+    }
+  ],
+  "retained_hand_owned_boundaries": [
+    {
+      "id": "package-domain-runtime-primitives",
+      "boundary_kind": "runtime-primitive",
+      "owner_surface": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json accepted_runtime_boundaries",
+      "proof_route": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+      "keep_reason": "Exact source-symbol boundaries cover live integration, mutation policy, provider/runtime boundaries, package-specific judgment, and temporary extraction gaps.",
+      "conversion_or_retirement_condition": "Retire or move to command-generation/IR when the symbol becomes deterministic portable behavior or when a smaller primitive can preserve the package policy.",
+      "accepted_direct_edit_reasons": [
+        "existing-primitive-bugfix",
+        "new-primitive-implementation"
+      ],
+      "stale_when": "A retained symbol lacks source-symbol proof, owner, primitive refs, conformance ref, minimization route, or stale condition."
+    },
+    {
+      "id": "root-runtime-authority-audit",
+      "boundary_kind": "runtime-primitive",
+      "owner_surface": "src/agentic_workspace/contracts/python_runtime_boundary.json root_cli_authority_audit",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "keep_reason": "Root runtime behavior still includes live workspace inspection, recovery, and policy judgment that should not be hidden as generated command behavior.",
+      "conversion_or_retirement_condition": "Move extractable deterministic behavior to contracts, command-generation, or generated IR when the audit marks it stable.",
+      "accepted_direct_edit_reasons": [
+        "existing-primitive-bugfix",
+        "new-primitive-implementation",
+        "runtime-boundary-audit-update"
+      ],
+      "stale_when": "The audit uses a closed issue as live ownership, omits extraction/guard candidates, or loses direct CLI edit routing."
+    },
+    {
+      "id": "wrapper-boundary-tests",
+      "boundary_kind": "wrapper-test",
+      "owner_surface": "docs/package/cli-boundary-tests.md and operation_artifact_registry.json proof_role=wrapper-smoke",
+      "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success plus focused wrapper pytest for changed commands",
+      "keep_reason": "Wrappers own argv, help, error, stdout, stderr, exit-code, and transport semantics that direct operation conformance intentionally does not prove.",
+      "conversion_or_retirement_condition": "Remove semantic assertions from wrapper tests after direct operation conformance covers the underlying behavior.",
+      "accepted_direct_edit_reasons": [
+        "wrapper-interface-change",
+        "transport-boundary-bugfix"
+      ],
+      "stale_when": "A wrapper test is used as the default semantic proof for operation behavior while a direct operation artifact exists."
+    },
+    {
+      "id": "aw-proof-routing-and-integration-tests",
+      "boundary_kind": "proof-routing-test",
+      "owner_surface": "docs/package/generated-behavior-test-inventory.md retained AW groups",
+      "proof_route": "Focused pytest for changed proof, packaging, lifecycle, start/implement/report/defaults, and dependency-integration surfaces",
+      "keep_reason": "These tests prove AW installed-product routing, proof selection, generated freshness, dependency consumption, and workflow trust semantics rather than generic command-generation behavior.",
+      "conversion_or_retirement_condition": "Move stable operation behavior to conformance cases and move generic generation behavior to command-generation tests.",
+      "accepted_direct_edit_reasons": [
+        "proof-routing-behavior-change",
+        "installed-product-boundary-change",
+        "dependency-integration-change"
+      ],
+      "stale_when": "A retained AW test duplicates generic command-generation machinery or a stable operation behavior case without a boundary rationale."
+    }
+  ],
+  "lane_sequence": [
+    "#1478",
+    "#1479",
+    "#1480",
+    "#1481",
+    "#1482",
+    "#1483",
+    "#1484"
+  ],
+  "closure_rule": "#1476 can be resolved only after all layers have direct proof or owner-approved rejection evidence and #1484 records the closure inventory and bypass guardrails."
+}

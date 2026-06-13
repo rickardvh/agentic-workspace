@@ -159,6 +159,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "generated_behavior_stratification.json",
+      "schema": "generated_behavior_stratification.schema.json",
+      "loader": "generated_behavior_stratification_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "workflow_definition_format.json",
       "schema": "workflow_definition_format.schema.json",
       "loader": "workflow_definition_format_manifest",

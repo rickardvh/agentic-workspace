@@ -22,9 +22,9 @@
     {
       "id": "lane-1476-authoritative-stratification-contract",
       "title": "Define authoritative generated-behavior stratification",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "A checked AW contract, schema, inventory, or equivalent durable surface defines primitive, operation IR, generated artifact, target-extension, wrapper, conformance case, and ordinary-test layers, including allowed ownership of executable code and ordinary tests.",
-      "owner_surface": "src/agentic_workspace/contracts, generated-behavior inventories, ordinary-test inventories, and command-generation#14 linkage",
+      "owner_surface": ".agentic-workspace/planning/lanes/archive/lane-1476-authoritative-stratification-contract.lane.json",
       "proof": "Contract/schema/inventory validation plus tests or checks showing retained hand-owned primitives/tests have owner, proof route, keep reason, and conversion or retirement condition.",
       "slice_contribution_to_parent": "Creates the authority model needed before promotion of operation callables, conformance cases, wrapper demotion, and closure inventory.",
       "residual_parent_intent": "Generated direct operation artifacts, target-extension support, TypeScript direct adapter, conformance case conversion, wrapper demotion, and closure guardrails remain.",

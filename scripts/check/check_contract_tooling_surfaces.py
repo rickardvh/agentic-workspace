@@ -22,6 +22,7 @@ from agentic_workspace.contract_tooling import (
     context_templates_manifest,
     contract_inventory_manifest,
     contract_schema,
+    generated_behavior_stratification_manifest,
     improvement_latitude_policy_manifest,
     improvement_signal_contract_manifest,
     lifecycle_generation_readiness_manifest,
@@ -1227,6 +1228,58 @@ def _validate_operation_artifact_registry(payload: dict[str, object]) -> list[st
     return errors
 
 
+def _validate_generated_behavior_stratification(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/generated-behavior-stratification/v1":
+        return ["generated_behavior_stratification.json has unexpected schema_version"]
+    expected_layers = [
+        "primitive",
+        "operation-ir",
+        "generated-implementation",
+        "target-extension",
+        "wrapper-adapter",
+        "conformance-case",
+        "ordinary-test-boundary",
+    ]
+    layers = payload.get("layers", [])
+    layer_ids = [str(layer.get("id", "")) for layer in layers if isinstance(layer, dict)]
+    if layer_ids != expected_layers:
+        errors.append("generated_behavior_stratification.json layer order drifted from #1476 closure model")
+    layers_by_id = {str(layer.get("id", "")): layer for layer in layers if isinstance(layer, dict)}
+    generated_layer = layers_by_id.get("generated-implementation", {})
+    if "do not hand-edit generated" not in str(generated_layer.get("direct_edit_policy", "")).lower():
+        errors.append("generated_behavior_stratification.json generated layer must reject direct generated behavior edits")
+    wrapper_layer = layers_by_id.get("wrapper-adapter", {})
+    if "default semantic proof" not in str(wrapper_layer.get("direct_edit_policy", "")).lower():
+        errors.append("generated_behavior_stratification.json wrapper layer must reject wrapper-default semantic proof")
+    ordinary_layer = layers_by_id.get("ordinary-test-boundary", {})
+    if "owner" not in str(ordinary_layer.get("allowed_handwritten_tests", "")).lower():
+        errors.append("generated_behavior_stratification.json ordinary-test layer must require owner-bearing retained tests")
+    retained = payload.get("retained_hand_owned_boundaries", [])
+    required_boundary_fields = {
+        "owner_surface",
+        "proof_route",
+        "keep_reason",
+        "conversion_or_retirement_condition",
+        "accepted_direct_edit_reasons",
+        "stale_when",
+    }
+    for boundary in retained:
+        if not isinstance(boundary, dict):
+            errors.append("generated_behavior_stratification.json retained boundaries must be objects")
+            continue
+        missing = sorted(field for field in required_boundary_fields if not boundary.get(field))
+        if missing:
+            errors.append(
+                f"generated_behavior_stratification.json retained boundary {boundary.get('id', '<unknown>')} missing: "
+                + ", ".join(missing)
+            )
+    boundary_ids = {str(boundary.get("id", "")) for boundary in retained if isinstance(boundary, dict)}
+    if not {"package-domain-runtime-primitives", "wrapper-boundary-tests", "aw-proof-routing-and-integration-tests"} <= boundary_ids:
+        errors.append("generated_behavior_stratification.json missing required retained boundary records")
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -2069,6 +2122,11 @@ def main(argv: list[str] | None = None) -> int:
             "operation artifact registry",
             _validate(operation_artifact_registry_manifest(), "operation_artifact_registry.schema.json")
             + _validate_operation_artifact_registry(operation_artifact_registry_manifest()),
+        ),
+        (
+            "generated behavior stratification",
+            _validate(generated_behavior_stratification_manifest(), "generated_behavior_stratification.schema.json")
+            + _validate_generated_behavior_stratification(generated_behavior_stratification_manifest()),
         ),
         (
             "command-generation schema boundary",
