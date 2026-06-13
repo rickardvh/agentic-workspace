@@ -6326,6 +6326,47 @@ def _lifecycle_cli_invoke(*, config: WorkspaceConfig, invocation_root: Path | No
     return config.cli_invoke
 
 
+def _lifecycle_review_remediations(
+    *, review_items: list[str], warnings: list[str], target_root: Path, selected_modules: list[str], cli_invoke: str
+) -> list[dict[str, Any]]:
+    messages = [*review_items, *warnings]
+    remediations: list[dict[str, Any]] = []
+    target = target_root.as_posix()
+    for module_name, relative_path in MODULE_UPGRADE_SOURCE_PATHS.items():
+        if module_name not in selected_modules:
+            continue
+        relative = relative_path.as_posix()
+        if not any(relative in message for message in messages):
+            continue
+        dry_run = _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {target} --module {module_name} --dry-run --format json",
+            cli_invoke=cli_invoke,
+        )
+        refresh = _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {target} --module {module_name} --format json",
+            cli_invoke=cli_invoke,
+        )
+        remediations.append(
+            {
+                "id": f"refresh-{module_name}-upgrade-source",
+                "module": module_name,
+                "surface": relative,
+                "reason": "recorded module upgrade source metadata is stale or requires review",
+                "review_first": dry_run,
+                "refresh_command": refresh,
+                "proof_after": _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target} --module {module_name} --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                "rule": (
+                    "Review the recorded source before refreshing it; use the module-specific refresh route "
+                    "instead of rerunning the same broad blocked lifecycle apply."
+                ),
+            }
+        )
+    return remediations
+
+
 def _lifecycle_plan_payload(
     *,
     payload: dict[str, Any],
@@ -6348,6 +6389,13 @@ def _lifecycle_plan_payload(
     warnings = list(payload.get("warnings", []))
     review_items = list(payload.get("needs_review", [])) + list(payload.get("placeholders", []))
     review_required = bool(review_items or warnings or payload.get("prompt_requirement") in {"required", "recommended"})
+    review_remediations = _lifecycle_review_remediations(
+        review_items=review_items,
+        warnings=warnings,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        cli_invoke=cli_invoke,
+    )
     config_payload = payload.get("config", {})
     update_payload = config_payload.get("update", {}) if isinstance(config_payload, dict) else {}
     module_policy_payloads = update_payload.get("modules", []) if isinstance(update_payload, dict) else []
@@ -6407,6 +6455,7 @@ def _lifecycle_plan_payload(
         "warnings": warnings,
         "review_required": review_required,
         "review_items": review_items,
+        "review_remediations": review_remediations,
         "local_only_state_interaction": "install-root" if local_only else "not-requested",
         "module_update_freshness": module_update_freshness,
         "action_owner_groups": action_owner_groups,
@@ -29132,8 +29181,23 @@ def _configured_local_agent_indirection_is_current(*, target_root: Path, config:
     )
 
 
+def _configured_workspace_pointer_is_current(*, target_root: Path, config: WorkspaceConfig) -> bool:
+    agents_relative = Path(config.agent_instructions_file)
+    agents_path = target_root / agents_relative
+    workflow_path = target_root / ".agentic-workspace" / "WORKFLOW.md"
+    if not agents_path.is_file() or not workflow_path.is_file():
+        return False
+    agents_text = agents_path.read_text(encoding="utf-8")
+    return workspace_pointer_block(cli_invoke=config.cli_invoke) in agents_text or (
+        WORKSPACE_WORKFLOW_MARKER_START in agents_text
+        and WORKSPACE_WORKFLOW_MARKER_END in agents_text
+        and ".agentic-workspace/WORKFLOW.md" in agents_text
+    )
+
+
 def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
     local_indirection_current = _configured_local_agent_indirection_is_current(target_root=target_root, config=config)
+    workspace_pointer_current = _configured_workspace_pointer_is_current(target_root=target_root, config=config)
 
     def _rewrite_path(value: Any) -> Any:
         if not isinstance(value, str):
@@ -29146,15 +29210,21 @@ def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_roo
     def _normalize_action(action: dict[str, Any]) -> dict[str, Any]:
         normalized = {**action, "path": _rewrite_path(action.get("path"))}
         if (
-            local_indirection_current
+            (local_indirection_current or workspace_pointer_current)
             and action.get("path") == DEFAULT_AGENT_INSTRUCTIONS_FILE
             and action.get("kind") == "manual review"
             and "--apply-local-entrypoint" in str(action.get("detail", ""))
+            and "redundant top-level memory workflow pointer block" not in str(action.get("detail", ""))
         ):
+            detail = (
+                "local startup indirection points to AGENTS.local.md workspace workflow block"
+                if local_indirection_current
+                else "workspace workflow pointer already routes startup through the shared workspace contract"
+            )
             normalized = {
                 **normalized,
                 "kind": "current",
-                "detail": "local startup indirection points to AGENTS.local.md workspace workflow block",
+                "detail": detail,
                 "safety": "safe",
                 "category": "safe-update",
             }
@@ -29162,9 +29232,10 @@ def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_roo
 
     def _normalize_warning(warning: dict[str, Any]) -> dict[str, Any] | None:
         if (
-            local_indirection_current
+            (local_indirection_current or workspace_pointer_current)
             and warning.get("path") == DEFAULT_AGENT_INSTRUCTIONS_FILE
             and "--apply-local-entrypoint" in str(warning.get("message", ""))
+            and "redundant top-level memory workflow pointer block" not in str(warning.get("message", ""))
         ):
             return None
         return {**warning, "path": _rewrite_path(warning.get("path"))}
@@ -29174,7 +29245,8 @@ def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_roo
         or DEFAULT_AGENT_INSTRUCTIONS_FILE in config.detected_agent_instructions_files
     ):
         if not local_indirection_current:
-            return report
+            if not workspace_pointer_current:
+                return report
         warnings = [_normalize_warning(warning) for warning in report["warnings"]]
         return {
             **report,

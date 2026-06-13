@@ -3,7 +3,9 @@
   "payload_files": [
     ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/docs/jumpstart-contract.md",
     ".agentic-workspace/docs/module-map.md",
+    ".agentic-workspace/docs/setup-findings-contract.md",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",

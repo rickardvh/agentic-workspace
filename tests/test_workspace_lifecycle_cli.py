@@ -1106,6 +1106,40 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     assert payload["next_steps"][0].startswith("Run uv run agentic-workspace doctor ")
 
 
+def test_lifecycle_plan_exposes_module_source_refresh_for_stale_upgrade_source(tmp_path: Path) -> None:
+    payload = {
+        "warnings": [".agentic-workspace/memory/UPGRADE-SOURCE.toml: recorded bootstrap source metadata is stale"],
+        "needs_review": [],
+        "placeholders": [],
+        "created": [],
+        "updated_managed": [],
+        "preserved_existing": [],
+        "module_reports": [],
+        "reports": [],
+    }
+
+    lifecycle_plan = cli._lifecycle_plan_payload(  # type: ignore[attr-defined]
+        payload=payload,
+        command_name="upgrade",
+        target_root=tmp_path,
+        selected_modules=["memory"],
+        dry_run=True,
+        local_only=False,
+        cli_invoke="uv run agentic-workspace",
+    )
+
+    assert lifecycle_plan["review_required"] is True
+    assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
+    remediation = lifecycle_plan["review_remediations"][0]
+    assert remediation["id"] == "refresh-memory-upgrade-source"
+    assert remediation["surface"] == ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
+    assert remediation["review_first"].startswith("uv run agentic-workspace upgrade ")
+    assert "--module memory" in remediation["review_first"]
+    assert remediation["refresh_command"].startswith("uv run agentic-workspace upgrade ")
+    assert "--dry-run" not in remediation["refresh_command"]
+    assert remediation["proof_after"].startswith("uv run agentic-workspace doctor ")
+
+
 def test_install_review_next_actions_use_invoking_workspace_cli_invoke(monkeypatch, tmp_path: Path, capsys) -> None:
     source = tmp_path / "source"
     target = tmp_path / "target"
