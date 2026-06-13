@@ -136,3 +136,20 @@ def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
     assert rendered["title_prefix"] == "[Review]:"
     assert rendered["normalized_title"] == "Template friction"
     assert rendered["duplicate_prefix_normalized"] is True
+
+
+def test_issue_body_rejects_shell_interpolation_residue() -> None:
+    try:
+        issue_body.render_issue(
+            kind="direction",
+            title="Malformed lane body",
+            fields={
+                "problem_intent": "Lane id: $(@{id=lane-example; readiness=ready}.id)",
+                "intended_outcome": "Avoid publishing shell residue.",
+            },
+        )
+    except ValueError as exc:
+        assert "shell interpolation residue" in str(exc)
+        assert "problem_intent" in str(exc)
+    else:
+        raise AssertionError("render_issue should reject unevaluated shell interpolation residue")

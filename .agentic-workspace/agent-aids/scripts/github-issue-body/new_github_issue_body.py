@@ -31,6 +31,12 @@ COMPLETION_BOUNDARY_FIELDS = {
     "evidence_required_for_final_completion",
 }
 
+SHELL_INTERPOLATION_RESIDUE_MARKERS = (
+    "$(@{",
+    "@{",
+    "System.Object[]",
+)
+
 
 def _parse_field(value: str) -> tuple[str, str]:
     if "=" not in value:
@@ -40,6 +46,23 @@ def _parse_field(value: str) -> tuple[str, str]:
     if not key:
         raise argparse.ArgumentTypeError("field id must not be blank")
     return key, field_value
+
+
+def _shell_interpolation_residue(value: str) -> str:
+    for marker in SHELL_INTERPOLATION_RESIDUE_MARKERS:
+        if marker in value:
+            return marker
+    return ""
+
+
+def _validate_field_values(fields: dict[str, str]) -> None:
+    for field_id, value in fields.items():
+        marker = _shell_interpolation_residue(value)
+        if marker:
+            raise ValueError(
+                f"field {field_id!r} contains shell interpolation residue {marker!r}; "
+                "render the value from structured data before publishing the issue body"
+            )
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -153,6 +176,7 @@ def _completion_boundary_default(*, field_id: str, fields: dict[str, str]) -> st
 
 
 def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, Any]:
+    _validate_field_values(fields)
     template = _load_template(kind)
     title_prefix = str(template.get("title", "")).strip()
     labels = template.get("labels", [])
@@ -194,7 +218,10 @@ def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     fields = dict(args.field)
-    rendered = render_issue(kind=args.kind, title=args.title, fields=fields)
+    try:
+        rendered = render_issue(kind=args.kind, title=args.title, fields=fields)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if args.format == "json":
         json.dump(rendered, sys.stdout, indent=2)
         sys.stdout.write("\n")

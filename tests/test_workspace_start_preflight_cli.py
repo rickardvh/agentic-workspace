@@ -1580,13 +1580,19 @@ def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Pa
     assert action["read_first"] == [action["command"]]
 
 
-def test_start_tiny_does_not_route_config_posture_questions_from_prompt_keywords(capsys) -> None:
+def test_start_tiny_does_not_route_config_posture_questions_from_prompt_keywords(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
     task = (
         "Inspect this repo enough to answer how a small follow-up should be reported. "
         "Keep the answer aligned with the repo's configured operating and reporting posture."
     )
 
-    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
