@@ -1,0 +1,186 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Operation and test IR single source of truth",
+  "status": "ready-for-lane-promotion",
+  "larger_intended_outcome": "Make operation and test IR the single source of truth for Agentic Workspace generated implementations and stable behavior tests, with AW consuming command-generation machinery rather than adding target-specific executable behavior.",
+  "parent_acceptance": {
+    "original_intent": "#1476 requires an enforced end-to-end model where operation/primitive IR, contracts, and input-output cases generate implementation artifacts, wrappers, and conformance executors, while ordinary feature work changes IR/contracts/cases rather than generated executable code or one-off behavior regressions.",
+    "acceptance_target": "AW has a checked stratification contract, generated direct operation callable artifacts for applicable migrated cases, target-extension and conformance behavior delegated to command-generation#14, wrapper tests demoted to wrapper semantics, ordinary tests inventoried with explicit keep/conversion rationale, and guardrails preventing behavior changes from bypassing IR/contracts/cases.",
+    "parent_proof_required": "Parent closure requires proof across all final-state bullets in #1476: checked stratification model, direct operation adapters for applicable AW cases, target support declaration, IR-backed conformance cases, wrapper demotion, ordinary-test boundary inventory, generated-code/edit guardrails, target-maintenance guardrails, command-generation#14 consumption evidence, and explicit closeout of remaining gaps.",
+    "residual_intent_rule": "Every promoted lane must state which #1476 layer it advances, which final-state requirements remain unsatisfied, whether parent closure is changed, proof achieved now, and residue owner.",
+    "clarification_needed_when": "Ask for owner confirmation before closing #1476 if TypeScript direct-operation support, target-extension machinery, or any retained ordinary test/generator boundary is rejected rather than implemented."
+  },
+  "non_goals": [
+    "Do not reopen #1441 as the migration parent; #1476 is the stronger end-state epic.",
+    "Do not solve reusable generator, target, or conformance machinery in AW when command-generation#14 owns it.",
+    "Do not add new AW executable primitives unless they are live integration, mutation policy, provider/runtime boundary, package-specific judgment, or an explicit temporary extraction gap with retirement path.",
+    "Do not treat CLI/MCP wrapper execution as final semantic proof where a direct operation artifact exists.",
+    "Do not remove wrapper tests that prove argv, help, error, stdout, stderr, exit-code, or transport behavior.",
+    "Do not preserve one-off regression tests where an input-output operation case can carry stable behavior more cleanly."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "lane-1476-authoritative-stratification-contract",
+      "title": "Define authoritative generated-behavior stratification",
+      "readiness": "ready",
+      "outcome": "A checked AW contract, schema, inventory, or equivalent durable surface defines primitive, operation IR, generated artifact, target-extension, wrapper, conformance case, and ordinary-test layers, including allowed ownership of executable code and ordinary tests.",
+      "owner_surface": "src/agentic_workspace/contracts, generated-behavior inventories, ordinary-test inventories, and command-generation#14 linkage",
+      "proof": "Contract/schema/inventory validation plus tests or checks showing retained hand-owned primitives/tests have owner, proof route, keep reason, and conversion or retirement condition.",
+      "slice_contribution_to_parent": "Creates the authority model needed before promotion of operation callables, conformance cases, wrapper demotion, and closure inventory.",
+      "residual_parent_intent": "Generated direct operation artifacts, target-extension support, TypeScript direct adapter, conformance case conversion, wrapper demotion, and closure guardrails remain.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-1476-generated-python-operation-callables",
+      "title": "Promote migrated AW cases to generated Python operation callables",
+      "readiness": "ready",
+      "outcome": "Applicable migrated AW conformance cases expose generated operation-shaped Python callable surfaces with registry symbol entries and python.function artifacts, replacing wrapper-smoke or cli.process as semantic proof where behavior is operation semantics.",
+      "owner_surface": "AW operation conformance registry/cases, generated workspace Python artifacts, and command-generation#14 callable generation machinery",
+      "proof": "Conformance runner uses python.function for applicable migrated AW cases; non-promoted cases have explicit wrapper-only or runtime-boundary rationale.",
+      "slice_contribution_to_parent": "Advances primitive, operation IR, generated implementation, wrapper, and conformance layers for the Python specimen target.",
+      "residual_parent_intent": "TypeScript direct operation support, target-extension contract, broader case conversion, wrapper demotion, ordinary-test inventory, and guardrails remain.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1476-authoritative-stratification-contract"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-1476-target-extension-contract",
+      "title": "Consume target-extension contract from command-generation",
+      "readiness": "ready",
+      "outcome": "AW records and proves that new targets declare projection rules, runtime dependencies, adapter or wrapper shape, packaging, conformance execution, support declaration, and target-runtime quirks without owning product operation semantics or per-operation feature logic.",
+      "owner_surface": "command-generation#14 target-extension contract and AW target-support consumption/guardrail surfaces",
+      "proof": "A target-support declaration can place a target into applicable generated artifacts and conformance cases once implementation exists; checks prevent targets from becoming per-operation maintenance surfaces.",
+      "slice_contribution_to_parent": "Clarifies the target-extension layer and keeps reusable target machinery out of AW-specific runtime code.",
+      "residual_parent_intent": "Actual TypeScript direct operation adapter and broader conformance case conversion may remain after the contract is consumed.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1476-authoritative-stratification-contract"
+      ],
+      "parallel_with": [
+        "lane-1476-generated-python-operation-callables"
+      ]
+    },
+    {
+      "id": "lane-1476-typescript-direct-operation-adapter",
+      "title": "Add or route TypeScript direct operation conformance",
+      "readiness": "needs-shaping",
+      "outcome": "TypeScript direct operation conformance is implemented through command-generation machinery, or a precise follow-up owns the adapter boundary with proof that wrapper execution is not treated as final semantic substitute.",
+      "owner_surface": "command-generation#14 TypeScript function adapter machinery and AW target support declaration",
+      "proof": "Applicable cases can run through typescript.function or a durable owner-approved adapter-boundary follow-up exists with closure impact recorded on #1476.",
+      "slice_contribution_to_parent": "Advances generated implementation, target-extension, and conformance layers beyond Python.",
+      "residual_parent_intent": "Wrapper demotion, ordinary-test inventory, and final closure guardrails remain unless already satisfied.",
+      "parent_proof_boundary": "slice-only unless rejected with owner-approved rationale",
+      "human_confirmation_needed": [
+        "Confirm any decision to defer or reject TypeScript direct operation support as final closure-compatible."
+      ],
+      "depends_on": [
+        "lane-1476-target-extension-contract"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-1476-ir-backed-conformance-cases",
+      "title": "Convert stable behavior to IR-backed conformance cases",
+      "readiness": "ready",
+      "outcome": "Stable behavior checks identify operation IR or primitive sequence, inputs, effects or fixtures, canonical expected result or structured error, adapter target, and owner, with executable tests generated or mechanically derived from those cases.",
+      "owner_surface": "AW conformance cases, operation IR fragments, primitive refs, ordinary-test conversion inventory, and command-generation#14 conformance case machinery",
+      "proof": "Converted cases preserve or improve coverage; retained ordinary tests are excluded only for runner internals, wrapper behavior, live integration, mutation policy, provider/runtime boundaries, high-risk workflow trust semantics, or narrow not-yet-expressible bug repros.",
+      "slice_contribution_to_parent": "Advances operation IR and conformance case layers and reduces one-off regression tests for stable behavior.",
+      "residual_parent_intent": "Wrapper demotion, generated callable coverage, target matrix inclusion, and final closure inventory may remain.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1476-authoritative-stratification-contract",
+        "lane-1476-generated-python-operation-callables"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-1476-wrapper-demotion-and-test-boundary",
+      "title": "Demote wrappers and inventory retained ordinary tests",
+      "readiness": "ready",
+      "outcome": "Equivalent CLI/MCP/transport cases are demoted to wrapper-boundary smoke after direct operation conformance covers behavior, and remaining ordinary handwritten test groups have owner, keep reason, and future conversion or durable boundary rationale.",
+      "owner_surface": "Wrapper test inventories, ordinary-test inventories, conformance matrix, and generated behavior registry",
+      "proof": "Wrapper tests prove only argv/help/error/stdout/stderr/exit-code/transport behavior unless operation semantics truly changed; ordinary retained groups are mechanically visible with rationale.",
+      "slice_contribution_to_parent": "Advances wrapper/adapter and ordinary-test boundary layers.",
+      "residual_parent_intent": "Final guardrails and closure inventory remain after demotion unless already satisfied.",
+      "parent_proof_boundary": "slice-only",
+      "human_confirmation_needed": [],
+      "depends_on": [
+        "lane-1476-ir-backed-conformance-cases"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "lane-1476-closure-inventory-and-guardrails",
+      "title": "Install closure inventory and bypass guardrails",
+      "readiness": "ready",
+      "outcome": "Generated-behavior and contract-test inventories account for every migrated, retained, rejected, or blocked behavior group, with checkers preventing future stable behavior changes from bypassing IR/contracts/cases or target-specific code from owning product semantics outside explicit runtime primitive or wrapper boundaries.",
+      "owner_surface": "generated-behavior inventories, contract-test inventories, guardrail checks, command-generation#14 integration evidence, and #1476 closeout comment",
+      "proof": "Checks fail for direct generated executable behavior edits, one-off ordinary stable behavior regressions without IR/case owner, and target-specific per-operation semantics outside explicit runtime primitive or wrapper boundaries.",
+      "slice_contribution_to_parent": "Provides parent-closure evidence and prevents representative slices from being mistaken for full #1476 completion.",
+      "residual_parent_intent": "None only if all #1476 acceptance bullets are satisfied or explicitly rejected with evidence and durable owner-approved rationale.",
+      "parent_proof_boundary": "parent-closure",
+      "human_confirmation_needed": [
+        "Confirm #1476 can close if any final-state bullet is satisfied by documented rejection rather than implementation."
+      ],
+      "depends_on": [
+        "lane-1476-generated-python-operation-callables",
+        "lane-1476-target-extension-contract",
+        "lane-1476-typescript-direct-operation-adapter",
+        "lane-1476-ir-backed-conformance-cases",
+        "lane-1476-wrapper-demotion-and-test-boundary"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "Authoritative stratification should land first so later slices do not preserve executable or test boundaries accidentally.",
+    "Python generated operation callable promotion can begin before TypeScript direct operation support if the shared target-extension contract is explicit.",
+    "TypeScript direct operation conformance should be implemented through command-generation#14 or explicitly routed as a separate adapter-boundary follow-up; AW should not create bespoke target machinery.",
+    "Wrapper demotion depends on direct operation conformance coverage for the behavior being demoted.",
+    "Final closure guardrails should land after enough specimen conversions exist to prove the end-to-end model."
+  ],
+  "parallelization_assumptions": [
+    "After stratification, command-generation#14 target machinery and AW Python specimen promotion can proceed in parallel if both preserve shared contracts and conformance semantics.",
+    "Ordinary-test inventory can be gathered in parallel with generated callable work, but conversion/demotion decisions need direct operation coverage evidence.",
+    "Delegation is appropriate for inventory and focused conversion slices when proof expectations and parent residual intent are explicit."
+  ],
+  "proof_expectations": [
+    "Each lane must identify which #1476 final-state layer it advances and which acceptance bullets remain unsatisfied.",
+    "Each implementation lane must use changed-path proof selection plus conformance/guardrail proof relevant to generated artifacts, operation IR, and tests.",
+    "Any retained AW hand-owned executable primitive must carry owner, contract, proof route, and permanence or retirement rationale.",
+    "Any retained ordinary test group must carry owner, keep reason, and future conversion condition or durable boundary rationale.",
+    "Command-generation#14 integration must be cited when reusable target, conformance, or generator machinery is consumed.",
+    "Parent closure requires an explicit #1476 closeout statement: what landed, what intent it serves, what remains unresolved, and why closure is honest."
+  ],
+  "promotion_rule": "Promote lane-1476-authoritative-stratification-contract first. Do not close #1476 from any slice until all acceptance bullets are satisfied or owner-approved rejections with durable rationale are recorded. Treat command-generation#14 as the reusable machinery owner and #1476 as AW specimen/consumer coordination.",
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1476",
+      "label": "AW generated implementation single-source epic",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "rickardvh/command-generation#14",
+      "label": "command-generation reusable machinery issue",
+      "role": "external_dependency"
+    },
+    {
+      "kind": "github-issue-comment",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1476#issuecomment-4698841391",
+      "label": "coordination boundary: AW specimen, CG machinery",
+      "role": "scope_boundary"
+    }
+  ],
+  "notes": "Created from refreshed GitHub issue evidence on 2026-06-13. The decomposition intentionally keeps AW-side work focused on declarative behavior, specimen conversion, inventories, and guardrails while command-generation#14 owns reusable target/conformance/generation machinery."
+}
