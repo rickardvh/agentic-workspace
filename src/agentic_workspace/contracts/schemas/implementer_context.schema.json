@@ -645,6 +645,7 @@
         "kind",
         "operating_posture",
         "workflow_obligations",
+        "improvement_obligations",
         "skill_routes",
         "allowed_actions",
         "forbidden_actions",
@@ -677,6 +678,14 @@
           "type": "array",
           "items": { "type": "object", "additionalProperties": true },
           "description": "Matched workflow obligations with stage, force, scope, and provenance."
+        },
+        "improvement_obligations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence."
         },
         "skill_routes": {
           "type": "array",

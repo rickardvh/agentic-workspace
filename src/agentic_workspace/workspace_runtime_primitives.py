@@ -2935,6 +2935,13 @@ def _normalized_setup_finding(raw: Any) -> dict[str, Any] | None:
     }
     if isinstance(validation_failure_class, str) and validation_failure_class in validation_failure_classes:
         normalized["validation_failure_class"] = validation_failure_class
+    pressure_state = raw.get("pressure_state", raw.get("state"))
+    if isinstance(pressure_state, str) and pressure_state in _IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_states"]:
+        normalized["pressure_state"] = pressure_state
+    for field in ("retire_when", "resulting_owner", "posture_obligation_ref", "evidence_ref", "issue_ref"):
+        value = raw.get(field)
+        if isinstance(value, str) and value.strip():
+            normalized[field] = value.strip()
     return normalized
 
 
@@ -3020,6 +3027,9 @@ def _improvement_signal_contract_payload() -> dict[str, Any]:
         "validation_failure_classes": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])),
         "validation_remedy_order": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_remedy_order", [])),
         "correct_by_design_review": dict(_IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {})),
+        "lifecycle_states": list(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_states"]),
+        "lifecycle_rule": str(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_rule"]),
+        "retirement_criteria_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["retirement_criteria_fields"]),
         "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
         "destinations": list(_IMPROVEMENT_SIGNAL_CONTRACT["destinations"]),
         "guardrails": list(_IMPROVEMENT_SIGNAL_CONTRACT["guardrails"]),
@@ -3166,8 +3176,123 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
             )
             if validation_failure_class:
                 candidate["validation_failure_class"] = validation_failure_class
+            for optional_field in (
+                "pressure_state",
+                "state",
+                "retire_when",
+                "resulting_owner",
+                "posture_obligation_ref",
+                "evidence_ref",
+                "issue_ref",
+            ):
+                if optional_field in item:
+                    candidate[optional_field] = copy.deepcopy(item[optional_field])
             candidates.append(candidate)
     return candidates[:5]
+
+
+def _improvement_pressure_state(candidate: dict[str, Any]) -> str:
+    allowed = set(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_states"])
+    state = str(candidate.get("pressure_state") or candidate.get("state") or "").strip()
+    if state in allowed:
+        return state
+    immediate_action = str(candidate.get("immediate_action") or "").strip()
+    if immediate_action == "dismiss":
+        return "accepted-risk"
+    if candidate.get("issue_ref"):
+        return "promoted-to-issue"
+    return "active"
+
+
+def _improvement_pressure_obligation_for_record(record: dict[str, Any]) -> dict[str, Any]:
+    record_id = str(record.get("id") or "improvement-pressure").strip()
+    kind = str(record.get("kind") or "").strip()
+    validation_class = str(record.get("validation_failure_class") or "").strip()
+    if kind == "validation_friction" and validation_class in {"interface_design_error", "unclear_proof_contract"}:
+        return {
+            "id": f"{record_id}-correct-by-design",
+            "source": "improvement-pressure",
+            "effect": "require correct-by-design assessment before broad completion claim",
+            "routes_to": ["proof_boundaries", "closeout_boundaries", "posture_adherence"],
+            "forbidden_actions": ["claim completion before improvement obligation is resolved"],
+            "proof_boundary": "record correct_by_design_assessment or route the active validation-friction pressure to an owner",
+            "closeout_boundary": "improvement-pressure obligation resolved, overridden, or accepted-risk before full completion claim",
+            "next_allowed_action": "record improvement obligation adherence",
+            "adherence": "unresolved",
+            "provenance": record.get("provenance", []),
+        }
+    return {
+        "id": f"{record_id}-owner-route",
+        "source": "improvement-pressure",
+        "effect": "route or dismiss owner before treating the friction signal as closed",
+        "routes_to": ["closeout_boundaries", "posture_adherence"],
+        "forbidden_actions": ["claim improvement pressure resolved without owner, dismissal, or accepted-risk state"],
+        "proof_boundary": "show owner route, mitigation, accepted-risk decision, or obsolete evidence for this pressure",
+        "closeout_boundary": "active improvement pressure has a recorded owner, mitigation, or accepted-risk disposition",
+        "next_allowed_action": "route active improvement pressure or record accepted-risk",
+        "adherence": "unresolved",
+        "provenance": record.get("provenance", []),
+    }
+
+
+def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[str, Any]:
+    candidates = [item for item in _list_payload(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)]
+    records: list[dict[str, Any]] = []
+    for candidate in candidates:
+        owner = str(candidate.get("suspected_owner") or candidate.get("source") or "unknown").strip()
+        record_id = "pressure-" + _decision_slug(f"{candidate.get('kind', 'signal')}-{owner}")[:72]
+        state = _improvement_pressure_state(candidate)
+        record: dict[str, Any] = {
+            "kind": "workspace-improvement-pressure-record/v1",
+            "id": record_id,
+            "state": state,
+            "signal_kind": str(candidate.get("candidate_kind") or ""),
+            "pressure_kind": str(candidate.get("kind") or ""),
+            "what_keeps_going_wrong": str(candidate.get("symptom") or ""),
+            "evidence": {
+                "source": str(candidate.get("source") or ""),
+                "observed_during": str(candidate.get("observed_during") or ""),
+                "evidence_ref": str(candidate.get("evidence_ref") or ""),
+            },
+            "cost_or_frequency": {
+                "cost": str(candidate.get("cost") or ""),
+                "recurrence": str(candidate.get("recurrence") or "first_seen"),
+                "confidence": str(candidate.get("confidence") or "medium"),
+            },
+            "owner_surface": owner,
+            "resulting_owner": str(candidate.get("resulting_owner") or candidate.get("issue_ref") or owner),
+            "retire_when": str(
+                candidate.get("retire_when") or "the owner route, mitigation, accepted-risk decision, or obsolete evidence is recorded"
+            ),
+            "posture_obligation_ref": str(candidate.get("posture_obligation_ref") or f"{record_id}-owner-route"),
+            "provenance": [
+                {"source": "improvement_intake.improvement_signal_candidates", "candidate_kind": candidate.get("candidate_kind")},
+                {"source": str(candidate.get("source") or "unknown")},
+            ],
+        }
+        validation_failure_class = str(candidate.get("validation_failure_class") or "").strip()
+        if validation_failure_class:
+            record["validation_failure_class"] = validation_failure_class
+            record["posture_obligation_ref"] = str(candidate.get("posture_obligation_ref") or f"{record_id}-correct-by-design")
+        if candidate.get("issue_ref"):
+            record["issue_ref"] = candidate["issue_ref"]
+        if state == "active":
+            record["posture_obligation"] = _improvement_pressure_obligation_for_record({**record, "kind": str(candidate.get("kind") or "")})
+        records.append(record)
+    active_records = [record for record in records if record.get("state") == "active"]
+    obligations = [record["posture_obligation"] for record in active_records if isinstance(record.get("posture_obligation"), dict)]
+    return {
+        "kind": "workspace-improvement-pressure/v1",
+        "status": "active" if active_records else ("quiet" if records else "none"),
+        "lifecycle_states": list(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_states"]),
+        "lifecycle_rule": str(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_rule"]),
+        "records": records,
+        "active_record_refs": [str(record.get("id")) for record in active_records],
+        "inactive_record_refs": [str(record.get("id")) for record in records if record.get("state") != "active"],
+        "posture_obligations": obligations,
+        "active_obligation_refs": [str(obligation.get("id")) for obligation in obligations],
+        "routing_rule": "Active pressure may compile into posture obligations; inactive pressure stays as compact audit detail.",
+    }
 
 
 def _improvement_intake_payload(
@@ -6940,6 +7065,8 @@ def _run_report_command(
         cli_invoke=config.cli_invoke,
     )
     workflow_obligations = _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record)
+    improvement_intake = _improvement_intake_payload(target_root=target_root, config=config, repo_friction=repo_friction)
+    improvement_pressure = _improvement_pressure_payload(improvement_intake)
     intent_custody = _intent_custody_payload(
         task_text=None,
         active_planning_record=raw_active_planning_record or active_planning_record,
@@ -6957,6 +7084,7 @@ def _run_report_command(
         proof={},
         completion_gate=_as_dict(closeout_trust.get("completion_gate")),
         closeout_trust=closeout_trust,
+        improvement_pressure=improvement_pressure,
     )
     payload = {
         "kind": "workspace-report/v1",
@@ -6998,6 +7126,7 @@ def _run_report_command(
         ),
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
         "workflow_obligations": workflow_obligations,
+        "improvement_pressure": improvement_pressure,
         "task_posture_packet": task_posture_packet,
         "applicable_intent": applicable_intent,
         "assurance_requirements": assurance_requirements,
@@ -7021,7 +7150,7 @@ def _run_report_command(
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
-        "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config, repo_friction=repo_friction),
+        "improvement_intake": improvement_intake,
         "repo_friction": repo_friction,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
@@ -18072,6 +18201,7 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
         "kind": task_posture_packet.get("kind"),
         "operating_posture": task_posture_packet.get("operating_posture", {}),
         "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
+        "improvement_obligations": task_posture_packet.get("improvement_obligations", []),
         "skill_routes": task_posture_packet.get("skill_routes", []),
         "allowed_actions": task_posture_packet.get("allowed_actions", []),
         "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
@@ -27225,6 +27355,7 @@ def _task_posture_packet_payload(
     proof: dict[str, Any] | None = None,
     completion_gate: dict[str, Any] | None = None,
     closeout_trust: dict[str, Any] | None = None,
+    improvement_pressure: dict[str, Any] | None = None,
     compact: bool = False,
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
@@ -27234,6 +27365,10 @@ def _task_posture_packet_payload(
     proof = _as_dict(proof)
     completion_gate = _as_dict(completion_gate)
     closeout_trust = _as_dict(closeout_trust)
+    improvement_pressure = _as_dict(improvement_pressure)
+    improvement_obligations = [
+        dict(item) for item in _list_payload(improvement_pressure.get("posture_obligations")) if isinstance(item, dict)
+    ]
     relevant_obligations = [
         dict(item) for item in _list_payload(workflow_obligations.get("relevant_to_current_work")) if isinstance(item, dict)
     ]
@@ -27306,11 +27441,16 @@ def _task_posture_packet_payload(
             "inline all module instructions into AGENTS.md instead of using routed posture",
         ]
     )
+    for obligation in improvement_obligations:
+        forbidden_actions.extend(str(item) for item in _list_payload(obligation.get("forbidden_actions")) if str(item).strip())
     proof_boundaries = [str(item) for item in _list_payload(proof.get("required_commands")) if str(item).strip()]
     if not proof_boundaries:
         proof_boundaries = [str(item) for item in _list_payload(proof.get("proof_commands")) if str(item).strip()]
     if not proof_boundaries and planning_safety_gate.get("workflow_sufficient") is False:
         proof_boundaries = ["create or promote active Planning before selecting implementation proof"]
+    proof_boundaries.extend(
+        str(item.get("proof_boundary")) for item in improvement_obligations if str(item.get("proof_boundary") or "").strip()
+    )
     repo_posture = _repo_posture_payload(config=config, surface=surface, compact=True)
     closeout_boundaries = [
         str(planning_safety_gate.get("claim_boundary", {}).get("completion_claim") or ""),
@@ -27320,6 +27460,9 @@ def _task_posture_packet_payload(
     closeout_boundaries = [item for item in closeout_boundaries if item]
     if not closeout_boundaries:
         closeout_boundaries = ["record proof, acceptance, posture adherence, and residue before completion claims"]
+    improvement_closeout_boundaries = [
+        str(item.get("closeout_boundary")) for item in improvement_obligations if str(item.get("closeout_boundary") or "").strip()
+    ]
     authority_boundaries = []
     for source_name, source_payload in (
         ("planning_safety_gate", planning_safety_gate),
@@ -27394,6 +27537,8 @@ def _task_posture_packet_payload(
     ]
     if relevant_obligations:
         review_rubrics.append("Were matched workflow obligations satisfied or explicitly routed?")
+    if improvement_obligations:
+        review_rubrics.append("Were active improvement-pressure obligations followed, overridden, accepted-risk, or left unresolved?")
     knowledge_gates = _knowledge_gates_payload(
         surface=surface,
         task_text=task_text,
@@ -27418,6 +27563,9 @@ def _task_posture_packet_payload(
         and str(gate.get("resolution_state") or "") == "open"
         and str(gate.get("force") or "") != "informational"
     ]
+    improvement_next_actions = [
+        str(item.get("next_allowed_action")) for item in improvement_obligations if str(item.get("next_allowed_action") or "").strip()
+    ]
     packet: dict[str, Any] = {
         "kind": "agentic-workspace/task-posture-packet/v1",
         "operating_posture": {
@@ -27436,19 +27584,20 @@ def _task_posture_packet_payload(
             "repo_posture_reminder": repo_posture["reminder"],
         },
         "workflow_obligations": relevant_obligations,
+        "improvement_obligations": improvement_obligations,
         "skill_routes": skill_routes,
         "allowed_actions": _dedupe(allowed_actions),
         "forbidden_actions": _dedupe(forbidden_actions),
         "proof_boundaries": _dedupe(proof_boundaries),
-        "closeout_boundaries": _dedupe([*closeout_boundaries, *gate_closeout_boundaries]),
+        "closeout_boundaries": _dedupe([*closeout_boundaries, *gate_closeout_boundaries, *improvement_closeout_boundaries]),
         "read_budget": read_budget,
         "authority_boundaries": authority_boundaries,
         "knowledge_gates": knowledge_gates,
         "gate_summary": gate_summary,
         "blocked_actions": blocked_actions,
-        "next_allowed_action": gate_next_actions[0]
-        if gate_next_actions
-        else (allowed_actions[0] if allowed_actions else "continue-direct"),
+        "next_allowed_action": improvement_next_actions[0]
+        if improvement_next_actions
+        else (gate_next_actions[0] if gate_next_actions else (allowed_actions[0] if allowed_actions else "continue-direct")),
         "output_shape_requirements": output_shape_requirements,
         "review_rubrics": review_rubrics,
         "module_contributions": module_contributions,
@@ -27457,6 +27606,7 @@ def _task_posture_packet_payload(
             {"source": "workflow_obligations", "matched_count": len(relevant_obligations)},
             {"source": "planning_safety_gate", "status": planning_safety_gate.get("status", "not-present")},
             {"source": "module_registry", "matched_module_count": len(module_contributions)},
+            {"source": "improvement_pressure", "active_obligation_count": len(improvement_obligations)},
         ],
     }
     packet["dynamic_instruction_projection"] = {
@@ -27478,6 +27628,15 @@ def _task_posture_packet_payload(
         "status": "requires-closeout-review",
         "closeout_question": "Did the work follow the task posture packet, and were any divergences recorded?",
         "allowed_states": ["complied", "intentional-divergence", "gap"],
+        "improvement_obligation_adherence": [
+            {
+                "obligation_ref": str(obligation.get("id") or ""),
+                "status": str(obligation.get("adherence") or "unresolved"),
+                "allowed_states": ["followed", "ignored", "overridden", "unresolved", "accepted-risk"],
+                "record_to": "closeout evidence, report closeout, or PR body",
+            }
+            for obligation in improvement_obligations
+        ],
     }
     return packet
 

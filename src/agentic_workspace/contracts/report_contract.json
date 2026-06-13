@@ -59,6 +59,7 @@
     "discovery",
     "standing_intent",
     "improvement_intake",
+    "improvement_pressure",
     "repo_friction",
     "registry",
     "config",
@@ -79,6 +80,7 @@
     "make each config setting's actual force inspectable instead of relying on setting names alone",
     "let optimization bias change rendering density, not canonical truth or execution method",
     "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal",
+    "compile only active improvement pressure into posture obligations; keep mitigated, promoted, accepted-risk, and obsolete pressure quiet by default",
     "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology",
     "compress routine agent routing into authority, active work, evidence, durable knowledge, and promotion residue without changing canonical owners",
     "expose continuation, completion, external-evidence, automation-readiness, and migration-pilot answers as derived projections rather than new stores or runtime ownership"
