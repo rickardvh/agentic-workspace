@@ -36,9 +36,9 @@
     {
       "id": "lane-1476-generated-python-operation-callables",
       "title": "Promote migrated AW cases to generated Python operation callables",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Applicable migrated AW conformance cases expose generated operation-shaped Python callable surfaces with registry symbol entries and python.function artifacts, replacing wrapper-smoke or cli.process as semantic proof where behavior is operation semantics.",
-      "owner_surface": "AW operation conformance registry/cases, generated workspace Python artifacts, and command-generation#14 callable generation machinery",
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-1476-generated-python-operation-callables.lane.json",
       "proof": "Conformance runner uses python.function for applicable migrated AW cases; non-promoted cases have explicit wrapper-only or runtime-boundary rationale.",
       "slice_contribution_to_parent": "Advances primitive, operation IR, generated implementation, wrapper, and conformance layers for the Python specimen target.",
       "residual_parent_intent": "TypeScript direct operation support, target-extension contract, broader case conversion, wrapper demotion, ordinary-test inventory, and guardrails remain.",

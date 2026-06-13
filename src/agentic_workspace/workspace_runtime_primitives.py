@@ -17994,7 +17994,7 @@ def _compact_action_signals_payload(
         "changed_signals": signals,
         "advisory_detail": {
             "selectors": selectors,
-            "rule": "Use selectors for advisory detail.",
+            "rule": "Use selectors.",
         },
         "agent_judgment": agent_judgment,
         "order": [
@@ -18612,6 +18612,9 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
     )
     compact = {key: value.get(key) for key in common_keys if key in value}
     compact.setdefault("recommended_route", value.get("recommended_route") or value.get("decision"))
+    decision = str(value.get("recommended_route") or value.get("decision") or "")
+    if not include_manual_handoff_detail and decision == "stay-local":
+        compact.pop("authority_boundary", None)
     if "authority_boundary" in compact:
         compact["authority_boundary"] = _compact_authority_boundary(compact["authority_boundary"])
     if isinstance(compact.get("route_evidence"), dict):
@@ -18628,7 +18631,6 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         }
     if isinstance(compact.get("effort_guidance"), dict):
         compact["effort_guidance"] = _compact_effort_guidance(compact["effort_guidance"])
-    decision = str(value.get("recommended_route") or value.get("decision") or "")
     suppress_manual_detail = not include_manual_handoff_detail and decision in {"manual-handoff", "ask-human"}
     config_effect = value.get("config_effect")
     manual_external_relay = value.get("manual_external_relay")
@@ -18668,7 +18670,15 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
                         "execution_authority",
                     )
                     if suppress_manual_detail:
-                        config_keys = ("delegation_mode", "safe_to_auto_run_commands", "execution_authority")
+                        config_keys = (
+                            "authority",
+                            "source_path",
+                            "configured_delegation_mode",
+                            "delegation_mode",
+                            "safe_to_auto_run_commands",
+                            "disabled_reason",
+                            "execution_authority",
+                        )
                     compact[routed_key] = {key: routed_value.get(key) for key in config_keys if key in routed_value}
                 else:
                     compact[routed_key] = routed_value
@@ -18677,9 +18687,11 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
         compact["reason"] = value.get("reason")
     decomposition_delegation = value.get("decomposition_delegation")
     delegation_candidates = [item for item in value.get("delegation_candidates", []) if isinstance(item, dict)]
+    delegation_candidate_detail_allowed = decision in {"suggest-delegation", "suggest-downroute", "delegate-bounded-slice"}
     include_decomposition = (
         isinstance(decomposition_delegation, dict)
         and decomposition_delegation.get("status") in {"present", "available-without-active-planning"}
+        and (delegation_candidate_detail_allowed or config_changes_effective_behavior)
         and (
             decision == "suggest-delegation"
             or bool(delegation_candidates)
@@ -18711,8 +18723,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
                 for target in skipped_targets[:2]
             ]
     if (
-        not suppress_manual_detail
-        and isinstance(manual_external_relay, dict)
+        isinstance(manual_external_relay, dict)
         and manual_external_relay.get("target_kind") == "manual-external"
         and (manual_external_relay.get("status") == "appropriate" or decision in {"suggest-escalation", "manual-handoff"})
     ):
@@ -18723,7 +18734,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
     if decision in {"suggest-delegation", "suggest-escalation", "delegate-bounded-slice", "manual-handoff", "ask-human"}:
         if value.get("handoff_command"):
             compact["handoff_command"] = value.get("handoff_command")
-        if include_manual_handoff_detail and value.get("manual_prompt"):
+        if (include_manual_handoff_detail or decision in {"manual-handoff", "ask-human"}) and value.get("manual_prompt"):
             compact["manual_prompt"] = value.get("manual_prompt")
         if value.get("delegation_next_step"):
             next_step = value.get("delegation_next_step")
@@ -19895,7 +19906,7 @@ def _startup_skills_projection(
     return {
         "kind": "agentic-workspace/startup-skills-projection/v1",
         "status": "recommended" if required else "available",
-        "rule": "Compact skill projection; use catalog.command only when explicit task-specific skill search is useful.",
+        "rule": "Use catalog.command only for task-specific skill search.",
         "required": required,
         "recommended": recommended,
         "catalog": {
@@ -20114,6 +20125,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         )
         if isinstance(task_intent, dict) and "acceptance" in task_intent and not prep_only_active and not read_only_compact_default:
             context["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
+            if context["task"].get("task_argument_mode") == "task-file":
+                context["acceptance"].pop("items", None)
+                context["acceptance"].pop("proof_rule", None)
         if read_only_compact_default:
             context["read_only_response"] = read_only_response
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
@@ -20171,15 +20185,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "drill_down": {
             "ordinary_profile": "primary=next_safe_action;skills=proj;legacy=select/context",
             "rule": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.",
-            "examples": [
-                _command_with_cli_invoke(
-                    command="agentic-workspace start --select cli_invocation,durable_intent --format json", cli_invoke=cli_invoke
-                ),
-                _command_with_cli_invoke(
-                    command="agentic-workspace start --select workflow_obligations,closeout_obligations --format json",
-                    cli_invoke=cli_invoke,
-                ),
-            ],
             "available_selectors": available_selectors,
         },
     }
@@ -20200,12 +20205,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             context["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
     delegation = payload.get("delegation_decision", {})
     delegation_route = delegation.get("recommended_route") or delegation.get("decision") if isinstance(delegation, dict) else None
-    if isinstance(delegation, dict) and (
-        delegation_route not in {"", None, "stay-local"}
-        or delegation.get("delegation_candidates")
-        or (isinstance(delegation.get("auto_delegation_audit"), dict) and delegation["auto_delegation_audit"].get("status") == "skipped")
-    ):
-        context["delegation_decision"] = delegation
+    delegation_config_effect = delegation.get("config_effect", {}) if isinstance(delegation, dict) else {}
+    delegation_config_changes_behavior = isinstance(delegation_config_effect, dict) and (
+        delegation_config_effect.get("configured_delegation_mode") != delegation_config_effect.get("delegation_mode")
+        or delegation_config_effect.get("disabled_reason") not in (None, "")
+        or delegation_config_effect.get("safe_to_auto_run_commands") is False
+    )
+    if isinstance(delegation, dict) and (delegation_route not in {"", None, "stay-local"} or delegation_config_changes_behavior):
+        context["delegation_decision"] = _compact_start_delegation_decision(delegation, include_manual_handoff_detail=False)
     cli_invocation = payload.get("cli_invocation", {})
     if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
         selected["cli_invocation"] = cli_invocation
@@ -20230,7 +20237,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "closeout_trust_inspection",
         "closeout_report_route",
         "repo_posture",
-        "continuation_reorientation",
         "intent_elicitation_protocol",
         "intent_discovery_dialogue",
         "vague_outcome_orientation",
@@ -24614,7 +24620,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if compact_gate.get("status") in {"clear", "satisfied"}:
             compact_gate.pop("candidate_pressure", None)
             compact_gate.pop("issue_scope_evidence", None)
-        projected["context"]["planning_safety_gate"] = compact_gate
+        if not (
+            isinstance(generated_surface_trust, dict)
+            and generated_surface_trust.get("status") == "present"
+            and compact_gate.get("status") in {"clear", "satisfied"}
+        ):
+            projected["context"]["planning_safety_gate"] = compact_gate
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["context"]["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
@@ -24702,8 +24713,8 @@ def _tiny_acceptance_payload(value: Any) -> dict[str, Any]:
             compact_items.append(
                 {
                     "id": item.get("id"),
-                    "expectation": _task_excerpt(str(item.get("expectation", "")), limit=92),
-                    "proof_hint": _task_excerpt(str(item.get("proof_hint", "")), limit=80),
+                    "expectation": _task_excerpt(str(item.get("expectation", "")), limit=72),
+                    "proof_hint": _task_excerpt(str(item.get("proof_hint", "")), limit=56),
                     "status": item.get("status"),
                 }
             )

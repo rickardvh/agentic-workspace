@@ -586,11 +586,30 @@ def _runtime_module_file_for_package(package_id: str) -> str:
 
 
 def _generated_package_for_package(package_id: str):
-    return load_generated_command_package_for_entrypoint(_entrypoint_for_package(package_id))
+    try:
+        return load_generated_command_package_for_entrypoint(_entrypoint_for_package(package_id))
+    except ModuleNotFoundError:
+        generated_package = {
+            "root-workspace": "workspace",
+            "planning-bootstrap": "planning",
+            "memory-bootstrap": "memory",
+            "verification-cli": "verification",
+        }[package_id]
+        return importlib.import_module(f"generated.{generated_package}.python")
 
 
 def _generated_runtime_module_for_package(package_id: str):
-    return load_generated_command_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
+    try:
+        return load_generated_command_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
+    except ModuleNotFoundError:
+        generated_package = {
+            "root-workspace": "workspace",
+            "planning-bootstrap": "planning",
+            "memory-bootstrap": "memory",
+            "verification-cli": "verification",
+        }[package_id]
+        runtime_module = _runtime_module_file_for_package(package_id).removesuffix(".py")
+        return importlib.import_module(f"generated.{generated_package}.python.{runtime_module}")
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
@@ -3180,6 +3199,33 @@ def _validate_generated_python_target_layout() -> list[str]:
     return errors
 
 
+def _command_generation_git_rev_from_pyproject() -> str:
+    payload = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    sources = payload.get("tool", {}).get("uv", {}).get("sources", {})
+    command_generation_source = sources.get("command-generation", {}) if isinstance(sources, dict) else {}
+    if isinstance(command_generation_source, dict):
+        return str(command_generation_source.get("rev", ""))
+    return ""
+
+
+def _validate_python_dockerfiles_pin_command_generation() -> list[str]:
+    expected_rev = _command_generation_git_rev_from_pyproject()
+    if not expected_rev:
+        return ["pyproject.toml command-generation source must declare a git rev"]
+    errors: list[str] = []
+    for relative_path in (
+        "generated/python/Dockerfile.conformance",
+        "generated/python/Dockerfile.primitive-conformance",
+    ):
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            continue
+        expected = f"command-generation.git@{expected_rev}"
+        if expected not in path.read_text(encoding="utf-8"):
+            errors.append(f"{relative_path} command-generation install ref must match pyproject.toml rev {expected_rev}")
+    return errors
+
+
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap", "verification-cli"):
@@ -4084,6 +4130,7 @@ def _validate_static_surfaces() -> list[str]:
     primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
     if not primitive_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.primitive-conformance is missing")
+    errors.extend(_validate_python_dockerfiles_pin_command_generation())
     try:
         import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
     except ModuleNotFoundError:

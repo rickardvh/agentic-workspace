@@ -8,6 +8,9 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -27,40 +30,10 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") not in {
-        'memory.adopt.lifecycle',
-        'memory.bootstrap-cleanup.apply',
-        'memory.capture-note.report',
-        'memory.create-note.apply',
-        'memory.current.report',
-        'memory.doctor.report',
-        'memory.init.lifecycle',
-        'memory.install.lifecycle',
-        'memory.list-files.report',
-        'memory.list-skills.report',
-        'memory.migrate-layout.lifecycle',
-        'memory.promotion-report.report',
-        'memory.prompt.render',
-        'memory.report.report',
-        'memory.route-report.report',
-        'memory.route-review.report',
-        'memory.route.report',
-        'memory.search.report',
-        'memory.status.report',
-        'memory.sync-memory.report',
-        'memory.uninstall.lifecycle',
-        'memory.upgrade.lifecycle',
-        'memory.verify-payload.report'
-    }:
-        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
-    if operation.get("migration_status") != "runtime-consumed":
-        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
-
-    try:
-        values = run_operation_steps(
-            operation,
-            initial_values={
-                "operation_id": operation.get("id"),
+    values = run_operation_values(
+        operation,
+        initial_values={
+            "operation_id": operation.get("id"),
                 'target': getattr(args, 'target', None),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),
@@ -99,7 +72,97 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'query': getattr(args, 'query', ''),
                 'current_command': getattr(args, 'current_command', 'show'),
                 'prompt_command': getattr(args, 'prompt_command', 'install'),
+        },
+    )
+    emitted = values.get('emitted')
+    if isinstance(emitted, str):
+        print(emitted, end='')
+    return 0
+
+
+def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any]) -> object:
+    with contextlib.redirect_stdout(io.StringIO()):
+        result = run_operation_values(
+            operation,
+            initial_values={
+                "operation_id": operation.get("id"),
+                'target': values.get('target', None),
+                'format': values.get('format', 'text'),
+                'verbose': values.get('verbose', False),
+                'strict_doc_ownership': values.get('strict_doc_ownership', False),
+                'project_name': values.get('project_name', None),
+                'project_purpose': values.get('project_purpose', None),
+                'key_repo_docs': values.get('key_repo_docs', None),
+                'key_subsystems': values.get('key_subsystems', None),
+                'primary_build_command': values.get('primary_build_command', None),
+                'primary_test_command': values.get('primary_test_command', None),
+                'other_key_commands': values.get('other_key_commands', None),
+                'notes': values.get('notes', None),
+                'files': values.get('files', []),
+                'surface': values.get('surface', []),
+                'mode': values.get('mode', None),
+                'slug': values.get('slug', ''),
+                'title': values.get('title', None),
+                'folder': values.get('folder', 'domains'),
+                'note_type': values.get('note_type', 'domain'),
+                'applies_to': values.get('applies_to', []),
+                'use_when': values.get('use_when', []),
+                'routes_from': values.get('routes_from', []),
+                'stale_when': values.get('stale_when', []),
+                'evidence': values.get('evidence', []),
+                'memory_role': values.get('memory_role', ''),
+                'promotion_target': values.get('promotion_target', ''),
+                'promotion_trigger': values.get('promotion_trigger', ''),
+                'retention_after_promotion': values.get('retention_after_promotion', ''),
+                'dry_run': values.get('dry_run', False),
+                'policy_profile': values.get('policy_profile', 'default'),
+                'apply_local_entrypoint': values.get('apply_local_entrypoint', False),
+                'force': values.get('force', False),
+                'summary': values.get('summary', ''),
+                'existing_note': values.get('existing_note', ''),
+                'force_new_reason': values.get('force_new_reason', ''),
+                'query': values.get('query', ''),
+                'current_command': values.get('current_command', 'show'),
+                'prompt_command': values.get('prompt_command', 'install'),
             },
+        ).get('result')
+    return result
+
+
+def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[str, Any]) -> dict[str, Any]:
+    if operation.get("id") not in {
+        'memory.adopt.lifecycle',
+        'memory.bootstrap-cleanup.apply',
+        'memory.capture-note.report',
+        'memory.create-note.apply',
+        'memory.current.report',
+        'memory.doctor.report',
+        'memory.init.lifecycle',
+        'memory.install.lifecycle',
+        'memory.list-files.report',
+        'memory.list-skills.report',
+        'memory.migrate-layout.lifecycle',
+        'memory.promotion-report.report',
+        'memory.prompt.render',
+        'memory.report.report',
+        'memory.route-report.report',
+        'memory.route-review.report',
+        'memory.route.report',
+        'memory.search.report',
+        'memory.status.report',
+        'memory.sync-memory.report',
+        'memory.uninstall.lifecycle',
+        'memory.upgrade.lifecycle',
+        'memory.verify-payload.report'
+    }:
+        raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
+    if operation.get("migration_status") != "runtime-consumed":
+        raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
+
+    try:
+        return run_operation_steps(
+            operation,
+            initial_values=dict(initial_values),
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
                 'memory.package-skills': _handle_context_root_memory_package_skills(),
@@ -129,12 +192,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.search.load': _handle_memory_search_load,
             },
         )
-        emitted = values.get('emitted')
-        if isinstance(emitted, str):
-            print(emitted, end='')
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
-    return 0
 
 
 def _handle_context_root_memory_package_payload() -> Path:

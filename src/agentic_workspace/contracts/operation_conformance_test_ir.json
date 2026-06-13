@@ -160,8 +160,8 @@
         {
           "artifact_id": "root-workspace.defaults.python",
           "target": "python",
-          "adapter_id": "cli.process",
-          "proof_role": "wrapper-smoke",
+          "adapter_id": "python.function",
+          "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/defaults",
           "wrapper_refs": [
             "defaults.report.cli"
@@ -211,6 +211,10 @@
         "exit_code": 0,
         "result": {
           "format": "text",
+          "selected_fields": {
+            "kind": "agentic-workspace/selected-output/v1",
+            "source_command": "defaults"
+          },
           "contains": [
             "Kind: agentic-workspace/selected-output/v1",
             "Source command: defaults",
@@ -248,9 +252,10 @@
         "retain_handwritten_tests": [
           "selector parser unit tests",
           "runtime defaults payload assembly tests",
+          "CLI wrapper text-emission smoke where stdout formatting, argv parsing, or process exit behavior is the behavior under test",
           "tests/test_generated_command_package_proof_runner.py::test_generated_python_conformance_uses_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
-        "rationale": "This case preserves black-box selected-output behavior without carrying every current test helper or payload assembly assertion into operation conformance IR."
+        "rationale": "This case now uses the generated Python operation callable for semantic proof. The retained stdout expectations document the wrapper-smoke boundary, but operation completion is proven through the JSON-shaped result returned by generated.workspace.python.commands.defaults_report:invoke."
       }
     },
     {
@@ -355,7 +360,7 @@
           "handwritten root CLI fallback parser tests",
           "target adapter parser mechanics tests that do not assert the config command behavior contract"
         ],
-        "rationale": "The case protects the structured operation error directly while avoiding a one-to-one copy of parser regression cases."
+        "rationale": "This case remains wrapper-smoke because the invalid --format rejection is currently owned by generated parser/transport choice validation, not by the JSON-shaped config.report operation callable. It protects wrapper error behavior without presenting cli.process as operation-semantic proof."
       }
     },
     {
@@ -480,7 +485,7 @@
           "primitive executor tests for filesystem and payload assembly",
           "tests/test_generated_command_package_proof_runner.py::test_generated_typescript_conformance_cases_come_from_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
-        "rationale": "Composite parity assumes primitive executor behavior is tested by primitive cases and checks only the higher-level generated operation behavior."
+        "rationale": "This case remains wrapper-smoke because its current acceptance is cross-target CLI parity for generated Memory transport and stable JSON fields. Composite parity assumes primitive executor behavior is tested by primitive cases, and a later TypeScript function target should promote this to direct operation conformance when both direct function adapters are available."
       }
     }
   ]

@@ -142,7 +142,7 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
     assert "[ok] generated command package proof (8 steps," in capsys.readouterr().out
 
 
-def test_operation_conformance_runner_executes_python_cases() -> None:
+def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     runner = _load_test_ir_runner()
 
     payload = runner.run_ir_cases(target_selection="python", case_filter=set(), require_node=False)
@@ -154,6 +154,8 @@ def test_operation_conformance_runner_executes_python_cases() -> None:
     assert payload["summary"]["pass_count"] == 3
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
+    assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
+    assert "Kind: agentic-workspace/selected-output/v1" not in capsys.readouterr().out
     assert cases[("config.invalid-format.error", "python")]["exit_code"] == 2
     assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
 
