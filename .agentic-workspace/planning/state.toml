@@ -17,4 +17,6 @@ queued_items = []
 
 [roadmap]
 lanes = []
-candidates = []
+candidates = [
+  { id = "github-1476-workspace-operation-test-ir-single-source", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1476; rickardvh/command-generation#14", title = "[Workspace]: Make operation and test IR the single source of truth for generated implementations", outcome = "Decompose #1476 into bounded AW-side lanes coordinated with command-generation#14, then promote the first stratification lane.", reason = "Open upstream issue from refreshed external intent evidence; decomposition recorded in .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json.", promotion_signal = "Promote lane-1476-authoritative-stratification-contract first; keep #1476 open until all final-state acceptance bullets are satisfied or owner-approved rejections are recorded.", suggested_first_slice = "Define the authoritative stratification contract and checked inventory for generated behavior, hand-owned primitives, ordinary tests, and command-generation#14 consumption." },
+]
