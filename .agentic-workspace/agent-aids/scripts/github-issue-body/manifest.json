@@ -9,7 +9,9 @@
   "owner": "workspace",
   "created_because": "Agents bypassed the repo GitHub issue templates when creating issues from review findings.",
   "use_when": [
-    "creating GitHub issues from review findings, dogfooding friction, bugs, or planning follow-ups"
+    "creating GitHub issues from review findings, dogfooding friction, bugs, or planning follow-ups",
+    "for nontrivial issue bodies, use --input-json, --from-lane, or --from-decomposition so semantic fields come from structured data",
+    "use --field only as a manual scalar fallback for simple one-off bodies; do not assemble Planning-derived fields in the shell"
   ],
   "entrypoint": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py",
   "safety": {
