@@ -5,7 +5,7 @@ WORKDIR /work
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-pip \
     && find /usr/lib/python3/dist-packages -name '*.pyc' -delete \
-    && python3 -m pip install --break-system-packages --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@b178a980fc561ce82821405707ebe24da85c09dc"
+    && python3 -m pip install --break-system-packages --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@70392e88b1f4ce627c9e4d844869d1a1ea623723"
 
 COPY src ./src
 COPY scripts ./scripts
