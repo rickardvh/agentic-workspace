@@ -190,6 +190,11 @@
       "description": "Lossy continuation/re-grounding view projected from existing owner surfaces so a low-context agent can identify preserved intent, allowed claim class, next safe action, source freshness, omissions, and drill-down routes without treating startup as a durable state owner.",
       "additionalProperties": true
     },
+    "continuation_reorientation": {
+      "type": "object",
+      "description": "Stronger continuation/compression-risk reorientation packet emitted only when a concrete continuation trigger is present, carrying repo posture, active intent refs, completion boundary, anti-goals, proof/claim boundary, and next safe action as a startup projection rather than a durable store.",
+      "additionalProperties": true
+    },
     "package_boundary": {
       "$ref": "#/$defs/package_boundary",
       "description": "Current package/root boundary information for the command invocation."

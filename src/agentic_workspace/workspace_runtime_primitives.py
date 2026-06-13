@@ -17975,6 +17975,98 @@ def _compact_start_continuation_view(view: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in compact.items() if value not in ({}, [], "", None)}
 
 
+def _continuation_reorientation_payload(
+    *,
+    config: WorkspaceConfig,
+    target_root: Path,
+    active_planning_present: bool,
+    payload: dict[str, Any],
+    task_text: str | None,
+    active_planning_record: dict[str, Any] | None = None,
+    active_intent_contract: dict[str, Any] | None = None,
+    intent_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    repo_posture = _compact_repo_posture_projection(_repo_posture_payload(config=config, surface="start", compact=True))
+    if not active_planning_present:
+        return {
+            "kind": "agentic-workspace/continuation-reorientation/v1",
+            "status": "not-triggered",
+            "trigger": {
+                "source": "planning.continuation_view",
+                "condition": "active-planning-present",
+                "present": False,
+            },
+            "repo_posture": repo_posture,
+            "normal_startup_rule": "Normal first-contact startup carries only repo_posture ref/digest/reminder unless continuation pressure is present or the selector is requested.",
+        }
+
+    active_planning_record = _as_dict(active_planning_record)
+    active_intent_contract = _as_dict(active_intent_contract)
+    continuation_view = _as_dict(payload.get("continuation_view"))
+    claim_boundary = _as_dict(continuation_view.get("claim_boundary"))
+    answers = _as_dict(continuation_view.get("answers"))
+    custody = _intent_custody_payload(
+        task_text=task_text,
+        task_intent=_as_dict(payload.get("task_intent")),
+        intent_evidence=_as_dict(intent_evidence) or _as_dict(payload.get("intent_evidence")),
+        active_intent_contract=active_intent_contract,
+        active_planning_record=active_planning_record,
+        durable_intent=_as_dict(payload.get("durable_intent")),
+        cli_invoke=config.cli_invoke,
+    )
+    completion_boundaries = _list_payload(_as_dict(custody.get("startup_projection")).get("completion_boundaries"))
+    anti_goals = _list_payload(_as_dict(custody.get("startup_projection")).get("anti_goals"))
+    if not anti_goals:
+        anti_goals = [
+            "do not claim parent, issue, or initiative closure from startup projection alone",
+            "do not treat this packet as a durable intent store",
+        ]
+    immediate = _as_dict(payload.get("immediate_next_allowed_action"))
+    proof = _as_dict(payload.get("proof"))
+    proof_boundary = (
+        proof.get("summary") or proof.get("next_proof") or immediate.get("next_proof") or "select proof after changed paths are known"
+    )
+    next_safe_action = {
+        key: immediate.get(key)
+        for key in ("action", "summary", "command", "risk", "next_proof")
+        if immediate.get(key) not in ("", None, [], {})
+    }
+    return {
+        "kind": "agentic-workspace/continuation-reorientation/v1",
+        "status": "required",
+        "trigger": {
+            "source": "planning.continuation_view",
+            "condition": "active-planning-present",
+            "present": True,
+            "rule": "Active Planning continuation/resume state upgrades startup from compact posture reminder to explicit reorientation packet.",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace summary --select continuation_view --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "repo_posture": repo_posture,
+        "active_intent_refs": _list_payload(custody.get("active_intent_refs")),
+        "completion_boundary": completion_boundaries[:4],
+        "anti_goals_or_omissions": anti_goals[:4],
+        "proof_claim_boundary": {
+            "proof": proof_boundary,
+            "claim_boundary": {
+                key: claim_boundary.get(key)
+                for key in ("status", "claim_level_allowed", "required_next_action", "active_intent_satisfied")
+                if claim_boundary.get(key) not in ("", None)
+            },
+            "claim_allowed": answers.get("claim_allowed"),
+        },
+        "next_safe_action": next_safe_action,
+        "startup_role": "projection-routing-only",
+        "not_durable_store": True,
+        "routing": {
+            "detail_selectors": ["continuation_view", "repo_posture", "intent_custody", "active_intent_contract"],
+            "owner_surface": "Planning active state and summary continuation_view",
+        },
+    }
+
+
 def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any]) -> dict[str, Any]:
     compact = {
         "kind": task_posture_packet.get("kind"),
@@ -18100,6 +18192,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
         },
         **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
+        **(
+            {"continuation_reorientation": payload["continuation_reorientation"]}
+            if isinstance(payload.get("continuation_reorientation"), dict)
+            and payload["continuation_reorientation"].get("status") == "required"
+            else {}
+        ),
         "routine_work_context": payload.get("routine_work_context", {}),
         "operating_posture": {
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
@@ -18722,6 +18820,7 @@ _START_TINY_ONLY_SELECTORS = {
     "cli_invocation",
     "context_router",
     "closeout_trust_inspection",
+    "continuation_reorientation",
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
@@ -19376,6 +19475,30 @@ def _hydrate_selected_start_advisory_payloads(
             durable_intent=_as_dict(payload.get("durable_intent")),
             cli_invoke=config.cli_invoke,
         )
+    if _selector_requests(select, "continuation_reorientation"):
+        active_summary = _as_dict(payload.get("active_state_summary"))
+        active_planning_present = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
+        active_planning_record = (
+            _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root) if active_planning_present else {}
+        )
+        active_intent_contract = _as_dict(payload.get("active_intent_contract"))
+        if active_planning_present and active_intent_contract.get("status") != "present":
+            active_intent_contract = _active_intent_contract_payload(
+                task_text=task_text,
+                acceptance=_as_dict(payload.get("acceptance")),
+                active_planning_record=active_planning_record,
+            )
+        if active_planning_present and not isinstance(payload.get("continuation_view"), dict):
+            payload["continuation_view"] = _startup_continuation_view_payload(target_root=target_root)
+        payload["continuation_reorientation"] = _continuation_reorientation_payload(
+            config=config,
+            target_root=target_root,
+            active_planning_present=active_planning_present,
+            payload=payload,
+            task_text=task_text,
+            active_planning_record=active_planning_record,
+            active_intent_contract=active_intent_contract,
+        )
     if _selector_requests(select, "closeout_trust_inspection"):
         payload.setdefault(
             "closeout_trust_inspection",
@@ -19517,6 +19640,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "closeout_obligations",
         "routine_work_context",
         "continuation_view",
+        "continuation_reorientation",
         "read_only_response",
         "proof",
         "repair_plan_profile",
@@ -19533,6 +19657,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.intent_acknowledgement",
         "context.intent_evidence",
         "context.intent_custody",
+        "context.continuation_reorientation",
         "context.active_intent_contract",
         "context.intent_satisfaction_matrix",
         "context.issue_reference_intent",
@@ -19933,6 +20058,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     if isinstance(payload.get("continuation_view"), dict):
         selected["continuation_view"] = payload["continuation_view"]
+    if isinstance(payload.get("continuation_reorientation"), dict) and payload["continuation_reorientation"].get("status") == "required":
+        selected["continuation_reorientation"] = payload["continuation_reorientation"]
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
         if (
@@ -19973,6 +20100,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "closeout_trust_inspection",
         "closeout_report_route",
         "repo_posture",
+        "continuation_reorientation",
         "intent_elicitation_protocol",
         "intent_discovery_dialogue",
         "vague_outcome_orientation",
@@ -20221,6 +20349,17 @@ def _start_tiny_payload_fast(
     if active_intent_contract["status"] == "present":
         payload["active_intent_contract"] = active_intent_contract
         payload["intent_satisfaction_matrix"] = intent_satisfaction_matrix
+    if active_planning_present:
+        payload["continuation_reorientation"] = _continuation_reorientation_payload(
+            config=config,
+            target_root=target_root,
+            active_planning_present=True,
+            payload=payload,
+            task_text=task_text,
+            active_planning_record=active_parent_record,
+            active_intent_contract=active_intent_contract,
+            intent_evidence=payload.get("intent_evidence", {}),
+        )
     if (
         intent_discovery.get("status") == "ask-human"
         and not active_planning_present

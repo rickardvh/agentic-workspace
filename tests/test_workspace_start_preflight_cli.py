@@ -608,6 +608,22 @@ def test_start_selects_repo_posture_and_intent_custody_without_broad_startup(tmp
     assert "Task records may support task/slice closure only" in custody["claim_rule"]
 
 
+def test_start_keeps_normal_startup_compact_without_continuation_reorientation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["start", "--target", str(target), "--task", "Fix a typo", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["context"]["repo_posture"]
+    assert posture["ref"].startswith("repo-posture/")
+    assert posture["digest"]
+    assert posture["reminder"] == "Intent; owners; proof."
+    assert "continuation_reorientation" not in payload
+    assert "continuation_reorientation" not in payload["context"]
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -859,6 +875,21 @@ candidates = []
     assert view["resume_predicate"]["required_next_action"] == "continue-current-work"
     assert view["stale_projections"][0]["field"] == "todo.active_items[0].next_action"
     assert "continuation_view" in payload["drill_down"]["available_selectors"]
+    reorientation = payload["continuation_reorientation"]
+    assert reorientation["status"] == "required"
+    assert reorientation["trigger"]["source"] == "planning.continuation_view"
+    assert reorientation["trigger"]["condition"] == "active-planning-present"
+    assert reorientation["repo_posture"]["ref"].startswith("repo-posture/")
+    assert reorientation["repo_posture"]["digest"]
+    assert "active-intent-contract" in reorientation["active_intent_refs"]
+    assert "planning/active" in reorientation["active_intent_refs"]
+    assert reorientation["completion_boundary"]
+    assert reorientation["anti_goals_or_omissions"]
+    assert reorientation["proof_claim_boundary"]["claim_boundary"]["claim_level_allowed"] == "partial-progress"
+    assert reorientation["next_safe_action"]["action"] == "continue-active-planning-record"
+    assert reorientation["startup_role"] == "projection-routing-only"
+    assert reorientation["not_durable_store"] is True
+    assert "continuation_reorientation" in payload["drill_down"]["available_selectors"]
 
 
 def test_start_select_returns_router_fields_for_active_planning_compact_profile(tmp_path: Path, capsys) -> None:
@@ -904,7 +935,7 @@ candidates = []
                 "--task",
                 "Continue active work",
                 "--select",
-                "next_safe_action,action_signals,continuation_view",
+                "next_safe_action,action_signals,continuation_view,continuation_reorientation",
                 "--format",
                 "json",
             ]
@@ -919,6 +950,8 @@ candidates = []
     assert packet["next_safe_action"] == "continue-active-planning-record"
     assert payload["values"]["action_signals"]["allowed_next_action"] == "continue-active-planning-record"
     assert payload["values"]["continuation_view"]["answers"]["next_safe_action"] == "Continue from the execplan next action."
+    assert payload["values"]["continuation_reorientation"]["trigger"]["source"] == "planning.continuation_view"
+    assert payload["values"]["continuation_reorientation"]["next_safe_action"]["action"] == "continue-active-planning-record"
 
 
 def test_start_surfaces_maintainer_mode_dogfooding_routes_from_local_config(tmp_path: Path, capsys) -> None:

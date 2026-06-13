@@ -86,6 +86,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `active_state_summary.active_execplan` | string \| null | yes |  | Active execplan contract value used by this contract. |  |  |
 | `active_state_summary.planning_status` | string | yes |  | Planning status text value used by this contract. |  |  |
 | `continuation_view` | object | no |  | Lossy continuation/re-grounding view projected from existing owner surfaces so a low-context agent can identify preserved intent, allowed claim class, next safe action, source freshness, omissions, and drill-down routes without treating startup as a durable state owner. |  |  |
+| `continuation_reorientation` | object | no |  | Stronger continuation/compression-risk reorientation packet emitted only when a concrete continuation trigger is present, carrying repo posture, active intent refs, completion boundary, anti-goals, proof/claim boundary, and next safe action as a startup projection rather than a durable store. |  |  |
 | `package_boundary` | ref `#/$defs/package_boundary` | no |  | Current package/root boundary information for the command invocation. |  |  |
 | `package_boundary.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `package_boundary.cwd` | string | yes |  | Working directory context used when running the command. |  |  |
