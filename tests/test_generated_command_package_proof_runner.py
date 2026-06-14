@@ -153,12 +153,19 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert payload["artifact_registry"] == "operation_artifact_registry.json"
     assert payload["summary"]["state"] == "pass"
     assert payload["summary"]["fail_count"] == 0
-    assert payload["summary"]["pass_count"] == 3
+    assert payload["summary"]["pass_count"] == 9
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
     assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
+    assert cases[("defaults.root-cli-authority.success", "python")]["selected_fields"]["answer.command"].endswith(
+        "defaults --section root_cli_authority --format json"
+    )
     assert "Kind: agentic-workspace/selected-output/v1" not in capsys.readouterr().out
     assert cases[("config.invalid-format.error", "python")]["exit_code"] == 2
+    assert cases[("config.selected-output.success", "python")]["exit_code"] == 0
+    assert cases[("defaults.tiny-router-text.success", "python")]["exit_code"] == 0
+    assert cases[("modules.report-router.success", "python")]["selected_fields"]["kind"] == "agentic-workspace/modules-router/v1"
+    assert cases[("delegation-outcome.append-write.boundary", "python")]["selected_fields"]["recorded.outcome"] == "success"
     assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
 
 
@@ -170,9 +177,9 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     strict = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=True)
 
     assert soft["summary"]["state"] == "pass"
-    assert soft["summary"]["unavailable_count"] == 3
+    assert soft["summary"]["unavailable_count"] == 8
     assert strict["summary"]["state"] == "fail"
-    assert strict["summary"]["fail_count"] == 3
+    assert strict["summary"]["fail_count"] == 8
 
 
 def test_operation_conformance_runner_executes_typescript_function_case() -> None:

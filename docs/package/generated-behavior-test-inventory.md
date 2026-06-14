@@ -12,8 +12,14 @@ These behaviors are represented as JSON operation conformance cases in `src/agen
 
 | Behavior | Case | Owner | Rationale |
 | --- | --- | --- | --- |
+| Root `modules` generated router behavior | `modules.report-router.success` | AW operation conformance | AW-specific modules router fields represented by an IR-backed wrapper-smoke case until direct artifacts exist. |
+| Root `defaults` root authority JSON behavior | `defaults.root-cli-authority.success` | AW operation conformance | AW-specific defaults contract fields through direct Python/TypeScript operation callables. |
+| Root `defaults` tiny text behavior | `defaults.tiny-router-text.success` | AW operation conformance | Generated tiny-router text represented as wrapper-boundary output, not ordinary regression bulk. |
 | Root `defaults` selected-output behavior | `defaults.selected-output.success` | AW operation conformance | AW-specific command contract and selected-output envelope. |
+| Root `config` selected-output behavior | `config.selected-output.success` | AW operation conformance | AW-specific config contract and selected-output envelope; wrapper-smoke until config direct artifacts exist. |
 | Root `config` invalid-format behavior | `config.invalid-format.error` | AW operation conformance | AW-specific option contract; wrapper execution remains smoke until direct generated artifacts exist. |
+| Delegation outcome generated text behavior | `delegation-outcome.append-text.boundary` | AW operation conformance | Generated text envelope and declared local-write effect represented as a boundary case. |
+| Delegation outcome Python write behavior | `delegation-outcome.append-write.boundary` | AW operation conformance | Python wrapper target proves the local-only file write effect; TypeScript currently owns text-envelope parity only. |
 | Memory `list-skills` generated target parity | `memory.list-skills.parity` | AW operation conformance | First-party module contract with Python/TypeScript parity proof. |
 
 ## Moved To Command-Generation Ownership
@@ -55,6 +61,8 @@ No current test group was copied into operation conformance solely because it me
 
 The previous AW-local generic command-generation primitive and artifact tests were not preserved as duplicate regression mass. Their generic behavior is now covered in command-generation, including package-owned reusable conformance case resources from `rickardvh/command-generation#13`, and AW retains only the dependency-integration checks named above.
 
-## Remaining Trigger
+## Conversion Closure
 
-The `defaults.selected-output.success` case now has real `python.function` and `typescript.function` artifacts in the registry, with TypeScript routed through the generated `invokeGeneratedOperation(...)` callable rather than the CLI writer path. Remaining migration work should promote additional behavior only when a direct operation artifact exists for that behavior; otherwise keep CLI coverage as wrapper-smoke proof and leave semantic completion claims on direct operation adapters.
+The ordinary generated-behavior regressions previously identified in the AW contract-test replacement inventory are now accounted for by operation-conformance IR cases: modules report, defaults root authority, defaults tiny text, defaults selected text, config selected text, delegation outcome text/write behavior, and memory list-skills parity. Remaining ordinary tests that mention generated surfaces are retained only under the narrow owners above: proof/checker routing, source-of-truth contract checks, adapter/write-guard mechanics, installed-product behavior, lifecycle behavior, runtime primitive integration, or high-risk workflow trust semantics.
+
+The `defaults.selected-output.success` and `defaults.root-cli-authority.success` cases have real `python.function` and `typescript.function` artifacts in the registry, with TypeScript routed through the generated `invokeGeneratedOperation(...)` callable rather than the CLI writer path. Other converted cases stay wrapper-smoke only where the behavior is wrapper presentation, generated process conformance, target-specific mutation effect coverage, or where direct operation artifacts do not exist yet. Future migrations should promote additional behavior only when a direct operation artifact exists for that behavior; otherwise keep CLI coverage as wrapper-smoke proof and leave semantic completion claims on direct operation adapters.

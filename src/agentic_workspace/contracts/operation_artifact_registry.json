@@ -21,17 +21,20 @@
         "defaults.report.cli"
       ],
       "case_ids": [
+        "defaults.root-cli-authority.success",
         "defaults.selected-output.success"
       ],
       "path_refs": [
         "generated/workspace/python/commands/defaults_report.py",
         "generated/workspace/python/primitives/operation_executor.py",
         "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.root-cli-authority.process.json",
         "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
       ],
       "stale_when": [
         "defaults.report operation contract changes",
         "root-workspace defaults generated Python callable artifact changes",
+        "defaults.root-cli-authority.process conformance expectations change",
         "defaults.selected-text.process conformance expectations change"
       ]
     },
@@ -47,15 +50,18 @@
         "config.report.cli"
       ],
       "case_ids": [
+        "config.selected-output.success",
         "config.invalid-format.error"
       ],
       "path_refs": [
         "generated/workspace/python/cli.py",
-        "src/agentic_workspace/contracts/operations/config.report.json"
+        "src/agentic_workspace/contracts/operations/config.report.json",
+        "src/agentic_workspace/contracts/conformance/config.selected-text.process.json"
       ],
       "stale_when": [
         "config.report operation contract changes",
-        "config CLI wrapper option semantics change"
+        "config CLI wrapper option semantics change",
+        "config.selected-text.process conformance expectations change"
       ]
     },
     {
@@ -71,17 +77,20 @@
         "defaults.report.cli"
       ],
       "case_ids": [
+        "defaults.root-cli-authority.success",
         "defaults.selected-output.success"
       ],
       "path_refs": [
         "generated/workspace/typescript/src/runtime.mjs",
         "generated/workspace/typescript/resources/operations/defaults.report.json",
         "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.root-cli-authority.process.json",
         "src/agentic_workspace/contracts/conformance/defaults.selected-text.process.json"
       ],
       "stale_when": [
         "defaults.report operation contract changes",
         "root-workspace defaults generated TypeScript runtime artifact changes",
+        "defaults.root-cli-authority.process conformance expectations change",
         "defaults.selected-text.process conformance expectations change"
       ]
     },
@@ -97,15 +106,18 @@
         "config.report.cli"
       ],
       "case_ids": [
+        "config.selected-output.success",
         "config.invalid-format.error"
       ],
       "path_refs": [
         "generated/workspace/typescript/src/cli.mjs",
-        "src/agentic_workspace/contracts/operations/config.report.json"
+        "src/agentic_workspace/contracts/operations/config.report.json",
+        "src/agentic_workspace/contracts/conformance/config.selected-text.process.json"
       ],
       "stale_when": [
         "config.report operation contract changes",
-        "config TypeScript wrapper option semantics change"
+        "config TypeScript wrapper option semantics change",
+        "config.selected-text.process conformance expectations change"
       ]
     },
     {
@@ -154,6 +166,158 @@
         "memory.list-skills operation contract changes",
         "memory list-skills TypeScript wrapper changes",
         "memory.list-skills.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.defaults-cli.python",
+      "operation_id": "defaults.report",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/defaults",
+      "wrapper_refs": [
+        "defaults.report.cli"
+      ],
+      "case_ids": [
+        "defaults.tiny-router-text.success"
+      ],
+      "path_refs": [
+        "generated/workspace/python/cli.py",
+        "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.tiny-text.process.json"
+      ],
+      "stale_when": [
+        "defaults.report operation contract changes",
+        "defaults CLI wrapper text rendering changes",
+        "defaults.tiny-text.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.defaults-cli.typescript",
+      "operation_id": "defaults.report",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/defaults",
+      "wrapper_refs": [
+        "defaults.report.cli"
+      ],
+      "case_ids": [
+        "defaults.tiny-router-text.success"
+      ],
+      "path_refs": [
+        "generated/workspace/typescript/src/cli.mjs",
+        "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/conformance/defaults.tiny-text.process.json"
+      ],
+      "stale_when": [
+        "defaults.report operation contract changes",
+        "defaults TypeScript wrapper text rendering changes",
+        "defaults.tiny-text.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.modules.python",
+      "operation_id": "modules.report",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/modules",
+      "wrapper_refs": [
+        "modules.report.cli"
+      ],
+      "case_ids": [
+        "modules.report-router.success"
+      ],
+      "path_refs": [
+        "generated/workspace/python/cli.py",
+        "src/agentic_workspace/contracts/operations/modules.report.json",
+        "src/agentic_workspace/contracts/conformance/modules.report.process.json"
+      ],
+      "stale_when": [
+        "modules.report operation contract changes",
+        "modules CLI wrapper output changes",
+        "modules.report.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.modules.typescript",
+      "operation_id": "modules.report",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/modules",
+      "wrapper_refs": [
+        "modules.report.cli"
+      ],
+      "case_ids": [
+        "modules.report-router.success"
+      ],
+      "path_refs": [
+        "generated/workspace/typescript/src/cli.mjs",
+        "src/agentic_workspace/contracts/operations/modules.report.json",
+        "src/agentic_workspace/contracts/conformance/modules.report.process.json"
+      ],
+      "stale_when": [
+        "modules.report operation contract changes",
+        "modules TypeScript wrapper output changes",
+        "modules.report.process conformance expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.delegation-outcome.python",
+      "operation_id": "delegation-outcome.append",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/note-delegation-outcome",
+      "wrapper_refs": [
+        "delegation-outcome.append.cli"
+      ],
+      "case_ids": [
+        "delegation-outcome.append-text.boundary",
+        "delegation-outcome.append-write.boundary"
+      ],
+      "path_refs": [
+        "generated/workspace/python/cli.py",
+        "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
+        "src/agentic_workspace/contracts/conformance/delegation-outcome.append-text.process.json"
+      ],
+      "stale_when": [
+        "delegation-outcome.append operation contract changes",
+        "delegation outcome Python wrapper output or write boundary changes",
+        "delegation-outcome.append-text.process conformance expectations change",
+        "delegation outcome append process expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.delegation-outcome.typescript",
+      "operation_id": "delegation-outcome.append",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/note-delegation-outcome",
+      "wrapper_refs": [
+        "delegation-outcome.append.cli"
+      ],
+      "case_ids": [
+        "delegation-outcome.append-text.boundary"
+      ],
+      "path_refs": [
+        "generated/workspace/typescript/src/cli.mjs",
+        "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
+        "src/agentic_workspace/contracts/conformance/delegation-outcome.append-text.process.json"
+      ],
+      "stale_when": [
+        "delegation-outcome.append operation contract changes",
+        "delegation outcome TypeScript wrapper output or write boundary changes",
+        "delegation-outcome.append-text.process conformance expectations change"
       ]
     }
   ],

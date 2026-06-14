@@ -88,9 +88,9 @@
     {
       "id": "lane-1476-ir-backed-conformance-cases",
       "title": "Convert stable behavior to IR-backed conformance cases",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Stable behavior checks identify operation IR or primitive sequence, inputs, effects or fixtures, canonical expected result or structured error, adapter target, and owner, with executable tests generated or mechanically derived from those cases.",
-      "owner_surface": "AW conformance cases, operation IR fragments, primitive refs, ordinary-test conversion inventory, and command-generation#14 conformance case machinery",
+      "owner_surface": ".agentic-workspace/planning/closeout-evidence/lane-1476-ir-backed-conformance-cases.closeout.json",
       "proof": "Converted cases preserve or improve coverage; retained ordinary tests are excluded only for runner internals, wrapper behavior, live integration, mutation policy, provider/runtime boundaries, high-risk workflow trust semantics, or narrow not-yet-expressible bug repros.",
       "slice_contribution_to_parent": "Advances operation IR and conformance case layers and reduces one-off regression tests for stable behavior.",
       "residual_parent_intent": "Wrapper demotion, generated callable coverage, target matrix inclusion, and final closure inventory may remain.",

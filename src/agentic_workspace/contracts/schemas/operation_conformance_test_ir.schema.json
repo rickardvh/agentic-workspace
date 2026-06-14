@@ -463,6 +463,21 @@
                 }
               },
               "additionalProperties": false
+            },
+            "filesystem": {
+              "type": "object",
+              "properties": {
+                "required_paths": {
+                  "$ref": "#/$defs/strings"
+                },
+                "forbidden_paths": {
+                  "$ref": "#/$defs/strings"
+                },
+                "allowed_write_paths": {
+                  "$ref": "#/$defs/strings"
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

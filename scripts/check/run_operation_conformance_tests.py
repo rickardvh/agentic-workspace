@@ -184,7 +184,7 @@ def _run_case_target(
         capture_output=True,
         check=False,
     )
-    failures = _evaluate_process_result(case=case, process_case=process_case, completed=completed)
+    failures = _evaluate_process_result(case=case, process_case=process_case, completed=completed, fixture_root=fixture_root)
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
@@ -359,6 +359,7 @@ def _evaluate_process_result(
     case: Mapping[str, object],
     process_case: ProcessConformanceCase,
     completed: subprocess.CompletedProcess[str],
+    fixture_root: Path,
 ) -> list[str]:
     failures: list[str] = []
     if completed.returncode != process_case.expected_exit:
@@ -382,6 +383,14 @@ def _evaluate_process_result(
         else:
             if selected != process_case.expected_fields:
                 failures.append(f"expected selected fields {process_case.expected_fields!r}, got {selected!r}")
+    filesystem = expected.get("filesystem", {}) if isinstance(expected, Mapping) else {}
+    if isinstance(filesystem, Mapping):
+        for rel_path in filesystem.get("required_paths", []):
+            if isinstance(rel_path, str) and not (fixture_root / rel_path).exists():
+                failures.append(f"required path missing: {rel_path}")
+        for rel_path in filesystem.get("forbidden_paths", []):
+            if isinstance(rel_path, str) and (fixture_root / rel_path).exists():
+                failures.append(f"forbidden path exists: {rel_path}")
     return failures
 
 
