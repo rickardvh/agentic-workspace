@@ -5,9 +5,11 @@ import ast
 import contextlib
 import copy
 import importlib
+import importlib.metadata
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -178,6 +180,8 @@ PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "accepted source fallback:",
     "not accepted as generic output",
 )
+COMMAND_GENERATION_RELEASE_BASE_URL = "https://github.com/rickardvh/command-generation/releases/download"
+COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.1.0,<0.2.0"
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",
@@ -2137,6 +2141,7 @@ def _generated_target_freshness_report(ir: dict[str, object]) -> dict[str, objec
     return {
         "kind": "generated-target-freshness/v1",
         "status": generic_report["status"],
+        "command_generation_package": _command_generation_package_provenance(),
         "target_families": target_families,
         "rendered_output_count": generic_report["rendered_output_count"],
         "rendered_output_count_by_family": generic_report["rendered_output_count_by_family"],
@@ -3199,30 +3204,83 @@ def _validate_generated_python_target_layout() -> list[str]:
     return errors
 
 
-def _command_generation_git_rev_from_pyproject() -> str:
+def _target_scoped_command_package_resource(package: dict[str, object], target: dict[str, object]) -> dict[str, object]:
+    scoped = dict(package)
+    scoped["targets"] = [dict(target)]
+    if target.get("kind") != "python":
+        scoped.pop("python_runtime_binding", None)
+    scoped["target_resource_scope"] = {
+        "kind": "command-generation/target-scoped-package-resource/v1",
+        "target_kind": str(target.get("kind", "")),
+        "target_package_name": str(target.get("package_name", "")),
+        "rule": "Target resources carry universal command/operation metadata plus only this target's runtime binding.",
+    }
+    return scoped
+
+
+def _command_generation_dependency_from_pyproject() -> str:
     payload = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    sources = payload.get("tool", {}).get("uv", {}).get("sources", {})
-    command_generation_source = sources.get("command-generation", {}) if isinstance(sources, dict) else {}
-    if isinstance(command_generation_source, dict):
-        return str(command_generation_source.get("rev", ""))
+    dependency_groups = payload.get("dependency-groups", {})
+    dev_dependencies = dependency_groups.get("dev", []) if isinstance(dependency_groups, dict) else []
+    if isinstance(dev_dependencies, list):
+        for dependency in dev_dependencies:
+            if isinstance(dependency, str) and dependency.startswith("command-generation"):
+                return dependency
     return ""
 
 
-def _validate_python_dockerfiles_pin_command_generation() -> list[str]:
-    expected_rev = _command_generation_git_rev_from_pyproject()
-    if not expected_rev:
-        return ["pyproject.toml command-generation source must declare a git rev"]
+def _command_generation_package_provenance() -> dict[str, object]:
+    dependency = _command_generation_dependency_from_pyproject()
+    installed_version = importlib.metadata.version("command-generation")
+    version_match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\.whl", dependency)
+    declared_version = version_match.group("version") if version_match else ""
+    release_url = dependency.split(" @ ", 1)[1] if " @ " in dependency else ""
+    compatible = bool(
+        declared_version
+        and declared_version == installed_version
+        and release_url.startswith(f"{COMMAND_GENERATION_RELEASE_BASE_URL}/v{declared_version}/")
+        and "#sha256=" in release_url
+    )
+    return {
+        "kind": "command-generation/package-provenance/v1",
+        "package": "command-generation",
+        "installed_version": installed_version,
+        "declared_version": declared_version,
+        "compatible_range": COMMAND_GENERATION_COMPATIBLE_RANGE,
+        "dependency_url": release_url,
+        "source": "released-wheel",
+        "compatible": compatible,
+    }
+
+
+def _validate_command_generation_release_provenance() -> list[str]:
+    provenance = _command_generation_package_provenance()
+    dependency = _command_generation_dependency_from_pyproject()
+    release_url = str(provenance.get("dependency_url", ""))
+    declared_version = str(provenance.get("declared_version", ""))
     errors: list[str] = []
+    if not dependency:
+        errors.append("pyproject.toml dev dependencies must declare command-generation as a released package URL")
+    if "git+https://github.com/rickardvh/command-generation.git" in dependency:
+        errors.append("pyproject.toml command-generation dependency must use the released wheel URL, not a Git source ref")
+    if not provenance.get("compatible"):
+        errors.append(
+            "command-generation package provenance mismatch: "
+            f"declared={declared_version!r}, installed={provenance.get('installed_version')!r}, url={release_url!r}"
+        )
     for relative_path in (
         "generated/python/Dockerfile.conformance",
         "generated/python/Dockerfile.primitive-conformance",
+        "generated/typescript.conformance.Dockerfile",
     ):
         path = REPO_ROOT / relative_path
         if not path.is_file():
             continue
-        expected = f"command-generation.git@{expected_rev}"
-        if expected not in path.read_text(encoding="utf-8"):
-            errors.append(f"{relative_path} command-generation install ref must match pyproject.toml rev {expected_rev}")
+        text = path.read_text(encoding="utf-8")
+        if release_url not in text:
+            errors.append(f"{relative_path} command-generation install URL must match pyproject.toml released package URL")
+        if "command-generation.git@" in text or "git+https://github.com/rickardvh/command-generation.git" in text:
+            errors.append(f"{relative_path} must not install command-generation from a Git source ref")
     return errors
 
 
@@ -4130,7 +4188,7 @@ def _validate_static_surfaces() -> list[str]:
     primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
     if not primitive_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.primitive-conformance is missing")
-    errors.extend(_validate_python_dockerfiles_pin_command_generation())
+    errors.extend(_validate_command_generation_release_provenance())
     try:
         import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
     except ModuleNotFoundError:
@@ -4182,7 +4240,8 @@ def _validate_static_surfaces() -> list[str]:
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
-            if command_package_resource is not None and expected_package is not None and command_package_resource != expected_package:
+            expected_resource = _target_scoped_command_package_resource(expected_package, target)
+            if command_package_resource is not None and expected_package is not None and command_package_resource != expected_resource:
                 errors.append(f"{package_label}/resources/command_package.json drifted from command_package_ir.json")
             if payload.get("files") != ["src", "resources"]:
                 errors.append(f"{package_label}/package.json does not include generated resources")
@@ -4528,6 +4587,15 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     if isinstance(target_freshness, dict) and target_freshness.get("status"):
         print(f"Generated target freshness: {target_freshness.get('status')}")
         print(f"Generated target families: {target_freshness.get('target_families')}")
+        package_provenance = target_freshness.get("command_generation_package", {})
+        if isinstance(package_provenance, dict):
+            print(
+                "Command-generation package: "
+                f"declared={package_provenance.get('declared_version')} "
+                f"installed={package_provenance.get('installed_version')} "
+                f"source={package_provenance.get('source')} "
+                f"compatible={str(package_provenance.get('compatible')).lower()}"
+            )
         print(f"Rendered outputs by family: {target_freshness.get('rendered_output_count_by_family')}")
         print(f"Stale outputs by family: {target_freshness.get('stale_output_count_by_family')}")
         print(f"Generated target claim rule: {target_freshness.get('claim_rule')}")

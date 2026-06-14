@@ -1313,7 +1313,10 @@ def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypa
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     pyproject = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
-    command_generation_rev = pyproject["tool"]["uv"]["sources"]["command-generation"]["rev"]
+    command_generation_dependency = next(
+        dependency for dependency in pyproject["dependency-groups"]["dev"] if dependency.startswith("command-generation @ ")
+    )
+    command_generation_url = command_generation_dependency.split(" @ ", 1)[1]
     python_dockerfile = repo_root / "generated" / "python" / "Dockerfile.conformance"
     python_text = python_dockerfile.read_text(encoding="utf-8")
     primitive_python_text = (repo_root / "generated" / "python" / "Dockerfile.primitive-conformance").read_text(encoding="utf-8")
@@ -1322,8 +1325,12 @@ def test_generated_command_package_docker_conformance_surface_exists() -> None:
 
     assert "scripts/check/check_generated_command_packages.py" in python_text
     assert "--python-conformance" in python_text
-    assert f"command-generation.git@{command_generation_rev}" in python_text
-    assert f"command-generation.git@{command_generation_rev}" in primitive_python_text
+    assert command_generation_url in python_text
+    assert command_generation_url in primitive_python_text
+    assert command_generation_url in text
+    assert "command-generation.git@" not in python_text
+    assert "command-generation.git@" not in primitive_python_text
+    assert "command-generation.git@" not in text
     assert "ENV PYTHONPATH=/work:" in python_text
     assert "COPY src ./src" in python_text
     assert "COPY generated ./generated" in python_text
@@ -1709,8 +1716,15 @@ def test_generic_command_generation_package_has_no_workspace_imports() -> None:
 def test_command_generation_readme_defines_lift_out_criteria() -> None:
     pyproject = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
     wrapper = (Path(__file__).resolve().parents[1] / "scripts" / "generate" / "workspace_command_generation.py").read_text(encoding="utf-8")
+    playbook = (Path(__file__).resolve().parents[1] / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
 
-    assert 'command-generation = { git = "https://github.com/rickardvh/command-generation.git"' in pyproject
+    assert (
+        "command-generation @ https://github.com/rickardvh/command-generation/releases/download/v0.1.0/"
+        "command_generation-0.1.0-py3-none-any.whl#sha256="
+    ) in pyproject
+    assert "github.com/rickardvh/command-generation.git" not in pyproject
+    assert "released, hash-pinned dev package" in playbook
+    assert "local source checkout for dogfooding" in playbook
     assert "CommandGenerationHostManifest" in wrapper
     assert "typescript_runtime_support.mjs" in wrapper
 

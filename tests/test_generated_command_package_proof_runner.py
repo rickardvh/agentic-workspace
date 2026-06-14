@@ -537,6 +537,13 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     target_freshness = report["generated_target_freshness"]
     assert target_freshness["kind"] == "generated-target-freshness/v1"
     assert target_freshness["status"] == "fresh"
+    provenance = target_freshness["command_generation_package"]
+    assert provenance["kind"] == "command-generation/package-provenance/v1"
+    assert provenance["source"] == "released-wheel"
+    assert provenance["declared_version"] == provenance["installed_version"] == "0.1.0"
+    assert provenance["compatible_range"] == ">=0.1.0,<0.2.0"
+    assert provenance["compatible"] is True
+    assert provenance["dependency_url"].startswith("https://github.com/rickardvh/command-generation/releases/download/v0.1.0/")
     assert target_freshness["target_families"] == ["python", "typescript"]
     assert target_freshness["rendered_output_count_by_family"]["python"] > 0
     assert target_freshness["rendered_output_count_by_family"]["typescript"] > 0
@@ -693,6 +700,16 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert "new-primitive-implementation" in payload["runtime_source_edit_policy"]["accepted_direct_edit_reasons"]
     assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
     assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
+
+
+def test_python_completion_blocker_report_surfaces_command_generation_package_posture(capsys) -> None:
+    checker = _load_checker()
+
+    status = checker.main(["--python-completion-blockers"])
+
+    assert status == 0
+    output = capsys.readouterr().out
+    assert "Command-generation package: declared=0.1.0 installed=0.1.0 source=released-wheel compatible=true" in output
 
 
 def test_memory_list_commands_are_portable_resource_python_projections() -> None:
