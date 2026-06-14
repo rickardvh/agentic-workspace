@@ -49,6 +49,17 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
 | `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
 | `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
+| `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | yes |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
+| `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
+| `installed_state_compatibility.reason` | string | no |  | Short explanation for the selected status. |  |  |
+| `installed_state_compatibility.authority` | const `"repo-state-authoritative"` | yes |  | Repo payload state owns compatibility for the current target. |  |  |
+| `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
+| `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
+| `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |
+| `installed_state_compatibility.adapter_contracts` | array of object | no |  | Entry-surface adapter contracts covered by this model. |  |  |
+| `installed_state_compatibility.next_action` | string \| null | no |  | Suggested command when drift requires or recommends action. |  |  |
+| `installed_state_compatibility.rule` | string | no |  | Policy rule for applying this packet. |  |  |
 | `selected_modules` | array of string | yes |  | Modules selected for this report invocation. |  |  |
 | `installed_modules` | array of string | yes |  | Installed Agentic Workspace modules detected in the target repository. |  |  |
 | `feature_tier` | object | yes |  | Resolved feature tier, package footprint, and ordinary operating scope. |  |  |

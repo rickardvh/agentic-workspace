@@ -113,12 +113,40 @@ def _assert_cli_compatibility(payload: dict[str, object], *, status: str) -> dic
     return compatibility
 
 
+def _assert_installed_state_compatibility(payload: dict[str, object], *, status: str) -> dict[str, object]:
+    if payload.get("kind") == "agentic-workspace/selected-output/v1":
+        values = payload.get("values")
+        assert isinstance(values, dict)
+        compatibility = values["installed_state_compatibility"]
+    else:
+        compatibility = payload["installed_state_compatibility"]
+    assert isinstance(compatibility, dict)
+    assert compatibility["kind"] == "agentic-workspace/installed-state-compatibility/v1"
+    assert compatibility["status"] == status
+    assert compatibility["authority"] == "repo-state-authoritative"
+    assert compatibility["executable"]["classification"]
+    assert compatibility["payload"]["status"]
+    assert compatibility["generated_artifacts"]["status"]
+    return compatibility
+
+
 def _assert_cli_compatibility_schema(payload: dict[str, object], *, schema_name: str) -> None:
     schema_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / schema_name
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
     errors = sorted(
         validator.evolve(schema=schema["$defs"]["cli_compatibility"]).iter_errors(payload["cli_compatibility"]),
+        key=lambda error: list(error.path),
+    )
+    assert [error.message for error in errors] == []
+
+
+def _assert_installed_state_compatibility_schema(payload: dict[str, object], *, schema_name: str) -> None:
+    schema_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    errors = sorted(
+        validator.evolve(schema=schema["$defs"]["installed_state_compatibility"]).iter_errors(payload["installed_state_compatibility"]),
         key=lambda error: list(error.path),
     )
     assert [error.message for error in errors] == []
