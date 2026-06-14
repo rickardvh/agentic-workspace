@@ -197,9 +197,12 @@ def test_target_support_consumes_command_generation_extension_contract() -> None
         operation_id="defaults.report",
         case_id="defaults.selected-output.success",
     )
-    assert [entry["target_id"] for entry in matrix_entries] == ["python"]
-    assert matrix_entries[0]["adapter_id"] == "python.function"
-    assert contracts["typescript"]["implementation_status"] == "planned"
+    assert [entry["target_id"] for entry in matrix_entries] == ["python", "typescript"]
+    assert {entry["target_id"]: entry["adapter_id"] for entry in matrix_entries} == {
+        "python": "python.function",
+        "typescript": "typescript.function",
+    }
+    assert contracts["typescript"]["implementation_status"] == "implemented"
 
 
 def test_target_support_checker_rejects_semantic_target_ownership() -> None:
@@ -715,6 +718,7 @@ def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() 
     }
     assert cases["defaults.selected-output.success"]["operation_ref"]["conformance_ref"] == "defaults.selected-text.process"
     assert cases["defaults.selected-output.success"]["artifacts"][0]["adapter_id"] == "python.function"
+    assert cases["defaults.selected-output.success"]["artifacts"][1]["adapter_id"] == "typescript.function"
     assert cases["defaults.selected-output.success"]["artifacts"][0]["proof_role"] == "operation-conformance"
     assert cases["defaults.selected-output.success"]["expected"]["result"]["selected_fields"] == {
         "kind": "agentic-workspace/selected-output/v1",
@@ -857,6 +861,8 @@ def test_operation_artifact_registry_routes_cases_and_proof_layers() -> None:
     assert module._validate_operation_artifact_registry(registry) == []
     artifacts = {artifact["artifact_id"]: artifact for artifact in registry["artifacts"]}
     assert artifacts["root-workspace.defaults.python"]["adapter_id"] == "python.function"
+    assert artifacts["root-workspace.defaults.typescript"]["adapter_id"] == "typescript.function"
+    assert artifacts["root-workspace.defaults.typescript"]["proof_role"] == "operation-conformance"
     assert artifacts["root-workspace.defaults.python"]["proof_role"] == "operation-conformance"
     assert artifacts["root-workspace.defaults.python"]["symbol"] == "generated.workspace.python.commands.defaults_report:invoke"
     assert artifacts["root-workspace.config.python"]["proof_role"] == "wrapper-smoke"

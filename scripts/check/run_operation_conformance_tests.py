@@ -26,8 +26,10 @@ import check_generated_command_packages as generated_package_check  # noqa: E402
 from command_generation import (  # noqa: E402
     FunctionConformanceTarget,
     OperationConformanceCase,
+    TypescriptFunctionConformanceTarget,
     materialize_case_fixture,
     run_function_conformance_case,
+    run_typescript_function_conformance_case,
 )
 from command_generation.conformance import ProcessConformanceCase  # noqa: E402
 
@@ -156,6 +158,8 @@ def _run_case_target(
     adapter_id = str(artifact.get("adapter_id", "cli.process"))
     if target_kind == "python" and adapter_id == "python.function":
         return _run_python_function_case(case=case, artifact=artifact)
+    if target_kind == "typescript" and adapter_id == "typescript.function":
+        return _run_typescript_function_case(case=case, artifact=artifact, temp_root=temp_root, require_node=require_node)
     process_case = _case_process_fixture(case)
     fixture_root = materialize_case_fixture(
         case=process_case,
@@ -235,6 +239,78 @@ def _python_function_target_for_artifact(artifact: Mapping[str, object]) -> Func
     return FunctionConformanceTarget(label=str(artifact.get("artifact_id", "python.function")), invoke=invoke)
 
 
+def _typescript_runtime_symbol(artifact: Mapping[str, object]) -> tuple[Path, str] | None:
+    symbol = str(artifact.get("symbol", ""))
+    if ":" not in symbol:
+        return None
+    runtime_path, function_name = symbol.rsplit(":", 1)
+    if not runtime_path or not function_name:
+        return None
+    return REPO_ROOT / runtime_path, function_name
+
+
+def _run_typescript_function_case(
+    *,
+    case: Mapping[str, object],
+    artifact: Mapping[str, object],
+    temp_root: Path,
+    require_node: bool,
+) -> dict[str, object]:
+    node = shutil.which("node")
+    if node is None:
+        state = "fail" if require_node else "unavailable"
+        return _function_result(case=case, artifact=artifact, state=state, message="node-unavailable")
+    runtime_symbol = _typescript_runtime_symbol(artifact)
+    if runtime_symbol is None:
+        return _function_result(case=case, artifact=artifact, state="unavailable", message="typescript.function artifact has no runtime symbol")
+    runtime_path, function_name = runtime_symbol
+    if not runtime_path.is_file():
+        return _function_result(
+            case=case,
+            artifact=artifact,
+            state="unavailable",
+            message=f"typescript.function runtime is missing: {runtime_path.relative_to(REPO_ROOT).as_posix()}",
+        )
+
+    operation_ref = case.get("operation_ref", {})
+    if not isinstance(operation_ref, Mapping):
+        return _function_result(case=case, artifact=artifact, state="fail", message="malformed operation_ref")
+    case_input = case.get("input", {})
+    if not isinstance(case_input, Mapping):
+        return _function_result(case=case, artifact=artifact, state="fail", message="malformed input block")
+    process_case = _case_process_fixture(case)
+    fixture_root = materialize_case_fixture(
+        case=process_case,
+        root=temp_root / str(case.get("id", "case")).replace(".", "-") / "typescript-function",
+    )
+    function_case = _case_function_fixture(case)
+    result, failures = run_typescript_function_conformance_case(
+        case=function_case,
+        target=TypescriptFunctionConformanceTarget(
+            label=str(artifact.get("artifact_id", "typescript.function")),
+            runtime_path=runtime_path,
+            operation_id=str(operation_ref.get("operation_id", "")),
+            operation_path=str(operation_ref.get("operation_path", "")),
+            cwd=fixture_root,
+            node_command=node,
+            function_name=function_name,
+            env=generated_package_check._conformance_env(runtime=""),
+        ),
+    )
+    return {
+        "case_id": str(case.get("id", "")),
+        "behavioral_class": str(case.get("behavioral_class", "")),
+        "operation_id": str(operation_ref.get("operation_id", "")),
+        "artifact_id": str(artifact.get("artifact_id", "")),
+        "adapter_id": str(artifact.get("adapter_id", "typescript.function")),
+        "conformance_ref": str(operation_ref.get("conformance_ref", "")),
+        "target": "typescript",
+        "state": "fail" if failures else "pass",
+        "selected_fields": result.selected_fields if result is not None and result.selected_fields is not None else {},
+        "message": "; ".join(failure.message for failure in failures),
+    }
+
+
 def _function_result(
     *,
     case: Mapping[str, object],
@@ -245,14 +321,16 @@ def _function_result(
     operation_ref = case.get("operation_ref", {})
     operation_id = operation_ref.get("operation_id", "") if isinstance(operation_ref, Mapping) else ""
     conformance_ref = operation_ref.get("conformance_ref", "") if isinstance(operation_ref, Mapping) else ""
+    adapter_id = str(artifact.get("adapter_id", "python.function"))
+    target = adapter_id.split(".", 1)[0] if "." in adapter_id else "python"
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
         "operation_id": str(operation_id),
         "artifact_id": str(artifact.get("artifact_id", "")),
-        "adapter_id": str(artifact.get("adapter_id", "python.function")),
+        "adapter_id": adapter_id,
         "conformance_ref": str(conformance_ref),
-        "target": "python",
+        "target": target,
         "state": state,
         "message": message,
     }

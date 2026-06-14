@@ -436,7 +436,7 @@
       "consumers": [
         "scripts/check/check_contract_tooling_surfaces.py",
         "command-generation target-extension contract",
-        "future #1481 TypeScript direct-operation support"
+        "#1481 TypeScript direct-operation support"
       ],
       "notes": "AW target-support declarations consume command-generation target-extension contracts so implemented targets can enter the semantic conformance matrix without target-specific product semantics or per-operation feature maintenance."
     },

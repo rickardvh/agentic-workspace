@@ -1312,8 +1312,8 @@ def _validate_target_support(payload: dict[str, object]) -> list[str]:
     matrix_by_target = {entry["target_id"]: entry for entry in matrix_entries}
     if matrix_by_target.get("python", {}).get("adapter_id") != "python.function":
         errors.append("target_support.json implemented python target must project python.function into the semantic matrix")
-    if "typescript" in matrix_by_target:
-        errors.append("target_support.json planned typescript target must not project into implemented semantic matrix yet")
+    if matrix_by_target.get("typescript", {}).get("adapter_id") != "typescript.function":
+        errors.append("target_support.json implemented typescript target must project typescript.function into the semantic matrix")
     rule = str(payload.get("rule", "")).lower()
     if "must not own product operation semantics" not in rule or "per-operation feature maintenance" not in rule:
         errors.append("target_support.json rule must reject product semantics and per-operation feature maintenance in targets")

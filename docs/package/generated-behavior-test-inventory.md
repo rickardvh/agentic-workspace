@@ -24,6 +24,7 @@ The shared package now owns the generic machinery that AW should not duplicate:
 | --- | --- | --- |
 | CLI/process contract execution | `process_case_from_contract`, `CliConformanceTarget`, `run_cli_conformance_case` | Used for wrapper-smoke execution of AW-specific cases. |
 | Direct JSON-shaped function execution | `operation_case_from_contract`, `FunctionConformanceTarget`, `run_function_conformance_case` | Used by AW runner for `python.function` artifacts when the registry declares an importable symbol. |
+| TypeScript direct operation execution | `TypescriptFunctionConformanceTarget`, `run_typescript_function_conformance_case` | Used by AW runner for `typescript.function` artifacts through generated `invokeGeneratedOperation(...)` runtime exports. |
 | Shared ownership/accounting | `conformance_ownership_inventory` | Records which conformance surfaces are generic and which remain consumer-owned. |
 | Package-owned reusable conformance cases | `contract_conformance_cases_manifest`, `load_contract_conformance_case` from `rickardvh/command-generation#13` | Replaces repeated inline generic conformance payloads in command-generation tests; AW consumes the pinned revision instead of carrying generic cases. |
 | Generated output staleness by target family | `generated_output_freshness_report` | AW consumes it for generated package freshness instead of owning generic hashing semantics. |
@@ -56,4 +57,4 @@ The previous AW-local generic command-generation primitive and artifact tests we
 
 ## Remaining Trigger
 
-The current registry has no real `python.function` or `typescript.function` implementation artifacts for the migrated AW cases, so direct operation conformance is installed as a runner path and tested with a synthetic artifact. When generated command packages expose importable operation functions, add registry `symbol` entries, promote the affected cases from `cli.process` wrapper-smoke to `*.function` operation-conformance, and demote the corresponding wrapper tests to boundary-only smoke.
+The `defaults.selected-output.success` case now has real `python.function` and `typescript.function` artifacts in the registry, with TypeScript routed through the generated `invokeGeneratedOperation(...)` callable rather than the CLI writer path. Remaining migration work should promote additional behavior only when a direct operation artifact exists for that behavior; otherwise keep CLI coverage as wrapper-smoke proof and leave semantic completion claims on direct operation adapters.
