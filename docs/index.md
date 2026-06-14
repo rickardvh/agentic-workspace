@@ -18,6 +18,7 @@ Use this map when updating docs so each page stays complete at its level without
 | How should agents route governing knowledge and source authority? | [Knowledge routing and source authority](package/knowledge-routing.md) | a page only needs to name a source kind, authority class, route trigger, freshness rule, or capture obligation |
 | When should governing knowledge block or constrain work? | [Pre-work knowledge gates](package/knowledge-gates.md) | a page only needs to name gate force, blocked actions, closeout evidence, or fallback behavior |
 | Which generated-command tests belong at the CLI wrapper boundary? | [CLI boundary tests](package/cli-boundary-tests.md) | a page only needs to distinguish operation conformance from argv/help/error/exit/stdout wrapper proof |
+| What final accounting proves generated behavior migration is complete? | [Generated behavior closure inventory](package/generated-behavior-closure-inventory.md) | a page only needs the #1476 parent closure evidence, unresolved-state rule, or bypass guardrails |
 | What do Planning and Memory own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state from durable repo knowledge |
 | What are the exact fields and generated references? | [Contracts and references](package/contracts.md) and [Reference material](reference/index.md) | hand-written docs would otherwise copy generated schema detail |
 | What is source-checkout maintainer workflow? | [Maintainer index](maintainer/index.md) | ordinary host-repo docs mention internal validation, dogfooding, or generation only as a boundary |
@@ -35,6 +36,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Knowledge routing and source authority](package/knowledge-routing.md): how startup, posture, closeout, Memory, Planning, issues, docs, and external sources route governing knowledge without broad mirroring.
 - [Pre-work knowledge gates](package/knowledge-gates.md): when routed knowledge should block design, edits, claims, or closeout until resolved.
 - [CLI boundary tests](package/cli-boundary-tests.md): how shell-facing wrapper tests stay separate from operation conformance cases.
+- [Generated behavior closure inventory](package/generated-behavior-closure-inventory.md): final #1476 accounting and bypass guardrails for generated behavior migration.
 - [Contracts and references](package/contracts.md): how JSON contracts, schemata, generated reference docs, and runtime outputs relate.
 - [Jumpstart contract](jumpstart-contract.md): how a newly installed or adopted workspace in a lived-in repo should discover candidate durable surfaces without bulk importing repo prose.
 - [Collaboration safety](collaboration-safety.md): git-native collaboration model, merge recovery, and shared-state pressure rules.

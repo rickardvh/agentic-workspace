@@ -13,6 +13,7 @@
     "layers",
     "retained_hand_owned_boundaries",
     "retained_ordinary_test_groups",
+    "parent_closure_inventory",
     "lane_sequence",
     "closure_rule"
   ],
@@ -57,6 +58,10 @@
         "$ref": "#/$defs/retained_ordinary_test_group"
       },
       "description": "Concrete ordinary handwritten test groups retained in AW with owner, proof route, keep reason, future conversion condition, and durable-boundary rationale."
+    },
+    "parent_closure_inventory": {
+      "$ref": "#/$defs/parent_closure_inventory",
+      "description": "Final #1476 accounting across acceptance requirements, evidence, residual state, and bypass guardrails."
     },
     "lane_sequence": {
       "type": "array",
@@ -261,6 +266,131 @@
           "type": "string",
           "minLength": 1
         }
+      }
+    },
+    "parent_closure_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "final_state_requirements",
+        "bypass_guardrails",
+        "unresolved",
+        "closure_statement"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "ready-to-close-parent",
+            "partial",
+            "blocked"
+          ],
+          "description": "Parent closure posture for #1476 after evaluating all final-state requirements."
+        },
+        "final_state_requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/final_state_requirement"
+          },
+          "description": "Acceptance requirements that must be satisfied or explicitly owner-rejected before #1476 parent closure."
+        },
+        "bypass_guardrails": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/bypass_guardrail"
+          },
+          "description": "Checked guardrails that prevent future generated-behavior work from bypassing contracts, IR, cases, or explicit boundaries."
+        },
+        "unresolved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Open parent-level gaps. Empty only when status is ready-to-close-parent."
+        },
+        "closure_statement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable statement explaining why the parent closure claim is honest."
+        }
+      }
+    },
+    "final_state_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "intent_served",
+        "evidence_refs",
+        "proof_route"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "satisfied",
+            "owner-approved-rejected",
+            "blocked",
+            "partial"
+          ]
+        },
+        "intent_served": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/non_empty_strings"
+        },
+        "proof_route": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "bypass_guardrail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "prevents",
+        "check_surface",
+        "proof_route",
+        "fails_when"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prevents": {
+          "type": "string",
+          "minLength": 1
+        },
+        "check_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fails_when": {
+          "$ref": "#/$defs/non_empty_strings"
+        }
+      }
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     }
   },

@@ -197,6 +197,29 @@ def test_generated_behavior_stratification_declares_layers_and_retained_boundari
         assert entry["durable_boundary_rationale"]
         assert entry["retained_boundary_ref"] in retained
 
+    closure_inventory = manifest["parent_closure_inventory"]
+    assert closure_inventory["status"] == "ready-to-close-parent"
+    assert closure_inventory["unresolved"] == []
+    requirements = {entry["id"]: entry for entry in closure_inventory["final_state_requirements"]}
+    assert {
+        "checked-stratification-contract",
+        "generated-direct-operation-callables",
+        "target-extension-consumed",
+        "ir-backed-conformance-cases",
+        "wrapper-demotion",
+        "ordinary-test-boundary-inventory",
+        "generated-code-and-test-bypass-guardrails",
+    } == requirements.keys()
+    assert {entry["status"] for entry in requirements.values()} == {"satisfied"}
+    guardrails = {entry["id"]: entry for entry in closure_inventory["bypass_guardrails"]}
+    assert {
+        "direct-generated-edit-bypass",
+        "ordinary-regression-bypass",
+        "target-product-semantics-bypass",
+        "representative-slice-parent-closure-bypass",
+    } == guardrails.keys()
+    assert "representative slices" in guardrails["representative-slice-parent-closure-bypass"]["prevents"]
+
 
 def test_target_support_consumes_command_generation_extension_contract() -> None:
     manifest = contract_tooling.target_support_manifest()
@@ -936,6 +959,39 @@ def test_generated_behavior_stratification_rejects_unowned_retained_ordinary_tes
     manifest["retained_ordinary_test_groups"][0]["retained_boundary_ref"] = "missing-boundary"
     assert any(
         "references unknown retained boundary missing-boundary" in error
+        for error in module._validate_generated_behavior_stratification(manifest)
+    )
+
+
+def test_generated_behavior_stratification_rejects_incomplete_parent_closure_inventory() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    manifest = copy.deepcopy(contract_tooling.generated_behavior_stratification_manifest())
+    manifest["parent_closure_inventory"]["final_state_requirements"][0]["status"] = "partial"
+    assert any(
+        "final requirement checked-stratification-contract is not closure-ready" in error
+        for error in module._validate_generated_behavior_stratification(manifest)
+    )
+
+    manifest = copy.deepcopy(contract_tooling.generated_behavior_stratification_manifest())
+    manifest["parent_closure_inventory"]["unresolved"] = ["missing final guardrail"]
+    assert any(
+        "cannot be ready-to-close-parent with unresolved parent gaps" in error
+        for error in module._validate_generated_behavior_stratification(manifest)
+    )
+
+    manifest = copy.deepcopy(contract_tooling.generated_behavior_stratification_manifest())
+    manifest["parent_closure_inventory"]["bypass_guardrails"] = [
+        guardrail
+        for guardrail in manifest["parent_closure_inventory"]["bypass_guardrails"]
+        if guardrail["id"] != "representative-slice-parent-closure-bypass"
+    ]
+    assert any(
+        "missing bypass guardrail(s): representative-slice-parent-closure-bypass" in error
         for error in module._validate_generated_behavior_stratification(manifest)
     )
 

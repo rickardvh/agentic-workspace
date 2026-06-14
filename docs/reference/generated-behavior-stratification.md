@@ -18,5 +18,11 @@ Authoritative layer model for generated behavior, operation IR, adapters, confor
 | `layers` | array of ref `#/$defs/layer` | yes |  | Ordered generated-behavior strata from primitive contracts through retained ordinary-test boundaries. |  |  |
 | `retained_hand_owned_boundaries` | array of ref `#/$defs/retained_boundary` | yes |  | Hand-owned runtime or test boundaries that remain allowed only with owner, proof, keep reason, and conversion criteria. |  |  |
 | `retained_ordinary_test_groups` | array of ref `#/$defs/retained_ordinary_test_group` | yes |  | Concrete ordinary handwritten test groups retained in AW with owner, proof route, keep reason, future conversion condition, and durable-boundary rationale. |  |  |
+| `parent_closure_inventory` | ref `#/$defs/parent_closure_inventory` | yes |  | Final #1476 accounting across acceptance requirements, evidence, residual state, and bypass guardrails. |  |  |
+| `parent_closure_inventory.status` | enum `"ready-to-close-parent"`, `"partial"`, `"blocked"` | yes |  | Parent closure posture for #1476 after evaluating all final-state requirements. |  |  |
+| `parent_closure_inventory.final_state_requirements` | array of ref `#/$defs/final_state_requirement` | yes |  | Acceptance requirements that must be satisfied or explicitly owner-rejected before #1476 parent closure. |  |  |
+| `parent_closure_inventory.bypass_guardrails` | array of ref `#/$defs/bypass_guardrail` | yes |  | Checked guardrails that prevent future generated-behavior work from bypassing contracts, IR, cases, or explicit boundaries. |  |  |
+| `parent_closure_inventory.unresolved` | array of string | yes |  | Open parent-level gaps. Empty only when status is ready-to-close-parent. |  |  |
+| `parent_closure_inventory.closure_statement` | string | yes |  | Human-readable statement explaining why the parent closure claim is honest. |  |  |
 | `lane_sequence` | array of string | yes |  | Issue sequence for the decomposed #1476 lanes. |  |  |
 | `closure_rule` | string | yes |  | Rule for when the parent epic can be resolved. |  |  |

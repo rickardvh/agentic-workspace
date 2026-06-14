@@ -121,9 +121,9 @@
     {
       "id": "lane-1476-closure-inventory-and-guardrails",
       "title": "Install closure inventory and bypass guardrails",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Generated-behavior and contract-test inventories account for every migrated, retained, rejected, or blocked behavior group, with checkers preventing future stable behavior changes from bypassing IR/contracts/cases or target-specific code from owning product semantics outside explicit runtime primitive or wrapper boundaries.",
-      "owner_surface": "generated-behavior inventories, contract-test inventories, guardrail checks, command-generation#14 integration evidence, and #1476 closeout comment",
+      "owner_surface": ".agentic-workspace/planning/execplans/lane-1476-closure-inventory-and-guardrails.plan.json",
       "proof": "Checks fail for direct generated executable behavior edits, one-off ordinary stable behavior regressions without IR/case owner, and target-specific per-operation semantics outside explicit runtime primitive or wrapper boundaries.",
       "slice_contribution_to_parent": "Provides parent-closure evidence and prevents representative slices from being mistaken for full #1476 completion.",
       "residual_parent_intent": "None only if all #1476 acceptance bullets are satisfied or explicitly rejected with evidence and durable owner-approved rationale.",
