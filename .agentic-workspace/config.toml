@@ -5,8 +5,10 @@
 
 schema_version = 1
 
+[modules]
+enabled = ["planning", "memory"]
+
 [workspace]
-default_preset = "full"
 agent_instructions_file = "AGENTS.md"
 workflow_artifact_profile = "repo-owned"
 improvement_latitude = "proactive"

@@ -41,6 +41,8 @@ class ModuleDescriptor:
     dependencies: tuple[str, ...]
     conflicts: tuple[str, ...]
     result_contract: ModuleResultContract
+    kind: str = "core"
+    default_enabled: bool = False
 
 
 class ModuleReportFinding(TypedDict, total=False):

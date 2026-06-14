@@ -105,6 +105,9 @@ function parseScalar(raw) {
   if (text === 'true') return true;
   if (text === 'false') return false;
   if (/^-?\d+$/.test(text)) return Number(text);
+  if (text.startsWith('[') && text.endsWith(']')) {
+    return text.slice(1, -1).split(',').map((item) => parseScalar(item.trim())).filter((item) => item !== '');
+  }
   const quoted = text.match(/^"(.*)"$/);
   return quoted ? quoted[1] : text;
 }
@@ -512,6 +515,8 @@ function workspaceConfig(values) {
   const targetRoot = resolve(String(values.target ?? '.'));
   const configPath = join(targetRoot, '.agentic-workspace/config.toml');
   const config = existsSync(configPath) ? parseTomlTables(readText(configPath), 'workspace') : {};
+  const modulesConfig = existsSync(configPath) ? parseTomlTables(readText(configPath), 'modules') : {};
+  const enabledModules = Array.isArray(modulesConfig.enabled) ? modulesConfig.enabled.map(String) : ['planning', 'memory'];
   return {
     kind: 'agentic-workspace/config/v1',
     profile: 'tiny',
@@ -523,7 +528,7 @@ function workspaceConfig(values) {
     local_config_present: existsSync(join(targetRoot, '.agentic-workspace/config.local.toml')),
     workspace: {
       cli_invoke: String(config.cli_invoke ?? 'uv run agentic-workspace'),
-      default_preset: String(config.default_preset ?? 'memory'),
+      enabled_modules: enabledModules,
       agent_instructions_file: String(config.agent_instructions_file ?? 'AGENTS.md'),
       optimization_bias: String(config.optimization_bias ?? 'balanced'),
     },

@@ -468,7 +468,7 @@ def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Pa
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target), "--preset", "memory", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert (

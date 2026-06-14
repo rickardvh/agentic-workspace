@@ -35,8 +35,8 @@ def test_workspace_lifecycle_smoke() -> None:
             "init",
             "--target",
             str(target),
-            "--preset",
-            "full",
+            "--modules",
+            "planning,memory",
             "--non-interactive",
             "--dry-run",
             "--format",
@@ -51,8 +51,8 @@ def test_workspace_lifecycle_smoke() -> None:
             "init",
             "--target",
             str(target),
-            "--preset",
-            "full",
+            "--modules",
+            "planning,memory",
             "--non-interactive",
             "--format",
             "json",
@@ -67,8 +67,8 @@ def test_workspace_lifecycle_smoke() -> None:
             "status",
             "--target",
             str(target),
-            "--preset",
-            "full",
+            "--modules",
+            "planning,memory",
             "--non-interactive",
             "--format",
             "json",
@@ -78,7 +78,7 @@ def test_workspace_lifecycle_smoke() -> None:
 
     modules = _run("agentic-workspace", "modules", "--verbose", "--format", "json", cwd=WORKSPACE_ROOT)
     module_payload = json.loads(modules.stdout)
-    assert {entry["id"] for entry in module_payload["module_profiles"]} >= {"planning", "memory"}
+    assert {entry["name"] for entry in module_payload["modules"]} >= {"planning", "memory"}
 
 
 def test_planning_lifecycle_smoke() -> None:

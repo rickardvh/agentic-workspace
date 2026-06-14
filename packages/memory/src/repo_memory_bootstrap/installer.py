@@ -190,7 +190,7 @@ def _add_workspace_orchestrator_notice(result: InstallResult, target_root: Path,
         target_root / WORKSPACE_WORKFLOW_PATH,
         (
             "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through "
-            f"`agentic-workspace init --preset {preset}` or `agentic-workspace upgrade --modules memory`. "
+            f"`agentic-workspace init --modules {preset}` or `agentic-workspace upgrade --modules memory`. "
             "Direct `agentic-memory` lifecycle commands are module-level maintenance/debugging surfaces and do not "
             "provide the full Workspace startup router, shared config, ownership, skills, or combined reports."
         ),

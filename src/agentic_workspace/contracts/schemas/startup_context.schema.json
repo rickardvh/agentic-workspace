@@ -156,7 +156,7 @@
     },
     "feature_tier": {
       "type": "object",
-      "description": "Resolved feature tier and package footprint for the target repository."
+      "description": "Resolved module enablement and package footprint for the target repository."
     },
     "context_router": {
       "type": "object",

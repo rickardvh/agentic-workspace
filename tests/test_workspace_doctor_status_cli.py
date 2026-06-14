@@ -16,7 +16,10 @@ def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path
 
     assert cli.main(["status", "--verbose", "--target", str(tmp_path)]) == 0
 
-    assert calls == [("planning", "status", {"target": str(tmp_path)})]
+    assert calls == [
+        ("planning", "status", {"target": str(tmp_path)}),
+        ("memory", "status", {"target": str(tmp_path)}),
+    ]
 
 
 def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_path: Path, capsys) -> None:
@@ -325,9 +328,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     )
     _write(
         (tmp_path / ".agentic-workspace" / "AGENTS.md"),
-        cli._workspace_managed_agent_instructions_text(
-            config=cli.config_lib.load_workspace_config(target_root=tmp_path, valid_presets={"full", "planning", "memory"})
-        ),
+        cli._workspace_managed_agent_instructions_text(config=cli.config_lib.load_workspace_config(target_root=tmp_path)),
         encoding="utf-8",
     )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
@@ -561,7 +562,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'default_preset = "planning"\n\n'
+        'enabled = ["planning"]\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'

@@ -27,11 +27,6 @@
       "source": "cli-option"
     },
     {
-      "name": "preset",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "agent_instructions_file",
       "required": false,
       "source": "cli-option"
@@ -52,7 +47,7 @@
     "steps": [
       {
         "arguments": {},
-        "description": "Resolve target, selected modules, preset, descriptors, and workspace config for prompt rendering.",
+        "description": "Resolve target, selected modules, descriptors, and workspace config for prompt rendering.",
         "id": "resolve_selection",
         "on_error": "emit_usage_error",
         "outputs": [

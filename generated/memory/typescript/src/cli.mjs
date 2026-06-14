@@ -185,7 +185,7 @@ const commandDefinitions = [
           "flags": [
             "--policy-profile"
           ],
-          "help": "Installer policy preset.",
+          "help": "Explicit module selection.",
           "name": "policy_profile"
         },
         {
@@ -294,7 +294,7 @@ const commandDefinitions = [
           "flags": [
             "--policy-profile"
           ],
-          "help": "Installer policy preset.",
+          "help": "Explicit module selection.",
           "name": "policy_profile"
         },
         {
@@ -403,7 +403,7 @@ const commandDefinitions = [
           "flags": [
             "--policy-profile"
           ],
-          "help": "Installer policy preset.",
+          "help": "Explicit module selection.",
           "name": "policy_profile"
         },
         {
@@ -520,7 +520,7 @@ const commandDefinitions = [
           "flags": [
             "--policy-profile"
           ],
-          "help": "Installer policy preset.",
+          "help": "Explicit module selection.",
           "name": "policy_profile"
         },
         {
@@ -661,7 +661,7 @@ const commandDefinitions = [
           "flags": [
             "--policy-profile"
           ],
-          "help": "Installer policy preset.",
+          "help": "Explicit module selection.",
           "name": "policy_profile"
         },
         {

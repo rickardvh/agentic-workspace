@@ -200,7 +200,7 @@ def test_direct_memory_install_warns_without_workspace_orchestrator(tmp_path: Pa
     assert any(
         action.kind == "warning"
         and action.path == target / ".agentic-workspace" / "WORKFLOW.md"
-        and "agentic-workspace init --preset memory" in action.detail
+        and "agentic-workspace init --modules memory" in action.detail
         and "module-level maintenance/debugging" in action.detail
         for action in result.actions
     )
@@ -217,7 +217,7 @@ def test_memory_status_warns_without_workspace_orchestrator(tmp_path: Path) -> N
     assert any(
         action.kind == "warning"
         and action.path == target / ".agentic-workspace" / "WORKFLOW.md"
-        and "agentic-workspace init --preset memory" in action.detail
+        and "agentic-workspace init --modules memory" in action.detail
         for action in result.actions
     )
 

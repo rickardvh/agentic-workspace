@@ -101,11 +101,12 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
     print(f"Installed modules: {installed if installed else '(none)'}")
     if selected:
         print(f"Selected modules: {selected}")
-    feature_tier = payload.get("feature_tier", {})
-    if isinstance(feature_tier, dict):
-        active_tier = feature_tier.get("active", {})
-        if isinstance(active_tier, dict) and active_tier.get("id"):
-            print(f"Feature tier: {active_tier.get('id')} ({active_tier.get('label', '')})")
+    module_enablement = payload.get("feature_tier", {})
+    if isinstance(module_enablement, dict):
+        active_modules = module_enablement.get("active", {})
+        if isinstance(active_modules, dict) and active_modules.get("id"):
+            modules = ", ".join(active_modules.get("modules", [])) or "(none)"
+            print(f"Module enablement: {modules}")
     branch_posture = payload.get("branch_workflow_posture", {})
     if isinstance(branch_posture, dict) and branch_posture.get("status") == "present":
         current_branch = branch_posture.get("current_branch") or "(unknown)"

@@ -88,7 +88,7 @@
       },
       {
         "arguments": {},
-        "description": "Load workspace config, defaults, local overrides, and valid preset metadata.",
+        "description": "Load workspace config, defaults, local overrides, and valid module metadata.",
         "id": "load_config",
         "outputs": [
           "config"

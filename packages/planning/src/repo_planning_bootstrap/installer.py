@@ -436,7 +436,7 @@ def _add_workspace_orchestrator_notice(result: InstallResult, *, preset: str = "
         result.target_root / WORKSPACE_WORKFLOW_PATH,
         (
             "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through "
-            f"`agentic-workspace init --preset {preset}` or `agentic-workspace upgrade --modules planning`. "
+            f"`agentic-workspace init --modules {preset}` or `agentic-workspace upgrade --modules planning`. "
             "Direct `agentic-planning` lifecycle commands are module-level maintenance/debugging surfaces and do not "
             "provide the full Workspace startup router, shared config, ownership, skills, or combined reports."
         ),

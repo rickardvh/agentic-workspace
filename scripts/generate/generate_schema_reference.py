@@ -284,7 +284,7 @@ def _annotation_errors(schema_path: Path, *, repo_root: Path = REPO_ROOT) -> lis
         errors.append(f"{schema_path.as_posix()} root is missing x-agentic-workspace-doc-role")
     if schema_path == DEFAULT_SCHEMA:
         for public_field in (
-            "workspace.default_preset",
+            "modules.enabled",
             "workspace.agent_instructions_file",
             "workspace.workflow_artifact_profile",
             "workspace.improvement_latitude",

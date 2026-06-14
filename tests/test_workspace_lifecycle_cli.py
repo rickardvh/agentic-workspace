@@ -87,7 +87,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
     ]
 
 
-def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
+def test_init_dispatches_to_full_modules_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
@@ -95,7 +95,7 @@ def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, 
     assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["preset"] == "full"
+    assert payload["preset"] is None
     assert payload["modules"] == ["planning", "memory"]
     assert payload["mode"] == "install"
     assert calls == [
@@ -109,7 +109,7 @@ def test_init_seeds_schema_valid_workspace_config(monkeypatch, tmp_path: Path, c
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
@@ -118,7 +118,7 @@ def test_init_seeds_schema_valid_workspace_config(monkeypatch, tmp_path: Path, c
     assert "# Edit this file directly only when changing repo-owned policy." in config_text
     assert "# Reference: .agentic-workspace/docs/workspace-config-contract.md" in config_text
     assert "# Check resolved config: agentic-workspace config --target . --format json" in config_text
-    assert 'default_preset = "planning"' in config_text
+    assert 'enabled = ["planning"]' in config_text
     assert payload["config"]["exists"] is True
     assert payload["config"]["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert ".agentic-workspace/config.toml" in payload["created"]
@@ -129,7 +129,7 @@ def test_init_ignores_repo_owned_local_runtime_state(monkeypatch, tmp_path: Path
     subprocess.run(["git", "-C", str(tmp_path), "init"], check=True, capture_output=True, text=True)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     gitignore_text = (tmp_path / ".gitignore").read_text(encoding="utf-8")
@@ -162,7 +162,7 @@ def test_init_records_payload_provenance_manifest(monkeypatch, tmp_path: Path, c
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
@@ -186,12 +186,12 @@ def test_upgrade_keeps_payload_provenance_current_when_stable(monkeypatch, tmp_p
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     installed_at = json.loads(provenance_path.read_text(encoding="utf-8"))["installed_at"]
 
-    assert cli.main(["upgrade", "--target", str(tmp_path), "--preset", "planning", "--dry-run", "--format", "json"]) == 0
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--modules", "planning", "--dry-run", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     reports = payload.get("module_reports", payload.get("reports", []))
@@ -208,7 +208,7 @@ def test_init_dry_run_reports_workspace_config_seed_without_writing(monkeypatch,
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--dry-run", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--dry-run", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert not (tmp_path / ".agentic-workspace" / "config.toml").exists()
@@ -224,7 +224,7 @@ def test_init_preserves_existing_workspace_config(monkeypatch, tmp_path: Path, c
     _write(config_path, existing_config, encoding="utf-8")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert config_path.read_text(encoding="utf-8") == existing_config
@@ -234,12 +234,12 @@ def test_init_preserves_existing_workspace_config(monkeypatch, tmp_path: Path, c
     assert "preserved repo-owned policy" in config_action["detail"]
 
 
-def test_init_uses_default_preset_from_repo_config(monkeypatch, tmp_path: Path, capsys) -> None:
+def test_init_uses_enabled_modules_from_repo_config(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
     _write(
         (tmp_path / ".agentic-workspace/config.toml"),
-        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n',
+        'schema_version = 1\n\n[modules]\nenabled = ["planning"]\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
@@ -247,7 +247,7 @@ def test_init_uses_default_preset_from_repo_config(monkeypatch, tmp_path: Path, 
     assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["preset"] == "planning"
+    assert payload["preset"] is None
     assert payload["modules"] == ["planning"]
     assert calls == [
         ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
@@ -368,7 +368,7 @@ def test_upgrade_local_only_full_install_does_not_request_root_agents_pointer(tm
     repo_root.mkdir()
     _init_git_repo(repo_root)
 
-    assert cli.main(["install", "--preset", "full", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+    assert cli.main(["install", "--modules", "planning,memory", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert cli.main(["upgrade", "--target", str(repo_root), "--non-interactive", "--format", "json"]) == 0
@@ -395,8 +395,8 @@ def test_upgrade_local_only_full_install_honors_configured_agent_instructions_fi
         cli.main(
             [
                 "install",
-                "--preset",
-                "full",
+                "--modules",
+                "planning,memory",
                 "--target",
                 str(repo_root),
                 "--local-only",
@@ -475,9 +475,9 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert payload["handoff_record_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").as_posix()
     assert "handoff_prompt" in payload
     assert payload["handoff_record"]["kind"] == "workspace-bootstrap-handoff/v1"
-    assert payload["handoff_record"]["intent"]["summary"] == "set up this repo for both Planning and Memory"
-    assert payload["handoff_record"]["intent"]["confirmed_intent"]["summary"] == "set up this repo for both Planning and Memory"
-    assert payload["handoff_record"]["intent"]["interpreted_intent"]["summary"] == "set up this repo for both Planning and Memory"
+    assert payload["handoff_record"]["intent"]["summary"] == "set up this repo for: planning, memory"
+    assert payload["handoff_record"]["intent"]["confirmed_intent"]["summary"] == "set up this repo for: planning, memory"
+    assert payload["handoff_record"]["intent"]["interpreted_intent"]["summary"] == "set up this repo for: planning, memory"
     assert "must_not_change" in payload["handoff_record"]
     assert "escalate_when" in payload["handoff_record"]
     assert "Intent:" in payload["handoff_prompt"]
@@ -1108,7 +1108,7 @@ def test_init_flags_preserved_agentic_workspace_absence_instructions(tmp_path: P
         "# Agent Instructions\n\nThis repository does not use Agentic Workspace. Work from ordinary files.\n",
     )
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert any(
@@ -1122,7 +1122,7 @@ def test_init_flags_preserved_agentic_workspace_absence_instructions(tmp_path: P
     [
         (["--modules", "memory"], ["memory"]),
         (["--modules", "planning"], ["planning"]),
-        (["--preset", "full"], ["planning", "memory"]),
+        (["--modules", "planning,memory"], ["planning", "memory"]),
     ],
 )
 def test_upgrade_lifecycle_plan_advertises_root_front_door_for_module_selections(
@@ -1167,12 +1167,18 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     lifecycle_plan = payload["lifecycle_plan"]
     assert lifecycle_plan["next_safe_command"]["command"].startswith("uv run agentic-workspace upgrade ")
     primary_action = lifecycle_plan["primary_next_action"]
-    assert primary_action["action"] == "apply-lifecycle-plan"
+    assert primary_action["action"] in {"apply-lifecycle-plan", "resolve-lifecycle-review"}
     assert primary_action["command"].startswith("uv run agentic-workspace upgrade ")
     assert primary_action["run"] == primary_action["command"]
-    assert primary_action["risk"] == "may mutate repo-managed workspace surfaces"
-    assert primary_action["required_inputs"] == ["target repo", "selected modules", "dry-run plan"]
-    assert primary_action["next_proof"] == "run doctor after apply and inspect surface classifications"
+    assert primary_action["risk"] in {"may mutate repo-managed workspace surfaces", "blocked until review items are resolved"}
+    assert primary_action["required_inputs"] in (
+        ["target repo", "selected modules", "dry-run plan"],
+        ["target repo", "selected modules", "review items"],
+    )
+    assert primary_action["next_proof"] in {
+        "run doctor after apply and inspect surface classifications",
+        "rerun the lifecycle dry-run after resolving review items",
+    }
     freshness = lifecycle_plan["module_update_freshness"][0]["freshness"]
     assert freshness["status"] in {"fresh", "unknown"}
     assert freshness["next_action"] is None or freshness["next_action"]["command"].startswith("uv run agentic-workspace upgrade ")
@@ -1235,7 +1241,10 @@ def test_install_review_next_actions_use_invoking_workspace_cli_invoke(monkeypat
     monkeypatch.chdir(source)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(target, calls))
 
-    assert cli.main(["install", "--target", str(target), "--preset", "full", "--non-interactive", "--dry-run", "--format", "json"]) == 0
+    assert (
+        cli.main(["install", "--target", str(target), "--modules", "planning,memory", "--non-interactive", "--dry-run", "--format", "json"])
+        == 0
+    )
 
     payload = json.loads(capsys.readouterr().out)
     lifecycle_plan = payload["lifecycle_plan"]
@@ -1606,7 +1615,7 @@ def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tm
     (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'default_preset = "planning"\n\n'
+        'enabled = ["planning"]\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'

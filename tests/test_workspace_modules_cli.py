@@ -11,23 +11,11 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert cli.main(["modules", "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert [entry["id"] for entry in payload["module_profiles"]] == [
-        "routing-only",
-        "planning",
-        "memory",
-        "full",
-    ]
-    full_profile = next(entry for entry in payload["module_profiles"] if entry["id"] == "full")
-    assert full_profile["profile_kind"] == "installer-preset"
-    assert full_profile["selected_modules"] == ["planning", "memory"]
-    assert full_profile["selection_rule"] == "expands to every bundled module marked include_in_full_preset"
-    assert payload["feature_tiers_compatibility"]["canonical_field"] == "module_profiles"
-    assert [entry["id"] for entry in payload["feature_tiers"]] == [
-        "routing-only",
-        "planning",
-        "memory",
-        "full",
-    ]
+    modules_by_name = {entry["name"]: entry for entry in payload["modules"]}
+    assert set(modules_by_name) >= {"planning", "memory"}
+    assert modules_by_name["planning"]["kind"] == "core"
+    assert isinstance(modules_by_name["memory"]["default_enabled"], bool)
+    assert payload["terminology"]["external_module"].startswith("Future integration form")
     footprint = payload["package_footprint"]
     assert footprint["decision"] == "bundle-first-party-modules-for-now"
     assert "unconditionally" in footprint["python_package_dependency_model"]
@@ -103,10 +91,8 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "workspace-root",
         "workspace-local-root",
     }
-    full_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "full")
-    assert full_tier["modules"] == ["planning", "memory"]
-    assert "does not imply source-checkout maintainer tooling" in full_tier["cost_model"]
-    assert "maintainer-dogfooding" not in {entry["id"] for entry in payload["feature_tiers"]}
+    assert "feature_tiers" not in payload
+    assert "module_profiles" not in payload
     assert {entry["id"] for entry in payload["advanced_features"]} == {
         "review_artifacts",
         "external_adapters",
@@ -115,7 +101,7 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert all(entry["default_enabled"] is False for entry in payload["advanced_features"])
     shipped_catalog = json.dumps(
         {
-            "feature_tiers": payload["feature_tiers"],
+            "modules": payload["modules"],
             "advanced_features": payload["advanced_features"],
         },
         sort_keys=True,
@@ -363,21 +349,21 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
     assert report["module"] == "planning"
 
 
-def test_selected_modules_uses_descriptor_owned_presets(tmp_path: Path) -> None:
+def test_selected_modules_uses_descriptor_owned_moduless(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     descriptors = _fake_descriptors(tmp_path, [])
     config = cli._load_workspace_config(target_root=tmp_path, descriptors=descriptors)
 
-    selected_modules, preset_name = cli._selected_modules(
+    selected_modules, modules_name = cli._selected_modules(
         command_name="init",
-        preset_name="full",
+        preset_name=None,
         module_arg=None,
         target_root=tmp_path,
         descriptors=descriptors,
         config=config,
     )
 
-    assert preset_name == "full"
+    assert modules_name is None
     assert selected_modules == ["planning", "memory"]
 
 

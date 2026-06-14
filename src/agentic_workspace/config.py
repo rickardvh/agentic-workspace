@@ -78,6 +78,8 @@ SUPPORTED_IMPROVEMENT_LATITUDES = (
     "proactive",
 )
 DEFAULT_OPTIMIZATION_BIAS = "balanced"
+DEFAULT_ENABLED_MODULES = ("planning", "memory")
+SUPPORTED_CORE_MODULES = ("planning", "memory", "verification")
 SUPPORTED_OPTIMIZATION_BIASES = (
     "agent-efficiency",
     "balanced",
@@ -383,7 +385,7 @@ class WorkspaceConfig:
     path: Path | None
     exists: bool
     schema_version: int
-    default_preset: str
+    enabled_modules: tuple[str, ...]
     agent_instructions_file: str
     agent_instructions_source: str
     workflow_artifact_profile: str
@@ -1598,6 +1600,26 @@ def default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:
     }
 
 
+def validate_enabled_modules(value: Any, *, config_path: Path, known_modules: tuple[str, ...] = SUPPORTED_CORE_MODULES) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} modules.enabled must be an array of module ids.")
+    enabled: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise WorkspaceUsageError(f"{config_path.as_posix()} modules.enabled entries must be non-empty strings.")
+        module_name = item.strip()
+        if module_name == "none":
+            raise WorkspaceUsageError(f"{config_path.as_posix()} modules.enabled uses [] for no enabled modules, not 'none'.")
+        if module_name not in known_modules:
+            supported = ", ".join(known_modules)
+            raise WorkspaceUsageError(
+                f"{config_path.as_posix()} modules.enabled contains unknown module '{module_name}'. Supported modules: {supported}."
+            )
+        if module_name not in enabled:
+            enabled.append(module_name)
+    return tuple(enabled)
+
+
 def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None = None) -> WorkspaceConfig:
     defaults = default_module_update_policies()
 
@@ -1613,7 +1635,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     local_override, local_warnings = load_mixed_agent_local_override(target_root=effective_root)
     warnings = list(local_warnings)
 
-    default_preset = "full"
+    enabled_modules = DEFAULT_ENABLED_MODULES
     configured_agent_instructions_file: str | None = None
     workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
     workflow_artifact_profile_source = "product-default"
@@ -1651,7 +1673,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             path=config_path,
             exists=False,
             schema_version=1,
-            default_preset=default_preset,
+            enabled_modules=enabled_modules,
             agent_instructions_file=agent_instructions_file,
             agent_instructions_source=agent_instructions_source,
             workflow_artifact_profile=workflow_artifact_profile,
@@ -1711,7 +1733,17 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         )
 
     unknown_top_level = sorted(
-        set(payload) - {"schema_version", "workspace", "update", "workflow_obligations", "system_intent", "assurance", "cli_compatibility"}
+        set(payload)
+        - {
+            "schema_version",
+            "workspace",
+            "modules",
+            "update",
+            "workflow_obligations",
+            "system_intent",
+            "assurance",
+            "cli_compatibility",
+        }
     )
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
@@ -1727,7 +1759,6 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     unknown_workspace = sorted(
         set(raw_workspace)
         - {
-            "default_preset",
             "agent_instructions_file",
             "workflow_artifact_profile",
             "improvement_latitude",
@@ -1741,10 +1772,25 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         unknown_text = ", ".join(unknown_workspace)
         warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
 
-    configured_preset = str(raw_workspace.get("default_preset", default_preset)).strip() or default_preset
-    if valid_presets and configured_preset not in valid_presets:
-        supported = ", ".join(sorted(valid_presets))
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset must be one of: {supported}.")
+    if "default_preset" in raw_workspace:
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset is no longer supported; use [modules] enabled = [...] instead."
+        )
+    raw_enabled_modules_section = payload.get("modules", {})
+    if raw_enabled_modules_section is None:
+        raw_enabled_modules_section = {}
+    if not isinstance(raw_enabled_modules_section, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [modules] section must be a table.")
+    unknown_enabled_module_fields = sorted(set(raw_enabled_modules_section) - {"enabled"})
+    if unknown_enabled_module_fields:
+        unknown_text = ", ".join(unknown_enabled_module_fields)
+        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} [modules] contains unsupported field(s): {unknown_text}.")
+    if "enabled" in raw_enabled_modules_section:
+        enabled_modules = validate_enabled_modules(
+            raw_enabled_modules_section["enabled"],
+            config_path=WORKSPACE_CONFIG_PATH,
+            known_modules=tuple(sorted(valid_presets)) if valid_presets else SUPPORTED_CORE_MODULES,
+        )
 
     raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
     if raw_agent_instructions_file is not None:
@@ -1892,7 +1938,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         path=config_path,
         exists=True,
         schema_version=1,
-        default_preset=configured_preset,
+        enabled_modules=enabled_modules,
         agent_instructions_file=agent_instructions_file,
         agent_instructions_source=agent_instructions_source,
         workflow_artifact_profile=workflow_artifact_profile,

@@ -362,7 +362,7 @@
         {
           "name": "workspace.init",
           "description": "Initialize Agentic Workspace in a host repository.",
-          "command": "agentic-workspace init --target <repo> --preset <preset> --format json",
+          "command": "agentic-workspace init --target <repo> --modules <modules|none> --format json",
           "read_only": false,
           "destructive": false,
           "idempotent": true,
@@ -509,104 +509,6 @@
       ]
     }
   },
-  "module_profiles": [
-    {
-      "id": "routing-only",
-      "label": "Routing only",
-      "profile_kind": "root-routing",
-      "selected_modules": [],
-      "preset": null,
-      "default_active": true,
-      "activation": "Use when the repo only needs compact entrypoint, config, and report routing surfaces.",
-      "cost_model": "smallest checked-in repo footprint; no module state selected.",
-      "selection_rule": "absence of selected modules plus root routing surfaces"
-    },
-    {
-      "id": "planning",
-      "label": "Planning",
-      "profile_kind": "installer-preset",
-      "selected_modules": [
-        "planning"
-      ],
-      "preset": "planning",
-      "default_active": true,
-      "activation": "Use when active execution state, execplan routing, or lane closeout must be recoverable.",
-      "cost_model": "adds checked-in planning state and active-work proof surfaces.",
-      "selection_rule": "expands to the bundled planning module"
-    },
-    {
-      "id": "memory",
-      "label": "Memory",
-      "profile_kind": "installer-preset",
-      "selected_modules": [
-        "memory"
-      ],
-      "preset": "memory",
-      "default_active": true,
-      "activation": "Use when durable repo knowledge should prevent repeated rediscovery.",
-      "cost_model": "adds checked-in routed knowledge surfaces without active execution planning.",
-      "selection_rule": "expands to the bundled memory module"
-    },
-    {
-      "id": "full",
-      "label": "Full",
-      "profile_kind": "installer-preset",
-      "selected_modules": [
-        "planning",
-        "memory"
-      ],
-      "preset": "full",
-      "default_active": true,
-      "activation": "Use when both active execution state and durable repo knowledge are worth the shared footprint.",
-      "cost_model": "installer convenience profile; does not imply source-checkout maintainer tooling or optional advanced surfaces.",
-      "selection_rule": "expands to every bundled module marked include_in_full_preset"
-    }
-  ],
-  "feature_tiers": [
-    {
-      "id": "routing-only",
-      "label": "Routing only",
-      "modules": [],
-      "preset": null,
-      "default_active": true,
-      "activation": "Use when the repo only needs compact entrypoint, config, and report routing surfaces.",
-      "cost_model": "smallest shared footprint; no checked-in module state required."
-    },
-    {
-      "id": "planning",
-      "label": "Planning",
-      "modules": [
-        "planning"
-      ],
-      "preset": "planning",
-      "default_active": true,
-      "activation": "Use when active execution state, execplan routing, or lane closeout must be recoverable.",
-      "cost_model": "adds checked-in planning state and active-work proof surfaces."
-    },
-    {
-      "id": "memory",
-      "label": "Memory",
-      "modules": [
-        "memory"
-      ],
-      "preset": "memory",
-      "default_active": true,
-      "activation": "Use when durable repo knowledge should prevent repeated rediscovery.",
-      "cost_model": "adds checked-in routed knowledge surfaces without active execution planning."
-    },
-    {
-      "id": "full",
-      "label": "Full",
-      "modules": [
-        "planning",
-        "memory"
-      ],
-      "preset": "full",
-      "default_active": true,
-      "activation": "Use when both active execution state and durable repo knowledge are worth the shared footprint.",
-      "cost_model": "current full preset; does not imply source-checkout maintainer tooling or optional advanced surfaces."
-    }
-  ],
   "advanced_features": [
     {
       "id": "review_artifacts",
@@ -657,7 +559,6 @@
       "name": "planning",
       "description": "Repo-native execution planning bootstrap and maintenance.",
       "selection_rank": 10,
-      "include_in_full_preset": true,
       "install_signals": [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans"
@@ -873,13 +774,14 @@
           "path",
           "message"
         ]
-      }
+      },
+      "kind": "core",
+      "default_enabled": true
     },
     {
       "name": "memory",
       "description": "Durable repository knowledge bootstrap and maintenance.",
       "selection_rank": 20,
-      "include_in_full_preset": true,
       "install_signals": [
         ".agentic-workspace/memory/repo/index.md",
         ".agentic-workspace/memory"
@@ -1096,13 +998,14 @@
           "path",
           "message"
         ]
-      }
+      },
+      "kind": "core",
+      "default_enabled": true
     },
     {
       "name": "verification",
       "description": "Repo-native soft verification protocols, bounded evidence records, and proof route hints.",
       "selection_rank": 30,
-      "include_in_full_preset": false,
       "install_signals": [
         ".agentic-workspace/verification/manifest.toml"
       ],
@@ -1234,7 +1137,21 @@
           "path",
           "message"
         ]
-      }
+      },
+      "kind": "core",
+      "default_enabled": false
     }
-  ]
+  ],
+  "terminology": {
+    "module": "Architectural unit with lifecycle, config, owned roots, reports, capabilities, and future extension potential.",
+    "core_module": "First-party module shipped and supported as part of Agentic Workspace.",
+    "external_module": "Future integration form; public third-party discovery, loading, packaging, and SDK contracts are not supported yet.",
+    "capability": "A module-provided behavior or affordance, not the selection unit.",
+    "plugin": "Not the primary term for AW core subsystems; plugin-like external integration remains future work.",
+    "non_goals": [
+      "dynamic third-party module loading",
+      "public plugin API",
+      "external module packaging contract"
+    ]
+  }
 }

@@ -26,11 +26,6 @@
       "source": "cli-option"
     },
     {
-      "name": "preset",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "non_interactive",
       "required": false,
       "source": "cli-option"

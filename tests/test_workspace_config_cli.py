@@ -18,7 +18,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["edit_reference"]["source_schema"] == "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
     assert "# Agentic Workspace managed config." in payload["edit_reference"]["managed_header"]
     assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
-    assert payload["workspace"]["default_preset"] == "full"
+    assert payload["workspace"]["enabled_modules"] == ["planning", "memory"]
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
     assert payload["workspace"]["workflow_artifact_profile"] == "repo-owned"
@@ -744,10 +744,11 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'default_preset = "planning"\n'
         'agent_instructions_file = "GEMINI.md"\n'
         'workflow_artifact_profile = "gemini"\n'
         'improvement_latitude = "balanced"\n\n'
+        "[modules]\n"
+        'enabled = ["planning"]\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
@@ -760,7 +761,7 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["exists"] is True
-    assert payload["workspace"]["default_preset"] == "planning"
+    assert payload["workspace"]["enabled_modules"] == ["planning"]
     assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
     assert payload["workspace"]["workflow_artifact_profile"] == "gemini"

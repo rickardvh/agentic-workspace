@@ -56,11 +56,11 @@ def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsy
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\ncurrent_task = "handoff detail"\n',
+        'schema_version = 1\n\n[workspace]\nenabled = ["planning"]\ncurrent_task = "handoff detail"\n',
         encoding="utf-8",
     )
 
@@ -897,11 +897,11 @@ def test_report_decision_pressure_surfaces_planning_promotion_candidate(tmp_path
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n\n[assurance]\ndecision_record_target = "docs/decisions/"\n',
+        'schema_version = 1\n\n[workspace]\nenabled = ["planning"]\n\n[assurance]\ndecision_record_target = "docs/decisions/"\n',
     )
     plan = target / ".agentic-workspace" / "planning" / "execplans" / "decision.plan.json"
     _write_json(
@@ -993,11 +993,11 @@ def test_report_closeout_trust_does_not_infer_architecture_decision_candidate_fr
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n',
+        'schema_version = 1\n\n[workspace]\nenabled = ["planning"]\n',
     )
     _write(target / "docs" / "adr" / "README.md", "# ADRs\n", encoding="utf-8")
     _write(target / "docs" / "adr" / "TEMPLATE.md", "# {{title}}\n\n{{decision}}\n", encoding="utf-8")
@@ -1054,7 +1054,7 @@ def test_report_closeout_trust_surfaces_memory_promotion_pressure_in_knowledge_r
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "memory"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "memory"]) == 0
     capsys.readouterr()
 
     def _memory_report_with_promotion_pressure(*, target=None):
@@ -1123,12 +1123,13 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
-    assert payload["feature_tier"]["active"]["id"] == "full"
+    assert payload["feature_tier"]["schema_version"] == "workspace-module-enablements/v1"
+    assert payload["feature_tier"]["active"]["id"] == "enabled-modules"
     assert payload["feature_tier"]["active"]["modules"] == ["planning", "memory"]
     assert payload["feature_tier"]["active"]["source"] == "installed_modules"
-    assert payload["feature_tier"]["default_rule"].startswith("Use the smallest module profile")
-    assert payload["feature_tier"]["compatibility_status"] == "deprecated-alias-for-module-profiles"
-    assert "maintainer-dogfooding" not in {tier["id"] for tier in payload["feature_tier"]["available_tiers"]}
+    assert payload["feature_tier"]["default_rule"].startswith("Fresh init enables core planning and memory")
+    assert payload["feature_tier"]["compatibility_status"] == "renamed-from-feature-tier"
+    assert "maintainer-dogfooding" not in {feature["id"] for feature in payload["feature_tier"]["advanced_policy"]["available_features"]}
     assert payload["health"] == "healthy"
     assert payload["output_contract"]["optimization_bias"] == "balanced"
     assert payload["output_contract"]["optimization_bias_source"] == "product-default"
@@ -1836,7 +1837,7 @@ def test_report_closeout_trust_explains_open_issue_residue_pending_pr_merge(tmp_
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "planning" / "state.toml",
@@ -4555,8 +4556,8 @@ def _write_applicable_intent_fixture(target: Path) -> None:
         """
 schema_version = 1
 
-[workspace]
-default_preset = "full"
+[modules]
+enabled = ["planning", "memory"]
 
 [assurance.requirements.privacy_soft_intent]
 level = "high"
@@ -4669,8 +4670,8 @@ def _write_resolved_applicable_intent_fixture(target: Path) -> None:
         """
 schema_version = 1
 
-[workspace]
-default_preset = "full"
+[modules]
+enabled = ["planning", "memory"]
 
 [assurance.requirements.privacy_soft_intent]
 level = "high"
@@ -4788,7 +4789,7 @@ def test_report_applicable_intent_section_projects_sources_authority_and_durable
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory"]) == 0
     capsys.readouterr()
     _write_applicable_intent_fixture(target)
 
@@ -4814,7 +4815,7 @@ def test_report_router_surfaces_applicable_intent_compactly(tmp_path: Path, caps
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory"]) == 0
     capsys.readouterr()
     _write_applicable_intent_fixture(target)
 
@@ -4835,7 +4836,7 @@ def test_report_closeout_report_caveats_unresolved_soft_applicable_intent_from_v
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory"]) == 0
     capsys.readouterr()
     _write_applicable_intent_fixture(target)
 
@@ -4857,7 +4858,7 @@ def test_report_applicable_intent_resolved_outcome_is_durable_closeout_evidence(
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory"]) == 0
     capsys.readouterr()
     _write_resolved_applicable_intent_fixture(target)
 
@@ -6258,7 +6259,7 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "planning" / "state.toml",
@@ -6352,7 +6353,7 @@ def test_external_intent_refresh_github_applies_candidates_to_inline_empty_array
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
     state_path = target / ".agentic-workspace" / "planning" / "state.toml"
     _write(

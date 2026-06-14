@@ -16,14 +16,14 @@ Use an installed `agentic-workspace` CLI from the target repo's environment when
 
 ```bash
 agentic-workspace defaults --section install_profiles --format json
-agentic-workspace init --target . --preset memory
+agentic-workspace init --target . --modules memory
 ```
 
-Choose the smallest preset that fits:
+Choose the smallest module set that fits:
 
 - `memory`: durable repo knowledge and anti-rediscovery context.
 - `planning`: active work continuity, proof expectations, and handoff state.
-- `full`: both Memory and Planning, only when both are explicitly desired.
+- `planning,memory`: both Memory and Planning, only when both are explicitly desired.
 
 ## If The CLI Is Missing
 

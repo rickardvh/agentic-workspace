@@ -27,11 +27,6 @@
       "source": "cli-option"
     },
     {
-      "name": "preset",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "dry_run",
       "required": false,
       "source": "cli-option"
