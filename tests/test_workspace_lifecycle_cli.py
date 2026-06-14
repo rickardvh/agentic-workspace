@@ -124,6 +124,39 @@ def test_init_seeds_schema_valid_workspace_config(monkeypatch, tmp_path: Path, c
     assert ".agentic-workspace/config.toml" in payload["created"]
 
 
+def test_init_ignores_repo_owned_local_runtime_state(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    subprocess.run(["git", "-C", str(tmp_path), "init"], check=True, capture_output=True, text=True)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    gitignore_text = (tmp_path / ".gitignore").read_text(encoding="utf-8")
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    _write(cache_path, "{}\n", encoding="utf-8")
+    check_ignore = subprocess.run(
+        ["git", "-C", str(tmp_path), "check-ignore", "-v", ".agentic-workspace/local/cache/external-intent-evidence.json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    status = subprocess.run(
+        ["git", "-C", str(tmp_path), "status", "--short", "--untracked-files=all", "--", ".agentic-workspace/local"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert ".agentic-workspace/local/" in gitignore_text
+    workspace_report = next(report for report in payload["module_reports"] if report["module"] == "workspace")
+    ignore_action = next(action for action in workspace_report["actions"] if action["path"] == ".gitignore")
+    assert ignore_action["kind"] == "created"
+    assert "repo-owned ignored runtime state" in ignore_action["detail"]
+    assert ".gitignore" in check_ignore.stdout
+    assert status.stdout == ""
+
+
 def test_init_dry_run_reports_workspace_config_seed_without_writing(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

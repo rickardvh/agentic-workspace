@@ -4951,6 +4951,7 @@ EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\nAGENTS.local.md\n"
 LEGACY_LOCAL_ONLY_IGNORE_BLOCKS = ("# Agentic Workspace local-only storage\n.agentic-workspace/\n",)
+REPO_OWNED_LOCAL_IGNORE_BLOCK = "# Agentic Workspace local runtime state\n.agentic-workspace/local/\n"
 LOCAL_ONLY_STATE_FILE = Path(".agentic-workspace") / "LOCAL-ONLY.toml"
 
 
@@ -5238,6 +5239,23 @@ def _remove_legacy_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> di
     }
 
 
+def _ensure_repo_owned_local_gitignore(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+    gitignore_path = target_root / ".gitignore"
+    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    if re.search(r"(?m)^\.agentic-workspace/local/?$", existing_text):
+        return {"kind": "current", "path": ".gitignore", "detail": "repo-owned local runtime state already ignored"}
+    rendered_text = existing_text.rstrip()
+    addition = "\n" + REPO_OWNED_LOCAL_IGNORE_BLOCK
+    rendered_text = rendered_text + addition if rendered_text else addition.lstrip("\n")
+    if not dry_run:
+        gitignore_path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run and (not gitignore_path.exists()) else "would update" if dry_run else "created",
+        "path": ".gitignore",
+        "detail": "record .agentic-workspace/local/ as repo-owned ignored runtime state",
+    }
+
+
 def _managed_workspace_config_header(*, cli_invoke: str) -> str:
     return "\n".join(
         [
@@ -5468,6 +5486,8 @@ def _workspace_init_or_upgrade_report(
                     "detail": "legacy llms.txt exists but is not recognized as the retired generated adapter",
                 }
             )
+    if local_only_repo_root is None:
+        actions.append(_ensure_repo_owned_local_gitignore(target_root=target_root, dry_run=dry_run))
     actions.append(_ensure_local_scratch(target_root=target_root, dry_run=dry_run))
     policy_actions, policy_warnings = _sync_update_policy_actions(
         target_root=target_root, selected_modules=selected_modules, dry_run=dry_run, command_name=command_name, config=config, apply=True
