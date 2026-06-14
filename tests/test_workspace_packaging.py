@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -9,6 +10,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
 from pathlib import Path
 from zipfile import ZipFile
@@ -18,18 +20,35 @@ PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 
+@contextlib.contextmanager
+def _package_build_lock():
+    lock_path = WORKSPACE_ROOT / "scratch" / "package-build.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            lock_path.mkdir()
+            break
+        except FileExistsError:
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        lock_path.rmdir()
+
+
 def _source_inventory() -> set[str]:
     return {path.relative_to(PAYLOAD_ROOT).as_posix() for path in PAYLOAD_ROOT.rglob("*") if path.is_file()}
 
 
 def _build_artifact(tmpdir: str, artifact: str) -> Path:
-    subprocess.run(
-        ["uv", "build", f"--{artifact}", "-o", tmpdir],
-        cwd=WORKSPACE_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    with _package_build_lock():
+        subprocess.run(
+            ["uv", "build", f"--{artifact}", "-o", tmpdir],
+            cwd=WORKSPACE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
     pattern = "*.whl" if artifact == "wheel" else "*.tar.gz"
     artifacts = list(Path(tmpdir).glob(pattern))
     assert len(artifacts) == 1, f"Expected exactly 1 {artifact}, found {len(artifacts)}"
