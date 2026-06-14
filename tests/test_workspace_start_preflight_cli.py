@@ -3736,6 +3736,53 @@ def test_start_can_select_compatible_installed_state_without_expanding_tiny_defa
     assert installed_state["generated_artifacts"]["status"] == "compatible"
 
 
+def test_start_surfaces_stale_sibling_aw_freshness_without_trial_and_error(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "agentic-workspace"
+    sibling = tmp_path / "command-generation"
+    target.mkdir()
+    sibling.mkdir()
+    _init_git_repo(target)
+    _init_git_repo(sibling)
+    _write(
+        sibling / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nsource_classes = ["installed-package"]\n',
+    )
+
+    assert (
+        cli.main(["start", "--target", str(target), "--task", "Update ../command-generation for the release lane", "--format", "json"]) == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    freshness = payload["sibling_repo_aw_freshness"]
+    _assert_sibling_repo_aw_freshness_schema(payload, schema_name="startup_context.schema.json")
+    assert freshness["status"] == "attention"
+    sibling_entry = freshness["siblings"][0]
+    assert sibling_entry["safe_operating_posture"] == "stale-do-not-route"
+    assert sibling_entry["authority"] == "current-repo-retains-workflow-authority"
+    assert sibling_entry["installed_state_compatibility"]["status"] == "blocking-drift"
+    assert sibling_entry["installed_state_compatibility"]["executable"]["classification"] == "use-repo-runner-required"
+
+
+def test_start_surfaces_compatible_sibling_aw_as_advisory(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "agentic-workspace"
+    sibling = tmp_path / "command-generation"
+    target.mkdir()
+    sibling.mkdir()
+    _init_git_repo(target)
+    _init_git_repo(sibling)
+    _write(sibling / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+
+    assert cli.main(["start", "--target", str(target), "--task", "Work in command-generation after AW changes", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    freshness = payload["sibling_repo_aw_freshness"]
+    assert freshness["status"] == "checked"
+    sibling_entry = freshness["siblings"][0]
+    assert sibling_entry["safe_operating_posture"] == "usable-with-caution"
+    assert sibling_entry["authority"] == "current-repo-retains-workflow-authority"
+    assert sibling_entry["installed_state_compatibility"]["status"] == "compatible"
+
+
 def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

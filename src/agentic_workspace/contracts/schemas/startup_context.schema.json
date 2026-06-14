@@ -38,6 +38,10 @@
       "$ref": "#/$defs/installed_state_compatibility",
       "description": "Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts."
     },
+    "sibling_repo_aw_freshness": {
+      "$ref": "#/$defs/sibling_repo_aw_freshness",
+      "description": "Cross-repo AW freshness posture for sibling repositories referenced by the current task."
+    },
     "cli_invocation": {
       "type": "object",
       "required": [
@@ -722,6 +726,43 @@
       },
       "additionalProperties": false,
       "description": "Installed-state compatibility details used by startup and report surfaces."
+    },
+    "sibling_repo_aw_freshness": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "siblings"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/sibling-repo-aw-freshness/v1",
+          "description": "Discriminator identifying the payload or record shape."
+        },
+        "status": {
+          "enum": [
+            "not-referenced",
+            "checked",
+            "attention"
+          ],
+          "description": "Whether sibling AW posture was checked and whether it needs attention."
+        },
+        "authority": {
+          "const": "current-repo-retains-workflow-authority",
+          "description": "Current repo remains authoritative for cross-repo workflow routing."
+        },
+        "siblings": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Sibling repository posture entries."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Policy rule for using sibling AW posture."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Sibling repository AW freshness posture derived from the installed-state compatibility model."
     },
     "cli_compatibility_check": {
       "type": "object",
