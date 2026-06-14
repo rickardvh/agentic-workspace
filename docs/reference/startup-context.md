@@ -76,6 +76,12 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `installed_state_compatibility.adapter_contracts` | array of object | no |  | Entry-surface adapter contracts covered by this model. |  |  |
 | `installed_state_compatibility.next_action` | string \| null | no |  | Suggested command when drift requires or recommends action. |  |  |
 | `installed_state_compatibility.rule` | string | no |  | Policy rule for applying this packet. |  |  |
+| `sibling_repo_aw_freshness` | ref `#/$defs/sibling_repo_aw_freshness` | no |  | Cross-repo AW freshness posture for sibling repositories referenced by the current task. |  |  |
+| `sibling_repo_aw_freshness.kind` | const `"agentic-workspace/sibling-repo-aw-freshness/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `sibling_repo_aw_freshness.status` | enum `"not-referenced"`, `"checked"`, `"attention"` | yes |  | Whether sibling AW posture was checked and whether it needs attention. |  |  |
+| `sibling_repo_aw_freshness.authority` | const `"current-repo-retains-workflow-authority"` | no |  | Current repo remains authoritative for cross-repo workflow routing. |  |  |
+| `sibling_repo_aw_freshness.siblings` | array of object | yes |  | Sibling repository posture entries. |  |  |
+| `sibling_repo_aw_freshness.rule` | string | no |  | Policy rule for using sibling AW posture. |  |  |
 | `cli_invocation` | object | no |  | Local command invocation guidance for PATH-limited agent environments. |  |  |
 | `cli_invocation.kind` | const `"agentic-workspace/cli-invocation/v1"` | yes |  | Discriminator for the local CLI invocation guidance. |  |  |
 | `cli_invocation.primary` | string | yes |  | Preferred local command prefix for invoking Agentic Workspace. |  |  |

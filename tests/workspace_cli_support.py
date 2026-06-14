@@ -152,6 +152,17 @@ def _assert_installed_state_compatibility_schema(payload: dict[str, object], *, 
     assert [error.message for error in errors] == []
 
 
+def _assert_sibling_repo_aw_freshness_schema(payload: dict[str, object], *, schema_name: str) -> None:
+    schema_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    errors = sorted(
+        validator.evolve(schema=schema["$defs"]["sibling_repo_aw_freshness"]).iter_errors(payload["sibling_repo_aw_freshness"]),
+        key=lambda error: list(error.path),
+    )
+    assert [error.message for error in errors] == []
+
+
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:
     def _build_handler(module_name: str, command_name: str):
         def _handler(**kwargs):

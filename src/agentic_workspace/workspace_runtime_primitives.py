@@ -591,6 +591,115 @@ def _installed_state_compatibility_payload(
     return payload
 
 
+def _sibling_repo_aw_freshness_payload(*, target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    references = _sibling_repo_references(target_root=target_root, task_text=task_text)
+    if not references:
+        return {"kind": "agentic-workspace/sibling-repo-aw-freshness/v1", "status": "not-referenced", "siblings": []}
+    siblings: list[dict[str, Any]] = []
+    for sibling_root in references:
+        relative = _display_path(sibling_root, target_root)
+        configured = (sibling_root / ".agentic-workspace" / "config.toml").is_file() or (
+            sibling_root / ".agentic-workspace" / "config.local.toml"
+        ).is_file()
+        if not configured:
+            siblings.append(
+                {
+                    "path": relative,
+                    "exists": sibling_root.exists(),
+                    "aw_configured": False,
+                    "safe_operating_posture": "not-configured-do-not-route",
+                    "authority": "current-repo-retains-workflow-authority",
+                    "reason": "No sibling AW config was found; use ordinary files there and keep routing in the current repo.",
+                }
+            )
+            continue
+        try:
+            sibling_config = _load_workspace_config(target_root=sibling_root)
+        except WorkspaceUsageError as exc:
+            siblings.append(
+                {
+                    "path": relative,
+                    "exists": True,
+                    "aw_configured": True,
+                    "safe_operating_posture": "stale-do-not-route",
+                    "authority": "current-repo-retains-workflow-authority",
+                    "reason": str(exc),
+                }
+            )
+            continue
+        installed_modules = _fast_installed_modules(target_root=sibling_root)
+        selected_modules = installed_modules or _preset_modules(_module_operations()).get(sibling_config.default_preset, [])
+        installed_state = _installed_state_compatibility_payload(
+            config=sibling_config,
+            selected_modules=selected_modules,
+            installed_modules=installed_modules,
+            compact=True,
+        )
+        status = str(installed_state.get("status", "compatible"))
+        if status == "compatible":
+            posture = "usable-with-caution"
+            reason = "Sibling AW posture is compatible, but the current repo still owns this cross-repo workflow lane."
+        elif status == "upgrade-recommended":
+            posture = "usable-with-caution"
+            reason = "Sibling AW has advisory executable drift; avoid making its workflow state authoritative."
+        else:
+            posture = "stale-do-not-route"
+            reason = "Sibling AW compatibility drift requires action before trusting its workflow routing."
+        siblings.append(
+            {
+                "path": relative,
+                "exists": True,
+                "aw_configured": True,
+                "safe_operating_posture": posture,
+                "authority": "current-repo-retains-workflow-authority",
+                "installed_state_compatibility": installed_state,
+                "suggested_check": _command_with_cli_invoke(
+                    command=f"agentic-workspace report --target {sibling_root.as_posix()} --section installed_state_compatibility --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                "reason": reason,
+            }
+        )
+    overall = "checked"
+    if any(sibling["safe_operating_posture"] == "stale-do-not-route" for sibling in siblings):
+        overall = "attention"
+    return {
+        "kind": "agentic-workspace/sibling-repo-aw-freshness/v1",
+        "status": overall,
+        "authority": "current-repo-retains-workflow-authority",
+        "siblings": siblings,
+        "rule": "Use sibling AW only as an advisory local check; current repo state remains authoritative for the active cross-repo lane.",
+    }
+
+
+def _sibling_repo_references(*, target_root: Path, task_text: str | None) -> list[Path]:
+    text = task_text or ""
+    if not text.strip():
+        return []
+    candidates: list[Path] = []
+    for match in re.finditer(r"(?<!\S)(?:\.\.[/\\][A-Za-z0-9_.-]+)(?!\S)", text):
+        candidate = (target_root / match.group(0)).resolve()
+        if candidate.parent == target_root.parent.resolve():
+            candidates.append(candidate)
+    try:
+        sibling_dirs = [path for path in target_root.parent.iterdir() if path.is_dir() and path.resolve() != target_root.resolve()]
+    except OSError:
+        sibling_dirs = []
+    lowered = text.lower()
+    for sibling in sibling_dirs:
+        name = sibling.name
+        if name.lower() in lowered and ((sibling / ".git").exists() or (sibling / ".agentic-workspace").exists()):
+            candidates.append(sibling.resolve())
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = candidate.as_posix().lower()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(candidate)
+    return deduped
+
+
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
 PROOF_ROUTE_HINTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["proof_route_hints_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
@@ -18578,6 +18687,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         projected["installed_state_compatibility"] = installed_state
+    sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
+    if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
+        projected["sibling_repo_aw_freshness"] = sibling_freshness
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         primary_next_action = maintainer_mode.get("primary_next_action", {})
@@ -19631,6 +19743,9 @@ def _start_payload(
         payload["cli_compatibility"] = cli_compatibility
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+    sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
+    if sibling_freshness["status"] != "not-referenced":
+        payload["sibling_repo_aw_freshness"] = sibling_freshness
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
         proof_payload = _proof_selection_for_changed_paths(
@@ -20360,6 +20475,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         startup_changed_signals.append(f"installed_state_compatibility={installed_state.get('status')}")
+    sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
+    if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") == "attention":
+        startup_changed_signals.append("sibling_repo_aw_freshness=attention")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
@@ -20439,6 +20557,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         selected["cli_compatibility"] = cli_compatibility
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         selected["installed_state_compatibility"] = installed_state
+    if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
+        selected["sibling_repo_aw_freshness"] = sibling_freshness
     durable_intent = payload.get("durable_intent", {})
     subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
@@ -20612,6 +20732,9 @@ def _start_tiny_payload_fast(
     }
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+    sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
+    if sibling_freshness["status"] != "not-referenced":
+        payload["sibling_repo_aw_freshness"] = sibling_freshness
     active_parent_record = (
         _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root) if active_planning_present else {}
     )
