@@ -40,7 +40,11 @@ jobs:
               raise SystemExit(f"Release tag {tag!r} must match pyproject.toml version {expected!r}")
 
       - name: Build Agentic Workspace package artifacts
-        run: uv build --wheel --sdist --out-dir dist
+        run: |
+          uv build --wheel --sdist --out-dir dist
+          uv build --wheel --sdist --out-dir dist packages/memory
+          uv build --wheel --sdist --out-dir dist packages/planning
+          uv build --wheel --sdist --out-dir dist packages/verification
 
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
