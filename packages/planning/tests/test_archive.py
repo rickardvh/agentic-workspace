@@ -1508,6 +1508,75 @@ def test_planning_closeout_routes_deferred_owner_without_full_intent_satisfactio
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == "GitHub #1021"
 
 
+def test_planning_closeout_routes_satisfied_slice_residue_to_open_parent(tmp_path: Path, capsys) -> None:
+    owner = ".agentic-workspace/planning/state.toml roadmap lane generated-cli-runtime"
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": owner,
+        "activation trigger": "next generated CLI slice",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "slice",
+                "--intent-status",
+                "satisfied",
+                "--residue",
+                "planning",
+                "--residue-owner",
+                owner,
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--what-happened",
+                "completed bounded generated CLI slice.",
+                "--scope-touched",
+                "generated CLI closeout route",
+                "--changed-surfaces",
+                "planning closeout writer",
+                "--review-summary",
+                "slice behavior is served; parent remains routed.",
+                "--outcome-summary",
+                "bounded slice served with parent continuation.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert not any(warning["warning_class"] == "archive_larger_intent_proxy_closeout_blocked" for warning in payload["warnings"])
+    assert not any(action["kind"] == "manual review" for action in payload["actions"])
+    assert archived["closure_check"]["closeout scope"] == "slice"
+    assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["closure_check"]["larger-intent status"] == "open"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == owner
+    assert archived["finished_run_review"]["intent served"] == f"yes for slice; parent remains open via {owner}"
+    assert archived["durable_residue"]["status"] == "planning"
+    assert archived["durable_residue"]["canonical owner now"] == owner
+    options = {option["id"]: option for option in payload["completion_options"]}
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["owner"] == owner
+    assert options["close-larger-intent"]["allowed"] is False
+
+
 def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

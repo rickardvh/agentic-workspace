@@ -12795,9 +12795,17 @@ def closeout_execplan(
         result.add("manual review", record_path, "planning closeout requires a canonical .plan.json record")
         return result
 
-    closure_decision = "archive-and-close" if normalized_intent == "satisfied" else "archive-but-keep-lane-open"
-    intent_satisfied = "yes" if normalized_intent == "satisfied" else "no"
     continuation_owner = residue_owner or ""
+    inferred_open_parent_slice = (
+        normalized_claim == "slice"
+        and normalized_intent == "satisfied"
+        and normalized_residue not in {"none", "dismissed"}
+        and bool(continuation_owner)
+    )
+    closure_decision = (
+        "archive-but-keep-lane-open" if normalized_intent != "satisfied" or inferred_open_parent_slice else "archive-and-close"
+    )
+    intent_satisfied = "no" if closure_decision == "archive-but-keep-lane-open" else "yes"
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_STATE_PATH.as_posix()
 
@@ -12955,7 +12963,11 @@ def closeout_execplan(
                 "scope respected": provided(review_summary) or "yes; closeout accepted the bounded claim.",
                 "proof status": "passed",
                 "intent served": (
-                    "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
+                    f"yes for slice; parent remains open via {continuation_owner}"
+                    if inferred_open_parent_slice
+                    else "yes"
+                    if normalized_intent == "satisfied"
+                    else f"no; intent-status={normalized_intent} keeps continuation explicit."
                 ),
                 "follow-on decision": follow_on,
             },
@@ -13042,7 +13054,11 @@ def closeout_execplan(
             finished_run_review["scope respected"] = "yes; closeout accepted the bounded claim."
         finished_run_review["proof status"] = "passed"
         finished_run_review["intent served"] = (
-            "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
+            f"yes for slice; parent remains open via {continuation_owner}"
+            if inferred_open_parent_slice
+            else "yes"
+            if normalized_intent == "satisfied"
+            else f"no; intent-status={normalized_intent} keeps continuation explicit."
         )
         if is_placeholder(finished_run_review.get("config compliance")):
             finished_run_review["config compliance"] = "used planning closeout command-owned writer"
