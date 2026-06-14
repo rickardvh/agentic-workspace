@@ -2,7 +2,7 @@ FROM python:3.12
 
 WORKDIR /work
 
-RUN python -m pip install --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@e9fafcd8d289748f84069419ff7644ec5bede82e"
+RUN python -m pip install --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@0bc4f76687d9587808b9e7d4f42362e10566be35"
 
 COPY src ./src
 COPY scripts ./scripts

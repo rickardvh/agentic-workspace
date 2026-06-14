@@ -269,7 +269,7 @@
           "CLI wrapper text-emission smoke where stdout formatting, argv parsing, or process exit behavior is the behavior under test",
           "tests/test_generated_command_package_proof_runner.py::test_generated_python_conformance_uses_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
-        "rationale": "This case now uses generated Python and TypeScript operation callables for semantic proof. The retained stdout expectations document the wrapper-smoke boundary, but operation completion is proven without argv parsing through generated.workspace.python.commands.defaults_report:invoke and generated/workspace/typescript/src/runtime.mjs:runGeneratedOperation."
+        "rationale": "This case now uses generated Python and TypeScript operation callables for semantic proof. The retained stdout expectations document the wrapper-smoke boundary, but operation completion is proven without argv parsing through generated.workspace.python.commands.defaults_report:invoke and generated/workspace/typescript/src/runtime.mjs:invokeGeneratedOperation."
       }
     },
     {
