@@ -342,4 +342,38 @@ def _write_json(path: Path, payload: dict[str, object]) -> None:
     _write(path, json.dumps(payload, indent=2) + "\n")
 
 
+def _json_payload_size(value: object, *, sort_keys: bool = True) -> int:
+    return len(json.dumps(value, sort_keys=sort_keys).encode("utf-8"))
+
+
+def _json_payload_contributors(value: object, *, sort_keys: bool = True, limit: int = 8) -> list[tuple[str, int]]:
+    contributors: list[tuple[str, int]] = []
+
+    def walk(current: object, path: str) -> None:
+        if isinstance(current, dict):
+            for key, child in current.items():
+                child_path = f"{path}.{key}" if path else str(key)
+                contributors.append((child_path, _json_payload_size(child, sort_keys=sort_keys)))
+                walk(child, child_path)
+        elif isinstance(current, list):
+            for index, child in enumerate(current):
+                child_path = f"{path}[{index}]"
+                contributors.append((child_path, _json_payload_size(child, sort_keys=sort_keys)))
+                walk(child, child_path)
+
+    walk(value, "")
+    return sorted(contributors, key=lambda item: item[1], reverse=True)[:limit]
+
+
+def _assert_json_payload_under(value: object, max_bytes: int, *, label: str, sort_keys: bool = True) -> None:
+    actual = _json_payload_size(value, sort_keys=sort_keys)
+    if actual < max_bytes:
+        return
+    contributors = _json_payload_contributors(value, sort_keys=sort_keys)
+    contribution_lines = "\n".join(f"  - {path}: {size} bytes" for path, size in contributors)
+    raise AssertionError(
+        f"{label} JSON payload is {actual} bytes; budget is < {max_bytes} bytes.\nLargest JSON contributors:\n{contribution_lines}"
+    )
+
+
 __all__ = [name for name in globals() if not name.startswith("__")]
