@@ -787,7 +787,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "manual-handoff",
         "ask-human",
     }
-    assert len(json.dumps(payload, sort_keys=True)) < 18450
+    _assert_json_payload_under(payload, 18450, label="start generated CLI changed-path payload")
     assert payload["proof"]["required_commands"] == [
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
@@ -1007,8 +1007,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 15000
+    _assert_json_payload_under(payload, 15000, label="start first-contact tiny payload")
     assert payload["kind"] == "startup-context/v1"
     assert payload["drill_down"]["rule"].startswith("Use --select")
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
@@ -1044,8 +1043,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 9000
+    _assert_json_payload_under(payload, 9000, label="start selector-first router payload")
     assert payload["kind"] == "startup-context/v1"
     assert set(payload) == {"kind", "target", "action_signals", "next_safe_action", "skills", "context", "drill_down"}
     competing_top_level_decision_fields = {
@@ -1597,7 +1595,7 @@ def test_start_tiny_does_not_route_config_posture_questions_from_prompt_keywords
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
     assert action["action"] != "inspect-effective-config"
-    assert len(json.dumps(payload, sort_keys=True)) < 14500
+    _assert_json_payload_under(payload, 14500, label="start config-posture prompt tiny payload")
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, capsys) -> None:
@@ -1630,7 +1628,7 @@ def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, cap
     assert "Write the original request once" in task_context["task_file_instruction"]
     assert len(task_context["task_digest"]) == 16
     assert task_context["task_text_length"] == len(task)
-    assert len(json.dumps(payload, sort_keys=True)) < 8800
+    _assert_json_payload_under(payload, 8800, label="start long-task tiny payload")
 
 
 def test_start_tiny_does_not_route_prep_only_handoff_from_prompt_keywords(tmp_path: Path, capsys) -> None:
@@ -1652,7 +1650,7 @@ def test_start_tiny_does_not_route_prep_only_handoff_from_prompt_keywords(tmp_pa
     assert "prep_only_handoff" not in _start_context(payload)
     packet = payload["next_safe_action"]
     assert packet["next_safe_action"] == "choose-smallest-workflow-shape"
-    assert len(json.dumps(payload, sort_keys=True)) < 9500
+    _assert_json_payload_under(payload, 9500, label="start prep-only tiny payload")
 
 
 def test_start_tiny_keeps_paraphrased_prep_only_prompt_agent_owned(tmp_path: Path, capsys) -> None:

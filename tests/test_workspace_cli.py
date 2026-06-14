@@ -4,6 +4,26 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_json_payload_budget_failure_reports_largest_contributors() -> None:
+    payload = {
+        "small": "ok",
+        "context": {
+            "large": "x" * 80,
+            "nested": {"medium": "y" * 40},
+        },
+        "items": [{"detail": "z" * 30}],
+    }
+
+    with pytest.raises(AssertionError) as excinfo:
+        _assert_json_payload_under(payload, 50, label="example tiny payload")
+
+    message = str(excinfo.value)
+    assert "example tiny payload JSON payload is" in message
+    assert "Largest JSON contributors:" in message
+    assert "context" in message
+    assert "context.large" in message
+
+
 def test_preset_conflicts_with_modules(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     with pytest.raises(SystemExit) as excinfo:

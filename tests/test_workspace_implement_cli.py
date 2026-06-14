@@ -1103,7 +1103,6 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     context = _implement_context(payload)
-    encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
     assert set(payload) <= {
         "kind",
@@ -1192,8 +1191,13 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
-    assert len(json.dumps(payload["generated_surface_trust"])) < 700
-    assert len(encoded) < 15850
+    _assert_json_payload_under(
+        payload["generated_surface_trust"],
+        700,
+        label="implement generated-surface trust compact projection",
+        sort_keys=False,
+    )
+    _assert_json_payload_under(payload, 15850, label="implement generated-surface tiny payload", sort_keys=False)
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:
