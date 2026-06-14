@@ -33,7 +33,7 @@ source = { editable = "packages/verification" }
 
 [[package]]
 name = "agentic-workspace"
-version = "0.0.0"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "agentic-memory" },

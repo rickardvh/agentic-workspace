@@ -35,6 +35,36 @@ jobs:
       - name: Check generated command packages
         run: uv run python scripts/check/check_generated_command_packages.py
 
+  workspace-package-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync workspace dependencies
+        run: make sync-all
+
+      - name: Build Agentic Workspace package artifacts
+        run: uv build --wheel --sdist --out-dir dist
+
+      - name: Run built package smoke tests
+        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
+
+      - name: Upload Agentic Workspace package artifacts
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: agentic-workspace-package-artifacts
+          path: dist/*
+          if-no-files-found: error
+
   package-checks:
     runs-on: ubuntu-latest
     strategy:

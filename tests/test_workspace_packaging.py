@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -92,6 +93,30 @@ def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
     assert wheel_inventory == expected_inventory
     assert sdist_inventory == expected_inventory
     assert installed_inventory == expected_inventory
+
+
+def test_workspace_package_declares_semver_identity() -> None:
+    pyproject = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert re.fullmatch(r"\d+\.\d+\.\d+", pyproject["project"]["version"])
+
+
+def test_ci_builds_and_uploads_root_package_artifacts() -> None:
+    ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "workspace-package-artifacts:" in ci_text
+    assert "uv build --wheel --sdist --out-dir dist" in ci_text
+    assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
+    assert "actions/upload-artifact@v6.0.0" in ci_text
+
+
+def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
+    release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+    assert '"v[0-9]+.[0-9]+.[0-9]+"' in release_text
+    assert "Release tag {tag!r} must match pyproject.toml version {expected!r}" in release_text
+    assert "uv build --wheel --sdist --out-dir dist" in release_text
+    assert "softprops/action-gh-release@v2.4.2" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
