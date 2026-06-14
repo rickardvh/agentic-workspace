@@ -14,6 +14,7 @@ import difflib
 import fnmatch
 import hashlib
 import importlib
+import importlib.metadata
 import io
 import json
 import os
@@ -205,6 +206,8 @@ WORKSPACE_PAYLOAD_FILES = tuple((Path(relative) for relative in _WORKSPACE_SURFA
 WORKSPACE_CONFIG_CONTRACT_DOC = ".agentic-workspace/docs/workspace-config-contract.md"
 WORKSPACE_CONFIG_SOURCE_SCHEMA = "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
 WORKSPACE_CONFIG_REFERENCE_DOC = "docs/reference/workspace-config.md"
+WORKSPACE_PAYLOAD_PROVENANCE_PATH = Path(".agentic-workspace") / "payload-provenance.json"
+WORKSPACE_PAYLOAD_SCHEMA = "agentic-workspace/payload/v1"
 WORKSPACE_POINTER_BLOCK = workspace_pointer_block()
 SYSTEM_INTENT_MIRROR_KIND = str(_WORKSPACE_SURFACES_MANIFEST["system_intent_mirror_kind"])
 SUBSYSTEM_INTENT_KIND = str(_WORKSPACE_SURFACES_MANIFEST["subsystem_intent_kind"])
@@ -306,6 +309,143 @@ def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: b
             key: payload[key] for key in ("kind", "package", "version", "source_class", "module_path", "target_relation", "compatibility")
         }
     return payload
+
+
+def _package_version(package: str) -> str:
+    try:
+        return importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError:
+        return ""
+
+
+def _git_source_identity(root: Path | None) -> str:
+    if root is None:
+        return ""
+    git_dir = root / ".git"
+    head_path = git_dir / "HEAD"
+    try:
+        head_text = head_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return root.as_posix()
+    if head_text.startswith("ref:"):
+        ref = head_text.split(":", 1)[1].strip()
+        try:
+            revision = (git_dir / ref).read_text(encoding="utf-8").strip()
+        except OSError:
+            revision = ""
+    else:
+        revision = head_text
+    return f"git:{revision[:12]}" if revision else root.as_posix()
+
+
+def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str, Any]:
+    identity = _invoked_cli_identity_payload(target_root=target_root)
+    source_class = str(identity.get("source_class", "unknown"))
+    if source_class == "source-checkout":
+        source = "local-source"
+        source_identity = _git_source_identity(_agentic_workspace_package_root())
+    elif source_class == "installed-package":
+        source = "released-wheel"
+        source_identity = str(identity.get("module_path", ""))
+    else:
+        source = "unknown"
+        source_identity = str(identity.get("module_path", ""))
+    return {
+        "package": "agentic-workspace",
+        "version": __version__,
+        "source": source,
+        "source_class": source_class,
+        "source_identity": source_identity,
+        "module_path": identity.get("module_path", ""),
+        "python_executable": identity.get("python_executable", ""),
+    }
+
+
+def _command_generation_package_identity() -> dict[str, Any]:
+    version = _package_version("command-generation")
+    if not version:
+        return {
+            "package": "command-generation",
+            "version": "",
+            "source": "not-installed",
+            "source_identity": "",
+            "runtime_required": False,
+        }
+    try:
+        import command_generation  # noqa: PLC0415
+    except ImportError:
+        module_path = ""
+    else:
+        module_path = Path(command_generation.__file__).resolve().as_posix()
+    return {
+        "package": "command-generation",
+        "version": version,
+        "source": "released-wheel",
+        "source_identity": module_path,
+        "runtime_required": False,
+    }
+
+
+def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/payload-provenance/v1",
+        "payload_schema": WORKSPACE_PAYLOAD_SCHEMA,
+        "installed_by": _payload_installer_identity(target_root=target_root),
+        "command_generation": _command_generation_package_identity(),
+        "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "payload_files": [relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
+        "rule": "Repo payload provenance records the executable/source identity that installed or last synced the AW payload.",
+    }
+
+
+def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+    relative = WORKSPACE_PAYLOAD_PROVENANCE_PATH
+    path = target_root / relative
+    existing_text = path.read_text(encoding="utf-8") if path.exists() else None
+    payload = _payload_provenance_payload(target_root=target_root)
+    rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if existing_text == rendered_text:
+        return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run and existing_text is None else "would update" if dry_run else "created",
+        "path": relative.as_posix(),
+        "detail": "record AW payload provenance for installed-state compatibility checks",
+    }
+
+
+def _read_payload_provenance(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / WORKSPACE_PAYLOAD_PROVENANCE_PATH
+    if not path.is_file():
+        return {
+            "kind": "agentic-workspace/payload-provenance-status/v1",
+            "status": "missing",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/payload-provenance-status/v1",
+            "status": "invalid",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/payload-provenance/v1":
+        return {
+            "kind": "agentic-workspace/payload-provenance-status/v1",
+            "status": "invalid",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "error": "payload provenance kind is missing or unsupported",
+        }
+    return {
+        "kind": "agentic-workspace/payload-provenance-status/v1",
+        "status": "present",
+        "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+        "payload": payload,
+    }
 
 
 def _version_key(version: str) -> tuple[int, ...]:
@@ -487,10 +627,29 @@ def _installed_state_compatibility_payload(
     failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
     stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
     payload_warnings = list((summary or {}).get("warnings", []))
+    provenance_status = _read_payload_provenance(target_root=config.target_root)
+    provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
+    installed_by = provenance_payload.get("installed_by", {}) if isinstance(provenance_payload, dict) else {}
+    installed_version = str(installed_by.get("version", "")) if isinstance(installed_by, dict) else ""
+    current_identity = _payload_installer_identity(target_root=config.target_root)
+    initialized_payload_present = (config.target_root / WORKSPACE_CONFIG_PATH).is_file() or bool(installed_modules)
+    payload_provenance_drift = "none"
+    if provenance_status.get("status") in {"invalid"}:
+        payload_provenance_drift = "invalid-provenance"
+    elif provenance_status.get("status") == "missing" and initialized_payload_present:
+        payload_provenance_drift = "missing-provenance"
+    elif installed_version and _version_key(installed_version) > _version_key(__version__):
+        payload_provenance_drift = "executable-too-old"
+    elif installed_version and _version_key(installed_version) < _version_key(__version__):
+        payload_provenance_drift = "payload-installed-by-older-aw"
     if cli_payload.get("status") == "blocking-drift":
         status = "blocking-drift"
         next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
         reason = "executable compatibility is blocking"
+    elif payload_provenance_drift == "executable-too-old":
+        status = "blocking-drift"
+        next_action = config.cli_invoke
+        reason = "repo payload provenance was installed by a newer AW version than the current executable"
     elif stale_generated_surfaces:
         status = "payload-upgrade-required"
         next_action = _command_with_cli_invoke(
@@ -498,6 +657,13 @@ def _installed_state_compatibility_payload(
             cli_invoke=config.cli_invoke,
         )
         reason = "module-managed or generated payload surfaces are stale"
+    elif payload_provenance_drift in {"missing-provenance", "invalid-provenance", "payload-installed-by-older-aw"}:
+        status = "payload-upgrade-required"
+        next_action = _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        reason = "repo payload provenance must be synced before strong installed-state compatibility claims"
     elif cli_payload.get("status") == "advisory-drift":
         status = "upgrade-recommended"
         next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
@@ -509,12 +675,14 @@ def _installed_state_compatibility_payload(
     executable_class = "compatible"
     if failed_cli_checks & {"exact_version", "minimum_version"}:
         executable_class = "executable-too-old-or-wrong-version"
+    elif payload_provenance_drift == "executable-too-old":
+        executable_class = "executable-too-old-or-wrong-version"
     elif failed_cli_checks & {"source_class", "target_relation"}:
         executable_class = "use-repo-runner-required"
     elif cli_payload.get("status") == "advisory-drift":
         executable_class = "upgrade-recommended"
     generated_status = "stale" if stale_generated_surfaces else "compatible"
-    payload_status = "sync-required" if stale_generated_surfaces else "observed-compatible"
+    payload_status = "sync-required" if stale_generated_surfaces or payload_provenance_drift != "none" else "observed-compatible"
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
@@ -523,7 +691,9 @@ def _installed_state_compatibility_payload(
         "executable": {
             "package": "agentic-workspace",
             "version": __version__,
-            "source_class": _invoked_cli_identity_payload(target_root=config.target_root, compact=True).get("source_class"),
+            "source": current_identity.get("source"),
+            "source_class": current_identity.get("source_class"),
+            "source_identity": current_identity.get("source_identity"),
             "compatibility_status": cli_payload.get("status"),
             "classification": executable_class,
             "failed_checks": list(cli_payload.get("failed_checks", [])),
@@ -535,6 +705,8 @@ def _installed_state_compatibility_payload(
             "installed_modules": list(installed_modules),
             "warning_count": len(payload_warnings),
             "stale_generated_surfaces": stale_generated_surfaces,
+            "provenance": provenance_status,
+            "provenance_drift": payload_provenance_drift,
             "sync_command": _command_with_cli_invoke(
                 command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
                 cli_invoke=config.cli_invoke,
@@ -578,7 +750,7 @@ def _installed_state_compatibility_payload(
             },
             "payload": {
                 key: payload["payload"][key]
-                for key in ("status", "installed_modules", "stale_generated_surfaces")
+                for key in ("status", "installed_modules", "stale_generated_surfaces", "provenance", "provenance_drift")
                 if payload["payload"].get(key) not in (None, [], "")
             },
             "generated_artifacts": payload["generated_artifacts"],
@@ -5372,6 +5544,7 @@ def _workspace_init_or_upgrade_report(
                 "detail": "refresh workspace shared-layer file from package payload",
             }
         )
+    actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run))
     local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
         target_root=target_root,
         config=config,
