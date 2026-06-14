@@ -474,6 +474,123 @@ def _cli_compatibility_remediation(
     }
 
 
+def _installed_state_compatibility_payload(
+    *,
+    config: WorkspaceConfig,
+    selected_modules: list[str],
+    installed_modules: list[str],
+    cli_compatibility: dict[str, Any] | None = None,
+    summary: dict[str, list[str]] | None = None,
+    compact: bool = False,
+) -> dict[str, Any]:
+    cli_payload = cli_compatibility or _cli_compatibility_payload(config=config, compact=compact)
+    failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
+    stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
+    payload_warnings = list((summary or {}).get("warnings", []))
+    if cli_payload.get("status") == "blocking-drift":
+        status = "blocking-drift"
+        next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
+        reason = "executable compatibility is blocking"
+    elif stale_generated_surfaces:
+        status = "payload-upgrade-required"
+        next_action = _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        reason = "module-managed or generated payload surfaces are stale"
+    elif cli_payload.get("status") == "advisory-drift":
+        status = "upgrade-recommended"
+        next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
+        reason = "executable compatibility drift is advisory"
+    else:
+        status = "compatible"
+        next_action = None
+        reason = "no executable or payload drift detected by current compatibility checks"
+    executable_class = "compatible"
+    if failed_cli_checks & {"exact_version", "minimum_version"}:
+        executable_class = "executable-too-old-or-wrong-version"
+    elif failed_cli_checks & {"source_class", "target_relation"}:
+        executable_class = "use-repo-runner-required"
+    elif cli_payload.get("status") == "advisory-drift":
+        executable_class = "upgrade-recommended"
+    generated_status = "stale" if stale_generated_surfaces else "compatible"
+    payload_status = "sync-required" if stale_generated_surfaces else "observed-compatible"
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/installed-state-compatibility/v1",
+        "status": status,
+        "reason": reason,
+        "authority": "repo-state-authoritative",
+        "executable": {
+            "package": "agentic-workspace",
+            "version": __version__,
+            "source_class": _invoked_cli_identity_payload(target_root=config.target_root, compact=True).get("source_class"),
+            "compatibility_status": cli_payload.get("status"),
+            "classification": executable_class,
+            "failed_checks": list(cli_payload.get("failed_checks", [])),
+            "guidance": ("Use the repo-owned configured invocation or install a supported executable version when this component drifts."),
+        },
+        "payload": {
+            "status": payload_status,
+            "selected_modules": list(selected_modules),
+            "installed_modules": list(installed_modules),
+            "warning_count": len(payload_warnings),
+            "stale_generated_surfaces": stale_generated_surfaces,
+            "sync_command": _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "rule": "Repo payload state is authoritative; stale payloads should be synced deliberately before trusting newer executables.",
+        },
+        "generated_artifacts": {
+            "status": generated_status,
+            "stale_surfaces": stale_generated_surfaces,
+            "proof_command": "uv run python scripts/check/check_generated_command_packages.py",
+        },
+        "adapter_contracts": [
+            {
+                "adapter": "cli",
+                "contract": "agentic-workspace/cli-adapter-compatibility/v1",
+                "status": cli_payload.get("status"),
+                "compatible_payload_range": "agentic-workspace/payload>=1,<2",
+            },
+            {
+                "adapter": "mcp",
+                "contract": "agentic-workspace/mcp-adapter-compatibility/reserved",
+                "status": "not-installed",
+                "compatible_payload_range": "shares agentic-workspace/installed-state-compatibility/v1",
+            },
+        ],
+        "next_action": next_action,
+        "rule": (
+            "Every entry surface should classify executable, payload, generated-artifact, and adapter posture through this "
+            "repo-state-authoritative packet instead of separate CLI- or MCP-specific sync rules."
+        ),
+    }
+    if compact:
+        compact_payload = {
+            "kind": payload["kind"],
+            "status": payload["status"],
+            "authority": payload["authority"],
+            "executable": {
+                key: payload["executable"][key]
+                for key in ("compatibility_status", "classification", "failed_checks")
+                if payload["executable"].get(key) not in (None, [], "")
+            },
+            "payload": {
+                key: payload["payload"][key]
+                for key in ("status", "installed_modules", "stale_generated_surfaces")
+                if payload["payload"].get(key) not in (None, [], "")
+            },
+            "generated_artifacts": payload["generated_artifacts"],
+            "adapter_contracts": payload["adapter_contracts"],
+            "next_action": payload["next_action"],
+        }
+        if compact_payload["next_action"] is None:
+            compact_payload.pop("next_action")
+        return compact_payload
+    return payload
+
+
 SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
 PROOF_ROUTE_HINTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["proof_route_hints_path"])
 _SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
@@ -5839,7 +5956,7 @@ def _build_init_summary(
     for report in reports:
         descriptor = descriptors.get(str(report.get("module", "")))
         module_generated_artifacts = {path.as_posix() for path in descriptor.generated_artifacts} if descriptor else set()
-        for action in report["actions"]:
+        for action in report.get("actions", []):
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
             kind = str(action.get("kind", ""))
@@ -5858,7 +5975,7 @@ def _build_init_summary(
                 continue
             if kind in {"manual review", "missing", "warning"}:
                 _append_unique(needs_review, _format_issue(relative_path=relative_path, detail=detail))
-        for warning in report["warnings"]:
+        for warning in report.get("warnings", []):
             relative_path = _display_path(warning.get("path", "."), target_root)
             message = str(warning.get("message", "needs review"))
             if _is_placeholder_issue(detail=message):
@@ -5969,6 +6086,14 @@ def _run_lifecycle_command(
     placeholders.extend(summary["placeholders"])
     stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    installed_state_compatibility = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=[entry.name for entry in registry if entry.installed],
+        cli_compatibility=cli_compatibility,
+        summary=summary,
+        compact=True,
+    )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
     payload: dict[str, Any] = {
@@ -5976,6 +6101,7 @@ def _run_lifecycle_command(
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "cli_compatibility": cli_compatibility,
+        "installed_state_compatibility": installed_state_compatibility,
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
@@ -7135,6 +7261,13 @@ def _run_report_command(
         closeout_trust=closeout_trust,
         improvement_pressure=improvement_pressure,
     )
+    installed_state_compatibility = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        cli_compatibility=_cli_compatibility_payload(config=config),
+        summary=_summarise_reports(target_root=target_root, reports=module_reports, descriptors=descriptors, command_name="report"),
+    )
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -7142,6 +7275,7 @@ def _run_report_command(
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root),
         "cli_compatibility": _cli_compatibility_payload(config=config),
+        "installed_state_compatibility": installed_state_compatibility,
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "feature_tier": _feature_tier_payload(
@@ -18435,8 +18569,15 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(repair_profile, dict) and repair_profile.get("status") == "direct-no-plan":
         projected["repair_plan_profile"] = repair_profile
     cli_compatibility = payload.get("cli_compatibility", {})
-    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
+    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
+        "advisory-drift",
+        "blocking-drift",
+        "warning-drift",
+    }:
         projected["cli_compatibility"] = cli_compatibility
+    installed_state = payload.get("installed_state_compatibility", {})
+    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
+        projected["installed_state_compatibility"] = installed_state
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         primary_next_action = maintainer_mode.get("primary_next_action", {})
@@ -19142,6 +19283,14 @@ def _start_payload(
         current_need = "config-posture-routing"
     elif _is_prep_only_handoff_task(task_text):
         current_need = "prep-only-planning-routing"
+    startup_cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    installed_state_compatibility = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        cli_compatibility=startup_cli_compatibility,
+        compact=True,
+    )
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
@@ -19477,9 +19626,11 @@ def _start_payload(
             "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    cli_compatibility = startup_cli_compatibility
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_compatibility"] = installed_state_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
         proof_payload = _proof_selection_for_changed_paths(
@@ -19655,6 +19806,16 @@ def _hydrate_selected_start_advisory_payloads(
         )
     if _selector_requests(select, "repo_posture"):
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
+    if _selector_requests(select, "installed_state_compatibility"):
+        installed_modules = _fast_installed_modules(target_root=target_root)
+        selected_modules = installed_modules or _preset_modules(_module_operations()).get(config.default_preset, [])
+        payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
+            config=config,
+            selected_modules=selected_modules,
+            installed_modules=installed_modules,
+            cli_compatibility=_cli_compatibility_payload(config=config, compact=True),
+            compact=True,
+        )
     if _selector_requests(select, "intent_custody"):
         payload["intent_custody"] = _intent_custody_payload(
             task_text=task_text,
@@ -20191,10 +20352,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             f"planning_safety={planning_gate.get('status')}:{planning_gate.get('gate_result') or planning_gate.get('decision')}"
         )
     if isinstance(payload.get("cli_compatibility"), dict) and payload["cli_compatibility"].get("status") in {
+        "advisory-drift",
         "blocking-drift",
         "warning-drift",
     }:
         startup_changed_signals.append(f"cli_compatibility={payload['cli_compatibility'].get('status')}")
+    installed_state = payload.get("installed_state_compatibility", {})
+    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
+        startup_changed_signals.append(f"installed_state_compatibility={installed_state.get('status')}")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
@@ -20266,8 +20431,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
         selected["cli_invocation"] = cli_invocation
     cli_compatibility = payload.get("cli_compatibility", {})
-    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
+    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
+        "advisory-drift",
+        "blocking-drift",
+        "warning-drift",
+    }:
         selected["cli_compatibility"] = cli_compatibility
+    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
+        selected["installed_state_compatibility"] = installed_state
     durable_intent = payload.get("durable_intent", {})
     subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
@@ -20344,6 +20515,14 @@ def _start_tiny_payload_fast(
         current_need = "prep-only-planning-routing"
     installed_modules = _fast_installed_modules(target_root=target_root)
     selected_modules = installed_modules or _preset_modules(_module_operations()).get(config.default_preset, [])
+    startup_cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    installed_state_compatibility = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        cli_compatibility=startup_cli_compatibility,
+        compact=True,
+    )
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
@@ -20431,6 +20610,8 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_compatibility"] = installed_state_compatibility
     active_parent_record = (
         _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root) if active_planning_present else {}
     )
@@ -20727,7 +20908,7 @@ def _start_tiny_payload_fast(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
-    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+    cli_compatibility = startup_cli_compatibility
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
     assurance_requirements = _assurance_requirements_report_payload(
@@ -29106,7 +29287,7 @@ def _summarise_reports(
     for report in reports:
         descriptor = descriptors.get(str(report.get("module", "")))
         module_generated_artifacts = {path.as_posix() for path in descriptor.generated_artifacts} if descriptor else set()
-        for action in report["actions"]:
+        for action in report.get("actions", []):
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
             kind = str(action.get("kind", ""))
@@ -29131,7 +29312,7 @@ def _summarise_reports(
                 relative_path=relative_path, detail=detail, generated_artifacts=module_generated_artifacts
             ) and kind in {"manual review", "warning", "updated", "would update"}:
                 _append_unique(stale_generated_surfaces, relative_path)
-        for warning in report["warnings"]:
+        for warning in report.get("warnings", []):
             relative_path = _display_path(warning.get("path", "."), target_root)
             message = str(warning.get("message", "needs review"))
             issue = _format_issue(relative_path=relative_path, detail=message)

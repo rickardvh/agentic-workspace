@@ -34,6 +34,10 @@
       "$ref": "#/$defs/cli_compatibility",
       "description": "Compatibility assessment between the invoked CLI and any repo-configured CLI expectations."
     },
+    "installed_state_compatibility": {
+      "$ref": "#/$defs/installed_state_compatibility",
+      "description": "Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts."
+    },
     "cli_invocation": {
       "type": "object",
       "required": [
@@ -654,6 +658,70 @@
       },
       "additionalProperties": false,
       "description": "Invoked cli identity details used by this contract."
+    },
+    "installed_state_compatibility": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "authority",
+        "executable",
+        "payload",
+        "generated_artifacts"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/installed-state-compatibility/v1",
+          "description": "Discriminator identifying the payload or record shape."
+        },
+        "status": {
+          "enum": [
+            "compatible",
+            "upgrade-recommended",
+            "payload-upgrade-required",
+            "blocking-drift"
+          ],
+          "description": "Current installed-state compatibility classification."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Short explanation for the selected status."
+        },
+        "authority": {
+          "const": "repo-state-authoritative",
+          "description": "Repo payload state owns compatibility for the current target."
+        },
+        "executable": {
+          "type": "object",
+          "description": "Executable identity and compatibility classification.",
+          "additionalProperties": true
+        },
+        "payload": {
+          "type": "object",
+          "description": "Installed repo payload compatibility and sync guidance.",
+          "additionalProperties": true
+        },
+        "generated_artifacts": {
+          "type": "object",
+          "description": "Generated artifact freshness classification.",
+          "additionalProperties": true
+        },
+        "adapter_contracts": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Entry-surface adapter contracts covered by this model."
+        },
+        "next_action": {
+          "type": [ "string", "null" ],
+          "description": "Suggested command when drift requires or recommends action."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Policy rule for applying this packet."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Installed-state compatibility details used by startup and report surfaces."
     },
     "cli_compatibility_check": {
       "type": "object",

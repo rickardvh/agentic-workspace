@@ -72,6 +72,24 @@ def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsy
     assert findings["config-active-state"]["suspected_drift_surface"] == ".agentic-workspace/config.toml"
 
 
+def test_report_surfaces_installed_state_compatibility_section(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["report", "--target", str(target), "--section", "installed_state_compatibility", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["kind"] == "agentic-workspace/installed-state-compatibility/v1"
+    assert answer["status"] == "compatible"
+    assert answer["authority"] == "repo-state-authoritative"
+    assert answer["payload"]["status"] == "observed-compatible"
+    assert answer["generated_artifacts"]["status"] == "compatible"
+    assert any(contract["adapter"] == "cli" for contract in answer["adapter_contracts"])
+    assert any(contract["adapter"] == "mcp" for contract in answer["adapter_contracts"])
+
+
 def test_report_reuse_pressure_section_routes_to_changed_path_evaluation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

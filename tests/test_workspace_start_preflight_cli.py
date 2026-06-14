@@ -3692,9 +3692,48 @@ def test_start_reports_blocking_cli_compatibility_drift_without_health_remediati
     payload = json.loads(capsys.readouterr().out)
     compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
     _assert_cli_compatibility_schema(payload, schema_name="startup_context.schema.json")
+    installed_state = _assert_installed_state_compatibility(payload, status="blocking-drift")
+    _assert_installed_state_compatibility_schema(payload, schema_name="startup_context.schema.json")
+    assert installed_state["executable"]["classification"] == "executable-too-old-or-wrong-version"
+    assert installed_state["payload"]["status"] == "observed-compatible"
+    assert any(contract["adapter"] == "mcp" for contract in installed_state["adapter_contracts"])
     assert compatibility["enforcement"] == "blocking"
     assert compatibility["failed_checks"] == ["exact_version"]
     assert "next_action" not in compatibility
+
+
+def test_start_reports_source_class_drift_through_installed_state(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nsource_classes = ["installed-package"]\n',
+    )
+
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(payload, status="blocking-drift")
+    assert installed_state["executable"]["classification"] == "use-repo-runner-required"
+    assert installed_state["executable"]["failed_checks"] == ["source_class"]
+    assert installed_state["next_action"]
+
+
+def test_start_can_select_compatible_installed_state_without_expanding_tiny_default(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+    default_payload = json.loads(capsys.readouterr().out)
+    assert "installed_state_compatibility" not in default_payload
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="compatible")
+    assert installed_state["generated_artifacts"]["status"] == "compatible"
 
 
 def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_path: Path, capsys) -> None:
