@@ -234,6 +234,134 @@
       "durable_boundary_rationale": "Installed-product behavior is an AW domain boundary: users experience generated resources through AW startup, proof, lifecycle, and package surfaces."
     }
   ],
+  "parent_closure_inventory": {
+    "status": "ready-to-close-parent",
+    "final_state_requirements": [
+      {
+        "id": "checked-stratification-contract",
+        "status": "satisfied",
+        "intent_served": "The generated-behavior model is a checked contract with layers for primitives, operation IR, generated implementation, target extension, wrapper adapters, conformance cases, and retained ordinary tests.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/generated_behavior_stratification.json",
+          "src/agentic_workspace/contracts/schemas/generated_behavior_stratification.schema.json",
+          "tests/test_contract_tooling.py::test_generated_behavior_stratification_declares_layers_and_retained_boundaries"
+        ],
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      },
+      {
+        "id": "generated-direct-operation-callables",
+        "status": "satisfied",
+        "intent_served": "Applicable migrated defaults behavior has generated Python and TypeScript direct operation callable artifacts, and wrapper execution is no longer the default semantic substitute for those cases.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/operation_artifact_registry.json",
+          "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
+          ".agentic-workspace/planning/closeout-evidence/lane-1476-generated-python-operation-callables.closeout.json",
+          ".agentic-workspace/planning/closeout-evidence/lane-1476-typescript-direct-operation-adapter.closeout.json"
+        ],
+        "proof_route": "uv run python scripts/check/run_operation_conformance_tests.py --target python; uv run python scripts/check/run_operation_conformance_tests.py --target typescript --require-node"
+      },
+      {
+        "id": "target-extension-consumed",
+        "status": "satisfied",
+        "intent_served": "AW consumes command-generation target-extension contracts and target support matrix projection without making targets own product operation semantics or per-operation feature maintenance.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/target_support.json",
+          "tests/test_contract_tooling.py::test_target_support_consumes_command_generation_extension_contract",
+          "tests/test_contract_tooling.py::test_target_support_checker_rejects_semantic_target_ownership"
+        ],
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      },
+      {
+        "id": "ir-backed-conformance-cases",
+        "status": "satisfied",
+        "intent_served": "Stable generated behavior groups are represented as compact operation conformance cases, preserving black-box behavior without preserving one-off regression-test bulk.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
+          "scripts/check/run_operation_conformance_tests.py",
+          ".agentic-workspace/planning/closeout-evidence/lane-1476-ir-backed-conformance-cases.closeout.json"
+        ],
+        "proof_route": "uv run python scripts/check/run_operation_conformance_tests.py --target python; uv run python scripts/check/run_operation_conformance_tests.py --target typescript --require-node"
+      },
+      {
+        "id": "wrapper-demotion",
+        "status": "satisfied",
+        "intent_served": "CLI/process artifacts are classified as wrapper-smoke unless a direct function adapter owns semantic operation proof; wrapper docs name the retained argv/help/error/stdout/stderr/exit-code boundary.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/operation_artifact_registry.json",
+          "docs/package/cli-boundary-tests.md",
+          ".agentic-workspace/planning/closeout-evidence/lane-1476-wrapper-demotion-and-test-boundary.closeout.json"
+        ],
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      },
+      {
+        "id": "ordinary-test-boundary-inventory",
+        "status": "satisfied",
+        "intent_served": "Retained AW ordinary tests are inventoried with owner, proof route, keep reason, future conversion condition, and durable-boundary rationale.",
+        "evidence_refs": [
+          "src/agentic_workspace/contracts/generated_behavior_stratification.json#retained_ordinary_test_groups",
+          "docs/package/generated-behavior-test-inventory.md",
+          "tests/test_contract_tooling.py::test_generated_behavior_stratification_rejects_unowned_retained_ordinary_tests"
+        ],
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      },
+      {
+        "id": "generated-code-and-test-bypass-guardrails",
+        "status": "satisfied",
+        "intent_served": "Checkers fail when stable generated behavior is claimed from direct generated edits, one-off ordinary regressions, target-specific product semantics, or parent completion from representative slices.",
+        "evidence_refs": [
+          "scripts/check/check_contract_tooling_surfaces.py::_validate_generated_behavior_stratification",
+          "tests/test_contract_tooling.py::test_generated_behavior_stratification_parent_closure_inventory_and_guardrails",
+          "tests/test_contract_tooling.py::test_generated_behavior_stratification_rejects_incomplete_parent_closure_inventory"
+        ],
+        "proof_route": "uv run pytest tests/test_contract_tooling.py -q"
+      }
+    ],
+    "bypass_guardrails": [
+      {
+        "id": "direct-generated-edit-bypass",
+        "prevents": "direct generated executable behavior edits being treated as product behavior changes without updating source contracts, IR, cases, or command-generation renderers",
+        "check_surface": "scripts/check/check_contract_tooling_surfaces.py::_validate_generated_behavior_stratification",
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "fails_when": [
+          "generated-implementation.direct_edit_policy no longer rejects hand-editing generated artifacts",
+          "parent_closure_inventory lacks this guardrail"
+        ]
+      },
+      {
+        "id": "ordinary-regression-bypass",
+        "prevents": "one-off ordinary stable behavior regressions replacing minimal IR-backed conformance cases",
+        "check_surface": "operation_conformance_test_ir.migration_policy plus generated_behavior_stratification.parent_closure_inventory",
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "fails_when": [
+          "operation conformance migration policy stops rejecting one-for-one regression-test bulk",
+          "retained ordinary test groups lack conversion ownership"
+        ]
+      },
+      {
+        "id": "target-product-semantics-bypass",
+        "prevents": "target-specific per-operation product semantics or feature maintenance living in AW target support instead of reusable target machinery and product contracts",
+        "check_surface": "src/agentic_workspace/contracts/target_support.json and command-generation target-extension validation",
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "fails_when": [
+          "target_support declares target_owns_product_semantics",
+          "target_support declares per_operation_feature_maintenance"
+        ]
+      },
+      {
+        "id": "representative-slice-parent-closure-bypass",
+        "prevents": "closing #1476 from representative slices while a final-state requirement remains partial, blocked, or unrouted",
+        "check_surface": "generated_behavior_stratification.parent_closure_inventory",
+        "proof_route": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "fails_when": [
+          "parent_closure_inventory.status is ready-to-close-parent while unresolved is non-empty",
+          "any final_state_requirements entry is not satisfied or owner-approved-rejected",
+          "a required final-state requirement id is missing"
+        ]
+      }
+    ],
+    "unresolved": [],
+    "closure_statement": "#1476 is ready for parent closure because every final-state requirement is implemented with checked evidence and no parent-level gap remains unresolved."
+  },
   "lane_sequence": [
     "#1478",
     "#1479",

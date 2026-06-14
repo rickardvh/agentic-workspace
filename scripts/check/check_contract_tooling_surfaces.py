@@ -1330,6 +1330,67 @@ def _validate_generated_behavior_stratification(payload: dict[str, object]) -> l
     missing_groups = sorted(required_group_ids - group_ids)
     if missing_groups:
         errors.append("generated_behavior_stratification.json missing retained ordinary test group(s): " + ", ".join(missing_groups))
+    closure_inventory = payload.get("parent_closure_inventory", {})
+    if not isinstance(closure_inventory, dict):
+        errors.append("generated_behavior_stratification.json parent_closure_inventory must be an object")
+        return errors
+    required_requirement_ids = {
+        "checked-stratification-contract",
+        "generated-direct-operation-callables",
+        "target-extension-consumed",
+        "ir-backed-conformance-cases",
+        "wrapper-demotion",
+        "ordinary-test-boundary-inventory",
+        "generated-code-and-test-bypass-guardrails",
+    }
+    requirements = closure_inventory.get("final_state_requirements", [])
+    requirement_ids: set[str] = set()
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            errors.append("generated_behavior_stratification.json final_state_requirements must contain objects")
+            continue
+        requirement_id = str(requirement.get("id", ""))
+        requirement_ids.add(requirement_id)
+        if requirement.get("status") not in {"satisfied", "owner-approved-rejected"}:
+            errors.append(f"generated_behavior_stratification.json final requirement {requirement_id} is not closure-ready")
+        for field in ("intent_served", "proof_route"):
+            if not requirement.get(field):
+                errors.append(f"generated_behavior_stratification.json final requirement {requirement_id} missing {field}")
+        if not requirement.get("evidence_refs"):
+            errors.append(f"generated_behavior_stratification.json final requirement {requirement_id} missing evidence_refs")
+    missing_requirements = sorted(required_requirement_ids - requirement_ids)
+    if missing_requirements:
+        errors.append("generated_behavior_stratification.json missing final requirement(s): " + ", ".join(missing_requirements))
+    required_guardrail_ids = {
+        "direct-generated-edit-bypass",
+        "ordinary-regression-bypass",
+        "target-product-semantics-bypass",
+        "representative-slice-parent-closure-bypass",
+    }
+    guardrails = closure_inventory.get("bypass_guardrails", [])
+    guardrail_ids: set[str] = set()
+    for guardrail in guardrails:
+        if not isinstance(guardrail, dict):
+            errors.append("generated_behavior_stratification.json bypass_guardrails must contain objects")
+            continue
+        guardrail_id = str(guardrail.get("id", ""))
+        guardrail_ids.add(guardrail_id)
+        for field in ("prevents", "check_surface", "proof_route"):
+            if not guardrail.get(field):
+                errors.append(f"generated_behavior_stratification.json bypass guardrail {guardrail_id} missing {field}")
+        if not guardrail.get("fails_when"):
+            errors.append(f"generated_behavior_stratification.json bypass guardrail {guardrail_id} missing fails_when")
+    missing_guardrails = sorted(required_guardrail_ids - guardrail_ids)
+    if missing_guardrails:
+        errors.append("generated_behavior_stratification.json missing bypass guardrail(s): " + ", ".join(missing_guardrails))
+    status = closure_inventory.get("status")
+    unresolved = closure_inventory.get("unresolved", [])
+    if status == "ready-to-close-parent" and unresolved:
+        errors.append("generated_behavior_stratification.json cannot be ready-to-close-parent with unresolved parent gaps")
+    if status != "ready-to-close-parent":
+        errors.append("generated_behavior_stratification.json parent closure inventory is not ready-to-close-parent")
+    if not closure_inventory.get("closure_statement"):
+        errors.append("generated_behavior_stratification.json parent closure inventory must include closure_statement")
     return errors
 
 
