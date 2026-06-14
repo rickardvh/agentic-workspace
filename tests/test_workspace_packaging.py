@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
 from pathlib import Path
 from zipfile import ZipFile
@@ -15,6 +18,27 @@ from zipfile import ZipFile
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
+MODULE_PACKAGE_DIRS = (
+    WORKSPACE_ROOT / "packages" / "memory",
+    WORKSPACE_ROOT / "packages" / "planning",
+    WORKSPACE_ROOT / "packages" / "verification",
+)
+
+
+@contextlib.contextmanager
+def _package_build_lock():
+    lock_path = WORKSPACE_ROOT / "scratch" / "package-build.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            lock_path.mkdir()
+            break
+        except FileExistsError:
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        lock_path.rmdir()
 
 
 def _source_inventory() -> set[str]:
@@ -22,15 +46,22 @@ def _source_inventory() -> set[str]:
 
 
 def _build_artifact(tmpdir: str, artifact: str) -> Path:
-    subprocess.run(
-        ["uv", "build", f"--{artifact}", "-o", tmpdir],
-        cwd=WORKSPACE_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    return _build_artifact_from(WORKSPACE_ROOT, tmpdir, artifact)
+
+
+def _build_artifact_from(package_root: Path, tmpdir: str, artifact: str) -> Path:
+    output_dir = Path(tmpdir)
     pattern = "*.whl" if artifact == "wheel" else "*.tar.gz"
-    artifacts = list(Path(tmpdir).glob(pattern))
+    before = set(output_dir.glob(pattern))
+    with _package_build_lock():
+        subprocess.run(
+            ["uv", "build", f"--{artifact}", "-o", tmpdir, str(package_root)],
+            cwd=WORKSPACE_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    artifacts = [path for path in output_dir.glob(pattern) if path not in before]
     assert len(artifacts) == 1, f"Expected exactly 1 {artifact}, found {len(artifacts)}"
     return artifacts[0]
 
@@ -92,6 +123,36 @@ def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
     assert wheel_inventory == expected_inventory
     assert sdist_inventory == expected_inventory
     assert installed_inventory == expected_inventory
+
+
+def test_workspace_package_declares_semver_identity() -> None:
+    pyproject = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert re.fullmatch(r"\d+\.\d+\.\d+", pyproject["project"]["version"])
+
+
+def test_ci_builds_and_uploads_root_package_artifacts() -> None:
+    ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "workspace-package-artifacts:" in ci_text
+    assert "uv build --wheel --sdist --out-dir dist" in ci_text
+    assert "uv build --wheel --sdist --out-dir dist packages/memory" in ci_text
+    assert "uv build --wheel --sdist --out-dir dist packages/planning" in ci_text
+    assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
+    assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
+    assert "actions/upload-artifact@v6.0.0" in ci_text
+
+
+def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
+    release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+    assert '"v[0-9]+.[0-9]+.[0-9]+"' in release_text
+    assert "Release tag {tag!r} must match pyproject.toml version {expected!r}" in release_text
+    assert "uv build --wheel --sdist --out-dir dist" in release_text
+    assert "uv build --wheel --sdist --out-dir dist packages/memory" in release_text
+    assert "uv build --wheel --sdist --out-dir dist packages/planning" in release_text
+    assert "uv build --wheel --sdist --out-dir dist packages/verification" in release_text
+    assert "softprops/action-gh-release@v2.4.2" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
@@ -189,8 +250,8 @@ def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
 def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact(tmpdir, "wheel")
-        workspace_exe = _install_workspace_stack_venv(wheel_path=wheel_path, tmpdir_path=tmpdir_path)
+        wheelhouse = _build_workspace_wheelhouse(tmpdir)
+        workspace_exe = _install_workspace_stack_venv(wheelhouse=wheelhouse, tmpdir_path=tmpdir_path)
         assert _venv_site_package_entry_names(tmpdir_path / ".venv", "command_generation") == []
         target = tmpdir_path / "repo"
         target.mkdir()
@@ -275,7 +336,18 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
     assert doctor_payload["health"] == "healthy"
 
 
-def _install_workspace_stack_venv(*, wheel_path: Path, tmpdir_path: Path) -> Path:
+def _build_workspace_wheelhouse(tmpdir: str) -> list[Path]:
+    wheel_paths = [_build_artifact(tmpdir, "wheel")]
+    wheel_paths.extend(_build_artifact_from(package_dir, tmpdir, "wheel") for package_dir in MODULE_PACKAGE_DIRS)
+    names = {path.name for path in wheel_paths}
+    assert any(name.startswith("agentic_workspace-") for name in names)
+    assert any(name.startswith("agentic_memory-") for name in names)
+    assert any(name.startswith("agentic_planning-") for name in names)
+    assert any(name.startswith("agentic_verification-") for name in names)
+    return wheel_paths
+
+
+def _install_workspace_stack_venv(*, wheelhouse: list[Path], tmpdir_path: Path) -> Path:
     venv_path = tmpdir_path / ".venv"
     subprocess.run(
         ["uv", "venv", str(venv_path)],
@@ -292,10 +364,7 @@ def _install_workspace_stack_venv(*, wheel_path: Path, tmpdir_path: Path) -> Pat
             "install",
             "--python",
             str(python_path),
-            str(WORKSPACE_ROOT / "packages" / "memory"),
-            str(WORKSPACE_ROOT / "packages" / "planning"),
-            str(WORKSPACE_ROOT / "packages" / "verification"),
-            str(wheel_path),
+            *(str(path) for path in wheelhouse),
         ],
         cwd=WORKSPACE_ROOT,
         capture_output=True,

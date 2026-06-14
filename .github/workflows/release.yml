@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  agentic-workspace-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync workspace dependencies
+        run: make sync-all
+
+      - name: Verify tag matches package version
+        shell: python
+        run: |
+          import os
+          import tomllib
+          from pathlib import Path
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+          expected = f"v{version}"
+          if tag != expected:
+              raise SystemExit(f"Release tag {tag!r} must match pyproject.toml version {expected!r}")
+
+      - name: Build Agentic Workspace package artifacts
+        run: |
+          uv build --wheel --sdist --out-dir dist
+          uv build --wheel --sdist --out-dir dist packages/memory
+          uv build --wheel --sdist --out-dir dist packages/planning
+          uv build --wheel --sdist --out-dir dist packages/verification
+
+      - name: Run built package smoke tests
+        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
+
+      - name: Publish GitHub release assets
+        uses: softprops/action-gh-release@v2.4.2
+        with:
+          files: dist/*
+          generate_release_notes: true
