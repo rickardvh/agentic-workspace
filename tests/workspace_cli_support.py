@@ -92,7 +92,7 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     assert identity["kind"] == "agentic-workspace/invoked-cli-identity/v1"
     assert identity["package"] == "agentic-workspace"
     assert identity["version"] == cli.__version__
-    assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
+    assert identity["source_class"] in {"source-checkout", "installed-package", "editable-dev", "unknown"}
     if "confidence" in identity:
         assert identity["confidence"] in {"high", "medium", "low"}
     assert str(identity["module_path"]).replace("\\", "/").endswith("generated/workspace/python/cli.py")

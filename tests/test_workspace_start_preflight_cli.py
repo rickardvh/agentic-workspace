@@ -3695,7 +3695,8 @@ def test_start_reports_blocking_cli_compatibility_drift_without_health_remediati
     installed_state = _assert_installed_state_compatibility(payload, status="blocking-drift")
     _assert_installed_state_compatibility_schema(payload, schema_name="startup_context.schema.json")
     assert installed_state["executable"]["classification"] == "executable-too-old-or-wrong-version"
-    assert installed_state["payload"]["status"] == "observed-compatible"
+    assert installed_state["payload"]["status"] == "sync-required"
+    assert installed_state["payload"]["provenance_drift"] == "missing-provenance"
     assert any(contract["adapter"] == "mcp" for contract in installed_state["adapter_contracts"])
     assert compatibility["enforcement"] == "blocking"
     assert compatibility["failed_checks"] == ["exact_version"]
@@ -3736,6 +3737,108 @@ def test_start_can_select_compatible_installed_state_without_expanding_tiny_defa
     assert installed_state["generated_artifacts"]["status"] == "compatible"
 
 
+def test_start_compares_present_payload_provenance(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="compatible")
+    provenance = installed_state["payload"]["provenance"]
+    assert provenance["status"] == "present"
+    assert provenance["payload"]["installed_by"]["version"] == cli.__version__
+    assert installed_state["payload"]["provenance_drift"] == "none"
+
+
+def test_start_requires_payload_sync_when_initialized_repo_lacks_provenance(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="payload-upgrade-required")
+    assert installed_state["payload"]["provenance"]["status"] == "missing"
+    assert installed_state["payload"]["provenance_drift"] == "missing-provenance"
+    assert "upgrade" in installed_state["next_action"]
+
+
+def test_start_blocks_when_payload_provenance_requires_newer_executable(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(
+        target / ".agentic-workspace" / "payload-provenance.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "payload_schema": "agentic-workspace/payload/v1",
+                "installed_by": {
+                    "package": "agentic-workspace",
+                    "version": "999.0.0",
+                    "source": "released-wheel",
+                    "source_class": "installed-package",
+                    "source_identity": "fixture",
+                },
+                "command_generation": {
+                    "package": "command-generation",
+                    "version": "0.1.0",
+                    "source": "released-wheel",
+                    "source_identity": "fixture",
+                    "runtime_required": False,
+                },
+                "installed_at": "2026-06-14T00:00:00+00:00",
+                "payload_files": [],
+            }
+        )
+        + "\n",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="blocking-drift")
+    assert installed_state["executable"]["classification"] == "executable-too-old-or-wrong-version"
+    assert installed_state["payload"]["provenance_drift"] == "executable-too-old"
+
+
+def test_start_rejects_incomplete_payload_provenance(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(
+        target / ".agentic-workspace" / "payload-provenance.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "installed_by": {
+                    "package": "agentic-workspace",
+                    "source": "released-wheel",
+                },
+            }
+        )
+        + "\n",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="payload-upgrade-required")
+    provenance = installed_state["payload"]["provenance"]
+    assert provenance["status"] == "invalid"
+    assert installed_state["payload"]["provenance_drift"] == "invalid-provenance"
+    assert any("payload_schema" in error for error in provenance["errors"])
+    assert any("installed_by.version" in error for error in provenance["errors"])
+
+
 def test_start_surfaces_stale_sibling_aw_freshness_without_trial_and_error(tmp_path: Path, capsys) -> None:
     target = tmp_path / "agentic-workspace"
     sibling = tmp_path / "command-generation"
@@ -3770,7 +3873,8 @@ def test_start_surfaces_compatible_sibling_aw_as_advisory(tmp_path: Path, capsys
     sibling.mkdir()
     _init_git_repo(target)
     _init_git_repo(sibling)
-    _write(sibling / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    assert cli.main(["init", "--target", str(sibling), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
 
     assert cli.main(["start", "--target", str(target), "--task", "Work in command-generation after AW changes", "--format", "json"]) == 0
 

@@ -157,6 +157,52 @@ def test_init_ignores_repo_owned_local_runtime_state(monkeypatch, tmp_path: Path
     assert status.stdout == ""
 
 
+def test_init_records_payload_provenance_manifest(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    workspace_report = next(report for report in payload["module_reports"] if report["module"] == "workspace")
+    provenance_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+
+    assert provenance_action["kind"] == "created"
+    assert provenance["kind"] == "agentic-workspace/payload-provenance/v1"
+    assert provenance["payload_schema"] == "agentic-workspace/payload/v1"
+    assert provenance["installed_by"]["package"] == "agentic-workspace"
+    assert provenance["installed_by"]["version"] == cli.__version__
+    assert provenance["installed_by"]["source"] in {"local-source", "repo-local-dev", "released-wheel", "unknown"}
+    assert provenance["command_generation"]["package"] == "command-generation"
+    assert provenance["installed_at"]
+
+
+def test_upgrade_keeps_payload_provenance_current_when_stable(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+    assert cli.main(["init", "--target", str(tmp_path), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    installed_at = json.loads(provenance_path.read_text(encoding="utf-8"))["installed_at"]
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--preset", "planning", "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    reports = payload.get("module_reports", payload.get("reports", []))
+    workspace_report = next(report for report in reports if report["module"] == "workspace")
+    provenance_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert provenance_action["kind"] == "current"
+    assert json.loads(provenance_path.read_text(encoding="utf-8"))["installed_at"] == installed_at
+
+
 def test_init_dry_run_reports_workspace_config_seed_without_writing(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

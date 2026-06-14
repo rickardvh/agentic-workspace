@@ -1142,6 +1142,7 @@
           "enum": [
             "source-checkout",
             "installed-package",
+            "editable-dev",
             "unknown"
           ],
           "description": "Allowed source class value for routing or validation."
