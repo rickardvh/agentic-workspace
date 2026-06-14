@@ -100,101 +100,13 @@
   "operation_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts",
   "package_role": "verification-module-cli",
   "program": "agentic-verification",
-  "python_runtime_binding": {
-    "default_runtime_command": "python -c \"import sys; from repo_verification_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
-    "entrypoint": "agentic-verification",
-    "local_runtime_bindings": [
-      {
-        "module_file": "primitives.verification_runtime",
-        "source_import_module": "repo_verification_bootstrap.runtime_primitives"
-      }
-    ],
-    "operation_executor": {
-      "context_roots": [
-        {
-          "generated_root": "_contracts",
-          "name": "verification.contracts",
-          "required_marker": "operations/verification.report.report.json"
-        }
-      ],
-      "handlers": [
-        {
-          "handler": "generated_target_root_resolve",
-          "primitive": "path.target_root.resolve",
-          "project_markers": [
-            "pyproject.toml",
-            "package.json",
-            "Cargo.toml",
-            ".hg"
-          ]
-        },
-        {
-          "function": "verification_report_payload",
-          "handler": "function_call",
-          "import_module": "repo_verification_bootstrap.runtime_primitives",
-          "kwargs": {
-            "changed_paths": {
-              "value": "changed_paths"
-            },
-            "target_root": {
-              "value": "target_root"
-            },
-            "task_text": {
-              "value": "task_text"
-            }
-          },
-          "primitive": "verification.report.load"
-        }
-      ],
-      "initial_values": [
-        {
-          "arg": "target",
-          "default": null,
-          "name": "target"
-        },
-        {
-          "arg": "changed_paths",
-          "default": [],
-          "name": "changed_paths"
-        },
-        {
-          "arg": "task_text",
-          "default": "",
-          "name": "task_text"
-        },
-        {
-          "arg": "format",
-          "default": "text",
-          "name": "format"
-        }
-      ],
-      "module_file": "primitives.operation_executor",
-      "supported_operation_ids": [
-        "verification.report.report"
-      ]
-    },
-    "render_runtime_module": true,
-    "resource_copies": [
-      {
-        "generated_root": "_contracts",
-        "required_marker": "operations/verification.report.report.json",
-        "source_root": "packages/verification/src/repo_verification_bootstrap/contracts"
-      }
-    ],
-    "runtime_module_file": "cli"
+  "target_resource_scope": {
+    "kind": "command-generation/target-scoped-package-resource/v1",
+    "rule": "Target resources carry universal command/operation metadata plus only this target's runtime binding.",
+    "target_kind": "typescript",
+    "target_package_name": "@agentic-workspace/verification-cli"
   },
   "targets": [
-    {
-      "entrypoints": [
-        "agentic-verification"
-      ],
-      "generated_root": "generated/verification/python",
-      "generation_status": "runtime-backed-read-only-adapter",
-      "kind": "python",
-      "maturity_level_ref": "runtime-backed-read-only-adapter",
-      "package_name": "agentic-verification",
-      "test_environment": "python-dev"
-    },
     {
       "entrypoints": [
         "agentic-verification"
