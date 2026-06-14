@@ -3809,6 +3809,36 @@ def test_start_blocks_when_payload_provenance_requires_newer_executable(tmp_path
     assert installed_state["payload"]["provenance_drift"] == "executable-too-old"
 
 
+def test_start_rejects_incomplete_payload_provenance(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(
+        target / ".agentic-workspace" / "payload-provenance.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "installed_by": {
+                    "package": "agentic-workspace",
+                    "source": "released-wheel",
+                },
+            }
+        )
+        + "\n",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    installed_state = _assert_installed_state_compatibility(selected, status="payload-upgrade-required")
+    provenance = installed_state["payload"]["provenance"]
+    assert provenance["status"] == "invalid"
+    assert installed_state["payload"]["provenance_drift"] == "invalid-provenance"
+    assert any("payload_schema" in error for error in provenance["errors"])
+    assert any("installed_by.version" in error for error in provenance["errors"])
+
+
 def test_start_surfaces_stale_sibling_aw_freshness_without_trial_and_error(tmp_path: Path, capsys) -> None:
     target = tmp_path / "agentic-workspace"
     sibling = tmp_path / "command-generation"

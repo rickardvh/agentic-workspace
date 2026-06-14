@@ -220,6 +220,7 @@ SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT = (
 SUPPORTED_CLI_SOURCE_CLASSES = (
     "source-checkout",
     "installed-package",
+    "editable-dev",
     "unknown",
 )
 SUPPORTED_CLI_TARGET_RELATIONS = (

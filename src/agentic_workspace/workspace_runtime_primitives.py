@@ -283,7 +283,7 @@ def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: b
         source_class = "source-checkout"
         confidence = "high"
     elif module_path.exists():
-        source_class = "installed-package"
+        source_class = _installed_package_source_class(package="agentic-workspace")
         confidence = "medium"
     else:
         source_class = "unknown"
@@ -309,6 +309,24 @@ def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: b
             key: payload[key] for key in ("kind", "package", "version", "source_class", "module_path", "target_relation", "compatibility")
         }
     return payload
+
+
+def _installed_package_source_class(*, package: str) -> str:
+    try:
+        distribution = importlib.metadata.distribution(package)
+    except importlib.metadata.PackageNotFoundError:
+        return "installed-package"
+    direct_url_text = distribution.read_text("direct_url.json")
+    if not direct_url_text:
+        return "installed-package"
+    try:
+        direct_url = json.loads(direct_url_text)
+    except json.JSONDecodeError:
+        return "installed-package"
+    dir_info = direct_url.get("dir_info") if isinstance(direct_url, dict) else None
+    if isinstance(dir_info, dict) and dir_info.get("editable") is True:
+        return "editable-dev"
+    return "installed-package"
 
 
 def _package_version(package: str) -> str:
@@ -344,6 +362,9 @@ def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str,
     if source_class == "source-checkout":
         source = "local-source"
         source_identity = _git_source_identity(_agentic_workspace_package_root())
+    elif source_class == "editable-dev":
+        source = "repo-local-dev"
+        source_identity = str(identity.get("module_path", ""))
     elif source_class == "installed-package":
         source = "released-wheel"
         source_identity = str(identity.get("module_path", ""))
@@ -398,11 +419,27 @@ def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _stable_payload_provenance(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: copy.deepcopy(value) for key, value in payload.items() if key != "installed_at"}
+
+
 def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dict[str, str]:
     relative = WORKSPACE_PAYLOAD_PROVENANCE_PATH
     path = target_root / relative
     existing_text = path.read_text(encoding="utf-8") if path.exists() else None
+    existing_payload: dict[str, Any] | None = None
+    if existing_text is not None:
+        try:
+            parsed_existing = json.loads(existing_text)
+        except json.JSONDecodeError:
+            parsed_existing = None
+        if isinstance(parsed_existing, dict):
+            existing_payload = parsed_existing
     payload = _payload_provenance_payload(target_root=target_root)
+    if existing_payload is not None and _stable_payload_provenance(existing_payload) == _stable_payload_provenance(payload):
+        return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
+    if existing_payload is not None and existing_payload.get("installed_at"):
+        payload["installed_at"] = existing_payload["installed_at"]
     rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if existing_text == rendered_text:
         return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
@@ -414,6 +451,46 @@ def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dic
         "path": relative.as_posix(),
         "detail": "record AW payload provenance for installed-state compatibility checks",
     }
+
+
+def _validate_payload_provenance(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("payload_schema") != WORKSPACE_PAYLOAD_SCHEMA:
+        errors.append("payload_schema must be agentic-workspace/payload/v1")
+    installed_by = payload.get("installed_by")
+    if not isinstance(installed_by, dict):
+        errors.append("installed_by must be an object")
+    else:
+        required_installed_by = {
+            "package": "agentic-workspace",
+            "version": None,
+            "source": {"released-wheel", "repo-local-dev", "local-source", "unknown"},
+            "source_class": {"installed-package", "editable-dev", "source-checkout", "unknown"},
+            "source_identity": None,
+        }
+        for field, expected in required_installed_by.items():
+            value = installed_by.get(field)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"installed_by.{field} must be a non-empty string")
+            elif isinstance(expected, str) and value != expected:
+                errors.append(f"installed_by.{field} must be {expected}")
+            elif isinstance(expected, set) and value not in expected:
+                errors.append(f"installed_by.{field} has unsupported value {value!r}")
+    command_generation = payload.get("command_generation")
+    if not isinstance(command_generation, dict):
+        errors.append("command_generation must be an object")
+    else:
+        if command_generation.get("package") != "command-generation":
+            errors.append("command_generation.package must be command-generation")
+        source = command_generation.get("source")
+        if not isinstance(source, str) or source not in {"released-wheel", "repo-local-dev", "local-source", "not-installed", "unknown"}:
+            errors.append("command_generation.source has unsupported value")
+    if not isinstance(payload.get("installed_at"), str) or not str(payload.get("installed_at")).strip():
+        errors.append("installed_at must be a non-empty string")
+    payload_files = payload.get("payload_files")
+    if not isinstance(payload_files, list) or not all(isinstance(item, str) and item for item in payload_files):
+        errors.append("payload_files must be a list of non-empty strings")
+    return errors
 
 
 def _read_payload_provenance(*, target_root: Path) -> dict[str, Any]:
@@ -439,6 +516,14 @@ def _read_payload_provenance(*, target_root: Path) -> dict[str, Any]:
             "status": "invalid",
             "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
             "error": "payload provenance kind is missing or unsupported",
+        }
+    validation_errors = _validate_payload_provenance(payload)
+    if validation_errors:
+        return {
+            "kind": "agentic-workspace/payload-provenance-status/v1",
+            "status": "invalid",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "errors": validation_errors,
         }
     return {
         "kind": "agentic-workspace/payload-provenance-status/v1",

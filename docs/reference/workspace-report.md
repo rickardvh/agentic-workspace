@@ -24,7 +24,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |
 | `invoked_cli_identity.version` | string | yes |  | Version text value used by this contract. |  |  |
-| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"unknown"` | yes |  | Allowed source class value for routing or validation. |  |  |
+| `invoked_cli_identity.source_class` | enum `"source-checkout"`, `"installed-package"`, `"editable-dev"`, `"unknown"` | yes |  | Allowed source class value for routing or validation. |  |  |
 | `invoked_cli_identity.confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed confidence value for routing or validation. |  |  |
 | `invoked_cli_identity.module_path` | string | yes |  | Module path text value used by this contract. |  |  |
 | `invoked_cli_identity.package_root` | string \| null | no |  | Package root contract value used by this contract. |  |  |

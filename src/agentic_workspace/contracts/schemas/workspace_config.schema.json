@@ -540,6 +540,7 @@
             "enum": [
               "source-checkout",
               "installed-package",
+              "editable-dev",
               "unknown"
             ],
             "description": "One entry in the source classes list."

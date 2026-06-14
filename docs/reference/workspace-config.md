@@ -95,6 +95,6 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |
 | `cli_compatibility.minimum_version` | string | no |  | Minimum accepted Agentic Workspace CLI version. | `"0.4.0"` |  |
 | `cli_compatibility.exact_version` | string | no |  | Exact accepted Agentic Workspace CLI version when a repo must pin execution. | `"0.4.0"` |  |
-| `cli_compatibility.source_classes` | array of enum `"source-checkout"`, `"installed-package"`, `"unknown"` | no | `[]` | Allowed source classes for the invoked CLI executable. |  |  |
+| `cli_compatibility.source_classes` | array of enum `"source-checkout"`, `"installed-package"`, `"editable-dev"`, `"unknown"` | no | `[]` | Allowed source classes for the invoked CLI executable. |  |  |
 | `cli_compatibility.target_relations` | array of enum `"inside-target"`, `"outside-target"`, `"no-target"` | no | `[]` | Allowed relation between the invoked CLI executable and the target repo. |  |  |
 | `cli_compatibility.command` | string | no |  | Expected CLI command string when the repo wants compatibility checks to match a specific invocation. | `"agentic-workspace"` |  |
