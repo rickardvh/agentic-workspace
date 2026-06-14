@@ -105,9 +105,9 @@
     {
       "id": "lane-1476-wrapper-demotion-and-test-boundary",
       "title": "Demote wrappers and inventory retained ordinary tests",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Equivalent CLI/MCP/transport cases are demoted to wrapper-boundary smoke after direct operation conformance covers behavior, and remaining ordinary handwritten test groups have owner, keep reason, and future conversion or durable boundary rationale.",
-      "owner_surface": "Wrapper test inventories, ordinary-test inventories, conformance matrix, and generated behavior registry",
+      "owner_surface": ".agentic-workspace/planning/closeout-evidence/lane-1476-wrapper-demotion-and-test-boundary.closeout.json",
       "proof": "Wrapper tests prove only argv/help/error/stdout/stderr/exit-code/transport behavior unless operation semantics truly changed; ordinary retained groups are mechanically visible with rationale.",
       "slice_contribution_to_parent": "Advances wrapper/adapter and ordinary-test boundary layers.",
       "residual_parent_intent": "Final guardrails and closure inventory remain after demotion unless already satisfied.",

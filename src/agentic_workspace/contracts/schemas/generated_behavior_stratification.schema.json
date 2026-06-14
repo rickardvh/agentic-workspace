@@ -12,6 +12,7 @@
     "rule",
     "layers",
     "retained_hand_owned_boundaries",
+    "retained_ordinary_test_groups",
     "lane_sequence",
     "closure_rule"
   ],
@@ -48,6 +49,14 @@
         "$ref": "#/$defs/retained_boundary"
       },
       "description": "Hand-owned runtime or test boundaries that remain allowed only with owner, proof, keep reason, and conversion criteria."
+    },
+    "retained_ordinary_test_groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/retained_ordinary_test_group"
+      },
+      "description": "Concrete ordinary handwritten test groups retained in AW with owner, proof route, keep reason, future conversion condition, and durable-boundary rationale."
     },
     "lane_sequence": {
       "type": "array",
@@ -200,6 +209,55 @@
           "uniqueItems": true
         },
         "stale_when": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "retained_ordinary_test_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "test_surface",
+        "owner",
+        "retained_boundary_ref",
+        "proof_route",
+        "keep_reason",
+        "future_conversion_condition",
+        "durable_boundary_rationale"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "test_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retained_boundary_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Id of the retained_hand_owned_boundaries entry that authorizes this group."
+        },
+        "proof_route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keep_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "future_conversion_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "durable_boundary_rationale": {
           "type": "string",
           "minLength": 1
         }

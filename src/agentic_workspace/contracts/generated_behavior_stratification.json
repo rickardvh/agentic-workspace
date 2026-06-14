@@ -172,6 +172,68 @@
       "stale_when": "A retained AW test duplicates generic command-generation machinery or a stable operation behavior case without a boundary rationale."
     }
   ],
+  "retained_ordinary_test_groups": [
+    {
+      "id": "generated-command-package-proof-runner",
+      "test_surface": "tests/test_generated_command_package_proof_runner.py",
+      "owner": "AW proof routing and migration gates",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "uv run pytest tests/test_generated_command_package_proof_runner.py",
+      "keep_reason": "Proves AW proof selector behavior, completion gates, Docker posture, crash classification, retry semantics, and runtime-source boundary checks rather than generic generated-command behavior.",
+      "future_conversion_condition": "Move any deterministic adapter execution or primitive behavior to command-generation or operation conformance when the test no longer depends on AW proof-routing posture.",
+      "durable_boundary_rationale": "AW owns when generated package proof is adequate for workspace completion; command-generation owns only reusable execution primitives."
+    },
+    {
+      "id": "contract-tooling-source-of-truth",
+      "test_surface": "tests/test_contract_tooling.py",
+      "owner": "AW contract and source-of-truth checks",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "uv run pytest tests/test_contract_tooling.py",
+      "keep_reason": "Validates AW manifests, operation contracts, artifact registry routing, generated mirror freshness, and live CLI compatibility as source-of-truth integrity checks.",
+      "future_conversion_condition": "Move generic renderer, primitive, or adapter mechanics to command-generation tests; move stable black-box operation behavior to operation conformance cases.",
+      "durable_boundary_rationale": "AW must retain package-specific contract integrity and generated-resource visibility tests even when behavior execution is IR-backed."
+    },
+    {
+      "id": "workspace-proof-generated-packages-cli",
+      "test_surface": "tests/test_workspace_proof_generated_packages_cli.py",
+      "owner": "AW proof route selection",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "uv run pytest tests/test_workspace_proof_generated_packages_cli.py",
+      "keep_reason": "Proves changed-path selection chooses generated-package and operation-conformance proof routes for AW workspace changes.",
+      "future_conversion_condition": "Collapse into generated proof-routing contract cases when route selection is fully represented as declarative source-path to proof-lane mappings; move any reusable route-evaluation machinery to command-generation.",
+      "durable_boundary_rationale": "AW owns proof selection for its installed workspace lifecycle; reusable conformance execution alone cannot prove the routing decision."
+    },
+    {
+      "id": "generated-tool-conformance",
+      "test_surface": "tests/test_generated_tool_conformance.py",
+      "owner": "AW black-box tool contracts",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "uv run pytest tests/test_generated_tool_conformance.py",
+      "keep_reason": "Covers AW tool contracts, filesystem side effects, adapter write guards, and local workspace safety boundaries.",
+      "future_conversion_condition": "Convert stable command behavior to operation conformance and move generic process-runner assertions to command-generation when filesystem safety is not the subject.",
+      "durable_boundary_rationale": "The retained behavior is local workspace safety and write-guard policy, not generic command invocation."
+    },
+    {
+      "id": "command-generation-dependency-integration",
+      "test_surface": "tests/test_command_generation_integration.py",
+      "owner": "AW dependency integration",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "uv run pytest tests/test_command_generation_integration.py",
+      "keep_reason": "Proves AW pins and consumes command-generation fragments, target support, and host primitive handlers correctly.",
+      "future_conversion_condition": "Move behavior to command-generation when it proves generic package capability; keep only consumer pinning, projection, and host-manifest integration in AW.",
+      "durable_boundary_rationale": "AW must prove the specific dependency boundary it consumes even when the upstream package owns reusable implementation semantics."
+    },
+    {
+      "id": "installed-product-generated-surface-routing",
+      "test_surface": "Packaging, lifecycle, skills, start/implement/report/defaults, and module tests that mention generated surfaces",
+      "owner": "AW installed-product behavior",
+      "retained_boundary_ref": "aw-proof-routing-and-integration-tests",
+      "proof_route": "Focused pytest for the changed installed-product, lifecycle, startup, report, defaults, or module surface",
+      "keep_reason": "Asserts shipping, install/upgrade, ordinary routing, compact output, and generated-resource visibility in the AW product rather than reusable generator behavior.",
+      "future_conversion_condition": "Move stable operation input-output behavior to conformance cases and move reusable generated artifact checks to command-generation once the installed-product posture is no longer the subject.",
+      "durable_boundary_rationale": "Installed-product behavior is an AW domain boundary: users experience generated resources through AW startup, proof, lifecycle, and package surfaces."
+    }
+  ],
   "lane_sequence": [
     "#1478",
     "#1479",

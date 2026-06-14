@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Demote wrappers and inventory retained ordinary tests",
+  "plan_id": "lane-1476-wrapper-demotion-and-test-boundary",
+  "created_at": "2026-06-14T11:18:27.210608+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1476-wrapper-demotion-and-test-boundary.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1476-wrapper-demotion-and-test-boundary.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1476-wrapper-demotion-and-test-boundary",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json lane lane-1476-wrapper-demotion-and-test-boundary.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Demoted wrapper/process proof posture to wrapper-smoke where direct operation adapters are unavailable, updated the CLI boundary current-state model for direct defaults adapters, and made retained AW ordinary generated-behavior test groups machine-checkable with owner, proof route, keep reason, future conversion condition, and durable boundary rationale.",
+    "scope touched": "#1483 wrapper/test-boundary lane under parent #1476",
+    "changed surfaces": "generated_behavior_stratification contract and schema; contract tooling checker; contract tests; generated reference docs; CLI boundary docs; generated behavior test inventory docs",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from lane-1476-closure-inventory-and-guardrails",
+    "next step": "promote the next bounded slice from lane-1476-closure-inventory-and-guardrails"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "#1483 acceptance is satisfied at slice scope: wrapper tests are classified as boundary proof, direct defaults adapters remain semantic proof, and ordinary retained test groups are explicitly inventoried with rationale. Parent #1476 continues through lane-1476-closure-inventory-and-guardrails.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "lane-1476-closure-inventory-and-guardrails"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/generate/generate_schema_reference.py --check --check-annotations; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make schema-reference-docs; make lint-workspace; make test-workspace; make maintainer-surfaces",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "#1476 requires an enforced end-to-end model where operation/primitive IR, contracts, and input-output cases generate implementation artifacts, wrappers, and conformance executors, while ordinary feature work changes IR/contracts/cases rather than generated executable code or one-off behavior regressions.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "lane-1476-closure-inventory-and-guardrails"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when lane-1476-closure-inventory-and-guardrails activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to lane-1476-closure-inventory-and-guardrails.",
+    "motivation worth preserving": "Future agents should continue from lane-1476-closure-inventory-and-guardrails rather than rediscover this closeout residue.",
+    "canonical owner now": "lane-1476-closure-inventory-and-guardrails",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Wrapper demotion and retained ordinary test inventory installed for the #1476 model.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "lane-1476-closure-inventory-and-guardrails",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "lane-1476-closure-inventory-and-guardrails",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "lane-1476-closure-inventory-and-guardrails",
+          "owner": "lane-1476-closure-inventory-and-guardrails",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

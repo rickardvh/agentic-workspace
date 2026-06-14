@@ -30,9 +30,9 @@ Wrapper tests can assert that a command maps argv into the expected operation in
 
 ## Current State
 
-The current operation conformance manifest still uses `cli.process` artifacts for migrated AW cases because the generated packages do not yet expose real importable operation functions for those cases. Those artifacts are explicitly marked `wrapper-smoke`; they are transitional proof surfaces, not the preferred semantic route.
+The current operation conformance manifest uses direct `python.function` and `typescript.function` artifacts for `defaults.report` cases that have generated operation callables. Those artifacts are the semantic proof route for the migrated defaults behavior.
 
-When generated packages expose `python.function` or `typescript.function` artifacts, promote the affected cases to direct operation adapters and demote CLI coverage to boundary-only tests.
+Remaining `cli.process` artifacts are explicitly marked `wrapper-smoke`. They prove wrapper presentation, transport, mutation-effect boundaries, or transitional cases that do not yet have direct operation artifacts. When generated packages expose additional `python.function` or `typescript.function` artifacts, promote the affected cases to direct operation adapters and keep CLI coverage boundary-only.
 
 ## Closeout Rule
 
