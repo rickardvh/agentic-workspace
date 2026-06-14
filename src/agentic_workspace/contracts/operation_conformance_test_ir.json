@@ -273,6 +273,129 @@
       }
     },
     {
+      "id": "defaults.root-cli-authority.success",
+      "title": "Root defaults root CLI authority JSON preserves compact contract fields",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "defaults.report",
+        "operation_path": "operations/defaults.report.json",
+        "conformance_ref": "defaults.root-cli-authority.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.defaults.python",
+          "target": "python",
+          "adapter_id": "python.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/defaults",
+          "wrapper_refs": [
+            "defaults.report.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.defaults.typescript",
+          "target": "typescript",
+          "adapter_id": "typescript.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/defaults",
+          "wrapper_refs": [
+            "defaults.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/defaults.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Root defaults compact contract selection and stable root CLI authority fields.",
+        "assumes_primitives": [
+          "output.emit"
+        ],
+        "reuses_case_ids": [
+          "defaults.selected-output.success"
+        ]
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "section": "root_cli_authority",
+          "format": "json"
+        },
+        "argv": [
+          "defaults",
+          "--section",
+          "root_cli_authority",
+          "--format",
+          "json"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "json",
+          "selected_fields": {
+            "profile": "compact-contract-answer/v1",
+            "surface": "defaults",
+            "selector.section": "root_cli_authority",
+            "matched": true,
+            "answer.command": "agentic-workspace defaults --section root_cli_authority --format json"
+          }
+        },
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "profile": "compact-contract-answer/v1",
+            "surface": "defaults",
+            "selector.section": "root_cli_authority",
+            "matched": true,
+            "answer.command": "agentic-workspace defaults --section root_cli_authority --format json"
+          }
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/defaults.root-cli-authority.process.json"
+        ],
+        "stale_when": [
+          "defaults.report operation or artifact mapping changes",
+          "defaults.root-cli-authority.process expectations change",
+          "root CLI authority compact answer fields change"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "root CLI authority generated-command behavior assertions for defaults.root-cli-authority.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "defaults policy and authority payload review tests",
+          "CLI wrapper JSON-emission smoke where argv parsing or process behavior is the behavior under test"
+        ],
+        "rationale": "This case uses generated Python and TypeScript operation callables for semantic proof of stable root CLI authority fields. It preserves black-box compact contract behavior without preserving the old ordinary regression-test shape."
+      }
+    },
+    {
       "id": "config.invalid-format.error",
       "title": "Root config rejects invalid generated option choice",
       "behavioral_class": "error",
@@ -375,6 +498,600 @@
           "target adapter parser mechanics tests that do not assert the config command behavior contract"
         ],
         "rationale": "This case remains wrapper-smoke because the invalid --format rejection is currently owned by generated parser/transport choice validation, not by the JSON-shaped config.report operation callable. It protects wrapper error behavior without presenting cli.process as operation-semantic proof."
+      }
+    },
+    {
+      "id": "config.selected-output.success",
+      "title": "Root config selected text output preserves selected-output contract",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "config.report",
+        "operation_path": "operations/config.report.json",
+        "conformance_ref": "config.selected-text.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.config.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/config",
+          "wrapper_refs": [
+            "config.report.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.config.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/config",
+          "wrapper_refs": [
+            "config.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/config.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Selected-output projection for stable config field output.",
+        "assumes_primitives": [
+          "workspace.config.load",
+          "output.fields.select",
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "select": "workspace.optimization_bias",
+          "format": "text"
+        },
+        "argv": [
+          "config",
+          "--target",
+          ".",
+          "--select",
+          "workspace.optimization_bias",
+          "--format",
+          "text"
+        ],
+        "fixture_id": "agent-efficiency-config",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n",
+          ".agentic-workspace/config.toml": "schema_version = 1\n\n[workspace]\noptimization_bias = \"agent-efficiency\"\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "text",
+          "selected_fields": {
+            "kind": "agentic-workspace/selected-output/v1",
+            "source_command": "config"
+          },
+          "contains": [
+            "Kind: agentic-workspace/selected-output/v1",
+            "Source command: config",
+            "\"workspace.optimization_bias\": \"agent-efficiency\""
+          ]
+        },
+        "stdout": {
+          "format": "text",
+          "contains": [
+            "Kind: agentic-workspace/selected-output/v1",
+            "Source command: config",
+            "\"workspace.optimization_bias\": \"agent-efficiency\""
+          ]
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/config.selected-text.process.json"
+        ],
+        "stale_when": [
+          "config.report operation or artifact mapping changes",
+          "config.selected-text.process expectations change",
+          "selected-output envelope changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "config selected-output text assertions for config.selected-text.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "detailed config policy and local override tests",
+          "config CLI wrapper tests where argv parsing, invalid choice behavior, stdout formatting, or process exit behavior is the behavior under test"
+        ],
+        "rationale": "This case is IR-backed but remains wrapper-smoke because config.report still depends on package-specific config loading and compatibility text boundaries. It records the stable black-box selected-output behavior without claiming direct callable semantic proof before config direct artifacts exist."
+      }
+    },
+    {
+      "id": "defaults.tiny-router-text.success",
+      "title": "Root defaults tiny text preserves generated router summary",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "defaults.report",
+        "operation_path": "operations/defaults.report.json",
+        "conformance_ref": "defaults.tiny-text.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.defaults-cli.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/defaults",
+          "wrapper_refs": [
+            "defaults.report.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.defaults-cli.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/defaults",
+          "wrapper_refs": [
+            "defaults.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/defaults.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Generated tiny text router presentation for defaults.",
+        "assumes_primitives": [
+          "workspace.defaults.load",
+          "workspace.defaults.select",
+          "output.emit"
+        ],
+        "reuses_case_ids": [
+          "defaults.selected-output.success",
+          "defaults.root-cli-authority.success"
+        ]
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "format": "text"
+        },
+        "argv": [
+          "defaults",
+          "--format",
+          "text"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "stdout": {
+          "format": "text",
+          "contains": [
+            "Default-route contract sections are available on demand",
+            "Common sections:",
+            "- startup",
+            "Detail commands:"
+          ]
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/defaults.tiny-text.process.json"
+        ],
+        "stale_when": [
+          "defaults.report operation or artifact mapping changes",
+          "defaults.tiny-text.process expectations change",
+          "defaults tiny router text changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "defaults tiny generated text assertions for defaults.tiny-text.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "defaults policy payload review tests and broader defaults section semantics"
+        ],
+        "rationale": "This case is IR-backed wrapper-smoke because the migrated behavior is generated text presentation at the CLI boundary. It preserves the black-box tiny router output without preserving the old ordinary regression shape."
+      }
+    },
+    {
+      "id": "modules.report-router.success",
+      "title": "Root modules report preserves generated router fields",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "modules.report",
+        "operation_path": "operations/modules.report.json",
+        "conformance_ref": "modules.report.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.modules.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/modules",
+          "wrapper_refs": [
+            "modules.report.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.modules.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/modules",
+          "wrapper_refs": [
+            "modules.report.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/modules.report.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Stable generated modules router output fields.",
+        "assumes_primitives": [
+          "workspace.root.resolve",
+          "workspace.modules.inspect",
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "format": "json"
+        },
+        "argv": [
+          "modules",
+          "--target",
+          ".",
+          "--format",
+          "json"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "kind": "agentic-workspace/modules-router/v1",
+            "profile": "tiny",
+            "detail_commands.full": "agentic-workspace modules --target . --verbose --format json"
+          }
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/modules.report.process.json"
+        ],
+        "stale_when": [
+          "modules.report operation or artifact mapping changes",
+          "modules.report.process expectations change",
+          "modules router output fields change"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "modules generated command success-path assertions for modules.report.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "module descriptor policy and installed-product integration tests"
+        ],
+        "rationale": "This case is IR-backed wrapper-smoke because modules.report has generated process conformance but no direct Python operation callable yet. It captures the stable output fields and leaves descriptor internals to their ordinary owners."
+      }
+    },
+    {
+      "id": "delegation-outcome.append-text.boundary",
+      "title": "Delegation outcome append text preserves output and write boundary",
+      "behavioral_class": "boundary",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "delegation-outcome.append",
+        "operation_path": "operations/delegation-outcome.append.json",
+        "conformance_ref": "delegation-outcome.append-text.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.delegation-outcome.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/note-delegation-outcome",
+          "wrapper_refs": [
+            "delegation-outcome.append.cli"
+          ]
+        },
+        {
+          "artifact_id": "root-workspace.delegation-outcome.typescript",
+          "target": "typescript",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/note-delegation-outcome",
+          "wrapper_refs": [
+            "delegation-outcome.append.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/delegation-outcome.append.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Generated text result and local-only delegation outcome write boundary.",
+        "assumes_primitives": [
+          "workspace.root.resolve",
+          "delegation.outcome.append",
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "delegation_target": "gpt_5_4_mini",
+          "task_class": "bounded-docs",
+          "outcome": "success",
+          "format": "text"
+        },
+        "argv": [
+          "note-delegation-outcome",
+          "--target",
+          ".",
+          "--delegation-target",
+          "gpt_5_4_mini",
+          "--task-class",
+          "bounded-docs",
+          "--outcome",
+          "success",
+          "--format",
+          "text"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "stdout": {
+          "format": "text",
+          "contains": [
+            "Kind: agentic-workspace/delegation-outcomes/v1",
+            "Path: .agentic-workspace/delegation-outcomes.json",
+            "- delegation_target: gpt_5_4_mini"
+          ]
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
+        "filesystem": {
+          "allowed_write_paths": [
+            ".agentic-workspace/delegation-outcomes.json"
+          ],
+          "required_paths": [
+            ".git/.keep",
+            "README.md"
+          ],
+          "forbidden_paths": []
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/delegation-outcome.append-text.process.json"
+        ],
+        "stale_when": [
+          "delegation-outcome.append operation or artifact mapping changes",
+          "delegation-outcome.append-text.process expectations change",
+          "delegation outcome output or local write boundary changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "delegation outcome generated text and allowed-write assertions for delegation-outcome.append-text.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "delegation policy tuning and local-runtime integration tests"
+        ],
+        "rationale": "This boundary case is IR-backed wrapper-smoke because it proves generated text output and declares the local-only write effect. A separate Python write-boundary case proves the actual file effect for the target that currently implements it; TypeScript preserves the generated text envelope only."
+      }
+    },
+    {
+      "id": "delegation-outcome.append-write.boundary",
+      "title": "Delegation outcome append writes the local outcome file for Python wrapper execution",
+      "behavioral_class": "boundary",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "delegation-outcome.append",
+        "operation_path": "operations/delegation-outcome.append.json",
+        "conformance_ref": "delegation-outcome.append.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.delegation-outcome.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/note-delegation-outcome",
+          "wrapper_refs": [
+            "delegation-outcome.append.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/delegation-outcome.append.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Local-only delegation outcome append write boundary for the generated Python wrapper.",
+        "assumes_primitives": [
+          "workspace.root.resolve",
+          "delegation.outcome.append",
+          "output.emit"
+        ],
+        "reuses_case_ids": [
+          "delegation-outcome.append-text.boundary"
+        ]
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "delegation_target": "test-target",
+          "task_class": "mechanical-follow-through",
+          "outcome": "success",
+          "format": "json"
+        },
+        "argv": [
+          "note-delegation-outcome",
+          "--target",
+          ".",
+          "--delegation-target",
+          "test-target",
+          "--task-class",
+          "mechanical-follow-through",
+          "--outcome",
+          "success",
+          "--format",
+          "json"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "kind": "agentic-workspace/delegation-outcomes/v1",
+            "recorded.outcome": "success"
+          }
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
+        "filesystem": {
+          "allowed_write_paths": [
+            ".agentic-workspace/delegation-outcomes.json"
+          ],
+          "required_paths": [
+            ".git/.keep",
+            "README.md",
+            ".agentic-workspace/delegation-outcomes.json"
+          ],
+          "forbidden_paths": []
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/delegation-outcome.append.process.json"
+        ],
+        "stale_when": [
+          "delegation-outcome.append operation or artifact mapping changes",
+          "delegation-outcome.append.process expectations change",
+          "delegation outcome local write boundary changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "delegation outcome append JSON and allowed-write assertions for delegation-outcome.append.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "delegation policy tuning and local-runtime integration tests"
+        ],
+        "rationale": "This Python-only boundary case proves the local file effect for the generated wrapper target that implements the append. It keeps TypeScript text-envelope coverage separate until TypeScript owns the same write semantics."
       }
     },
     {

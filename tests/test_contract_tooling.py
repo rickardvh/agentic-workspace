@@ -724,6 +724,8 @@ def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() 
         "kind": "agentic-workspace/selected-output/v1",
         "source_command": "defaults",
     }
+    assert cases["defaults.tiny-router-text.success"]["operation_ref"]["conformance_ref"] == "defaults.tiny-text.process"
+    assert cases["modules.report-router.success"]["expected"]["stdout"]["selected_fields"]["kind"] == "agentic-workspace/modules-router/v1"
     assert cases["config.invalid-format.error"]["expected"]["exit_code"] != 0
     assert cases["config.invalid-format.error"]["expected"]["error"] == {
         "kind": "invalid-choice",
@@ -731,6 +733,11 @@ def test_operation_conformance_test_ir_defines_success_error_and_parity_cases() 
         "value": "yaml",
     }
     assert "--format" in cases["config.invalid-format.error"]["expected"]["stderr"]["contains"]
+    assert cases["delegation-outcome.append-text.boundary"]["behavioral_class"] == "boundary"
+    assert (
+        ".agentic-workspace/delegation-outcomes.json"
+        in cases["delegation-outcome.append-write.boundary"]["expected"]["filesystem"]["required_paths"]
+    )
     parity = cases["memory.list-skills.parity"]
     assert {target["kind"] for target in parity["targets"]} == {"python", "typescript"}
     assert {artifact["adapter_id"] for artifact in parity["artifacts"]} == {"cli.process"}
@@ -775,6 +782,9 @@ def test_generated_behavior_test_inventory_accounts_for_migration_owners() -> No
         "Retained In AW With Narrow Owners",
         "Rejected Or Not Migrated",
         "defaults.selected-output.success",
+        "defaults.tiny-router-text.success",
+        "modules.report-router.success",
+        "delegation-outcome.append-write.boundary",
         "FunctionConformanceTarget",
         "tests/test_generated_command_package_proof_runner.py",
         "tests/test_command_generation_integration.py",
@@ -841,7 +851,12 @@ def test_operation_conformance_test_ir_references_known_command_contracts() -> N
     bulk_preserving["migration_policy"]["do_not_preserve"] = ["old helper names"]
     assert any("one-for-one regression-test bulk" in error for error in module._validate_operation_conformance_test_ir(bulk_preserving))
     cli_default = copy.deepcopy(manifest)
-    cli_default["initial_cases"][1]["artifacts"][0].pop("proof_role")
+    cli_case = next(
+        case
+        for case in cli_default["initial_cases"]
+        if any(artifact.get("adapter_id") == "cli.process" for artifact in case.get("artifacts", []))
+    )
+    next(artifact for artifact in cli_case["artifacts"] if artifact.get("adapter_id") == "cli.process").pop("proof_role")
     assert any(
         "cli.process artifacts must declare wrapper-smoke" in error for error in module._validate_operation_conformance_test_ir(cli_default)
     )

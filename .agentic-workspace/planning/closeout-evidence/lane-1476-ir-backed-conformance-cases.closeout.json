@@ -1,0 +1,125 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Convert stable behavior to IR-backed conformance cases",
+  "plan_id": "lane-1476-ir-backed-conformance-cases",
+  "created_at": "2026-06-14T10:19:37.155143+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/lane-1476-ir-backed-conformance-cases.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/lane-1476-ir-backed-conformance-cases.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "lane-1476-ir-backed-conformance-cases",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json lane lane-1476-ir-backed-conformance-cases.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added the full converted stable generated-behavior set as IR-backed operation conformance cases: modules.report-router.success, defaults.root-cli-authority.success, defaults.tiny-router-text.success, defaults.selected-output.success, config.selected-output.success, config.invalid-format.error, delegation-outcome.append-text.boundary, delegation-outcome.append-write.boundary, and memory.list-skills.parity. Updated registry/docs/tests and kept #1476 open for wrapper demotion and closure guardrails.",
+    "scope touched": "#1482 operation conformance case conversion",
+    "changed surfaces": "operation_conformance_test_ir.json; operation_artifact_registry.json; operation_conformance_test_ir.schema.json; run_operation_conformance_tests.py; generated-behavior-test-inventory.md; focused conformance tests; Planning state",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from lane-1476-wrapper-demotion-and-test-boundary",
+    "next step": "promote the next bounded slice from lane-1476-wrapper-demotion-and-test-boundary"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected; proof passed; parent #1476 remains open.",
+    "proof status": "passed",
+    "intent served": "yes for #1482; intent-status keeps parent #1476 continuation explicit.",
+    "config compliance": "followed AW start/promote/implement/proof routing; active plan recorded",
+    "misinterpretation risk": "low; wrapper-smoke and direct-function boundaries are named per case, and retained ordinary groups are documented by owner.",
+    "follow-on decision": "lane-1476-wrapper-demotion-and-test-boundary"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/run_operation_conformance_tests.py --target all --require-node --format json; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run ruff check scripts/check tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "All listed commands passed locally before the review update; after expanding the case set, operation conformance reports 9 cases and 18 pass results for all targets with Node required."
+  },
+  "intent_satisfaction": {
+    "original intent": "#1476 requires an enforced end-to-end model where operation/primitive IR, contracts, and input-output cases generate implementation artifacts, wrappers, and conformance executors, while ordinary feature work changes IR/contracts/cases rather than generated executable code or one-off behavior regressions.",
+    "was original intent fully satisfied?": "yes for #1482; #1476 remains open",
+    "evidence of intent satisfaction": "The full stable generated-behavior set identified by the AW contract-test replacement inventory is either represented by operation-conformance IR cases or retained under explicit narrow owners in docs/package/generated-behavior-test-inventory.md.",
+    "unsolved intent passed to": "lane-1476-wrapper-demotion-and-test-boundary"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#1482 stable-behavior conversion is complete, while parent #1476 still needs wrapper demotion and closure guardrails.",
+    "evidence carried forward": "operation conformance proof reports 9 IR cases and 18 pass results; generated behavior inventory accounts for migrated and retained groups.",
+    "reopen trigger": "Reopen when lane-1476-wrapper-demotion-and-test-boundary activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to lane-1476-wrapper-demotion-and-test-boundary.",
+    "motivation worth preserving": "Future agents should continue from lane-1476-wrapper-demotion-and-test-boundary rather than rediscover this closeout residue.",
+    "canonical owner now": "lane-1476-wrapper-demotion-and-test-boundary",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "All identified stable generated-command behavior groups are routed through operation-conformance IR cases or retained under explicit non-operation owners.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "lane-1476-wrapper-demotion-and-test-boundary",
+    "post-work posterity capture": "active execplan updated; PR body will carry slice/residual boundary",
+    "resume from": "lane-1476-wrapper-demotion-and-test-boundary",
+    "knowledge promoted (Memory/Docs/Config)": "docs/package/generated-behavior-test-inventory.md updated"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Improvement signal review was checked and no signal was found.",
+          "owner": "none",
+          "source": "improvement_signal_review.status"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Proceed to lane-1476-wrapper-demotion-and-test-boundary after #1482 merges.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Parent #1476 remains open until wrapper demotion and closure guardrails are proven.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "docs/package/generated-behavior-test-inventory.md updated",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "docs/package/generated-behavior-test-inventory.md updated",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  }
+}
