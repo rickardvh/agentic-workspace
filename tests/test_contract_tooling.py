@@ -180,6 +180,23 @@ def test_generated_behavior_stratification_declares_layers_and_retained_boundari
         assert entry["accepted_direct_edit_reasons"]
         assert entry["stale_when"]
 
+    retained_groups = {entry["id"]: entry for entry in manifest["retained_ordinary_test_groups"]}
+    assert {
+        "generated-command-package-proof-runner",
+        "contract-tooling-source-of-truth",
+        "workspace-proof-generated-packages-cli",
+        "generated-tool-conformance",
+        "command-generation-dependency-integration",
+        "installed-product-generated-surface-routing",
+    } == retained_groups.keys()
+    for entry in retained_groups.values():
+        assert entry["owner"]
+        assert entry["proof_route"]
+        assert entry["keep_reason"]
+        assert entry["future_conversion_condition"]
+        assert entry["durable_boundary_rationale"]
+        assert entry["retained_boundary_ref"] in retained
+
 
 def test_target_support_consumes_command_generation_extension_contract() -> None:
     manifest = contract_tooling.target_support_manifest()
@@ -788,6 +805,9 @@ def test_generated_behavior_test_inventory_accounts_for_migration_owners() -> No
         "FunctionConformanceTarget",
         "tests/test_generated_command_package_proof_runner.py",
         "tests/test_command_generation_integration.py",
+        "Future conversion",
+        "Durable boundary rationale",
+        "generated_behavior_stratification.json",
         "Former duplicate AW primitive tests were removed",
         "contract_conformance_cases_manifest",
         "rickardvh/command-generation#13",
@@ -898,6 +918,25 @@ def test_operation_artifact_registry_routes_cases_and_proof_layers() -> None:
     missing_symbol["artifacts"][0].pop("symbol")
     assert any(
         "direct function adapters must declare symbol" in error for error in module._validate_operation_artifact_registry(missing_symbol)
+    )
+
+
+def test_generated_behavior_stratification_rejects_unowned_retained_ordinary_tests() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    manifest = copy.deepcopy(contract_tooling.generated_behavior_stratification_manifest())
+    manifest["retained_ordinary_test_groups"][0].pop("future_conversion_condition")
+    assert any("missing: future_conversion_condition" in error for error in module._validate_generated_behavior_stratification(manifest))
+
+    manifest = copy.deepcopy(contract_tooling.generated_behavior_stratification_manifest())
+    manifest["retained_ordinary_test_groups"][0]["retained_boundary_ref"] = "missing-boundary"
+    assert any(
+        "references unknown retained boundary missing-boundary" in error
+        for error in module._validate_generated_behavior_stratification(manifest)
     )
 
 

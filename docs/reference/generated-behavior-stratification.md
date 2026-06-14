@@ -17,5 +17,6 @@ Authoritative layer model for generated behavior, operation IR, adapters, confor
 | `rule` | string | yes |  | Top-level rule for where stable generated behavior changes must be expressed. |  |  |
 | `layers` | array of ref `#/$defs/layer` | yes |  | Ordered generated-behavior strata from primitive contracts through retained ordinary-test boundaries. |  |  |
 | `retained_hand_owned_boundaries` | array of ref `#/$defs/retained_boundary` | yes |  | Hand-owned runtime or test boundaries that remain allowed only with owner, proof, keep reason, and conversion criteria. |  |  |
+| `retained_ordinary_test_groups` | array of ref `#/$defs/retained_ordinary_test_group` | yes |  | Concrete ordinary handwritten test groups retained in AW with owner, proof route, keep reason, future conversion condition, and durable-boundary rationale. |  |  |
 | `lane_sequence` | array of string | yes |  | Issue sequence for the decomposed #1476 lanes. |  |  |
 | `closure_rule` | string | yes |  | Rule for when the parent epic can be resolved. |  |  |

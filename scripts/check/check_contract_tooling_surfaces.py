@@ -1283,6 +1283,53 @@ def _validate_generated_behavior_stratification(payload: dict[str, object]) -> l
     boundary_ids = {str(boundary.get("id", "")) for boundary in retained if isinstance(boundary, dict)}
     if not {"package-domain-runtime-primitives", "wrapper-boundary-tests", "aw-proof-routing-and-integration-tests"} <= boundary_ids:
         errors.append("generated_behavior_stratification.json missing required retained boundary records")
+    retained_groups = payload.get("retained_ordinary_test_groups", [])
+    required_group_fields = {
+        "test_surface",
+        "owner",
+        "retained_boundary_ref",
+        "proof_route",
+        "keep_reason",
+        "future_conversion_condition",
+        "durable_boundary_rationale",
+    }
+    required_group_ids = {
+        "generated-command-package-proof-runner",
+        "contract-tooling-source-of-truth",
+        "workspace-proof-generated-packages-cli",
+        "generated-tool-conformance",
+        "command-generation-dependency-integration",
+        "installed-product-generated-surface-routing",
+    }
+    group_ids: set[str] = set()
+    for group in retained_groups:
+        if not isinstance(group, dict):
+            errors.append("generated_behavior_stratification.json retained ordinary test groups must be objects")
+            continue
+        group_id = str(group.get("id", ""))
+        group_ids.add(group_id)
+        missing = sorted(field for field in required_group_fields if not group.get(field))
+        if missing:
+            errors.append(
+                f"generated_behavior_stratification.json retained ordinary test group {group.get('id', '<unknown>')} missing: "
+                + ", ".join(missing)
+            )
+        boundary_ref = str(group.get("retained_boundary_ref", ""))
+        if boundary_ref not in boundary_ids:
+            errors.append(
+                f"generated_behavior_stratification.json retained ordinary test group {group_id} references unknown retained boundary {boundary_ref}"
+            )
+        combined_rationale = " ".join(
+            str(group.get(field, ""))
+            for field in ("keep_reason", "future_conversion_condition", "durable_boundary_rationale")
+        ).lower()
+        if "command-generation" not in combined_rationale and "operation conformance" not in combined_rationale:
+            errors.append(
+                f"generated_behavior_stratification.json retained ordinary test group {group_id} must name conversion ownership"
+            )
+    missing_groups = sorted(required_group_ids - group_ids)
+    if missing_groups:
+        errors.append("generated_behavior_stratification.json missing retained ordinary test group(s): " + ", ".join(missing_groups))
     return errors
 
 
