@@ -2632,11 +2632,11 @@ def test_planning_summary_suppresses_child_continuation_consumed_by_later_parent
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
 
 
-def test_planning_summary_suppresses_archived_child_when_continuation_is_active(tmp_path: Path) -> None:
-    install_bootstrap(target=tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
+def test_planning_summary_suppresses_archived_child_when_continuation_is_routed(tmp_path: Path) -> None:
+    scenarios = [
+        (
+            "active-continuation",
+            """
 [todo]
 active_items = [
   { id = "active-follow-on", status = "in-progress", source = "github:#463", surface = ".agentic-workspace/planning/execplans/active-follow-on.plan.json", why_now = "active continuation for #461" }
@@ -2647,79 +2647,17 @@ queued_items = []
 lanes = []
 candidates = []
 """,
-    )
-    active_path = tmp_path / ".agentic-workspace/planning/execplans/active-follow-on.plan.json"
-    _write_execplan_record(
-        active_path,
-        item_id="active-follow-on",
-        status="in-progress",
-        references=[
-            {
-                "kind": "github-issue",
-                "target": "#463",
-                "label": "active follow-on",
-                "role": "source_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#461",
-                "label": "parent lane",
-                "role": "parent_intent",
-                "locator": "issue",
-            },
-        ],
-    )
-
-    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    child_path = archive_dir / "completed-child.plan.json"
-    _write_execplan_record(
-        child_path,
-        item_id="completed-child",
-        status="completed",
-        references=[
-            {
-                "kind": "github-issue",
-                "target": "#462",
-                "label": "completed child",
-                "role": "closed_item",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#461",
-                "label": "parent lane",
-                "role": "parent_intent",
-                "locator": "issue",
-            },
-        ],
-    )
-    child_record = json.loads(child_path.read_text(encoding="utf-8"))
-    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "no"
-    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml active continuation for #461"
-    child_record["closure_check"]["larger-intent status"] = "open"
-    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
-    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
-
-    summary = planning_summary(target=tmp_path)
-    contract = summary["finished_work_inspection_contract"]
-
-    assert contract["counts"]["partial_count"] == 1
-    assert contract["counts"]["routed_continuation_count"] == 1
-    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
-    inspection = contract["inspections"][0]
-    assert inspection["classification"] == "routed_partial"
-    assert inspection["routed_by"] == [".agentic-workspace/planning/execplans/active-follow-on.plan.json"]
-    assert contract["derived_follow_up_candidates"] == []
-    assert summary["execution_readiness"]["status"] == "planning-backed"
-
-
-def test_planning_summary_suppresses_archived_child_when_continuation_is_in_roadmap(tmp_path: Path) -> None:
-    install_bootstrap(target=tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
+            (".agentic-workspace/planning/execplans/active-follow-on.plan.json", "#461", "#463"),
+            ["#462", "#461"],
+            "no",
+            ".agentic-workspace/planning/state.toml active continuation for #461",
+            ".agentic-workspace/planning/execplans/active-follow-on.plan.json",
+            "planning-backed",
+            None,
+        ),
+        (
+            "roadmap-issues",
+            """
 [todo]
 active_items = []
 queued_items = []
@@ -2730,65 +2668,17 @@ lanes = [
 ]
 candidates = []
 """,
-    )
-
-    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    child_path = archive_dir / "completed-child.plan.json"
-    _write_execplan_record(
-        child_path,
-        item_id="completed-child",
-        status="completed",
-        references=[
-            {
-                "kind": "github-issue",
-                "target": "#700",
-                "label": "completed child",
-                "role": "source_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#701",
-                "label": "parent lane",
-                "role": "parent_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#702",
-                "label": "next child",
-                "role": "next_lane",
-                "locator": "issue",
-            },
-        ],
-    )
-    child_record = json.loads(child_path.read_text(encoding="utf-8"))
-    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
-    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap lane parent-lane"
-    child_record["closure_check"]["larger-intent status"] = "open"
-    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
-    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
-
-    summary = planning_summary(target=tmp_path)
-    contract = summary["finished_work_inspection_contract"]
-
-    assert contract["counts"]["partial_count"] == 1
-    assert contract["counts"]["routed_continuation_count"] == 1
-    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
-    inspection = contract["inspections"][0]
-    assert inspection["classification"] == "routed_partial"
-    assert inspection["intent_satisfied"] == "yes"
-    assert inspection["routed_by"] == [".agentic-workspace/planning/state.toml roadmap lane parent-lane"]
-    assert contract["derived_follow_up_candidates"] == []
-    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
-
-
-def test_planning_summary_uses_roadmap_refs_for_archived_continuation_routing(tmp_path: Path) -> None:
-    install_bootstrap(target=tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
+            None,
+            ["#700", "#701", "#702"],
+            "yes",
+            ".agentic-workspace/planning/state.toml roadmap lane parent-lane",
+            ".agentic-workspace/planning/state.toml roadmap lane parent-lane",
+            "roadmap-needs-promotion",
+            None,
+        ),
+        (
+            "roadmap-refs",
+            """
 [todo]
 active_items = []
 queued_items = []
@@ -2799,65 +2689,17 @@ lanes = [
 ]
 candidates = []
 """,
-    )
-
-    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    child_path = archive_dir / "completed-child.plan.json"
-    _write_execplan_record(
-        child_path,
-        item_id="completed-child",
-        status="completed",
-        references=[
-            {
-                "kind": "github-issue",
-                "target": "#900",
-                "label": "completed child",
-                "role": "source_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#901",
-                "label": "parent lane",
-                "role": "parent_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#902",
-                "label": "next child",
-                "role": "next_lane",
-                "locator": "issue",
-            },
-        ],
-    )
-    child_record = json.loads(child_path.read_text(encoding="utf-8"))
-    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
-    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml roadmap lane parent-lane"
-    child_record["closure_check"]["larger-intent status"] = "open"
-    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
-    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
-
-    summary = planning_summary(target=tmp_path)
-    contract = summary["finished_work_inspection_contract"]
-
-    assert {reference["target"] for reference in summary["roadmap"]["candidate_lanes"][0]["references"]} == {"#901", "#902"}
-    assert contract["counts"]["partial_count"] == 1
-    assert contract["counts"]["routed_continuation_count"] == 1
-    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
-    inspection = contract["inspections"][0]
-    assert inspection["classification"] == "routed_partial"
-    assert inspection["routed_by"] == [".agentic-workspace/planning/state.toml roadmap lane parent-lane"]
-    assert contract["derived_follow_up_candidates"] == []
-    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
-
-
-def test_planning_summary_suppresses_archived_child_when_continuation_is_in_work_items(tmp_path: Path) -> None:
-    install_bootstrap(target=tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
+            None,
+            ["#900", "#901", "#902"],
+            "yes",
+            ".agentic-workspace/planning/state.toml roadmap lane parent-lane",
+            ".agentic-workspace/planning/state.toml roadmap lane parent-lane",
+            "roadmap-needs-promotion",
+            {"#901", "#902"},
+        ),
+        (
+            "work-items",
+            """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
@@ -2868,58 +2710,82 @@ work_items = [
 [active]
 execplans = []
 """,
-    )
+            None,
+            ["#800", "#801", "#802"],
+            "yes",
+            ".agentic-workspace/planning/state.toml work_items lane parent-lane",
+            ".agentic-workspace/planning/state.toml work_items lane parent-lane",
+            "roadmap-needs-promotion",
+            None,
+        ),
+    ]
+    for (
+        label,
+        state_text,
+        active_record,
+        child_refs,
+        intent_satisfied,
+        unsolved_intent,
+        routed_by,
+        readiness,
+        expected_roadmap_refs,
+    ) in scenarios:
+        repo = tmp_path / label
+        install_bootstrap(target=repo)
+        _write(repo / ".agentic-workspace/planning/state.toml", state_text)
+        if active_record is not None:
+            active_path_text, parent_ref, active_ref = active_record
+            _write_execplan_record(
+                repo / active_path_text,
+                item_id="active-follow-on",
+                status="in-progress",
+                references=[
+                    {
+                        "kind": "github-issue",
+                        "target": active_ref,
+                        "label": "active follow-on",
+                        "role": "source_intent",
+                        "locator": "issue",
+                    },
+                    {"kind": "github-issue", "target": parent_ref, "label": "parent lane", "role": "parent_intent", "locator": "issue"},
+                ],
+            )
 
-    archive_dir = tmp_path / ".agentic-workspace/planning/execplans/archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    child_path = archive_dir / "completed-child.plan.json"
-    _write_execplan_record(
-        child_path,
-        item_id="completed-child",
-        status="completed",
-        references=[
-            {
-                "kind": "github-issue",
-                "target": "#800",
-                "label": "completed child",
-                "role": "source_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#801",
-                "label": "parent lane",
-                "role": "parent_intent",
-                "locator": "issue",
-            },
-            {
-                "kind": "github-issue",
-                "target": "#802",
-                "label": "next child",
-                "role": "next_lane",
-                "locator": "issue",
-            },
-        ],
-    )
-    child_record = json.loads(child_path.read_text(encoding="utf-8"))
-    child_record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
-    child_record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/state.toml work_items lane parent-lane"
-    child_record["closure_check"]["larger-intent status"] = "open"
-    child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
-    installer_mod._write_execplan_record(record_path=child_path, record=child_record)
+        archive_dir = repo / ".agentic-workspace/planning/execplans/archive"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        child_path = archive_dir / "completed-child.plan.json"
+        roles = ["source_intent", "parent_intent", "next_lane"] if len(child_refs) == 3 else ["closed_item", "parent_intent"]
+        _write_execplan_record(
+            child_path,
+            item_id="completed-child",
+            status="completed",
+            references=[
+                {"kind": "github-issue", "target": target, "label": role.replace("_", " "), "role": role, "locator": "issue"}
+                for target, role in zip(child_refs, roles)
+            ],
+        )
+        child_record = json.loads(child_path.read_text(encoding="utf-8"))
+        child_record["intent_satisfaction"]["was original intent fully satisfied?"] = intent_satisfied
+        child_record["intent_satisfaction"]["unsolved intent passed to"] = unsolved_intent
+        child_record["closure_check"]["larger-intent status"] = "open"
+        child_record["closure_check"]["closure decision"] = "archive-but-keep-lane-open"
+        installer_mod._write_execplan_record(record_path=child_path, record=child_record)
 
-    summary = planning_summary(target=tmp_path)
-    contract = summary["finished_work_inspection_contract"]
+        summary = planning_summary(target=repo)
+        contract = summary["finished_work_inspection_contract"]
 
-    assert contract["counts"]["partial_count"] == 1
-    assert contract["counts"]["routed_continuation_count"] == 1
-    assert contract["counts"]["derived_follow_up_candidate_count"] == 0
-    inspection = contract["inspections"][0]
-    assert inspection["classification"] == "routed_partial"
-    assert inspection["intent_satisfied"] == "yes"
-    assert inspection["routed_by"] == [".agentic-workspace/planning/state.toml work_items lane parent-lane"]
-    assert contract["derived_follow_up_candidates"] == []
-    assert summary["execution_readiness"]["status"] == "roadmap-needs-promotion"
+        if expected_roadmap_refs is not None:
+            assert {reference["target"] for reference in summary["roadmap"]["candidate_lanes"][0]["references"]} == expected_roadmap_refs
+        assert contract["counts"]["partial_count"] == 1, label
+        assert contract["counts"]["routed_continuation_count"] == 1, label
+        assert contract["counts"]["derived_follow_up_candidate_count"] == 0, label
+        inspection = contract["inspections"][0]
+        assert inspection["classification"] == "routed_partial", label
+        assert inspection["routed_by"] == [routed_by], label
+        if intent_satisfied == "yes":
+            assert inspection["intent_satisfied"] == "yes", label
+        assert contract["derived_follow_up_candidates"] == [], label
+        assert summary["execution_readiness"]["status"] == readiness, label
 
 
 def test_planning_summary_suppresses_archived_child_when_parent_ref_is_externally_closed(tmp_path: Path) -> None:

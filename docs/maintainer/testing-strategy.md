@@ -6,11 +6,11 @@ Use this guide before adding or pruning tests in this repository. The goal is to
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:
 
-- root workspace: 1,126 collected tests / 39 files
-- planning package: 345 collected tests
+- root workspace: 1,113 collected tests / 39 files
+- planning package: 341 collected tests
 - memory package: 246 collected tests
 - verification package: 9 collected tests
-- total: 1,726 collected tests / 60 files
+- total: 1,709 collected tests / 60 files
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
@@ -38,7 +38,7 @@ The #1526 ownership slice reviewed root lifecycle/module orchestration against M
 
 The #1531/#1532/#1533 follow-up slice merged narrow duplicate scenario groups in the largest remaining root clusters: report section aliases, model CLI harness raw-read warning variants, and static generated-package completion-gate evidence checks. The affected report/start-preflight, model harness, and generated proof-runner subset moved from 433 collected tests to 428 collected tests while retaining high-risk workflow, scorer-warning, and proof/checker coverage.
 
-The #1535 Verification dogfood slice added the host-neutral `evidence_strategy` diagnostic report and used it to classify #1534 hotspot files before further reduction. The dogfood pass found 7 high-confidence merge candidates across 710 hotspot tests under the conservative exact-prefix heuristic, then merged the clearest model-harness, generated proof-runner, and implement-context groups. The full suite inventory moved from 1,732 collected tests to 1,726 collected tests: 3 new Verification package tests and 9 fewer ordinary root regression tests.
+The #1535 Verification dogfood slice added the host-neutral `evidence_strategy` diagnostic report and used it to classify #1534 hotspot files before further reduction. The dogfood pass found 7 high-confidence merge candidates across 710 hotspot tests under the conservative exact-prefix heuristic, then merged the clearest model-harness, generated proof-runner, implement-context, and planning cleanup/routing groups. A follow-up reduction pass broadened that same scenario-matrix approach to adapter rendering, quality-signal, execution-warning, and generated-proof acceptance variants. The full suite inventory moved from 1,732 collected tests to 1,709 collected tests: 3 new Verification package tests, 22 fewer ordinary root regression tests, and 4 fewer planning package tests.
 
 Use this compact inventory when changing these clusters:
 

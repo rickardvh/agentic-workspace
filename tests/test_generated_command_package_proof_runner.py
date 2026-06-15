@@ -1318,14 +1318,34 @@ def test_static_generated_package_proof_rejects_legacy_generated_python_package_
     assert any("legacy generated Python package directories" in error for error in errors)
 
 
-def test_static_generated_package_proof_accepts_current_runtime_projection_inventory_for_partial_completion() -> None:
-    errors = _checker_case_errors(
-        """
-        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
-        """
-    )
+def test_static_generated_package_proof_accepts_current_static_surfaces() -> None:
+    scenarios = [
+        (
+            "runtime-projection-inventory",
+            """
+            _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
+            """,
+            lambda errors: errors == [],
+        ),
+        (
+            "shipped-source-retirement",
+            """
+            _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
+            """,
+            lambda errors: errors == [],
+        ),
+        (
+            "python-completion-gate",
+            """
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            lambda errors: not [error for error in errors if "Python CLI completion" in error or "Python completion" in error],
+        ),
+    ]
+    for label, script, assertion in scenarios:
+        errors = _checker_case_errors(script)
 
-    assert errors == []
+        assert assertion(errors), label
 
 
 def test_static_generated_package_proof_rejects_shipped_source_cli_backslide() -> None:
@@ -1383,16 +1403,6 @@ def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywor
     assert errors == []
 
 
-def test_static_generated_package_proof_accepts_current_shipped_source_retirement() -> None:
-    errors = _checker_case_errors(
-        """
-        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
-        """
-    )
-
-    assert errors == []
-
-
 def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None:
     checker = _load_checker()
 
@@ -1416,16 +1426,6 @@ def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_stat
     )
 
     assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
-
-
-def test_static_generated_package_proof_accepts_current_python_completion_gate() -> None:
-    errors = _checker_case_errors(
-        """
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert not [error for error in errors if "Python CLI completion" in error or "Python completion" in error]
 
 
 def test_static_generated_package_proof_rejects_missing_primitive_conformance_case() -> None:

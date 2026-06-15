@@ -935,108 +935,22 @@ elimination_target = "promote"
     assert "route promotion or dismissal during closeout" in source["claim_effect"]["advises"]
 
 
-def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_change_impact(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build change_impact")
-
-    monkeypatch.setattr(cli, "_change_impact_payload", fail_change_impact)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "change_impact" not in payload
-    assert "change_impact" not in payload["context"]
-
-
-def test_implement_tiny_profile_does_not_compute_task_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_task_contract(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build task_contract")
-
-    monkeypatch.setattr(cli, "_task_contract_payload", fail_task_contract)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--task",
-                "Update README wording",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "task_contract" not in payload
-    assert "task_contract" not in payload["context"]
-    assert "task_contract" in payload["drill_down"]["available_selectors"]
-
-
-def test_implement_tiny_profile_does_not_compute_routine_work_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_routine_context(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build routine_work_context")
-
-    monkeypatch.setattr(cli, "_routine_work_context_payload", fail_routine_context)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "routine_work_context" not in payload
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
-
-
-def test_implement_tiny_profile_does_not_compute_assurance_requirements(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
+def test_implement_tiny_profile_does_not_compute_deferred_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    scenarios = [
+        ("change_impact", "_change_impact_payload", False, []),
+        ("task_contract", "_task_contract_payload", True, ["task_contract"]),
+        ("routine_work_context", "_routine_work_context_payload", False, ["routine_work_context"]),
+        ("assurance_requirements", "_assurance_requirements_report_payload", True, ["assurance_requirements"]),
+    ]
+    for field, helper_name, include_task, expected_selectors in scenarios:
+        repo = tmp_path / field
+        repo.mkdir()
+        _init_git_repo(repo)
+        _write_empty_planning_state(repo)
+        if field == "assurance_requirements":
+            _write(
+                repo / ".agentic-workspace/config.toml",
+                """
 schema_version = 1
 
 [assurance.requirements.docs_review]
@@ -1046,36 +960,26 @@ required_evidence = ["review_recorded"]
 force = "required-before-closeout"
 blocking_claims = ["claim-work-complete"]
 """,
-    )
-    _write(tmp_path / "README.md", "hello\n")
+            )
+        _write(repo / "README.md", "hello\n")
 
-    def fail_assurance_requirements(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build assurance_requirements")
+        def fail_deferred_helper(**_: object) -> dict[str, object]:
+            raise AssertionError(f"ordinary tiny implement output should not build {field}")
 
-    monkeypatch.setattr(cli, "_assurance_requirements_report_payload", fail_assurance_requirements)
+        monkeypatch.setattr(cli, helper_name, fail_deferred_helper)
+        args = ["implement", "--target", str(repo), "--changed", "README.md"]
+        if include_task:
+            args.extend(["--task", "Update README wording"])
+        args.extend(["--format", "json"])
 
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--task",
-                "Update README wording",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+        assert cli.main(args) == 0, field
 
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "assurance_requirements" not in payload
-    assert "assurance_requirements" not in payload["context"]
-    assert "assurance_requirements" in payload["drill_down"]["available_selectors"]
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "implementer-context-tiny/v1", field
+        assert field not in payload, field
+        assert field not in payload["context"], field
+        for selector in expected_selectors:
+            assert selector in payload["drill_down"]["available_selectors"], field
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:

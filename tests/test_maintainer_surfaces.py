@@ -490,7 +490,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
-    assert "1,726 collected tests / 60 files" in strategy
+    assert "1,709 collected tests / 60 files" in strategy
     assert "| Keep ordinary |" in strategy
     assert "| Merge |" in strategy
     assert "| Convert |" in strategy
