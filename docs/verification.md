@@ -38,7 +38,7 @@ The Verification report also includes a diagnostic `evidence_strategy` section:
 ```json
 {
   "kind": "agentic-workspace/verification-evidence-strategy/v1",
-  "status": "ready"
+  "status": "attention"
 }
 ```
 
