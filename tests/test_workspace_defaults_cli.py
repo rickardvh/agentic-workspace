@@ -140,15 +140,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["operating_questions"]["questions"][1]["ask_first"] == "agentic-workspace summary --format json"
     assert payload["operating_questions"]["questions"][2]["ask_first"] == "agentic-workspace preflight --target ./repo --format json"
     assert payload["operating_questions"]["questions"][2]["then_if_needed"][0] == "agentic-workspace report --target ./repo --format json"
-    assert payload["install_profiles"]["canonical_doc"] == "docs/package/modules.md"
-    assert payload["install_profiles"]["command"] == "agentic-workspace defaults --section install_profiles --format json"
-    assert payload["install_profiles"]["rule"].startswith("Use an installed public workspace entrypoint")
-    assert payload["install_profiles"]["cli_availability"]["preferred"].startswith("Use `agentic-workspace` already installed")
-    assert "not the default host-repo install path" in payload["install_profiles"]["cli_availability"]["temporary_fallback"]
-    assert payload["install_profiles"]["recommendation_order"] == ["memory", "planning", "planning,memory"]
-    assert payload["install_profiles"]["profiles"][0]["modules"] == ["memory"]
-    assert payload["install_profiles"]["profiles"][1]["modules"] == ["planning"]
-    assert payload["install_profiles"]["lightweight_profile"]["modules"] == ["memory"]
+    assert payload["module_selection"]["canonical_doc"] == "docs/package/modules.md"
+    assert payload["module_selection"]["command"] == "agentic-workspace defaults --section module_selection --format json"
+    assert payload["module_selection"]["rule"].startswith("Use an installed public workspace entrypoint")
+    assert payload["module_selection"]["cli_availability"]["preferred"].startswith("Use `agentic-workspace` already installed")
+    assert "not the default host-repo install path" in payload["module_selection"]["cli_availability"]["temporary_fallback"]
+    assert payload["module_selection"]["recommendation_order"] == ["memory", "planning", "planning,memory"]
+    assert payload["module_selection"]["module_options"][0]["modules"] == ["memory"]
+    assert payload["module_selection"]["module_options"][1]["modules"] == ["planning"]
+    assert payload["module_selection"]["lightweight_selection"]["modules"] == ["memory"]
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert (
         "agentic-workspace install --target ./repo --modules <memory|planning|planning,memory>"
@@ -1169,23 +1169,23 @@ def test_defaults_operating_questions_section_selector_returns_compact_contract_
     assert "docs/package/modules.md" in payload["refs"]
 
 
-def test_defaults_install_profiles_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--verbose", "--section", "install_profiles", "--format", "json"]) == 0
+def test_defaults_module_selection_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--verbose", "--section", "module_selection", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
     assert payload["surface"] == "defaults"
-    assert payload["selector"] == {"section": "install_profiles"}
+    assert payload["selector"] == {"section": "module_selection"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/package/modules.md"
     assert payload["answer"]["default_entrypoint"] == "agentic-workspace"
     assert "target repo's environment" in payload["answer"]["cli_availability"]["preferred"]
     assert payload["answer"]["default_answer"].startswith("Start with `memory`")
     assert payload["answer"]["recommendation_order"] == ["memory", "planning", "planning,memory"]
-    assert payload["answer"]["profiles"][0]["modules"] == ["memory"]
-    assert payload["answer"]["profiles"][2]["modules"] == ["planning", "memory"]
+    assert payload["answer"]["module_options"][0]["modules"] == ["memory"]
+    assert payload["answer"]["module_options"][2]["modules"] == ["planning", "memory"]
     assert payload["answer"]["partial_adoption"][1]["combination"] == "planning only"
-    assert payload["answer"]["lightweight_profile"]["modules"] == ["memory"]
+    assert payload["answer"]["lightweight_selection"]["modules"] == ["memory"]
     assert "docs/package/modules.md" in payload["refs"]
 
 

@@ -13,8 +13,35 @@
       "const": 1,
       "default": 1
     },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "memory",
+              "verification"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs.",
+          "default": [
+            "planning",
+            "memory"
+          ]
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "description": "Authoritative module enablement for this repository."
+    },
     "workspace": {
-      "description": "Repo-owned workspace policy for install presets, startup adapter shape, output posture, and advanced feature opt-ins.",
+      "description": "Repo-owned workspace policy for startup adapter shape, output posture, and advanced feature opt-ins. Module selection lives in top-level modules.enabled.",
       "type": "object",
       "default": {},
       "x-agentic-workspace-doc-role": "public",
@@ -563,33 +590,6 @@
         }
       },
       "additionalProperties": true
-    },
-    "modules": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "planning",
-              "memory",
-              "verification"
-            ]
-          },
-          "uniqueItems": true,
-          "description": "Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs.",
-          "default": [
-            "planning",
-            "memory"
-          ]
-        }
-      },
-      "required": [
-        "enabled"
-      ],
-      "description": "Authoritative module enablement for this repository."
     }
   },
   "x-agentic-workspace-doc-role": "public-reference",

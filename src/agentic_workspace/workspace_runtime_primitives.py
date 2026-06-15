@@ -4098,7 +4098,6 @@ def _build_module_descriptor(
         detector=detector,
         selection_rank=int(metadata["selection_rank"]),
         default_enabled=bool(metadata.get("default_enabled", name in {"planning", "memory"})),
-        include_in_full_preset=bool(metadata.get("include_in_full_preset", metadata.get("default_enabled", False))),
         install_signals=tuple((Path(path) for path in metadata["install_signals"])),
         workflow_surfaces=tuple((Path(path) for path in metadata["workflow_surfaces"])),
         generated_artifacts=tuple((Path(path) for path in metadata["generated_artifacts"])),

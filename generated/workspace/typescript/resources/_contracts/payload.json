@@ -1791,94 +1791,6 @@
     },
     "rule": "Use the compact signal shape to capture friction before deciding whether to fix, route, remember, review, or dismiss it."
   },
-  "install_profiles": {
-    "canonical_doc": "docs/package/modules.md",
-    "cli_availability": {
-      "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
-      "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
-      "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
-      "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners."
-    },
-    "command": "agentic-workspace defaults --section install_profiles --format json",
-    "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `planning,memory` only when both are justified.",
-    "default_entrypoint": "agentic-workspace",
-    "lightweight_profile": {
-      "modules": [
-        "memory"
-      ],
-      "summary": "Choose `memory` when you want the smallest useful shared core.",
-      "why": "It keeps the visible surface smaller than planning plus memory while still giving the repo durable knowledge and compact routing."
-    },
-    "partial_adoption": [
-      {
-        "combination": "memory only",
-        "primary_writable_surfaces": [
-          ".agentic-workspace/memory/repo/"
-        ],
-        "supported": true
-      },
-      {
-        "combination": "planning only",
-        "primary_writable_surfaces": [
-          ".agentic-workspace/planning/state.toml",
-          ".agentic-workspace/planning/execplans/"
-        ],
-        "supported": true
-      },
-      {
-        "combination": "memory + planning",
-        "primary_writable_surfaces": [
-          "Planning for active-now state",
-          "memory for durable knowledge"
-        ],
-        "supported": true
-      }
-    ],
-    "profiles": [
-      {
-        "good_fit": [
-          "subsystem knowledge is expensive to rediscover",
-          "recurring traps or operator sequences should be shared",
-          "the repo already has task tracking but lacks durable shared knowledge"
-        ],
-        "main_problem": "Stable repo knowledge keeps getting rediscovered.",
-        "modules": [
-          "memory"
-        ],
-        "why": "Memory is the smallest useful core module for durable context and quiet routing."
-      },
-      {
-        "good_fit": [
-          "work spans many short sessions",
-          "active execution drifts without a checked-in queue",
-          "backlog tools exist, but active implementation still fragments"
-        ],
-        "main_problem": "Active work keeps drifting or fragmenting.",
-        "modules": [
-          "planning"
-        ],
-        "why": "Planning gives a checked-in active queue and bounded execplans."
-      },
-      {
-        "good_fit": [
-          "the repo wants both restartable execution and lower rediscovery cost",
-          "agents are regular maintainers and need both active state and durable context"
-        ],
-        "main_problem": "You want both durable knowledge and checked-in execution.",
-        "modules": [
-          "planning",
-          "memory"
-        ],
-        "why": "The workspace layer composes both modules through one lifecycle entrypoint."
-      }
-    ],
-    "recommendation_order": [
-      "memory",
-      "planning",
-      "planning,memory"
-    ],
-    "rule": "Use an installed public workspace entrypoint and choose the smallest module selection that matches the repo's main operating problem."
-  },
   "intent": {
     "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
     "command": "agentic-workspace defaults --section intent --format json",
@@ -2655,6 +2567,96 @@
       "cheap switching across agents and subscriptions",
       "persisted shared knowledge beats rediscovery"
     ]
+  },
+  "module_selection": {
+    "canonical_doc": "docs/package/modules.md",
+    "cli_availability": {
+      "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
+      "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
+      "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
+      "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners."
+    },
+    "command": "agentic-workspace defaults --section module_selection --format json",
+    "compatibility_note": "This section is the module selection contract; module enablement is not a preset system.",
+    "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `planning,memory` only when both are justified.",
+    "default_entrypoint": "agentic-workspace",
+    "lightweight_selection": {
+      "modules": [
+        "memory"
+      ],
+      "summary": "Choose `memory` when you want the smallest useful shared core.",
+      "why": "It keeps the visible surface smaller than planning plus memory while still giving the repo durable knowledge and compact routing."
+    },
+    "module_options": [
+      {
+        "good_fit": [
+          "subsystem knowledge is expensive to rediscover",
+          "recurring traps or operator sequences should be shared",
+          "the repo already has task tracking but lacks durable shared knowledge"
+        ],
+        "main_problem": "Stable repo knowledge keeps getting rediscovered.",
+        "modules": [
+          "memory"
+        ],
+        "why": "Memory is the smallest useful core module for durable context and quiet routing."
+      },
+      {
+        "good_fit": [
+          "work spans many short sessions",
+          "active execution drifts without a checked-in queue",
+          "backlog tools exist, but active implementation still fragments"
+        ],
+        "main_problem": "Active work keeps drifting or fragmenting.",
+        "modules": [
+          "planning"
+        ],
+        "why": "Planning gives a checked-in active queue and bounded execplans."
+      },
+      {
+        "good_fit": [
+          "the repo wants both restartable execution and lower rediscovery cost",
+          "agents are regular maintainers and need both active state and durable context"
+        ],
+        "main_problem": "You want both durable knowledge and checked-in execution.",
+        "modules": [
+          "planning",
+          "memory"
+        ],
+        "why": "The workspace layer composes both modules through one lifecycle entrypoint."
+      }
+    ],
+    "partial_adoption": [
+      {
+        "combination": "memory only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/memory/repo/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "planning only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "memory + planning",
+        "primary_writable_surfaces": [
+          "Planning for active-now state",
+          "memory for durable knowledge"
+        ],
+        "supported": true
+      }
+    ],
+    "recommendation_order": [
+      "memory",
+      "planning",
+      "planning,memory"
+    ],
+    "rule": "Use an installed public workspace entrypoint and choose the smallest module enablement that matches the repo's main operating problem.",
+    "selector_name": "module_selection"
   },
   "operating_questions": {
     "canonical_doc": "docs/package/modules.md",

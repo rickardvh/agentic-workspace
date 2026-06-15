@@ -4,7 +4,7 @@
     "decision": "bundle-first-party-modules-for-now",
     "status": "intentional-temporary",
     "python_package_dependency_model": "The AW Python package currently depends on the bundled planning, memory, and verification module distributions unconditionally.",
-    "repo_footprint_rule": "Presets choose checked-in repository footprint; routing-only minimizes installed repo state, not Python package dependencies.",
+    "repo_footprint_rule": "Repo-owned modules.enabled chooses checked-in repository footprint; [] minimizes installed repo state, not Python package dependencies.",
     "why": "Keeping first-party modules installed with the root command preserves simple installed-CLI lifecycle orchestration while generic module manifests and optional-module loading are still being shaped.",
     "bounded_by": [
       "#490",
@@ -19,7 +19,7 @@
     "must_preserve": [
       "simple root lifecycle invocation",
       "routing-only as smallest checked-in repo footprint",
-      "planning, memory, and verification as first-party examples of the same module contract third parties use"
+      "planning, memory, and verification as first-party core modules using an internal contract that may later inform external module support"
     ]
   },
   "participation_model": {

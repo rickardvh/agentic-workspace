@@ -29,7 +29,6 @@ class ModuleDescriptor:
     commands: dict[str, Callable[..., Any]]
     detector: Callable[[Path], bool]
     selection_rank: int
-    include_in_full_preset: bool
     install_signals: tuple[Path, ...]
     workflow_surfaces: tuple[Path, ...]
     generated_artifacts: tuple[Path, ...]

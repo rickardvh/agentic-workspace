@@ -15,7 +15,7 @@ Run lifecycle commands from that target repo, or pass it explicitly with `--targ
 Use an installed `agentic-workspace` CLI from the target repo's environment when available.
 
 ```bash
-agentic-workspace defaults --section install_profiles --format json
+agentic-workspace defaults --section module_selection --format json
 agentic-workspace init --target . --modules memory
 ```
 

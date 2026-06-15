@@ -317,7 +317,6 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
         commands={"doctor": _doctor_handler},
         detector=lambda detected_root: True,
         selection_rank=10,
-        include_in_full_preset=True,
         install_signals=(Path("TODO.md"),),
         workflow_surfaces=(Path("TODO.md"),),
         generated_artifacts=(),
@@ -328,6 +327,7 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
         capabilities=(),
         dependencies=(),
         conflicts=(),
+        default_enabled=True,
         result_contract=cli.ModuleResultContract(
             schema_version="workspace-module-report/v1",
             guaranteed_fields=("module",),
@@ -377,7 +377,6 @@ def test_selected_modules_rejects_declared_missing_dependency(tmp_path: Path) ->
         commands=memory_descriptor.commands,
         detector=memory_descriptor.detector,
         selection_rank=memory_descriptor.selection_rank,
-        include_in_full_preset=memory_descriptor.include_in_full_preset,
         install_signals=memory_descriptor.install_signals,
         workflow_surfaces=memory_descriptor.workflow_surfaces,
         generated_artifacts=memory_descriptor.generated_artifacts,
@@ -388,6 +387,7 @@ def test_selected_modules_rejects_declared_missing_dependency(tmp_path: Path) ->
         capabilities=memory_descriptor.capabilities,
         dependencies=("planning",),
         conflicts=(),
+        default_enabled=memory_descriptor.default_enabled,
         result_contract=memory_descriptor.result_contract,
     )
 
@@ -405,7 +405,6 @@ def test_selected_modules_rejects_declared_conflict(tmp_path: Path) -> None:
         commands=planning_descriptor.commands,
         detector=planning_descriptor.detector,
         selection_rank=planning_descriptor.selection_rank,
-        include_in_full_preset=planning_descriptor.include_in_full_preset,
         install_signals=planning_descriptor.install_signals,
         workflow_surfaces=planning_descriptor.workflow_surfaces,
         generated_artifacts=planning_descriptor.generated_artifacts,
@@ -416,6 +415,7 @@ def test_selected_modules_rejects_declared_conflict(tmp_path: Path) -> None:
         capabilities=planning_descriptor.capabilities,
         dependencies=(),
         conflicts=("memory",),
+        default_enabled=planning_descriptor.default_enabled,
         result_contract=planning_descriptor.result_contract,
     )
 
@@ -430,7 +430,6 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
         commands={},
         detector=lambda detected_root: False,
         selection_rank=30,
-        include_in_full_preset=True,
         install_signals=(Path("signals.md"),),
         workflow_surfaces=(Path("signals.md"),),
         generated_artifacts=(),
