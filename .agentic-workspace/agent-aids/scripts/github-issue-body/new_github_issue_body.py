@@ -26,10 +26,6 @@ TEMPLATE_BY_KIND = {
 
 COMPLETION_BOUNDARY_FIELDS = {
     "final_satisfaction",
-    "bounded_slice_success",
-    "partial_pr_may_close",
-    "required_follow_up_owner",
-    "required_residual_intent",
     "evidence_required_for_final_completion",
 }
 
@@ -244,17 +240,6 @@ def _completion_boundary_default(*, field_id: str, fields: dict[str, str]) -> st
         if final_hint:
             return f"Final completion requires satisfying: {final_hint}"
         return "The issue is complete only when the final intended outcome is delivered and proven, or explicitly re-scoped by the issue owner."
-    if field_id == "bounded_slice_success":
-        return (
-            "A partial slice may land when it is coherent, proves its local behavior, records remaining intent, "
-            "and names the continuation owner."
-        )
-    if field_id == "partial_pr_may_close":
-        return "no"
-    if field_id == "required_follow_up_owner":
-        return "This issue remains the follow-up owner unless a specific owner is named."
-    if field_id == "required_residual_intent":
-        return "Any part of final satisfaction not delivered by a partial slice remains open here."
     if field_id == "evidence_required_for_final_completion":
         if evidence_hint:
             return f"Final completion evidence must prove the final intended state, including: {evidence_hint}"
@@ -324,7 +309,6 @@ def _lane_request_from_record(record: dict[str, Any], *, source_ref: dict[str, s
     outcome = str(record.get("lane_outcome") or "").strip()
     purpose = str(record.get("purpose_for_parent") or "").strip()
     proof = str(record.get("proof_strategy") or "").strip()
-    residual = str(record.get("residual_lane_work") or "").strip()
     parent = str(record.get("parent_decomposition_ref") or "").strip()
     references = [source_ref]
     if parent:
@@ -349,10 +333,6 @@ def _lane_request_from_record(record: dict[str, Any], *, source_ref: dict[str, s
         ).strip(),
         "acceptance": proof or "The issue body accurately reflects the structured Planning lane record.",
         "final_satisfaction": outcome or "The generated issue is complete when the lane outcome is delivered and proven.",
-        "bounded_slice_success": "A partial PR may land only when it records remaining lane intent and continuation owner.",
-        "partial_pr_may_close": "no",
-        "required_follow_up_owner": source_ref.get("path", "") or lane_id,
-        "required_residual_intent": residual or "Any lane intent not delivered by a partial slice remains on the Planning lane.",
         "evidence_required_for_final_completion": proof or "Lane proof aggregation must show the final intended state.",
         "planning_expectations": "Generated from structured Planning lane data; do not reconstruct this body with shell property interpolation.",
         "related_references": _references_text(references),
@@ -416,11 +396,6 @@ def request_from_decomposition(*, target_root: Path, decomposition: str, lane_id
         ),
         "acceptance": str(lane.get("proof") or "").strip(),
         "final_satisfaction": str(lane.get("outcome") or "").strip(),
-        "bounded_slice_success": str(lane.get("slice_contribution_to_parent") or "").strip()
-        or "A coherent lane slice may land when residual parent intent remains explicit.",
-        "partial_pr_may_close": "no",
-        "required_follow_up_owner": str(lane.get("owner_surface") or source_path).strip(),
-        "required_residual_intent": str(lane.get("residual_parent_intent") or "").strip(),
         "evidence_required_for_final_completion": str(lane.get("proof") or record.get("parent_acceptance", {}).get("parent_proof_required") or "").strip(),
         "planning_expectations": "Generated from structured Planning decomposition data; select lanes with --lane-id.",
         "related_references": _references_text([source_ref]),

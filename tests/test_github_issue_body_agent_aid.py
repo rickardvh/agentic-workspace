@@ -24,10 +24,6 @@ def _write_json(path: Path, payload: dict) -> None:
 def test_issue_templates_include_completion_boundary_fields() -> None:
     required_fields = {
         "final_satisfaction",
-        "bounded_slice_success",
-        "partial_pr_may_close",
-        "required_follow_up_owner",
-        "required_residual_intent",
         "evidence_required_for_final_completion",
     }
 
@@ -58,12 +54,11 @@ def test_direction_issue_body_uses_repo_template_fields() -> None:
     assert rendered["labels"] == ["planning"]
     assert "## Problem / intent\nMake the right issue shape cheap." in rendered["body"]
     assert "## Acceptance / success signal\nGenerated body has template headings." in rendered["body"]
-    assert "## Partial PR may close\nno" in rendered["body"]
     assert "## Final satisfaction\nFinal completion requires satisfying: Agents use the repo template fields." in rendered["body"]
     assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
 
 
-def test_direction_issue_body_preserves_completion_boundary_fields() -> None:
+def test_direction_issue_body_preserves_final_completion_fields() -> None:
     rendered = issue_body.render_issue(
         kind="direction",
         title="Completion boundary",
@@ -74,10 +69,6 @@ def test_direction_issue_body_preserves_completion_boundary_fields() -> None:
             "scope": "In scope: issue authoring.",
             "acceptance": "Generated body has final and partial closure fields.",
             "final_satisfaction": "The parent issue closes only when closeout and issue authoring both preserve the boundary.",
-            "bounded_slice_success": "A first slice can add fields and leave the parent open.",
-            "partial_pr_may_close": "no",
-            "required_follow_up_owner": "#1187",
-            "required_residual_intent": "Closeout examples still need proof.",
             "evidence_required_for_final_completion": "Issue body helper output and closeout_trust example.",
         },
     )
@@ -86,10 +77,6 @@ def test_direction_issue_body_preserves_completion_boundary_fields() -> None:
         "## Final satisfaction\nThe parent issue closes only when closeout and issue authoring both preserve the boundary."
         in rendered["body"]
     )
-    assert "## Bounded slice success\nA first slice can add fields and leave the parent open." in rendered["body"]
-    assert "## Partial PR may close\nno" in rendered["body"]
-    assert "## Required follow-up owner\n#1187" in rendered["body"]
-    assert "## Required residual intent\nCloseout examples still need proof." in rendered["body"]
     assert "## Evidence required for final completion\nIssue body helper output and closeout_trust example." in rendered["body"]
 
 
@@ -109,11 +96,10 @@ def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
     assert rendered["labels"] == ["review"]
     assert "## Issue kind\nReview / trust gap" in rendered["body"]
     assert "## Should the product absorb this first?\nYes" in rendered["body"]
-    assert "## Partial PR may close\nno" in rendered["body"]
     assert "## Final satisfaction\nFinal completion requires satisfying: Agents preserve form fields." in rendered["body"]
 
 
-def test_bug_issue_body_defaults_completion_boundary_fields() -> None:
+def test_bug_issue_body_defaults_final_completion_fields() -> None:
     rendered = issue_body.render_issue(
         kind="bug",
         title="Regression",
@@ -131,8 +117,7 @@ def test_bug_issue_body_defaults_completion_boundary_fields() -> None:
         "## Final satisfaction\nFinal completion requires satisfying: The command preserves the remaining bug-fix intent."
         in rendered["body"]
     )
-    assert "## Bounded slice success\nA partial slice may land" in rendered["body"]
-    assert "## Partial PR may close\nno" in rendered["body"]
+    assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
 
 
 def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
@@ -278,7 +263,7 @@ def test_issue_body_renders_from_decomposition_candidate_lane(tmp_path: Path) ->
         }
     ]
     assert "## Problem / intent\nDirectly addresses Planning-derived issue generation." in rendered["body"]
-    assert "## Required residual intent\nFurther lanes remain in the decomposition." in rendered["body"]
+    assert "## Evidence required for final completion\nThe source-loading test selects lane-two." in rendered["body"]
 
 
 def test_issue_body_cli_rejects_mixed_structured_and_field_modes(tmp_path: Path) -> None:

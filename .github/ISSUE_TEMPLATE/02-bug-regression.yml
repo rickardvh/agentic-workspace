@@ -63,44 +63,6 @@ body:
       required: true
 
   - type: textarea
-    id: bounded_slice_success
-    attributes:
-      label: Bounded slice success
-      description: What useful partial fix may land while preserving remaining bug intent and ownership?
-      placeholder: Describe any partial mitigation that may land without claiming the bug is fixed.
-    validations:
-      required: true
-
-  - type: dropdown
-    id: partial_pr_may_close
-    attributes:
-      label: Partial PR may close
-      description: Can a partial fix close this bug without satisfying the final expected behavior?
-      options:
-        - "no"
-        - "yes"
-    validations:
-      required: true
-
-  - type: textarea
-    id: required_follow_up_owner
-    attributes:
-      label: Required follow-up owner
-      description: If a partial fix lands, where must remaining work be owned?
-      placeholder: Issue, parent lane, planning state, module owner, or none.
-    validations:
-      required: true
-
-  - type: textarea
-    id: required_residual_intent
-    attributes:
-      label: Required residual intent
-      description: What bug-fix intent must remain open after a partial fix?
-      placeholder: Name the remaining behavior gap that must not be lost.
-    validations:
-      required: true
-
-  - type: textarea
     id: evidence_required_for_final_completion
     attributes:
       label: Evidence required for final completion
