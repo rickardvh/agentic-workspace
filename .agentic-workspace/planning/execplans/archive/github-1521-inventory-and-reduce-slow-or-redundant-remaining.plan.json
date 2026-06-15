@@ -115,7 +115,7 @@
     "activation trigger": "Continue with focused follow-up issues #1531, #1532, and #1533 after #1530 lands."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, live-checkout preflight modes are grouped as one scenario matrix, maintainer inventory docs now match current counts and conformance surfaces, and root/package ownership guidance is explicit.",
+    "what this slice enabled": "Reduced packaging, generated proof-runner, preflight, inventory, and Memory current-view test duplication while recording root/package ownership guidance.",
     "intentionally deferred": "The #1521 parent lane remains open for known follow-up clusters: report/start-preflight (#1531), model CLI harness (#1532), and generated-package proof runner (#1533).",
     "discovered implications": "The broad root duration run exceeded 10 minutes; future slices should avoid full-suite proof unless required.",
     "proof achieved now": "packaging subset and lint passed before final proof selection",
@@ -410,6 +410,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.\nIntent satisfied: no; this slice completed #1526/#1527, while #1521 remains open as the parent lane.\nArchive decision: archive-but-keep-lane-open\nProof: passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset\nChanged surfaces: testing strategy; Memory current-memory tests; maintainer guard; planning closeout record\nDurable residue: issue (#1521, #1531, #1532, #1533)\nMemory learning: none\nFollow-up: #1531, #1532, and #1533\nCompletion gate: allowed for the slice only\nCompletion claim allowed: bounded-slice-complete"
+    "text": "Generated closeout adapter; structured fields are authoritative. Slice completed #1526/#1527; #1521 remains open with follow-ups #1531, #1532, and #1533. Archive decision: archive-but-keep-lane-open. Proof passed; completion claim is bounded-slice-complete."
   }
 }

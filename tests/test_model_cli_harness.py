@@ -2650,67 +2650,39 @@ def test_model_cli_harness_scores_vague_outcome_solution_jump() -> None:
 def test_model_cli_harness_scores_vague_outcome_raw_reads_without_compact_startup() -> None:
     harness = _load_harness()
 
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace/WORKFLOW.md\n"
-                "Read .agentic-workspace/planning/schemas/planning-review.schema.json\n"
-                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
-                "Satisfaction evidence is structured review proof."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
+    raw_read_outputs = [
+        (
+            "posix",
+            "Read .agentic-workspace/WORKFLOW.md\n"
+            "Read .agentic-workspace/planning/schemas/planning-review.schema.json\n"
+            "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+            "Satisfaction evidence is structured review proof.",
+        ),
+        (
+            "windows",
+            "Read .agentic-workspace\\WORKFLOW.md\n"
+            "Read .agentic-workspace\\planning\\schemas\\planning-review.schema.json\n"
+            "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+            "Satisfaction evidence is structured review proof.",
+        ),
+        (
+            "later-compact-mention",
+            "Read .agentic-workspace\\WORKFLOW.md\n"
+            "The intended outcome is handoff trust. Inspect planning first. "
+            "Satisfaction evidence is structured proof. Later, a next agent could run "
+            "agentic-workspace summary --target . --format json.",
+        ),
+    ]
+    for label, stdout in raw_read_outputs:
+        warnings = harness._semantic_workflow_warnings(
+            scenario_id="intent-satisfaction-review",
+            prompt_variant_id="vague-outcome-trust",
+            result={"stdout": stdout, "stderr": ""},
+            mutation_summary={"status": "clean"},
+        )
 
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
-
-
-def test_model_cli_harness_scores_vague_outcome_windows_raw_reads_without_compact_startup() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace\\WORKFLOW.md\n"
-                "Read .agentic-workspace\\planning\\schemas\\planning-review.schema.json\n"
-                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
-                "Satisfaction evidence is structured review proof."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
-
-
-def test_model_cli_harness_scores_vague_outcome_raw_reads_before_later_compact_mention() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace\\WORKFLOW.md\n"
-                "The intended outcome is handoff trust. Inspect planning first. "
-                "Satisfaction evidence is structured proof. Later, a next agent could run "
-                "agentic-workspace summary --target . --format json."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
+        messages = [warning["message"] for warning in warnings]
+        assert any("raw workspace files before using compact startup" in message for message in messages), label
 
 
 def test_model_cli_harness_accepts_vague_outcome_raw_reads_after_compact_startup() -> None:

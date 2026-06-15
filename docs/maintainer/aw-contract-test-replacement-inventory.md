@@ -39,6 +39,12 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | `tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases` | `defaults.root-cli-authority.success` selected field `answer.command` ends with the root CLI authority command. | `defaults.root-cli-authority.process` / `minimal-repo` | The test still proves the Python conformance runner loads and executes the case successfully. |
 | `tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases` | `modules.report-router.success` selected field `kind` equals the modules router kind. | `modules.report.process` / `minimal-repo` | The test still proves the Python conformance runner loads and executes the case successfully. |
 
+## Merged Ordinary Proof Checks
+
+| Old ordinary tests | Merge reason | Remaining ordinary coverage |
+| --- | --- | --- |
+| `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_python_completion_gate_evidence`, `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence`, `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence` | All three tests remove one required `python_cli_completion.completion_gate.satisfied_by` item and assert that static proof rejects the missing evidence. | `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_completion_gate_evidence` keeps the checker-internal contract as one scenario matrix. |
+
 ## Kept Ordinary
 
 | Surface | Keep reason | Future conversion condition |

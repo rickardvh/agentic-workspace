@@ -2779,34 +2779,31 @@ def test_report_section_selector_returns_external_work_reconciliation(tmp_path: 
     assert answer["workspace_report_view"]["delta_section"] == "external_work_delta"
 
 
-def test_report_section_selector_accepts_current_work_alias(tmp_path: Path, capsys) -> None:
+def test_report_section_selector_accepts_current_work_aliases(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["report", "--target", str(target), "--section", "current_work", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["profile"] == "compact-contract-answer/v1"
-    assert payload["selector"] == {"section": "current_work", "resolved_section": "effective_authority.current_work"}
-    assert payload["answer"]["status"] in {"absent", "direct-or-no-active-plan"}
-
-
-def test_report_section_selector_accepts_current_external_work_alias(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
-    capsys.readouterr()
-
-    assert cli.main(["report", "--target", str(target), "--section", "current_external_work", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["profile"] == "compact-contract-answer/v1"
-    assert payload["selector"] == {"section": "current_external_work", "resolved_section": "external_work_reconciliation"}
-    assert payload["answer"]["kind"] == "planning-external-work-reconciliation/v1"
+    scenarios = [
+        (
+            "current_work",
+            {"section": "current_work", "resolved_section": "effective_authority.current_work"},
+            lambda answer: answer["status"] in {"absent", "direct-or-no-active-plan"},
+        ),
+        (
+            "current_external_work",
+            {"section": "current_external_work", "resolved_section": "external_work_reconciliation"},
+            lambda answer: answer["kind"] == "planning-external-work-reconciliation/v1",
+        ),
+    ]
+    for section, expected_selector, answer_check in scenarios:
+        assert cli.main(["report", "--target", str(target), "--section", section, "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["profile"] == "compact-contract-answer/v1"
+        assert payload["selector"] == expected_selector
+        assert answer_check(payload["answer"])
 
 
 def test_report_section_selector_error_recommends_compact_recovery(tmp_path: Path, capsys) -> None:

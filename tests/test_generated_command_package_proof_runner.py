@@ -1063,58 +1063,28 @@ def test_static_generated_package_proof_rejects_read_only_routing_for_mutating_t
     assert any("weak-agent-safe-adapter while generated commands include mutation-capable effects" in error for error in errors)
 
 
-def test_static_generated_package_proof_requires_python_completion_gate_evidence() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-            item
-            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-            if item["id"] != "python-docker-conformance"
-        ]
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
+def test_static_generated_package_proof_requires_completion_gate_evidence() -> None:
+    required_gate_items = [
+        "python-docker-conformance",
+        "representative-operation-ir-runtime-consumed",
+        "operation-execution-inventory-exhaustive",
+    ]
+    for item_id in required_gate_items:
+        errors = _checker_case_errors(
+            f"""
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+                item
+                for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+                if item["id"] != {item_id!r}
+            ]
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            _emit({{"errors": checker._validate_static_surfaces()}})
+            """
+        )
 
-    assert any("python-docker-conformance" in error for error in errors)
-
-
-def test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-            item
-            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-            if item["id"] != "representative-operation-ir-runtime-consumed"
-        ]
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("representative-operation-ir-runtime-consumed" in error for error in errors)
-
-
-def test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-            item
-            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-            if item["id"] != "operation-execution-inventory-exhaustive"
-        ]
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("operation-execution-inventory-exhaustive" in error for error in errors)
+        assert any(item_id in error for error in errors), item_id
 
 
 def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift() -> None:
