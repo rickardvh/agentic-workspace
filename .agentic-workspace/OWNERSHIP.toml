@@ -188,10 +188,10 @@ escalate_when = ["change widens public command contract", "change requires plann
 
 [[subsystems]]
 id = "model-cli-harness"
-paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "docs/maintainer/retired-test-knowledge/test_model_cli_harness.py"]
+paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "docs/maintainer/test-knowledge-inventory.md"]
 owns = ["model CLI dogfooding scenarios", "adaptive model-run evaluation records", "harness scorer guardrails"]
 does_not_own = ["formal benchmark policy", "provider authentication", "package runtime command semantics"]
-proof = ["uv run pytest --collect-only -q tests packages", "rg -n \"model_cli_harness\" docs/maintainer/retired-test-knowledge/test_model_cli_harness.py"]
+proof = ["uv run pytest --collect-only -q tests packages", "rg -n \"test_model_cli_harness.py\" docs/maintainer/test-knowledge-inventory.md"]
 escalate_when = ["scenario changes become formal benchmark policy", "provider instability is misclassified as product behavior"]
 
 [notes]

@@ -62,16 +62,16 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | `tests/test_workspace_implement_cli.py` | Planning safety, intent, proof, delegation, and generated-conformance proof guidance semantics. | Keep high-risk workflow trust regressions ordinary until operation or fragment owners settle. |
 | `tests/test_workspace_proof_cli.py` | Proof-selection semantics, verification integration, and completion-claim safety. | Keep ordinary until stable proof/report contract owners can express the behavior. |
 
-## Archived Ordinary Regression Knowledge
+## Deleted Legacy Regression Clusters
 
-| Former ordinary surface | Archive path | Future proof direction |
+| Former ordinary surface | Compact record | Future proof direction |
 | --- | --- | --- |
-| `tests/test_workspace_report_cli.py` | `docs/maintainer/retired-test-knowledge/test_workspace_report_cli.py` | New report behavior should land as focused scenario tests or contract-owned report cases, not by reviving the full legacy cluster. |
-| `tests/test_workspace_start_preflight_cli.py` | `docs/maintainer/retired-test-knowledge/test_workspace_start_preflight_cli.py` | Startup/preflight changes should use compact routing matrices and AW workflow contracts. |
-| `tests/test_model_cli_harness.py` | `docs/maintainer/retired-test-knowledge/test_model_cli_harness.py` | Harness behavior should use focused scorer/adapter tests or harness-owned fixtures. |
-| `tests/test_contract_tooling.py` | `docs/maintainer/retired-test-knowledge/test_contract_tooling.py` | Stable generated behavior should move to generated package checks or conformance cases. |
-| `tests/test_workspace_lifecycle_cli.py` | `docs/maintainer/retired-test-knowledge/test_workspace_lifecycle_cli.py` | Lifecycle behavior should be covered by small root smoke paths plus package install/lifecycle checks. |
-| `packages/planning/tests/test_summary.py` | `docs/maintainer/retired-test-knowledge/planning_test_summary.py` | Planning summary behavior should use focused package contract tests, not broad historical projection fixtures. |
+| `tests/test_workspace_report_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | New report behavior should land as focused scenario tests or contract-owned report cases, not by reviving the full legacy cluster. |
+| `tests/test_workspace_start_preflight_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | Startup/preflight changes should use compact routing matrices and AW workflow contracts. |
+| `tests/test_model_cli_harness.py` | `docs/maintainer/test-knowledge-inventory.md` | Harness behavior should use focused scorer/adapter tests or harness-owned fixtures. |
+| `tests/test_contract_tooling.py` | `docs/maintainer/test-knowledge-inventory.md` | Stable generated behavior should move to generated package checks or conformance cases. |
+| `tests/test_workspace_lifecycle_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | Lifecycle behavior should be covered by small root smoke paths plus package install/lifecycle checks. |
+| `packages/planning/tests/test_summary.py` | `docs/maintainer/test-knowledge-inventory.md` | Planning summary behavior should use focused package contract tests, not broad historical projection fixtures. |
 
 ## Boundary
 
