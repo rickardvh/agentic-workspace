@@ -136,6 +136,24 @@ does not create or complete the decision.
 }
 ```
 
+Proof decisions may also include optional lifecycle fields for temporary or
+replaceable evidence:
+
+```json
+{
+  "retention_until": "2026-07-01",
+  "stale_when": ["packages/verification/src/**"],
+  "replacement_owner": "conformance-contract",
+  "review_trigger": "Review before retiring the temporary proof."
+}
+```
+
+Verification reports these fields under `evidence_strategy.proof_decision.lifecycle`.
+`permanent` evidence reports `state: "permanent"`. `temporary` and `replaceable`
+evidence can report `current`, `stale`, `expired`, or `invalid` based only on the
+explicit date and changed-path glob fields. The lifecycle state is a prompt for
+agent review; it does not decide whether evidence is sufficient.
+
 Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest

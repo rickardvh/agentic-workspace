@@ -361,7 +361,53 @@ def _proof_governance_payload(
     }
 
 
-def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
+def _proof_decision_lifecycle(*, decision: dict[str, Any], changed_paths: list[str]) -> dict[str, Any]:
+    durability = str(decision.get("evidence_durability", "")).strip()
+    retention_until = str(decision.get("retention_until", "")).strip()
+    replacement_owner = str(decision.get("replacement_owner", "")).strip()
+    review_trigger = str(decision.get("review_trigger", "")).strip()
+    stale_when = [str(item).strip() for item in _list_payload(decision.get("stale_when")) if str(item).strip()]
+    stale_matches: list[str] = []
+    for path in _normalize_changed_paths(changed_paths):
+        for pattern in stale_when:
+            if fnmatch.fnmatch(path, pattern):
+                stale_matches.append(f"changed path matched {pattern}")
+    invalid_fields: list[str] = []
+    expired = False
+    if retention_until:
+        try:
+            expired = date.fromisoformat(retention_until) < date.today()
+        except ValueError:
+            invalid_fields.append("retention_until")
+    state = "unknown"
+    if durability == "permanent":
+        state = "permanent"
+    elif durability in {"temporary", "replaceable"}:
+        if invalid_fields:
+            state = "invalid"
+        elif expired:
+            state = "expired"
+        elif stale_matches:
+            state = "stale"
+        else:
+            state = "current"
+    return {
+        "state": state,
+        "retention_until": retention_until,
+        "stale_when": stale_when,
+        "stale_because": _dedupe(stale_matches),
+        "replacement_owner": replacement_owner,
+        "review_trigger": review_trigger,
+        "review_needed": state in {"expired", "stale", "invalid"},
+        "invalid_fields": invalid_fields,
+        "limits": [
+            "Lifecycle state is derived only from explicit proof-decision fields.",
+            "Verification does not decide whether temporary evidence remains sufficient.",
+        ],
+    }
+
+
+def _proof_decision_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
     decision_path = target_root / PROOF_DECISION_PATH
     exists, payload, parse_error = _read_json_if_present(decision_path)
     base = {
@@ -381,6 +427,7 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
             "missing_fields": PROOF_DECISION_REQUIRED_FIELDS,
             "invalid_fields": [],
             "decision": {},
+            "lifecycle": {},
         }
     if parse_error:
         return {
@@ -390,6 +437,7 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
             "missing_fields": [],
             "invalid_fields": ["json"],
             "decision": {},
+            "lifecycle": {},
         }
     if not isinstance(payload, dict):
         return {
@@ -398,6 +446,7 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
             "missing_fields": [],
             "invalid_fields": ["root"],
             "decision": {},
+            "lifecycle": {},
         }
     decision = payload.get("proof_decision", payload)
     if not isinstance(decision, dict):
@@ -407,6 +456,7 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
             "missing_fields": [],
             "invalid_fields": ["proof_decision"],
             "decision": {},
+            "lifecycle": {},
         }
     missing_fields = [field for field in PROOF_DECISION_REQUIRED_FIELDS if not str(decision.get(field, "")).strip()]
     invalid_fields: list[str] = []
@@ -433,6 +483,8 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
     confidence = str(decision.get("confidence", "")).strip()
     if confidence and confidence not in {"high", "medium", "low"}:
         invalid_fields.append("confidence")
+    lifecycle = _proof_decision_lifecycle(decision=decision, changed_paths=changed_paths)
+    invalid_fields.extend(field for field in lifecycle["invalid_fields"] if field not in invalid_fields)
     status = "present"
     if invalid_fields:
         status = "invalid"
@@ -444,6 +496,7 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
         "missing_fields": missing_fields,
         "invalid_fields": invalid_fields,
         "decision": {field: decision.get(field, "") for field in PROOF_DECISION_REQUIRED_FIELDS},
+        "lifecycle": lifecycle,
     }
 
 
@@ -690,7 +743,7 @@ def _evidence_strategy_payload(
         task_text=task_text,
         manifest=manifest,
     )
-    proof_decision = _proof_decision_payload(target_root=target_root)
+    proof_decision = _proof_decision_payload(target_root=target_root, changed_paths=changed_paths)
     return {
         "kind": EVIDENCE_STRATEGY_KIND,
         "status": "attention" if candidate_sources or observed_signals else "unavailable",
