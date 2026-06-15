@@ -13,22 +13,40 @@
       "const": 1,
       "default": 1
     },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "memory",
+              "verification"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs.",
+          "default": [
+            "planning",
+            "memory"
+          ]
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "description": "Authoritative module enablement for this repository."
+    },
     "workspace": {
-      "description": "Repo-owned workspace policy for install presets, startup adapter shape, output posture, and advanced feature opt-ins.",
+      "description": "Repo-owned workspace policy for startup adapter shape, output posture, and advanced feature opt-ins. Module selection lives in top-level modules.enabled.",
       "type": "object",
       "default": {},
       "x-agentic-workspace-doc-role": "public",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
-        "default_preset": {
-          "description": "Default module preset used by lifecycle commands when no preset is supplied.",
-          "enum": [
-            "memory",
-            "planning",
-            "full"
-          ],
-          "default": "full"
-        },
         "agent_instructions_file": {
           "description": "Repo startup adapter text file agents should read first.",
           "type": "string",

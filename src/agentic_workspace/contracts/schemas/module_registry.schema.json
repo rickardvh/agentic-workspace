@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/module-registry.schema.json",
   "title": "Module Registry",
-  "description": "Registry of workspace modules, feature tiers, component classes, and generated command metadata.",
+  "description": "Registry of Agentic Workspace core modules and current orchestration metadata.",
   "type": "object",
   "required": [
     "schema_version",
@@ -10,8 +10,6 @@
     "participation_model",
     "component_model",
     "workspace_components",
-    "module_profiles",
-    "feature_tiers",
     "advanced_features",
     "module_command_args",
     "modules"
@@ -549,76 +547,6 @@
       "additionalProperties": false,
       "description": "Open participation contract for modules, workflow obligations, generated projections, and ordinary-loop composition."
     },
-    "module_profiles": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "profile_kind",
-          "selected_modules",
-          "preset",
-          "default_active",
-          "activation",
-          "cost_model",
-          "selection_rule"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Stable identifier used to reference this record."
-          },
-          "label": {
-            "type": "string",
-            "description": "Label text value used by this contract."
-          },
-          "profile_kind": {
-            "enum": [
-              "root-routing",
-              "installer-preset",
-              "module-selection"
-            ],
-            "description": "Allowed profile kind value for routing or validation."
-          },
-          "selected_modules": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "One entry in the selected modules list."
-            },
-            "description": "Ordered selected modules entries used by this contract."
-          },
-          "preset": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Preset contract value used by this contract."
-          },
-          "default_active": {
-            "type": "boolean",
-            "description": "Default active true/false policy flag used by this contract."
-          },
-          "activation": {
-            "type": "string",
-            "description": "Activation text value used by this contract."
-          },
-          "cost_model": {
-            "type": "string",
-            "description": "Cost model text value used by this contract."
-          },
-          "selection_rule": {
-            "type": "string",
-            "description": "Selection rule text value used by this contract."
-          }
-        },
-        "additionalProperties": false,
-        "description": "One entry in the module profiles list."
-      },
-      "description": "Module profile summaries used for selection, reporting, and docs."
-    },
     "workspace_components": {
       "type": "object",
       "required": [
@@ -667,62 +595,6 @@
       },
       "additionalProperties": false,
       "description": "Root workspace components that are not owned by a single module."
-    },
-    "feature_tiers": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "modules",
-          "preset",
-          "default_active",
-          "activation",
-          "cost_model"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Stable identifier used to reference this record."
-          },
-          "label": {
-            "type": "string",
-            "description": "Label text value used by this contract."
-          },
-          "modules": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "One entry in the modules list."
-            },
-            "description": "Modules covered by this contract section."
-          },
-          "preset": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Preset contract value used by this contract."
-          },
-          "default_active": {
-            "type": "boolean",
-            "description": "Default active true/false policy flag used by this contract."
-          },
-          "activation": {
-            "type": "string",
-            "description": "Activation text value used by this contract."
-          },
-          "cost_model": {
-            "type": "string",
-            "description": "Cost model text value used by this contract."
-          }
-        },
-        "additionalProperties": false,
-        "description": "One entry in the feature tiers list."
-      },
-      "description": "Named install/feature tiers and their ordinary operating cost."
     },
     "advanced_features": {
       "type": "array",
@@ -781,7 +653,6 @@
           "name",
           "description",
           "selection_rank",
-          "include_in_full_preset",
           "install_signals",
           "workflow_surfaces",
           "generated_artifacts",
@@ -807,10 +678,6 @@
           "selection_rank": {
             "type": "integer",
             "description": "Selection rank numeric value used by this contract."
-          },
-          "include_in_full_preset": {
-            "type": "boolean",
-            "description": "Include in full preset true/false policy flag used by this contract."
           },
           "install_signals": {
             "type": "array",
@@ -1035,12 +902,29 @@
             },
             "additionalProperties": false,
             "description": "Result contract details used by this contract."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "core",
+              "external"
+            ],
+            "description": "Module origin. Only core modules are supported by the current runtime."
+          },
+          "default_enabled": {
+            "type": "boolean",
+            "description": "Whether the core module is enabled by default for fresh init."
           }
         },
         "additionalProperties": false,
         "description": "One entry in the modules list."
       },
       "description": "Registered modules and their descriptors."
+    },
+    "terminology": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Current module terminology and future extension boundary."
     }
   },
   "$defs": {

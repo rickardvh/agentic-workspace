@@ -62,7 +62,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.rule` | string | no |  | Policy rule for applying this packet. |  |  |
 | `selected_modules` | array of string | yes |  | Modules selected for this report invocation. |  |  |
 | `installed_modules` | array of string | yes |  | Installed Agentic Workspace modules detected in the target repository. |  |  |
-| `feature_tier` | object | yes |  | Resolved feature tier, package footprint, and ordinary operating scope. |  |  |
+| `feature_tier` | object | yes |  | Resolved module enablement, package footprint, and ordinary operating scope. |  |  |
 | `health` | string | yes |  | Overall workspace health signal for quick routing. |  |  |
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |

@@ -130,7 +130,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
     )
     assert payload["compact_contract_profile"]["selectors"]["defaults"] == ("agentic-workspace defaults --section <section> --format json")
-    assert payload["operating_questions"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["operating_questions"]["canonical_doc"] == "docs/package/modules.md"
     assert payload["operating_questions"]["command"] == "agentic-workspace defaults --section operating_questions --format json"
     assert payload["operating_questions"]["questions"][0]["id"] == "startup_or_lifecycle_path"
     assert payload["operating_questions"]["questions"][0]["ask_first"] == 'agentic-workspace start --task "<task>" --format json'
@@ -140,19 +140,22 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["operating_questions"]["questions"][1]["ask_first"] == "agentic-workspace summary --format json"
     assert payload["operating_questions"]["questions"][2]["ask_first"] == "agentic-workspace preflight --target ./repo --format json"
     assert payload["operating_questions"]["questions"][2]["then_if_needed"][0] == "agentic-workspace report --target ./repo --format json"
-    assert payload["install_profiles"]["canonical_doc"] == "docs/which-package.md"
-    assert payload["install_profiles"]["command"] == "agentic-workspace defaults --section install_profiles --format json"
-    assert payload["install_profiles"]["rule"].startswith("Use an installed public workspace entrypoint")
-    assert payload["install_profiles"]["cli_availability"]["preferred"].startswith("Use `agentic-workspace` already installed")
-    assert "not the default host-repo install path" in payload["install_profiles"]["cli_availability"]["temporary_fallback"]
-    assert payload["install_profiles"]["recommendation_order"] == ["memory", "planning", "full"]
-    assert payload["install_profiles"]["profiles"][0]["preset"] == "memory"
-    assert payload["install_profiles"]["profiles"][1]["preset"] == "planning"
-    assert payload["install_profiles"]["lightweight_profile"]["preset"] == "memory"
+    assert payload["module_selection"]["canonical_doc"] == "docs/package/modules.md"
+    assert payload["module_selection"]["command"] == "agentic-workspace defaults --section module_selection --format json"
+    assert payload["module_selection"]["rule"].startswith("Use an installed public workspace entrypoint")
+    assert payload["module_selection"]["cli_availability"]["preferred"].startswith("Use `agentic-workspace` already installed")
+    assert "not the default host-repo install path" in payload["module_selection"]["cli_availability"]["temporary_fallback"]
+    assert payload["module_selection"]["recommendation_order"] == ["memory", "planning", "planning,memory"]
+    assert payload["module_selection"]["module_options"][0]["modules"] == ["memory"]
+    assert payload["module_selection"]["module_options"][1]["modules"] == ["planning"]
+    assert payload["module_selection"]["lightweight_selection"]["modules"] == ["memory"]
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
-    assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
+    assert (
+        "agentic-workspace install --target ./repo --modules <memory|planning|planning,memory>"
+        == payload["lifecycle"]["default_install_command"]
+    )
     assert "if missing, install it before bootstrap" in payload["lifecycle"]["cli_availability_rule"]
-    assert payload["lifecycle"]["default_setup_posture"] == "smallest-viable-preset-first"
+    assert payload["lifecycle"]["default_setup_posture"] == "smallest-viable-module-set-first"
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "docs/agentic-workspace-install.md"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
@@ -293,9 +296,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["ownership_mapping"]["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
-    assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --preset <memory|planning|full>"
+    assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --modules <memory|planning|planning,memory>"
     assert "reserve uvx/pipx for explicit temporary fallback" in payload["combined_install"]["cli_availability_rule"]
-    assert payload["combined_install"]["full_when"].startswith("Use --preset full only when both")
+    assert payload["combined_install"]["full_when"].startswith("Use --modules planning,memory only when both")
     assert payload["recovery"]["canonical_doc"] == "docs/environment-recovery-contract.md"
     assert payload["recovery"]["rule"] == "Inspect state first, refresh contract second, re-run the narrowest proving lane third."
     assert payload["recovery"]["ordered_path"][:2] == [
@@ -522,7 +525,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
-    assert "workspace.default_preset" in payload["config"]["supported_fields"]
+    assert "modules.enabled" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
@@ -1158,32 +1161,32 @@ def test_defaults_operating_questions_section_selector_returns_compact_contract_
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "operating_questions"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["answer"]["canonical_doc"] == "docs/package/modules.md"
     assert payload["answer"]["questions"][0]["id"] == "startup_or_lifecycle_path"
     assert payload["answer"]["questions"][3]["id"] == "proof_or_ownership_answer"
     assert payload["answer"]["questions"][4]["then_if_needed"][0] == "docs/agentic-workspace-install.md"
     assert payload["answer"]["stop_rule"] == ("Do not reopen broader docs once one compact surface has answered the routine question.")
-    assert "docs/which-package.md" in payload["refs"]
+    assert "docs/package/modules.md" in payload["refs"]
 
 
-def test_defaults_install_profiles_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--verbose", "--section", "install_profiles", "--format", "json"]) == 0
+def test_defaults_module_selection_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--verbose", "--section", "module_selection", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
     assert payload["surface"] == "defaults"
-    assert payload["selector"] == {"section": "install_profiles"}
+    assert payload["selector"] == {"section": "module_selection"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["answer"]["canonical_doc"] == "docs/package/modules.md"
     assert payload["answer"]["default_entrypoint"] == "agentic-workspace"
     assert "target repo's environment" in payload["answer"]["cli_availability"]["preferred"]
     assert payload["answer"]["default_answer"].startswith("Start with `memory`")
-    assert payload["answer"]["recommendation_order"] == ["memory", "planning", "full"]
-    assert payload["answer"]["profiles"][0]["preset"] == "memory"
-    assert payload["answer"]["profiles"][2]["preset"] == "full"
+    assert payload["answer"]["recommendation_order"] == ["memory", "planning", "planning,memory"]
+    assert payload["answer"]["module_options"][0]["modules"] == ["memory"]
+    assert payload["answer"]["module_options"][2]["modules"] == ["planning", "memory"]
     assert payload["answer"]["partial_adoption"][1]["combination"] == "planning only"
-    assert payload["answer"]["lightweight_profile"]["preset"] == "memory"
-    assert "docs/which-package.md" in payload["refs"]
+    assert payload["answer"]["lightweight_selection"]["modules"] == ["memory"]
+    assert "docs/package/modules.md" in payload["refs"]
 
 
 def test_defaults_system_intent_section_selector_returns_compact_contract_answer(capsys) -> None:

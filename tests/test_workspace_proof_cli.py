@@ -91,7 +91,7 @@ def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Pat
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
 
     assert cli.main(["proof", "--verbose", "--target", str(target), "--route", "workspace_proof", "--format", "json"]) == 0

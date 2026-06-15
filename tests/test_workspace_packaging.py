@@ -263,8 +263,8 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
             "init",
             "--target",
             str(target),
-            "--preset",
-            "full",
+            "--modules",
+            "planning,memory",
             "--format",
             "json",
         )
@@ -326,7 +326,7 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
         )
 
     assert init_payload["command"] == "init"
-    assert init_payload["preset"] == "full"
+    assert init_payload["preset"] is None
     assert start_payload["kind"] == "agentic-workspace/selected-output/v1"
     assert start_payload["values"]["invoked_cli_identity"]["source_class"] == "installed-package"
     assert summary_payload["kind"] == "planning-summary/v1"

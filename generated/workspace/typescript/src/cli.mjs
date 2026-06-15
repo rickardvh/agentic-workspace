@@ -2112,13 +2112,6 @@ const commandDefinitions = [
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules"
           ],
           "help": "Comma-separated module selection.",
@@ -2440,13 +2433,6 @@ const commandDefinitions = [
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules"
           ],
           "help": "Comma-separated module selection.",
@@ -2722,13 +2708,6 @@ const commandDefinitions = [
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules",
             "--module"
           ],
@@ -2844,13 +2823,6 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -2982,13 +2954,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
-            },
-            {
-              "flags": [
                 "--modules"
               ],
               "help": "Comma-separated module selection.",
@@ -3048,13 +3013,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
-            },
-            {
-              "flags": [
                 "--modules"
               ],
               "help": "Comma-separated module selection.",
@@ -3096,13 +3054,6 @@ const commandDefinitions = [
               ],
               "help": "Target repository path. Defaults to the current directory.",
               "name": "target"
-            },
-            {
-              "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
             },
             {
               "flags": [
@@ -3152,13 +3103,6 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3214,13 +3158,6 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3283,13 +3220,6 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3378,13 +3308,6 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [

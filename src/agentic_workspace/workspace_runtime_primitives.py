@@ -221,7 +221,7 @@ MODULE_UPGRADE_SOURCE_PATHS = {
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleDescriptor"] | None = None, **kwargs):
     """Backward-compatible alias for tests and local helpers."""
     if descriptors is not None and "valid_presets" not in kwargs:
-        kwargs["valid_presets"] = set(_preset_modules(descriptors))
+        kwargs["valid_presets"] = set(descriptors)
     return config_lib.load_workspace_config(target_root=target_root, **kwargs)
 
 
@@ -885,7 +885,7 @@ def _sibling_repo_aw_freshness_payload(*, target_root: Path, task_text: str | No
             )
             continue
         installed_modules = _fast_installed_modules(target_root=sibling_root)
-        selected_modules = installed_modules or _preset_modules(_module_operations()).get(sibling_config.default_preset, [])
+        selected_modules = list(sibling_config.enabled_modules)
         installed_state = _installed_state_compatibility_payload(
             config=sibling_config,
             selected_modules=selected_modules,
@@ -973,8 +973,6 @@ _PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footpr
 _MODULE_PARTICIPATION_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("participation_model", {}))
 _MODULE_COMPONENT_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("component_model", {}))
 _WORKSPACE_COMPONENTS = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("workspace_components", {}))
-_MODULE_PROFILE_ENTRIES = tuple((copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("module_profiles", [])))
-_FEATURE_TIER_ENTRIES = tuple((copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", [])))
 _ADVANCED_FEATURE_ENTRIES = tuple((copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", [])))
 _CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
 _SETUP_FINDING_CLASS_PAYLOADS = {str(item["class"]): copy.deepcopy(item) for item in _SETUP_FINDINGS_POLICY["accepted_classes"]}
@@ -2365,6 +2363,8 @@ class RepoInspection:
 class ModuleRegistryEntry:
     name: str
     description: str
+    kind: str
+    default_enabled: bool
     lifecycle_commands: tuple[str, ...]
     lifecycle_hook_expectations: tuple[str, ...]
     autodetects_installation: bool
@@ -4086,6 +4086,7 @@ def _build_module_descriptor(
     return ModuleDescriptor(
         name=name,
         description=str(metadata["description"]),
+        kind=str(metadata.get("kind", "core")),
         commands={
             "install": lambda *, target, dry_run, force: install_handler(target=target, dry_run=dry_run, force=force),
             "adopt": lambda *, target, dry_run: adopt_handler(target=target, dry_run=dry_run),
@@ -4096,7 +4097,7 @@ def _build_module_descriptor(
         },
         detector=detector,
         selection_rank=int(metadata["selection_rank"]),
-        include_in_full_preset=bool(metadata["include_in_full_preset"]),
+        default_enabled=bool(metadata.get("default_enabled", name in {"planning", "memory"})),
         install_signals=tuple((Path(path) for path in metadata["install_signals"])),
         workflow_surfaces=tuple((Path(path) for path in metadata["workflow_surfaces"])),
         generated_artifacts=tuple((Path(path) for path in metadata["generated_artifacts"])),
@@ -5524,19 +5525,56 @@ def _managed_workspace_config_header(*, cli_invoke: str) -> str:
     )
 
 
-def _seeded_workspace_config_text(*, config: WorkspaceConfig, resolved_preset: str | None) -> str:
-    default_preset = resolved_preset or config.default_preset
+def _seeded_workspace_config_text(*, config: WorkspaceConfig, enabled_modules: list[str]) -> str:
     lines = [
         _managed_workspace_config_header(cli_invoke=config.cli_invoke),
         "",
         "schema_version = 1",
         "",
+        "[modules]",
+        "enabled = " + json.dumps(enabled_modules),
+        "",
         "[workspace]",
-        f"default_preset = {json.dumps(default_preset)}",
         f"agent_instructions_file = {json.dumps(config.agent_instructions_file)}",
         f"workflow_artifact_profile = {json.dumps(config.workflow_artifact_profile)}",
     ]
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _set_enabled_modules_action(*, target_root: Path, enabled_modules: list[str], dry_run: bool) -> dict[str, str]:
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if not config_path.exists():
+        return {
+            "kind": "skipped",
+            "path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "detail": "workspace config will be seeded with enabled modules",
+        }
+    text = config_path.read_text(encoding="utf-8")
+    rendered = "enabled = " + json.dumps(enabled_modules)
+    if re.search(r"(?ms)^\[modules\]\s*.*?^enabled\s*=", text):
+        new_text = re.sub(r"(?m)^enabled\s*=.*$", rendered, text, count=1)
+    elif "[modules]" in text:
+        new_text = re.sub(r"(?m)^\[modules\]\s*$", f"[modules]\n{rendered}", text, count=1)
+    else:
+        insert = f"\n[modules]\n{rendered}\n"
+        match = re.search(r"(?m)^\[workspace\]\s*$", text)
+        if match:
+            new_text = text[: match.start()] + insert + "\n" + text[match.start() :]
+        else:
+            new_text = text.rstrip() + "\n\n" + insert.lstrip()
+    if new_text == text:
+        return {
+            "kind": "current",
+            "path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "detail": "modules.enabled already matches requested repo intent",
+        }
+    if not dry_run:
+        config_path.write_text(new_text, encoding="utf-8")
+    return {
+        "kind": "would update" if dry_run else "updated",
+        "path": WORKSPACE_CONFIG_PATH.as_posix(),
+        "detail": "set repo-owned [modules].enabled module intent",
+    }
 
 
 def _seed_workspace_config_action(
@@ -5547,6 +5585,7 @@ def _seed_workspace_config_action(
     command_name: str,
     local_only_repo_root: Path | None,
     config: WorkspaceConfig,
+    selected_modules: list[str],
 ) -> dict[str, str] | None:
     if command_name != "init" or local_only_repo_root is not None:
         return None
@@ -5559,7 +5598,7 @@ def _seed_workspace_config_action(
         }
     if not dry_run:
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        config_path.write_text(_seeded_workspace_config_text(config=config, resolved_preset=resolved_preset), encoding="utf-8")
+        config_path.write_text(_seeded_workspace_config_text(config=config, enabled_modules=selected_modules), encoding="utf-8")
     return {
         "kind": "would create" if dry_run else "created",
         "path": WORKSPACE_CONFIG_PATH.as_posix(),
@@ -5589,9 +5628,17 @@ def _workspace_init_or_upgrade_report(
         command_name=command_name,
         local_only_repo_root=local_only_repo_root,
         config=config,
+        selected_modules=selected_modules,
     )
     if config_action is not None:
         actions.append(config_action)
+    elif command_name in {"init", "install"} and local_only_repo_root is None:
+        config_modules = selected_modules
+        if command_name == "install":
+            ordered_names = _ordered_module_names(descriptors)
+            requested = set(config.enabled_modules) | set(selected_modules)
+            config_modules = [module_name for module_name in ordered_names if module_name in requested]
+        actions.append(_set_enabled_modules_action(target_root=target_root, enabled_modules=config_modules, dry_run=dry_run))
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
         source_bytes = _workspace_payload_bytes_for_target(relative, target_root=target_root)
@@ -5762,12 +5809,22 @@ def _workspace_init_or_upgrade_report(
 
 
 def _workspace_uninstall_report(
-    *, target_root: Path, dry_run: bool, config: WorkspaceConfig, local_only_repo_root: Path | None = None
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
+    dry_run: bool,
+    config: WorkspaceConfig,
+    local_only_repo_root: Path | None = None,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     removable_candidates: list[Path] = []
     ambiguous_payloads: list[Path] = []
+    if local_only_repo_root is None:
+        remaining = set(config.enabled_modules) - set(selected_modules)
+        ordered_remaining = [module_name for module_name in _ordered_module_names(descriptors) if module_name in remaining]
+        actions.append(_set_enabled_modules_action(target_root=target_root, enabled_modules=ordered_remaining, dry_run=dry_run))
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
         if not destination.exists():
@@ -5841,52 +5898,21 @@ def _selected_modules(
     config: WorkspaceConfig,
 ) -> tuple[list[str], str | None]:
     ordered_module_names = _ordered_module_names(descriptors)
-    preset_modules = _preset_modules(descriptors)
     if preset_name and module_arg:
-        raise ModuleSelectionError("Use either --preset or --modules, not both.")
+        raise ModuleSelectionError("Use --modules; --preset is no longer supported.")
     if preset_name:
-        if preset_name not in preset_modules:
-            supported = ", ".join(preset_modules)
-            raise ModuleSelectionError(f"Unknown preset: {preset_name}. Supported presets: {supported}.")
-        return (preset_modules[preset_name], preset_name)
+        raise ModuleSelectionError("--preset is no longer supported; use --modules or [modules].enabled.")
     if module_arg:
         requested = _parse_modules(module_arg, ordered_module_names=ordered_module_names)
         return ([module_name for module_name in ordered_module_names if module_name in requested], None)
-    if command_name in {"init", "prompt"}:
-        return (preset_modules[config.default_preset], config.default_preset)
-    if command_name == "report":
-        registry = _module_registry(descriptors=descriptors, target_root=target_root)
-        detected = [entry.name for entry in registry if entry.installed]
-        return (detected, None)
-    registry = _module_registry(descriptors=descriptors, target_root=target_root)
-    detected = [entry.name for entry in registry if entry.installed]
-    if detected:
-        return (detected, None)
-    raise ModuleSelectionError("No installed modules were detected for this lifecycle command. Use --modules to target modules explicitly.")
+    enabled = [module_name for module_name in ordered_module_names if module_name in set(config.enabled_modules)]
+    return (enabled, None)
 
 
 def _ordered_module_names(descriptors: dict[str, ModuleDescriptor]) -> list[str]:
     return [
         descriptor.name for descriptor in sorted(descriptors.values(), key=lambda descriptor: (descriptor.selection_rank, descriptor.name))
     ]
-
-
-def _preset_modules(descriptors: dict[str, ModuleDescriptor]) -> dict[str, list[str]]:
-    ordered_module_names = _ordered_module_names(descriptors)
-    presets: dict[str, list[str]] = {}
-    profile_entries = _MODULE_PROFILE_ENTRIES or tuple(
-        ({"id": module_name, "preset": module_name, "selected_modules": [module_name]} for module_name in ordered_module_names)
-    )
-    for profile in profile_entries:
-        preset = profile.get("preset")
-        if not isinstance(preset, str) or not preset:
-            continue
-        selected = [str(module_name) for module_name in profile.get("selected_modules", []) if str(module_name) in descriptors]
-        presets[preset] = [module_name for module_name in ordered_module_names if module_name in selected]
-    for module_name in ordered_module_names:
-        presets.setdefault(module_name, [module_name])
-    presets.setdefault("full", [module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset])
-    return presets
 
 
 def _feature_tier_payload(
@@ -5898,62 +5924,27 @@ def _feature_tier_payload(
     compact: bool = False,
 ) -> dict[str, Any]:
     active_modules = installed_modules if installed_modules is not None else selected_modules
-    active_set = set(active_modules)
     active_source = "installed_modules" if installed_modules is not None else "selected_modules"
-    active_profile = next(
-        (
-            profile
-            for profile in _MODULE_PROFILE_ENTRIES
-            if bool(profile.get("default_active", True)) and set(profile.get("selected_modules", [])) == active_set
-        ),
-        None,
-    )
-    if active_profile is None:
-        active_profile = {
-            "id": "custom",
-            "label": "Custom",
-            "selected_modules": list(active_modules),
-            "preset": resolved_preset,
-            "default_active": True,
-            "activation": "Custom module selection; inspect selected_modules for the exact footprint.",
-            "cost_model": "depends on selected modules.",
-            "profile_kind": "module-selection",
-            "selection_rule": "explicit selected module ids",
-        }
     active = {
-        "id": str(active_profile.get("id", "")),
-        "label": str(active_profile.get("label", active_profile.get("id", ""))),
+        "id": "enabled-modules",
+        "label": "Enabled modules",
         "modules": list(active_modules),
-        "preset": active_profile.get("preset") or resolved_preset,
-        "activation": str(active_profile.get("activation", "")),
+        "activation": "Repo intent comes from [modules].enabled; installed files are separate state evidence.",
         "source": active_source,
     }
     cli_invoke = config.cli_invoke if config is not None else DEFAULT_CLI_INVOKE
     payload: dict[str, Any] = {
-        "schema_version": "workspace-feature-tiers/v1",
-        "compatibility_status": "deprecated-alias-for-module-profiles",
-        "canonical_surface": f"{cli_invoke} modules --target ./repo --format json -> module_profiles",
+        "schema_version": "workspace-module-enablements/v1",
+        "compatibility_status": "renamed-from-feature-tier",
+        "canonical_surface": f"{cli_invoke} config --target ./repo --select workspace.enabled_modules --format json",
         "active": active,
-        "default_rule": "Use the smallest module profile whose selected modules match the repo footprint; source-checkout maintainer tooling is not a shipped tier.",
+        "default_rule": "Fresh init enables core planning and memory unless --modules or modules.enabled says otherwise.",
         "detail_command": f"{cli_invoke} modules --target ./repo --format json",
     }
     if compact:
         payload["advanced_features_enabled_count"] = len(config.advanced_features) if config is not None else 0
         return payload
     payload["advanced_policy"] = _advanced_feature_policy_payload(config=config, include_catalog=True)
-    payload["available_tiers"] = [
-        {
-            "id": str(profile["id"]),
-            "label": str(profile["label"]),
-            "modules": list(profile.get("selected_modules", [])),
-            "preset": profile.get("preset"),
-            "default_active": bool(profile.get("default_active", True)),
-            "activation": str(profile.get("activation", "")),
-            "cost_model": str(profile.get("cost_model", "")),
-        }
-        for profile in _MODULE_PROFILE_ENTRIES
-    ]
-    payload["available_module_profiles"] = copy.deepcopy(list(_MODULE_PROFILE_ENTRIES))
     return payload
 
 
@@ -5964,7 +5955,7 @@ def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_
         "schema_version": "workspace-advanced-feature-policy/v1",
         "enabled_features": enabled,
         "enabled_source": config.advanced_features_source if config is not None else "product-default",
-        "default_rule": "Advanced host-repo diagnostics are opt-in; source-checkout-only maintainer tooling is not a shipped feature tier.",
+        "default_rule": "Advanced host-repo diagnostics are opt-in; source-checkout-only maintainer tooling is not a shipped core module.",
         "ordinary_startup_rule": "Use start, summary, report, defaults, and proof first; inspect advanced review or external-adapter diagnostics only by selector or explicit enabled feature.",
         "config_field": "workspace.advanced_features",
         "detail_command": f"{cli_invoke} modules --target ./repo --format json",
@@ -6030,6 +6021,10 @@ def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[s
     tokens = [token.strip() for token in module_arg.split(",") if token.strip()]
     if not tokens:
         raise ModuleSelectionError("--modules requires at least one module token.")
+    if tokens == ["none"]:
+        return set()
+    if "none" in tokens:
+        raise ModuleSelectionError("--modules none must be used by itself.")
     unknown = [token for token in tokens if token not in ordered_module_names]
     if unknown:
         supported = ", ".join(ordered_module_names)
@@ -6121,7 +6116,7 @@ def _run_init(
     )
     effective_config = config
     if not dry_run:
-        effective_config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+        effective_config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
     summary = _build_init_summary(
         target_root=target_root,
         selected_modules=selected_modules,
@@ -6461,9 +6456,30 @@ def _run_lifecycle_command(
                 config=config,
             )
         )
+    elif command_name == "install":
+        reports.append(
+            _workspace_init_or_upgrade_report(
+                target_root=target_root,
+                local_only_repo_root=local_only_repo_root,
+                selected_modules=selected_modules,
+                resolved_preset=resolved_preset,
+                descriptors=descriptors,
+                dry_run=dry_run,
+                inspection_mode="install",
+                command_name=command_name,
+                config=config,
+            )
+        )
     elif command_name == "uninstall":
         reports.append(
-            _workspace_uninstall_report(target_root=target_root, dry_run=dry_run, config=config, local_only_repo_root=local_only_repo_root)
+            _workspace_uninstall_report(
+                target_root=target_root,
+                selected_modules=selected_modules,
+                descriptors=descriptors,
+                dry_run=dry_run,
+                config=config,
+                local_only_repo_root=local_only_repo_root,
+            )
         )
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors, command_name=command_name)
     warnings: list[str] = []
@@ -6483,6 +6499,14 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
+    enabled_set = set(selected_modules)
+    installed_set = {entry.name for entry in registry if entry.installed}
+    missing_enabled_modules = [module_name for module_name in selected_modules if module_name not in installed_set]
+    residue_modules = [entry.name for entry in registry if entry.installed and entry.name not in enabled_set]
+    for module_name in missing_enabled_modules:
+        warnings.append(f"enabled module '{module_name}' is not installed")
+    for module_name in residue_modules:
+        warnings.append(f"installed module '{module_name}' is not enabled; treat it as residue, not repo intent")
     payload: dict[str, Any] = {
         "command": command_name,
         "target": target_root.as_posix(),
@@ -6490,6 +6514,10 @@ def _run_lifecycle_command(
         "cli_compatibility": cli_compatibility,
         "installed_state_compatibility": installed_state_compatibility,
         "modules": selected_modules,
+        "enabled_modules": selected_modules,
+        "installed_modules": [entry.name for entry in registry if entry.installed],
+        "missing_enabled_modules": missing_enabled_modules,
+        "residue_modules": residue_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
         "non_interactive": non_interactive,
@@ -6506,10 +6534,23 @@ def _run_lifecycle_command(
             {
                 "name": entry.name,
                 "description": entry.description,
+                "kind": entry.kind,
+                "default_enabled": entry.default_enabled,
                 "commands": list(entry.lifecycle_commands),
                 "lifecycle_hook_expectations": list(entry.lifecycle_hook_expectations),
                 "autodetects_installation": entry.autodetects_installation,
                 "installed": entry.installed,
+                "enabled": entry.name in enabled_set,
+                "current": bool(entry.installed and entry.name in enabled_set and entry.name not in stale_generated_surfaces),
+                "state": (
+                    "current"
+                    if entry.installed and entry.name in enabled_set and entry.name not in stale_generated_surfaces
+                    else "missing"
+                    if entry.name in enabled_set and not entry.installed
+                    else "residue"
+                    if entry.installed and entry.name not in enabled_set
+                    else "available"
+                ),
                 "dry_run_commands": list(entry.dry_run_commands),
                 "force_commands": list(entry.force_commands),
                 "capabilities": list(entry.capabilities),
@@ -6603,7 +6644,7 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             compact_workspace = {
                 key: workspace.get(key)
                 for key in (
-                    "default_preset",
+                    "enabled_modules",
                     "agent_instructions_file",
                     "workflow_artifact_profile",
                     "improvement_latitude",
@@ -19602,7 +19643,7 @@ def _start_payload(
     installed_modules = [entry.name for entry in registry if entry.installed]
     preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths, profile="full")
     active_state = preflight.get("active_planning_state", {})
-    selected_modules = installed_modules or _preset_modules(descriptors).get(config.default_preset, [])
+    selected_modules = list(config.enabled_modules)
     if not installed_modules and isinstance(active_state, dict):
         active_count = active_state.get("todo", {}).get("active_count", 0)
         if active_count or active_state.get("planning_record", {}).get("status") == "present":
@@ -19703,7 +19744,7 @@ def _start_payload(
         "feature_tier": _feature_tier_payload(
             selected_modules=selected_modules,
             installed_modules=installed_modules or None,
-            resolved_preset=config.default_preset,
+            resolved_preset=None,
             config=config,
             compact=True,
         ),
@@ -20201,7 +20242,7 @@ def _hydrate_selected_start_advisory_payloads(
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
     if _selector_requests(select, "installed_state_compatibility"):
         installed_modules = _fast_installed_modules(target_root=target_root)
-        selected_modules = installed_modules or _preset_modules(_module_operations()).get(config.default_preset, [])
+        selected_modules = list(config.enabled_modules)
         payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
             config=config,
             selected_modules=selected_modules,
@@ -20912,7 +20953,7 @@ def _start_tiny_payload_fast(
     elif _is_prep_only_handoff_task(task_text):
         current_need = "prep-only-planning-routing"
     installed_modules = _fast_installed_modules(target_root=target_root)
-    selected_modules = installed_modules or _preset_modules(_module_operations()).get(config.default_preset, [])
+    selected_modules = list(config.enabled_modules)
     startup_cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     installed_state_compatibility = _installed_state_compatibility_payload(
         config=config,
@@ -20960,7 +21001,7 @@ def _start_tiny_payload_fast(
         "feature_tier": _feature_tier_payload(
             selected_modules=selected_modules,
             installed_modules=installed_modules or None,
-            resolved_preset=config.default_preset,
+            resolved_preset=None,
             config=config,
             compact=True,
         ),
@@ -27548,10 +27589,10 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
     return [
         {"field": "schema_version", "enforcement": "hard", "scope": "repo-config", "used_by": ["config loader", "all workspace commands"]},
         {
-            "field": "workspace.default_preset",
+            "field": "modules.enabled",
             "enforcement": "operational",
             "scope": "repo-config",
-            "used_by": ["setup", "install", "init", "module selection"],
+            "used_by": ["setup", "install", "init", "upgrade", "uninstall", "report", "doctor", "module selection"],
         },
         {
             "field": "workspace.agent_instructions_file",
@@ -30544,18 +30585,14 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
         "participation_model": copy.deepcopy(_MODULE_PARTICIPATION_MODEL),
         "component_model": copy.deepcopy(_MODULE_COMPONENT_MODEL),
         "workspace_components": copy.deepcopy(_WORKSPACE_COMPONENTS),
-        "module_profiles": copy.deepcopy(list(_MODULE_PROFILE_ENTRIES)),
-        "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
-        "feature_tiers_compatibility": {
-            "status": "deprecated-alias",
-            "canonical_field": "module_profiles",
-            "rule": "Feature tiers are retained for weak-agent/backward compatibility; module_profiles are the canonical module-selection contract.",
-        },
+        "terminology": copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("terminology", {})),
         "advanced_features": copy.deepcopy(list(_ADVANCED_FEATURE_ENTRIES)),
         "modules": [
             {
                 "name": entry.name,
                 "description": entry.description,
+                "kind": entry.kind,
+                "default_enabled": entry.default_enabled,
                 "commands": list(entry.lifecycle_commands),
                 "lifecycle_hook_expectations": list(entry.lifecycle_hook_expectations),
                 "autodetects_installation": entry.autodetects_installation,
@@ -30589,15 +30626,8 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
             "target": target_root.as_posix() if target_root is not None else None,
             "active_module_count": len(installed),
             "active_modules": [entry.name for entry in installed],
-            "available_module_profiles": [
-                {
-                    "id": str(entry.get("id", "")),
-                    "modules": list(entry.get("selected_modules", [])),
-                    "preset": entry.get("preset"),
-                    "default_active": bool(entry.get("default_active", True)),
-                }
-                for entry in _MODULE_PROFILE_ENTRIES
-            ],
+            "default_enabled_modules": [entry.name for entry in registry if entry.default_enabled],
+            "selection_rule": "Repo intent is [modules].enabled; installed files are reported as state evidence.",
             "detail_commands": {
                 "full": "agentic-workspace modules --target . --verbose --format json",
                 "status": "agentic-workspace status --target . --format json",
@@ -30680,7 +30710,7 @@ def _startup_skill_routing_payload(
         "status": "advisory",
         "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI as the ordinary route and workflow docs as conservative no-CLI recovery. Advanced host-repo diagnostics are opt-in.",
         "query": skill_command,
-        "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
+        "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped core modules.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
             'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
@@ -31942,7 +31972,7 @@ def _selected_runtime_context(
     _validate_descriptor_contract(descriptors)
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name=command_name, target_root=target_root)
-    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
     explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
     if explicit_agent_instructions_file:
         config = _with_agent_instructions_file(
@@ -32293,7 +32323,7 @@ def _load_lifecycle_mutation_context(
             if command_name in {"install", "init"} and bool(getattr(args, "local_only", False)):
                 local_only_repo_root = target_root
         _enforce_preflight_gate(parser=parser, args=args, command_name=command_name)
-        config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+        config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
         explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
         if explicit_agent_instructions_file:
             config = _with_agent_instructions_file(
@@ -32303,8 +32333,8 @@ def _load_lifecycle_mutation_context(
             )
         selected_modules, resolved_preset = _selected_modules(
             command_name=command_name,
-            preset_name=args.preset,
-            module_arg=args.modules,
+            preset_name=getattr(args, "preset", None),
+            module_arg=getattr(args, "modules", None),
             target_root=target_root,
             descriptors=descriptors,
             config=config,
@@ -32442,7 +32472,7 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
 def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
-    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(_preset_modules(descriptors)))
+    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
 
 
 def _load_workspace_operation_defaults(_values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -32525,7 +32555,7 @@ def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _argu
 def _load_workspace_operation_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
-    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(_preset_modules(descriptors)))
+    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
 
 
 def _refresh_workspace_operation_system_intent_metadata(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
@@ -32622,7 +32652,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         current["status_health"] = "not-installed"
         current["doctor_health"] = "not-installed"
     else:
-        config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+        config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
         status_payload = _run_lifecycle_command(
             command_name="status",
             target_root=target_root,
@@ -36754,7 +36784,7 @@ def _emit_ownership(
 
 
 def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
-    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
     defaults = _defaults_payload()["ownership_mapping"]
     ledger_path = target_root / defaults["ledger"]
     warnings: list[str] = []
@@ -37784,7 +37814,8 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "workspace": {
-            "default_preset": config.default_preset,
+            "enabled_modules": list(config.enabled_modules),
+            "module_enablement_source": "repo-config" if config.exists else "product-default",
             "agent_instructions_file": config.agent_instructions_file,
             "agent_instructions_file_source": config.agent_instructions_source,
             "workflow_artifact_profile": config.workflow_artifact_profile,
@@ -37882,7 +37913,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "detail_command": payload["config_effect_audit"]["detail_command"],
         },
         "workspace": {
-            "default_preset": workspace["default_preset"],
+            "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],
             "workflow_artifact_profile": workspace["workflow_artifact_profile"],
             "improvement_latitude": workspace["improvement_latitude"],
@@ -37960,6 +37991,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "citation_rule": reporting_posture["citation_rule"],
         },
         "workspace": {
+            "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],
             "improvement_latitude": workspace["improvement_latitude"],
             "improvement_latitude_source": workspace["improvement_latitude_source"],
@@ -37980,7 +38012,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "compatibility_compact": f"{workspace['cli_invoke']} config --target . --verbose --format json",
         },
         "available_selectors": [
-            "workspace.default_preset",
+            "workspace.enabled_modules",
             "workspace.agent_instructions_file",
             "workspace.workflow_obligation_ids",
             "local_runtime",
@@ -38006,6 +38038,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
     if profile == "tiny":
         print(f"Target: {payload['target']}")
         print(f"Config path: {payload['config_path']}")
+        print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
         print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
         print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
         print(f"Delegation mode: {payload['local_runtime']['delegation_mode']['value']}")
@@ -38017,6 +38050,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
         print(f"Target: {payload['target']}")
         print(f"Config path: {payload['config_path']}")
         print(f"Exists: {payload['exists']}")
+        print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
         print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
         print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
         print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
@@ -38034,7 +38068,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
         print("Warnings:")
         for warning in payload["warnings"]:
             print(f"- {warning}")
-    print(f"Default preset: {payload['workspace']['default_preset']}")
+    print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
     print(
         f"Agent instructions file: {payload['workspace']['agent_instructions_file']} ({payload['workspace']['agent_instructions_file_source']})"
     )
@@ -38767,6 +38801,8 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
             ModuleRegistryEntry(
                 name=descriptor.name,
                 description=descriptor.description,
+                kind=descriptor.kind,
+                default_enabled=descriptor.default_enabled,
                 lifecycle_commands=lifecycle_commands,
                 lifecycle_hook_expectations=lifecycle_commands,
                 autodetects_installation=True,

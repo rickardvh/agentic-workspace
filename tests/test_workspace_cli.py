@@ -24,12 +24,12 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
-def test_preset_conflicts_with_modules(tmp_path: Path) -> None:
+def test_repeated_modules_uses_last_module_selection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    with pytest.raises(SystemExit) as excinfo:
-        cli.main(["init", "--preset", "planning", "--modules", "planning", "--target", str(tmp_path)])
+    assert cli.main(["init", "--modules", "memory", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
 
-    assert excinfo.value.code == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["modules"] == ["planning"]
 
 
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
@@ -41,7 +41,7 @@ def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp
 
     cases = [
         (["defaults", "--verbose", "--format", "json"], lambda payload: "startup" in payload),
-        (["modules", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: "module_profiles" in payload),
+        (["modules", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: "terminology" in payload),
         (["summary", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["profile"] == "full"),
         (["report", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["kind"] == "workspace-report/v1"),
         (["config", "--target", str(tmp_path), "--verbose", "--format", "json"], lambda payload: payload["target"] == tmp_path.as_posix()),
@@ -152,14 +152,22 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
 
     assert (
         cli.main(
-            ["config", "--target", str(tmp_path), "--select", "workspace.default_preset,mixed_agent.runtime_resolution", "--format", "json"]
+            [
+                "config",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "workspace.enabled_modules,mixed_agent.runtime_resolution",
+                "--format",
+                "json",
+            ]
         )
         == 0
     )
     config = json.loads(capsys.readouterr().out)
     assert config["kind"] == "agentic-workspace/selected-output/v1"
     assert config["source_command"] == "config"
-    assert config["values"]["workspace.default_preset"] == "full"
+    assert config["values"]["workspace.enabled_modules"] == ["planning", "memory"]
     assert "recommendation" in config["values"]["mixed_agent.runtime_resolution"]
     assert "missing" not in config
 
@@ -267,7 +275,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
     assert (
         cli.main(

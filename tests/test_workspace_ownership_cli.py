@@ -81,7 +81,7 @@ def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_pa
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
     capsys.readouterr()
     agents_path = target / "AGENTS.md"
     agents_path.write_text(

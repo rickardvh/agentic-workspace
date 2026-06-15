@@ -2085,13 +2085,6 @@
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules"
           ],
           "help": "Comma-separated module selection.",
@@ -2401,13 +2394,6 @@
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules"
           ],
           "help": "Comma-separated module selection.",
@@ -2675,13 +2661,6 @@
         },
         {
           "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
             "--modules",
             "--module"
           ],
@@ -2795,13 +2774,6 @@
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -2931,13 +2903,6 @@
             },
             {
               "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
-            },
-            {
-              "flags": [
                 "--modules"
               ],
               "help": "Comma-separated module selection.",
@@ -2997,13 +2962,6 @@
             },
             {
               "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
-            },
-            {
-              "flags": [
                 "--modules"
               ],
               "help": "Comma-separated module selection.",
@@ -3045,13 +3003,6 @@
               ],
               "help": "Target repository path. Defaults to the current directory.",
               "name": "target"
-            },
-            {
-              "flags": [
-                "--preset"
-              ],
-              "help": "Named module bundle.",
-              "name": "preset"
             },
             {
               "flags": [
@@ -3099,13 +3050,6 @@
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3159,13 +3103,6 @@
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3226,13 +3163,6 @@
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [
@@ -3319,13 +3249,6 @@
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
         },
         {
           "flags": [

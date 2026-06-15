@@ -30,18 +30,11 @@
           "help": "Target repository path. Defaults to the current directory."
         },
         {
-          "name": "preset",
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle."
-        },
-        {
           "name": "modules",
           "flags": [
             "--modules"
           ],
-          "help": "Comma-separated module selection."
+          "help": "Comma-separated module selection, or 'none'."
         },
         {
           "name": "non_interactive",

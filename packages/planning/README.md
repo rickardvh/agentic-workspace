@@ -88,7 +88,7 @@ Bundled skills:
 
 ## Quick Start
 
-Default path: use `agentic-workspace init --preset planning`.
+Default path: use `agentic-workspace init --modules planning`.
 Treat the preset as the user intent: "set up this repo for Agentic Planning" and let the workspace CLI choose the safe install vs adopt path from repo state.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
@@ -112,7 +112,7 @@ After workspace bootstrap, `docs/agentic-workspace-install.md` is the canonical 
 Normal public lifecycle path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --preset planning
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --modules planning
 ```
 
 If you want an agent to perform lifecycle work without a local CLI install, use the paired remote prompt commands below.

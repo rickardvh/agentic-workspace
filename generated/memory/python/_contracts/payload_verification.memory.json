@@ -114,7 +114,7 @@
   },
   "workspace_orchestrator_notice": {
     "marker": ".agentic-workspace/WORKFLOW.md",
-    "detail": "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through `agentic-workspace init --preset memory` or `agentic-workspace upgrade --modules memory`. Direct `agentic-memory` lifecycle commands are module-level maintenance/debugging surfaces and do not provide the full Workspace startup router, shared config, ownership, skills, or combined reports.",
+    "detail": "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through `agentic-workspace init --modules memory` or `agentic-workspace upgrade --modules memory`. Direct `agentic-memory` lifecycle commands are module-level maintenance/debugging surfaces and do not provide the full Workspace startup router, shared config, ownership, skills, or combined reports.",
     "role": "workspace-orchestration",
     "safety": "safe",
     "category": "safe-update"

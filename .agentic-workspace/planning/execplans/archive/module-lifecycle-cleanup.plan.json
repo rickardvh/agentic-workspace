@@ -1,0 +1,417 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement module lifecycle cleanup milestone",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+    "hard_constraints": "Implement the GitHub milestone on one PR without adding public third-party loading or preserving preset compatibility aliases.",
+    "agent_may_decide": "Exact runtime shape, tests, docs compression, generated-reference refresh, and issue close wording as long as the milestone acceptance criteria are met.",
+    "escalate_when": "A correct implementation requires dynamic third-party module loading, package distribution redesign, or unrelated module internals.",
+    "next_action": "Replace preset-driven module selection with config-owned modules.enabled and update registry/docs/tests.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_lifecycle_cli.py tests/test_workspace_report_cli.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_packaging.py tests/test_workspace_skills_cli.py tests/test_workspace_ownership_cli.py",
+      "uv run python scripts/check/check_generated_command_packages.py"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/config.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_output.py",
+      "src/agentic_workspace/_schema.py",
+      "src/agentic_workspace/contracts/**",
+      "generated/workspace/**",
+      "docs/**",
+      "README.md",
+      "tests/**",
+      ".agentic-workspace/planning/execplans/module-lifecycle-cleanup.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Fresh init writes [modules].enabled = [\"planning\", \"memory\"] and installs those core modules.",
+      "Explicit --modules, including none, writes the repo-owned enabled module list.",
+      "Install, uninstall, upgrade, report, doctor, status, and start default from modules.enabled rather than presets or installed signals.",
+      "Registry/schema/docs remove preset/profile/feature-tier runtime selection concepts and define core-module terminology plus future external-module boundary.",
+      "Tests cover config-owned enablement, residue/missing classification, dependency/conflict reporting, and rejected preset surfaces."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "GitHub milestone Module lifecycle cleanup (#1514-#1520)"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement GitHub milestone Module lifecycle cleanup (#1514-#1520) on one PR.",
+      "constraints": "No public third-party module loading, no preset compatibility layer, and no unrelated module-internal redesign.",
+      "latitude": "Choose exact field names, output shape, docs compression, and test placement while satisfying milestone criteria.",
+      "escalation": "Escalate when implementation requires dynamic external module support, package distribution redesign, or unrelated subsystem rewrites.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "module-lifecycle-cleanup",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_output.py",
+        "src/agentic_workspace/_schema.py",
+        "src/agentic_workspace/contracts/**",
+        "generated/workspace/**",
+        "docs/**",
+        "README.md",
+        "tests/**"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement module lifecycle cleanup milestone",
+    "inferred intended outcome": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+    "chosen concrete what": "One PR implementing modules.enabled as the lifecycle authority and removing preset/bootstrapper framing from runtime, registry, docs, and tests.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime/config/schema/contracts/generated workspace package, README/docs/reference, focused tests, and this planning artifact.",
+    "max changed files": "Broad but bounded milestone PR; keep changes to directly referenced runtime, contract, generated, docs, and test surfaces.",
+    "required validation commands": "Focused pytest suite, generated command package check, and agentic-workspace proof for changed paths.",
+    "ask-before-refactor threshold": "Ask before changing package distribution, adding public external module loading, or rewriting module internals outside lifecycle selection.",
+    "stop before touching": "Unrelated planning/memory package internals, model harness suites, and non-module product areas."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from config-owned modules.enabled as the root lifecycle authority; remove preset runtime selection and prove all milestone issue criteria.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+    "hard constraints": "No third-party loading implementation and no preset compatibility aliases.",
+    "agent may decide locally": "Implementation details, docs wording, tests, generated reference refresh, and PR composition.",
+    "escalate when": "A correct path requires package distribution redesign, external SDK design, or unrelated subsystem rewrites."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The change spans runtime contracts, generated outputs, docs, tests, and PR closeout; keeping one local implementation thread reduces merge and intent drift risk.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "d9ea3d914d83a836",
+    "recorded at": "2026-06-14T20:23:01+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+      "label": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "module-lifecycle-cleanup",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement config-owned module enablement, registry simplification, lifecycle/report classification, docs cleanup, and tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_output.py",
+    "src/agentic_workspace/_schema.py",
+    "src/agentic_workspace/contracts/**",
+    "generated/workspace/**",
+    "docs/**",
+    "README.md",
+    "tests/**"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_lifecycle_cli.py tests/test_workspace_report_cli.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_packaging.py tests/test_workspace_skills_cli.py tests/test_workspace_ownership_cli.py",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/run_agentic_workspace.py proof --target . --changed <changed-paths> --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "All open issues in the Module lifecycle cleanup milestone are implemented by one PR.",
+    "Runtime lifecycle uses modules.enabled as the single repo-owned module selection authority.",
+    "Preset/profile/feature-tier/bootstrapper framing is removed from executable selection, registry contract, primary docs, and generic tests.",
+    "Lifecycle and reports distinguish available, enabled, installed/current, missing, and residue module states."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented config-owned core module enablement for the module lifecycle cleanup milestone, removed preset/profile/feature-tier selection from runtime contracts and docs, regenerated package outputs, and updated lifecycle/reporting tests.",
+    "scope touched": "Workspace config/runtime/contracts/generated packages, module registry schemas, public docs, package installer guidance, and focused tests.",
+    "changed surfaces": "src/agentic_workspace, src/agentic_workspace/contracts, generated, docs, README.md, packages/memory, packages/planning, tests, .agentic-workspace planning state.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within the milestone: modules.enabled is now the repo-owned selection authority; presets are rejected; lifecycle state distinguishes enabled, installed/current, missing, residue, and available modules.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The change spans runtime contracts, generated outputs, docs, tests, and PR closeout; keeping one local implementation thread reduces merge and intent drift risk.",
+    "expected savings": "Delegation would save little because issue intent, code changes, regeneration, validation, and PR composition need tight iteration.",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "Broad scope requires focused proof and final issue-to-acceptance audit.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; make test-memory; make lint-memory; make test-planning; make lint-planning; make maintainer-surfaces; make schema-reference-docs; make typecheck-planning; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub milestone Module lifecycle cleanup (#1514-#1520)",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Module lifecycle cleanup milestone implemented on branch codex/module-lifecycle-cleanup and ready for one PR.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-14: Scaffolded by agentic-planning new-plan.",
+    "2026-06-14: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1514",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1520",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub milestone Module lifecycle cleanup (#1514-#1520)\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace; make lint-workspace; make test-memory; make lint-memory; make test-planning; make lint-planning; make maintainer-surfaces; make schema-reference-docs; make typecheck-planning; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py\nChanged surfaces: src/agentic_workspace, src/agentic_workspace/contracts, generated, docs, README.md, packages/memory, packages/planning, tests, .agentic-workspace planning state.\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

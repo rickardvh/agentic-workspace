@@ -26,10 +26,6 @@
       "type": "integer",
       "description": "Rank used to order modules during selection and execution."
     },
-    "include_in_full_preset": {
-      "type": "boolean",
-      "description": "Whether this module is included in the 'full' preset by default."
-    },
     "capabilities": {
       "type": "array",
       "items": {
@@ -162,6 +158,18 @@
         }
       },
       "description": "The schema version and required fields the workspace adapter guarantees to preserve."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "core",
+        "external"
+      ],
+      "description": "Module origin. Only core modules are supported by the current runtime."
+    },
+    "default_enabled": {
+      "type": "boolean",
+      "description": "Whether the core module is enabled by default for fresh init."
     }
   },
   "additionalProperties": false,

@@ -22,8 +22,8 @@ def test_schema_reference_generator_renders_workspace_config_annotations() -> No
     text = module.render_schema_reference(module.DEFAULT_SCHEMA)
 
     assert "Source schema: `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`" in text
-    assert "`workspace.default_preset`" in text
-    assert '`"full"`' in text
+    assert "`modules.enabled`" in text
+    assert '`["planning", "memory"]`' in text
     assert "`workspace.agent_instructions_file`" in text
     assert '`"CLAUDE.md"`' in text
     assert '`".cursor/rules/project.mdc"`' in text

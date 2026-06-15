@@ -185,7 +185,6 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             commands={command_name: _build_handler(module_name, command_name) for command_name in commands},
             detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
             selection_rank=10 if module_name == "planning" else 20,
-            include_in_full_preset=True,
             install_signals=(
                 (Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning"))
                 if module_name == "planning"
@@ -238,6 +237,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             ),
             dependencies=(),
             conflicts=(),
+            default_enabled=True,
             result_contract=cli.ModuleResultContract(
                 schema_version="workspace-module-report/v1",
                 guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
@@ -281,7 +281,6 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             },
             detector=lambda detected_root: True,
             selection_rank=10,
-            include_in_full_preset=True,
             install_signals=(Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=(Path("AGENTS.md"), Path(".agentic-workspace/planning/agent-manifest.json")),
             generated_artifacts=(Path(".agentic-workspace/planning/agent-manifest.json"),),
@@ -299,6 +298,7 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             capabilities=("active-execution-state",),
             dependencies=(),
             conflicts=(),
+            default_enabled=True,
             result_contract=cli.ModuleResultContract(
                 schema_version="workspace-module-report/v1",
                 guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
@@ -323,7 +323,6 @@ def _descriptors_with_install_signals(
                 and (detected_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             selection_rank=descriptors["planning"].selection_rank,
-            include_in_full_preset=descriptors["planning"].include_in_full_preset,
             install_signals=(Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=descriptors["planning"].workflow_surfaces,
             generated_artifacts=descriptors["planning"].generated_artifacts,
@@ -334,6 +333,7 @@ def _descriptors_with_install_signals(
             capabilities=descriptors["planning"].capabilities,
             dependencies=descriptors["planning"].dependencies,
             conflicts=descriptors["planning"].conflicts,
+            default_enabled=descriptors["planning"].default_enabled,
             result_contract=descriptors["planning"].result_contract,
         ),
         "memory": cli.ModuleDescriptor(
@@ -344,7 +344,6 @@ def _descriptors_with_install_signals(
                 (detected_root / "memory" / "index.md").exists() and (detected_root / ".agentic-workspace" / "memory").exists()
             ),
             selection_rank=descriptors["memory"].selection_rank,
-            include_in_full_preset=descriptors["memory"].include_in_full_preset,
             install_signals=(Path(".agentic-workspace/memory/repo/index.md"), Path("memory/current"), Path(".agentic-workspace/memory")),
             workflow_surfaces=descriptors["memory"].workflow_surfaces,
             generated_artifacts=descriptors["memory"].generated_artifacts,
@@ -355,6 +354,7 @@ def _descriptors_with_install_signals(
             capabilities=descriptors["memory"].capabilities,
             dependencies=descriptors["memory"].dependencies,
             conflicts=descriptors["memory"].conflicts,
+            default_enabled=descriptors["memory"].default_enabled,
             result_contract=descriptors["memory"].result_contract,
         ),
     }

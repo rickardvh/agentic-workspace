@@ -19,11 +19,6 @@
       "required": false
     },
     {
-      "name": "preset",
-      "source": "cli-option",
-      "required": false
-    },
-    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -87,7 +82,7 @@
       {
         "id": "resolve_selection",
         "uses": "workspace.selection.resolve",
-        "description": "Resolve target, selected modules, preset, descriptors, and workspace config for prompt rendering.",
+        "description": "Resolve target, selected modules, descriptors, and workspace config for prompt rendering.",
         "arguments": {},
         "outputs": [
           "selection"

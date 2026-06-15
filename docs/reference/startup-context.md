@@ -96,7 +96,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `cli_invocation.mismatch.required_next_action` | string | yes |  | Immediate correction step before relying on the startup payload. |  |  |
 | `cli_invocation.mismatch.trust` | string | yes |  | Trust posture to apply until the invocation mismatch is resolved. |  |  |
 | `startup_sequence` | array of object | no |  | Ordered surfaces and commands an agent should use before opening broader repo context. |  |  |
-| `feature_tier` | object | no |  | Resolved feature tier and package footprint for the target repository. |  |  |
+| `feature_tier` | object | no |  | Resolved module enablement and package footprint for the target repository. |  |  |
 | `context_router` | object | no |  | Available compact context-router views and when to use each one. |  |  |
 | `adaptive_routing` | object | no |  | Machine-readable need classification, read budget, and escalation detail commands for this startup packet. |  |  |
 | `active_state_summary` | object | no |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |

@@ -156,7 +156,7 @@
     },
     "feature_tier": {
       "type": "object",
-      "description": "Resolved feature tier, package footprint, and ordinary operating scope."
+      "description": "Resolved module enablement, package footprint, and ordinary operating scope."
     },
     "health": {
       "type": "string",

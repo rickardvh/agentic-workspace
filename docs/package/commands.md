@@ -12,7 +12,7 @@ classification](ordinary-continuity-loop.md).
 
 | Command | Use when |
 | --- | --- |
-| `agentic-workspace init --target ./repo --preset memory` | bootstrap the smallest common durable-knowledge install |
+| `agentic-workspace init --target ./repo --modules memory` | bootstrap the smallest common durable-knowledge install |
 | `agentic-workspace start --target ./repo --task "<task>" --format json` | begin ordinary work from the smallest startup decision card |
 | `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
 | `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
@@ -40,7 +40,7 @@ Use `agentic-workspace` in ordinary host-repo workflow guidance. Use `agentic-pl
 
 | Command | Use when |
 | --- | --- |
-| `init` | set up a repo from a preset, choosing conservative install or adopt behavior |
+| `init` | set up a repo from selected core modules, choosing conservative install or adopt behavior |
 | `install` | add selected modules explicitly |
 | `upgrade --dry-run` | preview managed-surface refreshes |
 | `upgrade` | apply managed-surface refreshes |
@@ -51,7 +51,7 @@ Use `agentic-workspace` in ordinary host-repo workflow guidance. Use `agentic-pl
 
 | Command | Use when |
 | --- | --- |
-| `defaults` | inspect policy, startup, validation, and preset defaults |
+| `defaults` | inspect policy, startup, validation, and module defaults |
 | `config` | inspect resolved repo and local workspace posture |
 | `ownership` | answer which surface owns a path or concern |
 | `modules` | list available or installed modules |
@@ -77,4 +77,3 @@ The deeper model for these groups is described in [Lifecycle and context command
 - `proof --format json`: [Proof selection rules](../reference/proof-selection-rules.md) and [Proof routes manifest](../reference/proof-routes-manifest.md).
 - `config --format json`: [Workspace config](../reference/workspace-config.md) and [Workspace local override](../reference/workspace-local-override.md).
 - generated adapter and operation contracts: [Operation contracts](../reference/operation-contracts.md), [Operation primitives](../reference/operation-primitives.md), and [Command adapter generation](../reference/command-adapter-generation.md).
-

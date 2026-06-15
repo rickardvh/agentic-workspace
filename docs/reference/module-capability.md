@@ -14,7 +14,6 @@ Module capability contract for describing package-owned features and execution p
 | `name` | string | yes |  | Durable name of the module. |  |  |
 | `description` | string | yes |  | Human-readable description of the module's purpose. |  |  |
 | `selection_rank` | integer | no |  | Rank used to order modules during selection and execution. |  |  |
-| `include_in_full_preset` | boolean | no |  | Whether this module is included in the 'full' preset by default. |  |  |
 | `capabilities` | array of string | yes |  | Durable product capabilities the module owns. |  |  |
 | `commands` | array of string | yes |  | Lifecycle hooks the workspace layer may orchestrate. |  |  |
 | `command_args` | object | no |  | Arguments accepted by each lifecycle command. |  |  |
@@ -31,3 +30,5 @@ Module capability contract for describing package-owned features and execution p
 | `result_contract.guaranteed_fields` | array of string | yes |  | Ordered guaranteed fields entries used by this contract. |  |  |
 | `result_contract.action_fields` | array of string | yes |  | Ordered action fields entries used by this contract. |  |  |
 | `result_contract.warning_fields` | array of string | yes |  | Ordered warning fields entries used by this contract. |  |  |
+| `kind` | enum `"core"`, `"external"` | no |  | Module origin. Only core modules are supported by the current runtime. |  |  |
+| `default_enabled` | boolean | no |  | Whether the core module is enabled by default for fresh init. |  |  |

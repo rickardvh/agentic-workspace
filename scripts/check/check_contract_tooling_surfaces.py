@@ -133,11 +133,13 @@ def _sample_workspace_config_payload() -> dict[str, object]:
     return {
         "schema_version": 1,
         "workspace": {
-            "default_preset": "full",
             "agent_instructions_file": "AGENTS.md",
             "workflow_artifact_profile": "repo-owned",
             "improvement_latitude": "balanced",
             "optimization_bias": "agent-efficiency",
+        },
+        "modules": {
+            "enabled": ["planning", "memory"],
         },
         "update": {
             "modules": {
@@ -242,7 +244,8 @@ def _sample_module_capability_payload() -> dict[str, object]:
         "name": descriptor.name,
         "description": descriptor.description,
         "selection_rank": descriptor.selection_rank,
-        "include_in_full_preset": descriptor.include_in_full_preset,
+        "kind": descriptor.kind,
+        "default_enabled": descriptor.default_enabled,
         "capabilities": list(descriptor.capabilities),
         "commands": list(descriptor.commands),
         "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
@@ -2523,7 +2526,8 @@ def main(argv: list[str] | None = None) -> int:
             "name": entry.name,
             "description": entry.description,
             "selection_rank": descriptors[entry.name].selection_rank,
-            "include_in_full_preset": descriptors[entry.name].include_in_full_preset,
+            "kind": entry.kind,
+            "default_enabled": entry.default_enabled,
             "install_signals": [path.as_posix() for path in entry.install_signals],
             "workflow_surfaces": [path.as_posix() for path in entry.workflow_surfaces],
             "generated_artifacts": [path.as_posix() for path in entry.generated_artifacts],
@@ -2639,7 +2643,8 @@ def main(argv: list[str] | None = None) -> int:
         "name",
         "description",
         "selection_rank",
-        "include_in_full_preset",
+        "kind",
+        "default_enabled",
         "capabilities",
         "commands",
         "command_args",

@@ -1374,7 +1374,7 @@
     },
     {
       "id": "workspace.selection.resolve",
-      "summary": "Resolve module selection options, presets, and configured defaults.",
+      "summary": "Resolve module selection options and configured module enablement defaults.",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace package runtime boundary",
       "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",

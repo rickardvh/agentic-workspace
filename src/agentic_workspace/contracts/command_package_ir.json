@@ -370,11 +370,6 @@
               "default": null
             },
             {
-              "name": "preset",
-              "arg": "preset",
-              "default": null
-            },
-            {
               "name": "review_burden",
               "arg": "review_burden",
               "default": null
@@ -1093,66 +1088,331 @@
                 "name": "lane-create",
                 "help": "Create a first-class Planning lane record.",
                 "options": [
-                  {"name": "id", "flags": ["--id"], "required": true, "help": "Stable lane id; used as the .lane.json filename."},
-                  {"name": "title", "flags": ["--title"], "default": "", "help": "Human-readable lane title."},
-                  {"name": "parent_decomposition", "flags": ["--parent-decomposition"], "default": "", "help": "Optional parent decomposition record path."},
-                  {"name": "outcome", "flags": ["--outcome"], "default": "", "help": "Lane-level outcome."},
-                  {"name": "purpose", "flags": ["--purpose"], "default": "", "help": "How this lane advances the parent decomposition."},
-                  {"name": "proof_strategy", "flags": ["--proof-strategy"], "default": "", "help": "How slice proofs aggregate into lane proof."},
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "required": true,
+                    "help": "Stable lane id; used as the .lane.json filename."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "default": "",
+                    "help": "Human-readable lane title."
+                  },
+                  {
+                    "name": "parent_decomposition",
+                    "flags": [
+                      "--parent-decomposition"
+                    ],
+                    "default": "",
+                    "help": "Optional parent decomposition record path."
+                  },
+                  {
+                    "name": "outcome",
+                    "flags": [
+                      "--outcome"
+                    ],
+                    "default": "",
+                    "help": "Lane-level outcome."
+                  },
+                  {
+                    "name": "purpose",
+                    "flags": [
+                      "--purpose"
+                    ],
+                    "default": "",
+                    "help": "How this lane advances the parent decomposition."
+                  },
+                  {
+                    "name": "proof_strategy",
+                    "flags": [
+                      "--proof-strategy"
+                    ],
+                    "default": "",
+                    "help": "How slice proofs aggregate into lane proof."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
                 "name": "lane-promote",
                 "help": "Promote a decomposition candidate lane into a first-class lane record.",
-                "arguments": [{"name": "lane", "help": "Decomposition candidate lane id to promote."}],
+                "arguments": [
+                  {
+                    "name": "lane",
+                    "help": "Decomposition candidate lane id to promote."
+                  }
+                ],
                 "options": [
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
                 "name": "lane-activate",
                 "help": "Mark a lane record active and optionally select its current slice.",
-                "arguments": [{"name": "lane", "help": "Lane id to activate."}],
+                "arguments": [
+                  {
+                    "name": "lane",
+                    "help": "Lane id to activate."
+                  }
+                ],
                 "options": [
-                  {"name": "current_slice", "flags": ["--current-slice"], "default": "", "help": "Optional lane slice id to mark active."},
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "current_slice",
+                    "flags": [
+                      "--current-slice"
+                    ],
+                    "default": "",
+                    "help": "Optional lane slice id to mark active."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
                 "name": "lane-close",
                 "help": "Record lane proof aggregation, residual work, and parent contribution.",
-                "arguments": [{"name": "lane", "help": "Lane id to close."}],
+                "arguments": [
+                  {
+                    "name": "lane",
+                    "help": "Lane id to close."
+                  }
+                ],
                 "options": [
-                  {"name": "proof", "flags": ["--proof"], "default": "", "help": "Lane-level proof evidence to aggregate."},
-                  {"name": "residual_work", "flags": ["--residual-work"], "default": "", "help": "Residual lane work or known proof gap."},
-                  {"name": "parent_contribution", "flags": ["--parent-contribution"], "default": "", "help": "How this lane advances the parent epic."},
-                  {"name": "parent_close_permission", "flags": ["--parent-close-permission"], "choices": ["do-not-close-parent", "may-advance-parent", "may-close-parent-after-human-confirmation", "may-close-parent"], "default": "may-advance-parent", "help": "Whether this lane permits parent advancement or closure."},
-                  {"name": "next_owner", "flags": ["--next-owner"], "default": "", "help": "Owner for residual lane or parent work."},
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "proof",
+                    "flags": [
+                      "--proof"
+                    ],
+                    "default": "",
+                    "help": "Lane-level proof evidence to aggregate."
+                  },
+                  {
+                    "name": "residual_work",
+                    "flags": [
+                      "--residual-work"
+                    ],
+                    "default": "",
+                    "help": "Residual lane work or known proof gap."
+                  },
+                  {
+                    "name": "parent_contribution",
+                    "flags": [
+                      "--parent-contribution"
+                    ],
+                    "default": "",
+                    "help": "How this lane advances the parent epic."
+                  },
+                  {
+                    "name": "parent_close_permission",
+                    "flags": [
+                      "--parent-close-permission"
+                    ],
+                    "choices": [
+                      "do-not-close-parent",
+                      "may-advance-parent",
+                      "may-close-parent-after-human-confirmation",
+                      "may-close-parent"
+                    ],
+                    "default": "may-advance-parent",
+                    "help": "Whether this lane permits parent advancement or closure."
+                  },
+                  {
+                    "name": "next_owner",
+                    "flags": [
+                      "--next-owner"
+                    ],
+                    "default": "",
+                    "help": "Owner for residual lane or parent work."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
                 "name": "lane-archive",
                 "help": "Archive a closed lane record and remove its live state projection.",
-                "arguments": [{"name": "lane", "help": "Closed lane id to archive."}],
+                "arguments": [
+                  {
+                    "name": "lane",
+                    "help": "Closed lane id to archive."
+                  }
+                ],
                 "options": [
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
@@ -2944,13 +3204,6 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
-              },
-              {
                 "name": "modules",
                 "flags": [
                   "--modules"
@@ -3578,13 +3831,6 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
-              },
-              {
                 "name": "modules",
                 "flags": [
                   "--modules"
@@ -4074,13 +4320,6 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
-              },
-              {
                 "name": "modules",
                 "flags": [
                   "--modules",
@@ -4250,13 +4489,6 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
               },
               {
                 "name": "modules",
@@ -4435,13 +4667,6 @@
                     "help": "Target repository path. Defaults to the current directory."
                   },
                   {
-                    "name": "preset",
-                    "flags": [
-                      "--preset"
-                    ],
-                    "help": "Named module bundle."
-                  },
-                  {
                     "name": "modules",
                     "flags": [
                       "--modules"
@@ -4501,13 +4726,6 @@
                     "help": "Target repository path. Defaults to the current directory."
                   },
                   {
-                    "name": "preset",
-                    "flags": [
-                      "--preset"
-                    ],
-                    "help": "Named module bundle."
-                  },
-                  {
                     "name": "modules",
                     "flags": [
                       "--modules"
@@ -4550,13 +4768,6 @@
                       "--target"
                     ],
                     "help": "Target repository path. Defaults to the current directory."
-                  },
-                  {
-                    "name": "preset",
-                    "flags": [
-                      "--preset"
-                    ],
-                    "help": "Named module bundle."
                   },
                   {
                     "name": "modules",
@@ -4663,13 +4874,6 @@
                 "help": "Target repository path. Defaults to the current directory."
               },
               {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
-              },
-              {
                 "name": "modules",
                 "flags": [
                   "--modules"
@@ -4774,13 +4978,6 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
               },
               {
                 "name": "modules",
@@ -4896,13 +5093,6 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
               },
               {
                 "name": "modules",
@@ -5045,13 +5235,6 @@
                   "--target"
                 ],
                 "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "preset",
-                "flags": [
-                  "--preset"
-                ],
-                "help": "Named module bundle."
               },
               {
                 "name": "modules",
@@ -7341,143 +7524,593 @@
         {
           "adapter_id": "planning.lane-create.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "lane-create"},
-          "operation_ref": {"id": "planning.lane-create.lifecycle", "path": "operations/planning.lane-create.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.lane-create.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "lane-create"
+          },
+          "operation_ref": {
+            "id": "planning.lane-create.lifecycle",
+            "path": "operations/planning.lane-create.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.lane-create.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "lane-create",
             "help": "Create a first-class Planning lane record.",
             "options": [
-              {"name": "id", "flags": ["--id"], "required": true, "help": "Stable lane id; used as the .lane.json filename."},
-              {"name": "title", "flags": ["--title"], "default": "", "help": "Human-readable lane title."},
-              {"name": "parent_decomposition", "flags": ["--parent-decomposition"], "default": "", "help": "Optional parent decomposition record path."},
-              {"name": "outcome", "flags": ["--outcome"], "default": "", "help": "Lane-level outcome."},
-              {"name": "purpose", "flags": ["--purpose"], "default": "", "help": "How this lane advances the parent decomposition."},
-              {"name": "proof_strategy", "flags": ["--proof-strategy"], "default": "", "help": "How slice proofs aggregate into lane proof."},
-              {"name": "target", "flags": ["--target"], "help": "Target repository path. Defaults to the current directory."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "id",
+                "flags": [
+                  "--id"
+                ],
+                "required": true,
+                "help": "Stable lane id; used as the .lane.json filename."
+              },
+              {
+                "name": "title",
+                "flags": [
+                  "--title"
+                ],
+                "default": "",
+                "help": "Human-readable lane title."
+              },
+              {
+                "name": "parent_decomposition",
+                "flags": [
+                  "--parent-decomposition"
+                ],
+                "default": "",
+                "help": "Optional parent decomposition record path."
+              },
+              {
+                "name": "outcome",
+                "flags": [
+                  "--outcome"
+                ],
+                "default": "",
+                "help": "Lane-level outcome."
+              },
+              {
+                "name": "purpose",
+                "flags": [
+                  "--purpose"
+                ],
+                "default": "",
+                "help": "How this lane advances the parent decomposition."
+              },
+              {
+                "name": "proof_strategy",
+                "flags": [
+                  "--proof-strategy"
+                ],
+                "default": "",
+                "help": "How slice proofs aggregate into lane proof."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning lane mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lane mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.lane-create.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.lane-create.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-promote.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "lane-promote"},
-          "operation_ref": {"id": "planning.lane-promote.lifecycle", "path": "operations/planning.lane-promote.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.lane-promote.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "lane-promote"
+          },
+          "operation_ref": {
+            "id": "planning.lane-promote.lifecycle",
+            "path": "operations/planning.lane-promote.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.lane-promote.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "lane-promote",
             "help": "Promote a decomposition candidate lane into a first-class lane record.",
-            "arguments": [{"name": "lane", "help": "Decomposition candidate lane id to promote."}],
+            "arguments": [
+              {
+                "name": "lane",
+                "help": "Decomposition candidate lane id to promote."
+              }
+            ],
             "options": [
-              {"name": "target", "flags": ["--target"], "help": "Target repository path. Defaults to the current directory."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning lane mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lane mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.lane-promote.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.lane-promote.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-activate.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "lane-activate"},
-          "operation_ref": {"id": "planning.lane-activate.lifecycle", "path": "operations/planning.lane-activate.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.lane-activate.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "lane-activate"
+          },
+          "operation_ref": {
+            "id": "planning.lane-activate.lifecycle",
+            "path": "operations/planning.lane-activate.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.lane-activate.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "lane-activate",
             "help": "Mark a lane record active and optionally select its current slice.",
-            "arguments": [{"name": "lane", "help": "Lane id to activate."}],
+            "arguments": [
+              {
+                "name": "lane",
+                "help": "Lane id to activate."
+              }
+            ],
             "options": [
-              {"name": "current_slice", "flags": ["--current-slice"], "default": "", "help": "Optional lane slice id to mark active."},
-              {"name": "target", "flags": ["--target"], "help": "Target repository path. Defaults to the current directory."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "current_slice",
+                "flags": [
+                  "--current-slice"
+                ],
+                "default": "",
+                "help": "Optional lane slice id to mark active."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning lane mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lane mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.lane-activate.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.lane-activate.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-close.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "lane-close"},
-          "operation_ref": {"id": "planning.lane-close.lifecycle", "path": "operations/planning.lane-close.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.lane-close.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "lane-close"
+          },
+          "operation_ref": {
+            "id": "planning.lane-close.lifecycle",
+            "path": "operations/planning.lane-close.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.lane-close.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "lane-close",
             "help": "Record lane proof aggregation, residual work, and parent contribution.",
-            "arguments": [{"name": "lane", "help": "Lane id to close."}],
+            "arguments": [
+              {
+                "name": "lane",
+                "help": "Lane id to close."
+              }
+            ],
             "options": [
-              {"name": "proof", "flags": ["--proof"], "default": "", "help": "Lane-level proof evidence to aggregate."},
-              {"name": "residual_work", "flags": ["--residual-work"], "default": "", "help": "Residual lane work or known proof gap."},
-              {"name": "parent_contribution", "flags": ["--parent-contribution"], "default": "", "help": "How this lane advances the parent epic."},
-              {"name": "parent_close_permission", "flags": ["--parent-close-permission"], "choices": ["do-not-close-parent", "may-advance-parent", "may-close-parent-after-human-confirmation", "may-close-parent"], "default": "may-advance-parent", "help": "Whether this lane permits parent advancement or closure."},
-              {"name": "next_owner", "flags": ["--next-owner"], "default": "", "help": "Owner for residual lane or parent work."},
-              {"name": "target", "flags": ["--target"], "help": "Target repository path. Defaults to the current directory."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "proof",
+                "flags": [
+                  "--proof"
+                ],
+                "default": "",
+                "help": "Lane-level proof evidence to aggregate."
+              },
+              {
+                "name": "residual_work",
+                "flags": [
+                  "--residual-work"
+                ],
+                "default": "",
+                "help": "Residual lane work or known proof gap."
+              },
+              {
+                "name": "parent_contribution",
+                "flags": [
+                  "--parent-contribution"
+                ],
+                "default": "",
+                "help": "How this lane advances the parent epic."
+              },
+              {
+                "name": "parent_close_permission",
+                "flags": [
+                  "--parent-close-permission"
+                ],
+                "choices": [
+                  "do-not-close-parent",
+                  "may-advance-parent",
+                  "may-close-parent-after-human-confirmation",
+                  "may-close-parent"
+                ],
+                "default": "may-advance-parent",
+                "help": "Whether this lane permits parent advancement or closure."
+              },
+              {
+                "name": "next_owner",
+                "flags": [
+                  "--next-owner"
+                ],
+                "default": "",
+                "help": "Owner for residual lane or parent work."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning lane mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lane mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.lane-close.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.lane-close.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-archive.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "lane-archive"},
-          "operation_ref": {"id": "planning.lane-archive.lifecycle", "path": "operations/planning.lane-archive.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.lane-archive.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "lane-archive"
+          },
+          "operation_ref": {
+            "id": "planning.lane-archive.lifecycle",
+            "path": "operations/planning.lane-archive.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.lane-archive.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "lane-archive",
             "help": "Archive a closed lane record and remove its live state projection.",
-            "arguments": [{"name": "lane", "help": "Closed lane id to archive."}],
+            "arguments": [
+              {
+                "name": "lane",
+                "help": "Closed lane id to archive."
+              }
+            ],
             "options": [
-              {"name": "target", "flags": ["--target"], "help": "Target repository path. Defaults to the current directory."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning lane mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lane mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.lane-archive.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.lane-archive.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.new-plan.cli",
@@ -9619,7 +10252,7 @@
                   "strict-doc-ownership"
                 ],
                 "default": "default",
-                "help": "Installer policy preset."
+                "help": "Explicit module selection."
               },
               {
                 "name": "format",
@@ -9776,7 +10409,7 @@
                   "strict-doc-ownership"
                 ],
                 "default": "default",
-                "help": "Installer policy preset."
+                "help": "Explicit module selection."
               },
               {
                 "name": "format",
@@ -9933,7 +10566,7 @@
                   "strict-doc-ownership"
                 ],
                 "default": "default",
-                "help": "Installer policy preset."
+                "help": "Explicit module selection."
               },
               {
                 "name": "format",
@@ -10098,7 +10731,7 @@
                   "strict-doc-ownership"
                 ],
                 "default": "default",
-                "help": "Installer policy preset."
+                "help": "Explicit module selection."
               },
               {
                 "name": "format",
@@ -10331,7 +10964,7 @@
                   "strict-doc-ownership"
                 ],
                 "default": "default",
-                "help": "Installer policy preset."
+                "help": "Explicit module selection."
               },
               {
                 "name": "format",

@@ -730,7 +730,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
     assert payload["startup_sequence"][2]["command"] == "uv run agentic-workspace summary --format json"
     assert payload["context_router"]["views"][0]["command"] == "uv run agentic-workspace start --target ./repo --format json"
-    assert payload["feature_tier"]["active"]["id"] == "planning"
+    assert payload["feature_tier"]["active"]["id"] == "enabled-modules"
     assert payload["feature_tier"]["active"]["modules"] == ["planning"]
     assert payload["feature_tier"]["active"]["source"] == "selected_modules"
     assert "available_tiers" not in payload["feature_tier"]
@@ -1582,7 +1582,7 @@ def test_start_tiny_does_not_route_config_posture_questions_from_prompt_keywords
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     task = (
@@ -1635,7 +1635,7 @@ def test_start_tiny_does_not_route_prep_only_handoff_from_prompt_keywords(tmp_pa
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     task = (
@@ -1657,7 +1657,7 @@ def test_start_tiny_keeps_paraphrased_prep_only_prompt_agent_owned(tmp_path: Pat
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     task = "Prepare repository state for future CSV row import feature without implementing it"
@@ -1672,7 +1672,7 @@ def test_start_tiny_keeps_groundwork_without_implementation_prompt_agent_owned(t
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     task = "Prepare groundwork for CSV row import support without implementing feature"
@@ -1688,7 +1688,7 @@ def test_start_tiny_keeps_durable_plan_state_without_code_prompt_agent_owned(tmp
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     task = "Prepare durable implementation plan/state for CSV row import feature with no code changes yet"
@@ -3371,7 +3371,7 @@ def test_start_does_not_promote_unrelated_roadmap_for_lifecycle_task(tmp_path: P
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "planning" / "state.toml",
@@ -3404,7 +3404,7 @@ def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert cli.main(["start", "--target", str(target), "--task", "Ingest and prioritize issues", "--format", "json"]) == 0
@@ -3443,7 +3443,7 @@ def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path,
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
     local_agents = target / ".agentic-workspace" / "AGENTS.md"
@@ -3453,7 +3453,7 @@ def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path,
     assert "Use `agentic-workspace planning ...` and `agentic-workspace memory ...` commands" in text
     assert "route or file an improvement issue" in text
 
-    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
     assert doctor_payload["health"] == "healthy"
     assert ".agentic-workspace/AGENTS.md" not in doctor_payload["warnings"]
@@ -3468,7 +3468,7 @@ def test_init_uses_configured_workspace_local_agent_instructions_filename(tmp_pa
         'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
     )
 
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
     assert ".agentic-workspace/GEMINI.md" in payload["created"]
@@ -3482,7 +3482,7 @@ def test_doctor_offers_scoped_repair_for_missing_workspace_local_agent_instructi
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
     local_agents = target / ".agentic-workspace" / "AGENTS.md"
     local_agents.unlink()
@@ -3541,7 +3541,7 @@ def test_start_task_keeps_skill_search_explicit(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert (
@@ -3572,7 +3572,7 @@ def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert (
@@ -3741,7 +3741,7 @@ def test_start_compares_present_payload_provenance(tmp_path: Path, capsys) -> No
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
@@ -3873,7 +3873,7 @@ def test_start_surfaces_compatible_sibling_aw_as_advisory(tmp_path: Path, capsys
     sibling.mkdir()
     _init_git_repo(target)
     _init_git_repo(sibling)
-    assert cli.main(["init", "--target", str(sibling), "--preset", "planning", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(sibling), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert cli.main(["start", "--target", str(target), "--task", "Work in command-generation after AW changes", "--format", "json"]) == 0
@@ -3894,7 +3894,7 @@ def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_pat
         "# Agent Instructions\n\nThis repository does not use Agentic Workspace. Work from ordinary files.\n",
     )
 
-    assert cli.main(["init", "--target", str(tmp_path), "--preset", "full", "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Orient and fix README", "--format", "json"]) == 0

@@ -9,7 +9,7 @@ Use this map when updating docs so each page stays complete at its level without
 | Question | Canonical owner | Link instead of repeating when |
 | --- | --- | --- |
 | What is Agentic Workspace and when does it pay back? | [Package overview](package/overview.md) | another page only needs the product thesis or adoption boundary |
-| Which preset/profile should a repo start with? | [Which package should I install?](which-package.md) | repeating the memory/planning/full threshold would duplicate install guidance |
+| Which core modules should a repo enable? | [Modules](package/modules.md) | repeating the memory/planning threshold would duplicate module guidance |
 | What does the root CLI do? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) | a page only needs to name a command or compact router |
 | What is the ordinary agent operating loop and how are visible surfaces classified? | [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md) | later simplification work needs the target workflow, surface classes, overlap findings, or follow-on sequence |
 | Which substeps inside the ordinary loop should be simplified next? | [Operating loop substep inventory](package/operating-loop-substeps.md) | later #1389 slices need per-step decisions, module-slot seams, knowledge-gate fields, or concrete follow-on issues |
@@ -46,7 +46,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Generated schema reference](reference/index.md): generated field-level documentation for machine-readable contracts.
 - [Workspace configuration reference](reference/workspace-config.md): schema reference for `.agentic-workspace/config.toml`.
 - [CLI command contract](reference/cli-commands.md): generated reference for the declared root command surface.
-- [Module registry contract](reference/module-registry.md): generated reference for module profiles, components, and package footprint metadata.
+- [Module registry contract](reference/module-registry.md): generated reference for core modules, components, and package footprint metadata.
 
 ## Maintainer Material
 
@@ -56,7 +56,6 @@ Use this map when updating docs so each page stays complete at its level without
 
 ## Supporting Context
 
-- [Which package should I install?](which-package.md): compact preset selector and package-choice explanation.
 - [Architecture](architecture.md): current composition and module-boundary summary.
 - [Documentation status](documentation-status.md): role and freshness index after the package docs answer the current behavior question.
 - [Maturity model](maturity-model.md): support and adoption expectations, not a product map.

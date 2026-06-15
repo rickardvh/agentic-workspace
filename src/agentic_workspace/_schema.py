@@ -29,7 +29,6 @@ class ModuleDescriptor:
     commands: dict[str, Callable[..., Any]]
     detector: Callable[[Path], bool]
     selection_rank: int
-    include_in_full_preset: bool
     install_signals: tuple[Path, ...]
     workflow_surfaces: tuple[Path, ...]
     generated_artifacts: tuple[Path, ...]
@@ -41,6 +40,8 @@ class ModuleDescriptor:
     dependencies: tuple[str, ...]
     conflicts: tuple[str, ...]
     result_contract: ModuleResultContract
+    kind: str = "core"
+    default_enabled: bool = False
 
 
 class ModuleReportFinding(TypedDict, total=False):

@@ -106,7 +106,7 @@ def test_direct_planning_install_warns_without_workspace_orchestrator(tmp_path: 
     assert any(
         action.kind == "warning"
         and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md"
-        and "agentic-workspace init --preset planning" in action.detail
+        and "agentic-workspace init --modules planning" in action.detail
         and "module-level maintenance/debugging" in action.detail
         for action in result.actions
     )
@@ -121,7 +121,7 @@ def test_planning_status_warns_without_workspace_orchestrator(tmp_path: Path) ->
     assert any(
         action.kind == "warning"
         and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md"
-        and "agentic-workspace init --preset planning" in action.detail
+        and "agentic-workspace init --modules planning" in action.detail
         for action in result.actions
     )
 

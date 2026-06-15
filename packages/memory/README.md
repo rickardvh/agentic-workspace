@@ -52,7 +52,7 @@ The CLI is the delivery mechanism, not the whole product. The product capability
 
 ## Quick Start
 
-Default path: use `agentic-workspace init --preset memory`.
+Default path: use `agentic-workspace init --modules memory`.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
 Advanced module-only no-install path:
@@ -229,7 +229,7 @@ In this monorepo checkout, the active operational memory install lives at the re
 Normal public lifecycle path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --preset memory
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --modules memory
 ```
 
 ### Agent workflow for install

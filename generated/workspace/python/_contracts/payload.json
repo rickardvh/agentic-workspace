@@ -347,7 +347,7 @@
         "ask_first": "agentic-workspace config --target ./repo --format json",
         "id": "workspace_policy",
         "primary_owner": ".agentic-workspace/config.toml",
-        "summary": "repo-owned preset, update intent, improvement latitude, and optimization bias"
+        "summary": "repo-owned module enablement, update intent, improvement latitude, and optimization bias"
       },
       {
         "ask_first": "agentic-workspace ownership --target ./repo --format json",
@@ -630,15 +630,73 @@
     ],
     "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
   },
+  "closeout_protocol": {
+    "claim_boundary": {
+      "proof_success_is": [
+        "evidence input to closeout",
+        "support for the selected claim boundary"
+      ],
+      "proof_success_is_not": [
+        "completion permission",
+        "issue closure permission",
+        "parent intent satisfaction",
+        "evidence that residue is absent"
+      ]
+    },
+    "command": "agentic-workspace defaults --section closeout_protocol --format json",
+    "does_not_own": [
+      "proof selection",
+      "proof execution",
+      "Memory note content",
+      "external tracker truth",
+      "parent epic completion without explicit authorization"
+    ],
+    "kind": "agentic-workspace/closeout-protocol-defaults/v1",
+    "knowledge_route_state_vocabulary": [
+      "consulted",
+      "skipped",
+      "stale",
+      "unavailable",
+      "dismissed",
+      "captured",
+      "promotion-required"
+    ],
+    "owns": [
+      "completion permission",
+      "intent satisfaction reconciliation",
+      "claim-level boundary",
+      "residue owner routing",
+      "continuation owner",
+      "parent and issue closure permission"
+    ],
+    "protocol": "Completion Honesty / Residue Routing",
+    "report_surface": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+    "required_decisions": [
+      "what proof established",
+      "which claim class is allowed",
+      "whether slice, lane, parent, or full intent is satisfied",
+      "which residue state applies",
+      "where any required continuation is owned",
+      "whether issue or parent closure is authorized"
+    ],
+    "routed_outputs": [
+      "summary closeout_trust_inspection",
+      "report closeout_trust.closeout_protocol",
+      "report closeout_report",
+      "planning closeout writer",
+      "memory capture or route surfaces when durable knowledge matters"
+    ],
+    "rule": "Closeout is a protocol phase over existing owners, not a new first-contact command."
+  },
   "combined_install": {
     "cli_availability_rule": "Use an installed `agentic-workspace` CLI first; install it if unavailable, and reserve uvx/pipx for explicit temporary fallback.",
-    "full_when": "Use --preset full only when both active-now planning and durable anti-rediscovery memory are worth the shared footprint.",
+    "full_when": "Use --modules planning,memory only when both active-now planning and durable anti-rediscovery memory are worth the shared footprint.",
     "operating_model": [
       "Planning owns active-now state.",
       "Memory owns durable anti-rediscovery knowledge.",
       "Use the shared workspace lifecycle verbs as the normal operating path."
     ],
-    "primary": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+    "primary": "agentic-workspace install --target ./repo --modules <memory|planning|planning,memory>",
     "secondary": [
       "Direct package CLIs stay available, but they are not the normal path for combined installs."
     ]
@@ -723,7 +781,7 @@
       "Repo config may change module update intent without creating separate public module upgrade entrypoints."
     ],
     "supported_fields": [
-      "workspace.default_preset",
+      "modules.enabled",
       "workspace.agent_instructions_file",
       "workspace.workflow_artifact_profile",
       "workspace.improvement_latitude",
@@ -1733,85 +1791,6 @@
     },
     "rule": "Use the compact signal shape to capture friction before deciding whether to fix, route, remember, review, or dismiss it."
   },
-  "install_profiles": {
-    "canonical_doc": "docs/which-package.md",
-    "cli_availability": {
-      "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
-      "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
-      "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
-      "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners."
-    },
-    "command": "agentic-workspace defaults --section install_profiles --format json",
-    "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `full` only when both are justified.",
-    "default_entrypoint": "agentic-workspace",
-    "lightweight_profile": {
-      "preset": "memory",
-      "summary": "Choose `memory` when you want the smallest useful shared core.",
-      "why": "It keeps the visible surface smaller than `planning` or `full` while still giving the repo durable knowledge and compact routing."
-    },
-    "partial_adoption": [
-      {
-        "combination": "memory only",
-        "primary_writable_surfaces": [
-          ".agentic-workspace/memory/repo/"
-        ],
-        "supported": true
-      },
-      {
-        "combination": "planning only",
-        "primary_writable_surfaces": [
-          ".agentic-workspace/planning/state.toml",
-          ".agentic-workspace/planning/execplans/"
-        ],
-        "supported": true
-      },
-      {
-        "combination": "memory + planning",
-        "primary_writable_surfaces": [
-          "Planning for active-now state",
-          "memory for durable knowledge"
-        ],
-        "supported": true
-      }
-    ],
-    "profiles": [
-      {
-        "good_fit": [
-          "subsystem knowledge is expensive to rediscover",
-          "recurring traps or operator sequences should be shared",
-          "the repo already has task tracking but lacks durable shared knowledge"
-        ],
-        "main_problem": "Stable repo knowledge keeps getting rediscovered.",
-        "preset": "memory",
-        "why": "Memory is the smallest useful operational profile for durable context and quiet routing."
-      },
-      {
-        "good_fit": [
-          "work spans many short sessions",
-          "active execution drifts without a checked-in queue",
-          "backlog tools exist, but active implementation still fragments"
-        ],
-        "main_problem": "Active work keeps drifting or fragmenting.",
-        "preset": "planning",
-        "why": "Planning gives a checked-in active queue and bounded execplans."
-      },
-      {
-        "good_fit": [
-          "the repo wants both restartable execution and lower rediscovery cost",
-          "agents are regular maintainers and need both active state and durable context"
-        ],
-        "main_problem": "You want both durable knowledge and checked-in execution.",
-        "preset": "full",
-        "why": "The workspace layer composes both modules through one lifecycle entrypoint."
-      }
-    ],
-    "recommendation_order": [
-      "memory",
-      "planning",
-      "full"
-    ],
-    "rule": "Use an installed public workspace entrypoint and choose the smallest preset that matches the repo's main operating problem."
-  },
   "intent": {
     "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
     "command": "agentic-workspace defaults --section intent --format json",
@@ -1835,13 +1814,13 @@
     "canonical_bootstrap_next_action": ".agentic-workspace/bootstrap-handoff.md",
     "canonical_external_agent_handoff": "docs/agentic-workspace-install.md",
     "cli_availability_rule": "Prefer the installed `agentic-workspace` command; if missing, install it before bootstrap instead of defaulting to uvx or pipx.",
-    "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+    "default_install_command": "agentic-workspace install --target ./repo --modules <memory|planning|planning,memory>",
     "default_operating_commands": [
       "agentic-workspace status --target ./repo",
       "agentic-workspace doctor --target ./repo",
       "agentic-workspace upgrade --target ./repo"
     ],
-    "default_setup_posture": "smallest-viable-preset-first",
+    "default_setup_posture": "smallest-viable-module-set-first",
     "primary_entrypoint": "agentic-workspace",
     "secondary": [
       "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control."
@@ -1850,6 +1829,71 @@
       "set up this repo for Agentic Memory",
       "set up this repo for Agentic Planning",
       "set up this repo for both Planning and Memory"
+    ]
+  },
+  "memory_consultation": {
+    "capture_boundary": {
+      "allowed": "compact reusable knowledge with future route value",
+      "forbidden": [
+        "active task state",
+        "issue triage",
+        "broad documentation copies",
+        "chat transcripts",
+        "validation logs",
+        "plan history"
+      ]
+    },
+    "command": "agentic-workspace defaults --section memory_consultation --format json",
+    "consultation_states": [
+      "not_checked",
+      "checked_none",
+      "relevant_notes_found",
+      "capture_candidate",
+      "routed_elsewhere",
+      "dismissed",
+      "follow_up_required"
+    ],
+    "durable_residue_decisions": [
+      "memory",
+      "planning",
+      "docs",
+      "tests",
+      "contracts",
+      "config",
+      "review",
+      "issue",
+      "dismissed",
+      "none_found"
+    ],
+    "kind": "agentic-workspace/memory-consultation-defaults/v1",
+    "ordinary_read_rule": "Surface Memory only when it can change interpretation, safe action, proof, closeout, rediscovery cost, or residue ownership.",
+    "ordinary_surface": "memory_consult.consultation_protocol",
+    "owner_routing": {
+      "dismissed": "one-off task detail, transcript residue, validation logs, or weak unrepeated signals",
+      "docs_or_contracts": "stable canonical guidance, requirements, checks, or enforceable rules",
+      "issue": "external follow-up work that should be routable outside checked-in Planning",
+      "memory": "durable anti-rediscovery lessons, invariants, routing hints, operator context, or recurring failure patterns",
+      "planning": "active intent, sequencing, continuation, issue linkage, and completion claims",
+      "verification_or_proof": "proof expectations, evidence routes, stale/gap semantics, or manual verification protocols"
+    },
+    "protocol": "Memory Consultation / Anti-Rediscovery",
+    "rule": "Memory routes the smallest durable anti-rediscovery context and residue owner; it must not become active state, task history, issue triage, or broad documentation storage.",
+    "skill_posture": [
+      {
+        "owns": "classification of consultation status, durable residue route, and improvement signal route",
+        "posture": "reasoning-protocol",
+        "skill": "memory-consultation-and-residue"
+      },
+      {
+        "owns": "writing compact durable knowledge only after the owner decision says Memory is correct",
+        "posture": "routed-mutation-protocol",
+        "skill": "memory-capture"
+      },
+      {
+        "owns": "deterministic route lookup and helper commands, not a parallel workflow manual",
+        "posture": "CLI aid/catalogue",
+        "skill": "memory-router and command snippets"
+      }
     ]
   },
   "mixed_agent": {
@@ -2524,8 +2568,98 @@
       "persisted shared knowledge beats rediscovery"
     ]
   },
+  "module_selection": {
+    "canonical_doc": "docs/package/modules.md",
+    "cli_availability": {
+      "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
+      "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
+      "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
+      "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners."
+    },
+    "command": "agentic-workspace defaults --section module_selection --format json",
+    "compatibility_note": "This section is the module selection contract; module enablement is not a preset system.",
+    "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `planning,memory` only when both are justified.",
+    "default_entrypoint": "agentic-workspace",
+    "lightweight_selection": {
+      "modules": [
+        "memory"
+      ],
+      "summary": "Choose `memory` when you want the smallest useful shared core.",
+      "why": "It keeps the visible surface smaller than planning plus memory while still giving the repo durable knowledge and compact routing."
+    },
+    "module_options": [
+      {
+        "good_fit": [
+          "subsystem knowledge is expensive to rediscover",
+          "recurring traps or operator sequences should be shared",
+          "the repo already has task tracking but lacks durable shared knowledge"
+        ],
+        "main_problem": "Stable repo knowledge keeps getting rediscovered.",
+        "modules": [
+          "memory"
+        ],
+        "why": "Memory is the smallest useful core module for durable context and quiet routing."
+      },
+      {
+        "good_fit": [
+          "work spans many short sessions",
+          "active execution drifts without a checked-in queue",
+          "backlog tools exist, but active implementation still fragments"
+        ],
+        "main_problem": "Active work keeps drifting or fragmenting.",
+        "modules": [
+          "planning"
+        ],
+        "why": "Planning gives a checked-in active queue and bounded execplans."
+      },
+      {
+        "good_fit": [
+          "the repo wants both restartable execution and lower rediscovery cost",
+          "agents are regular maintainers and need both active state and durable context"
+        ],
+        "main_problem": "You want both durable knowledge and checked-in execution.",
+        "modules": [
+          "planning",
+          "memory"
+        ],
+        "why": "The workspace layer composes both modules through one lifecycle entrypoint."
+      }
+    ],
+    "partial_adoption": [
+      {
+        "combination": "memory only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/memory/repo/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "planning only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "memory + planning",
+        "primary_writable_surfaces": [
+          "Planning for active-now state",
+          "memory for durable knowledge"
+        ],
+        "supported": true
+      }
+    ],
+    "recommendation_order": [
+      "memory",
+      "planning",
+      "planning,memory"
+    ],
+    "rule": "Use an installed public workspace entrypoint and choose the smallest module enablement that matches the repo's main operating problem.",
+    "selector_name": "module_selection"
+  },
   "operating_questions": {
-    "canonical_doc": "docs/which-package.md",
+    "canonical_doc": "docs/package/modules.md",
     "command": "agentic-workspace defaults --section operating_questions --format json",
     "questions": [
       {
@@ -2797,45 +2931,45 @@
     "command": "agentic-workspace defaults --section proof_selection --format json",
     "construction_boundary": "Proof and validation confirm correct construction; repeated construction repair loops should route to interface/scaffold improvements instead of more validation prose.",
     "proof_adequacy": {
-      "kind": "agentic-workspace/proof-adequacy/v1",
-      "protocol": "Proof Adequacy",
-      "rule": "Judge evidence against the claim boundary before completion; proof success is input to closeout, not completion permission by itself.",
-      "surface_roles": [
-        {
-          "surface": "proof",
-          "owns": "proof selection, required evidence, manual-verification fallback, and Verification enrichment"
-        },
-        {
-          "surface": "implement --changed",
-          "owns": "changed-path work context and proof hints for known paths"
-        },
-        {
-          "surface": "Verification",
-          "owns": "routed soft protocols, evidence bundles, stale/gap semantics, and proof route hints"
-        },
-        {
-          "surface": "closeout",
-          "owns": "completion permission, intent satisfaction, residue routing, and parent closure boundary"
-        }
-      ],
       "claim_boundary": {
-        "proof_success_authorizes": [
-          "proof execution evidence for the selected claim boundary",
-          "input to closeout and acceptance reconciliation"
-        ],
         "does_not_authorize": [
           "completion permission without closeout",
           "semantic intent satisfaction",
           "parent issue, lane, or epic closure",
           "ignoring required residue or continuation ownership"
+        ],
+        "proof_success_authorizes": [
+          "proof execution evidence for the selected claim boundary",
+          "input to closeout and acceptance reconciliation"
         ]
       },
+      "cli_mirror_posture": "Proof route snippets and command lists are generated/catalogue candidates; the reasoning protocol is Proof Adequacy.",
+      "kind": "agentic-workspace/proof-adequacy/v1",
+      "protocol": "Proof Adequacy",
+      "rule": "Judge evidence against the claim boundary before completion; proof success is input to closeout, not completion permission by itself.",
+      "surface_roles": [
+        {
+          "owns": "proof selection, required evidence, manual-verification fallback, and Verification enrichment",
+          "surface": "proof"
+        },
+        {
+          "owns": "changed-path work context and proof hints for known paths",
+          "surface": "implement --changed"
+        },
+        {
+          "owns": "routed soft protocols, evidence bundles, stale/gap semantics, and proof route hints",
+          "surface": "Verification"
+        },
+        {
+          "owns": "completion permission, intent satisfaction, residue routing, and parent closure boundary",
+          "surface": "closeout"
+        }
+      ],
       "verification_routes_when": [
         "changed paths match Verification protocols or proof routes",
         "active Planning proof profiles or workflow obligations request soft evidence",
         "knowledge gates or module manifests make stale/gap semantics relevant"
-      ],
-      "cli_mirror_posture": "Proof route snippets and command lists are generated/catalogue candidates; the reasoning protocol is Proof Adequacy."
+      ]
     },
     "recommended_lanes": [
       {
@@ -2884,129 +3018,6 @@
     "secondary": [
       "Use package-local tests or payload verification only when the trust question is package-specific."
     ]
-  },
-  "closeout_protocol": {
-    "kind": "agentic-workspace/closeout-protocol-defaults/v1",
-    "protocol": "Completion Honesty / Residue Routing",
-    "command": "agentic-workspace defaults --section closeout_protocol --format json",
-    "report_surface": "agentic-workspace report --target ./repo --section closeout_trust --format json",
-    "rule": "Closeout is a protocol phase over existing owners, not a new first-contact command.",
-    "owns": [
-      "completion permission",
-      "intent satisfaction reconciliation",
-      "claim-level boundary",
-      "residue owner routing",
-      "continuation owner",
-      "parent and issue closure permission"
-    ],
-    "does_not_own": [
-      "proof selection",
-      "proof execution",
-      "Memory note content",
-      "external tracker truth",
-      "parent epic completion without explicit authorization"
-    ],
-    "required_decisions": [
-      "what proof established",
-      "which claim class is allowed",
-      "whether slice, lane, parent, or full intent is satisfied",
-      "which residue state applies",
-      "where any required continuation is owned",
-      "whether issue or parent closure is authorized"
-    ],
-    "knowledge_route_state_vocabulary": [
-      "consulted",
-      "skipped",
-      "stale",
-      "unavailable",
-      "dismissed",
-      "captured",
-      "promotion-required"
-    ],
-    "claim_boundary": {
-      "proof_success_is": [
-        "evidence input to closeout",
-        "support for the selected claim boundary"
-      ],
-      "proof_success_is_not": [
-        "completion permission",
-        "issue closure permission",
-        "parent intent satisfaction",
-        "evidence that residue is absent"
-      ]
-    },
-    "routed_outputs": [
-      "summary closeout_trust_inspection",
-      "report closeout_trust.closeout_protocol",
-      "report closeout_report",
-      "planning closeout writer",
-      "memory capture or route surfaces when durable knowledge matters"
-    ]
-  },
-  "memory_consultation": {
-    "kind": "agentic-workspace/memory-consultation-defaults/v1",
-    "protocol": "Memory Consultation / Anti-Rediscovery",
-    "command": "agentic-workspace defaults --section memory_consultation --format json",
-    "ordinary_surface": "memory_consult.consultation_protocol",
-    "rule": "Memory routes the smallest durable anti-rediscovery context and residue owner; it must not become active state, task history, issue triage, or broad documentation storage.",
-    "consultation_states": [
-      "not_checked",
-      "checked_none",
-      "relevant_notes_found",
-      "capture_candidate",
-      "routed_elsewhere",
-      "dismissed",
-      "follow_up_required"
-    ],
-    "durable_residue_decisions": [
-      "memory",
-      "planning",
-      "docs",
-      "tests",
-      "contracts",
-      "config",
-      "review",
-      "issue",
-      "dismissed",
-      "none_found"
-    ],
-    "owner_routing": {
-      "memory": "durable anti-rediscovery lessons, invariants, routing hints, operator context, or recurring failure patterns",
-      "planning": "active intent, sequencing, continuation, issue linkage, and completion claims",
-      "docs_or_contracts": "stable canonical guidance, requirements, checks, or enforceable rules",
-      "verification_or_proof": "proof expectations, evidence routes, stale/gap semantics, or manual verification protocols",
-      "issue": "external follow-up work that should be routable outside checked-in Planning",
-      "dismissed": "one-off task detail, transcript residue, validation logs, or weak unrepeated signals"
-    },
-    "skill_posture": [
-      {
-        "skill": "memory-consultation-and-residue",
-        "posture": "reasoning-protocol",
-        "owns": "classification of consultation status, durable residue route, and improvement signal route"
-      },
-      {
-        "skill": "memory-capture",
-        "posture": "routed-mutation-protocol",
-        "owns": "writing compact durable knowledge only after the owner decision says Memory is correct"
-      },
-      {
-        "skill": "memory-router and command snippets",
-        "posture": "CLI aid/catalogue",
-        "owns": "deterministic route lookup and helper commands, not a parallel workflow manual"
-      }
-    ],
-    "ordinary_read_rule": "Surface Memory only when it can change interpretation, safe action, proof, closeout, rediscovery cost, or residue ownership.",
-    "capture_boundary": {
-      "allowed": "compact reusable knowledge with future route value",
-      "forbidden": [
-        "active task state",
-        "issue triage",
-        "broad documentation copies",
-        "chat transcripts",
-        "validation logs",
-        "plan history"
-      ]
-    }
   },
   "recovery": {
     "canonical_doc": "docs/environment-recovery-contract.md",
@@ -3503,6 +3514,53 @@
     ]
   },
   "startup": {
+    "active_work_boundary": {
+      "agent_owned_decisions": [
+        "semantic intent clarity",
+        "direct versus bounded versus lane versus epic work shape",
+        "whether compact evidence is enough to begin or continue",
+        "proof proportionality and completion claim level"
+      ],
+      "kind": "agentic-workspace/active-work-boundary/v1",
+      "planning_autopilot_applies_when": [
+        "active Planning state already owns the current continuation",
+        "the task needs durable handoff, lane sequencing, promotion, or closeout mutation",
+        "compact routing forbids implementation until a candidate or execplan is promoted"
+      ],
+      "planning_autopilot_not_for": [
+        "tiny direct edits with obvious proof",
+        "startup-only orientation",
+        "raw command browsing without a routed mutation or active continuation need"
+      ],
+      "protocol": "Work Shaping plus Planning Autopilot",
+      "rule": "Choose the work shape from compact routing and agent judgment; use Planning only when active execution state, continuation ownership, or a routed Planning mutation is required.",
+      "surfaces": [
+        {
+          "may_do": "route to direct action, changed-path implementer context, active continuation, planning mutation, proof, knowledge, or recovery",
+          "must_not_do": "become an active-state editor or require a command-list tour before work begins",
+          "owns": "ordinary first-contact routing, work-shape pressure, and the next safe action",
+          "surface": "start"
+        },
+        {
+          "may_do": "tell the agent whether to continue, reconcile, promote, close out, or drill into the active execplan",
+          "must_not_do": "mutate Planning state or replace Planning closeout and promotion commands",
+          "owns": "active continuation, current Planning state projection, proof posture, and claim-boundary inspection",
+          "surface": "summary"
+        },
+        {
+          "may_do": "support bounded implementation when paths are known and surface blockers are clear",
+          "must_not_do": "select broad roadmap work, promote lanes, or claim parent intent completion",
+          "owns": "known changed-path work context, task posture, proof hints, and changed-surface gates",
+          "surface": "implement --changed"
+        },
+        {
+          "may_do": "write checked-in active work state after compact routing or explicit user intent requires it",
+          "must_not_do": "appear as the ordinary first-contact workflow or be hand-edited when a command-owned mutation exists",
+          "owns": "routed Planning state mutation: new plans, promotions, handoffs, delegation decisions, closeout, and archive",
+          "surface": "planning"
+        }
+      ]
+    },
     "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
     "context_router": {
       "first_view": "start",
@@ -3581,53 +3639,6 @@
       "If you need takeover guidance plus live state together, prefer `agentic-workspace preflight --format json` before running multiple compact queries or rereading repo prose.",
       "If the question is active planning recovery rather than startup order, use the `start` packet route first; run `agentic-workspace summary --format json` before raw planning state or execplan prose only when the route points there."
     ],
-    "active_work_boundary": {
-      "kind": "agentic-workspace/active-work-boundary/v1",
-      "protocol": "Work Shaping plus Planning Autopilot",
-      "rule": "Choose the work shape from compact routing and agent judgment; use Planning only when active execution state, continuation ownership, or a routed Planning mutation is required.",
-      "surfaces": [
-        {
-          "surface": "start",
-          "owns": "ordinary first-contact routing, work-shape pressure, and the next safe action",
-          "may_do": "route to direct action, changed-path implementer context, active continuation, planning mutation, proof, knowledge, or recovery",
-          "must_not_do": "become an active-state editor or require a command-list tour before work begins"
-        },
-        {
-          "surface": "summary",
-          "owns": "active continuation, current Planning state projection, proof posture, and claim-boundary inspection",
-          "may_do": "tell the agent whether to continue, reconcile, promote, close out, or drill into the active execplan",
-          "must_not_do": "mutate Planning state or replace Planning closeout and promotion commands"
-        },
-        {
-          "surface": "implement --changed",
-          "owns": "known changed-path work context, task posture, proof hints, and changed-surface gates",
-          "may_do": "support bounded implementation when paths are known and surface blockers are clear",
-          "must_not_do": "select broad roadmap work, promote lanes, or claim parent intent completion"
-        },
-        {
-          "surface": "planning",
-          "owns": "routed Planning state mutation: new plans, promotions, handoffs, delegation decisions, closeout, and archive",
-          "may_do": "write checked-in active work state after compact routing or explicit user intent requires it",
-          "must_not_do": "appear as the ordinary first-contact workflow or be hand-edited when a command-owned mutation exists"
-        }
-      ],
-      "agent_owned_decisions": [
-        "semantic intent clarity",
-        "direct versus bounded versus lane versus epic work shape",
-        "whether compact evidence is enough to begin or continue",
-        "proof proportionality and completion claim level"
-      ],
-      "planning_autopilot_applies_when": [
-        "active Planning state already owns the current continuation",
-        "the task needs durable handoff, lane sequencing, promotion, or closeout mutation",
-        "compact routing forbids implementation until a candidate or execplan is promoted"
-      ],
-      "planning_autopilot_not_for": [
-        "tiny direct edits with obvious proof",
-        "startup-only orientation",
-        "raw command browsing without a routed mutation or active continuation need"
-      ]
-    },
     "first_queries": [
       {
         "command": "agentic-workspace start --task \"<task>\" --format json",
@@ -3657,7 +3668,7 @@
       "Read memory only when installed and the task needs durable context."
     ],
     "skill_routing": {
-      "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
+      "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped core modules.",
       "available_advanced_route_command": "agentic-workspace modules --target ./repo --format json",
       "fallback_when_skills_unavailable": [
         "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
@@ -3667,13 +3678,13 @@
       "preferred_routes": [
         {
           "fallback": "agentic-workspace summary --format json",
-          "skill": "planning-reporting",
-          "fit_signal": "active planning report, restart, or proof posture"
+          "fit_signal": "active planning report, restart, or proof posture",
+          "skill": "planning-reporting"
         },
         {
           "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
-          "skill": "bootstrap-upgrade",
-          "fit_signal": "managed planning bootstrap upgrade"
+          "fit_signal": "managed planning bootstrap upgrade",
+          "skill": "bootstrap-upgrade"
         }
       ],
       "query": "agentic-workspace skills --target ./repo --task \"<task>\" --format json",
@@ -4063,14 +4074,14 @@
         "enough_proof": [
           "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md"
         ],
-        "non_local_references": [
-          "https://github.com/rickardvh/command-generation/blob/main/README.md"
-        ],
         "escalate_when": [
           "the documentation outcome cannot be verified from the diff and nearby docs alone"
         ],
         "execution_mode": "review",
         "id": "repo_docs_review",
+        "non_local_references": [
+          "https://github.com/rickardvh/command-generation/blob/main/README.md"
+        ],
         "proof_kind": "diff-review",
         "proof_responsibility": "local-closeout",
         "recovery_signal": "Docs-only wording changes should use compact diff review; broaden to maintainer or code proof when the docs are generated, adapter-owned, or coupled to behavior changes.",
