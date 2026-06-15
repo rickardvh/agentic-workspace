@@ -4,12 +4,13 @@ Use this guide before adding or pruning tests in this repository. The goal is to
 
 ## Current Inventory
 
-The June 15, 2026 inventory for #1521 found 60 Python test files and 1,739 collected tests across the root workspace and package suites:
+The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:
 
-- root workspace: 1,141 collected tests
+- root workspace: 1,140 collected tests / 39 files
 - planning package: 345 collected tests
 - memory package: 247 collected tests
 - verification package: 6 collected tests
+- total: 1,738 collected tests / 60 files
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
@@ -17,13 +18,14 @@ The largest clusters by test count are:
 
 - `tests/test_model_cli_harness.py`
 - `tests/test_workspace_report_cli.py`
-- `packages/planning/tests/test_summary.py`
 - `tests/test_workspace_start_preflight_cli.py`
+- `packages/planning/tests/test_summary.py`
+- `tests/test_contract_tooling.py`
 - `tests/test_generated_command_package_proof_runner.py`
 - `tests/test_workspace_lifecycle_cli.py`
 - `packages/planning/tests/test_archive.py`
 - `tests/test_workspace_implement_cli.py`
-- `tests/test_contract_tooling.py`
+- `packages/memory/tests/test_install.py`
 - `tests/test_workspace_proof_cli.py`
 
 These clusters are not automatically bad. Treat them as the first places to look for scenario consolidation, table-driven structure, or contract-owned conformance cases when related work changes them.
@@ -31,6 +33,15 @@ These clusters are not automatically bad. Treat them as the first places to look
 The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests now reuse module-scoped wheel and sdist artifacts while preserving the same inventory, import, workflow, and install assertions. The packaging subset passes in about 20 seconds on the local Windows checkout.
 
 The #1524 workflow-cluster slice merged the live-checkout active-only and verbose preflight mode checks in `tests/test_workspace_start_preflight_cli.py` into one scenario-matrix test. The affected `tests/test_workspace_report_cli.py` plus `tests/test_workspace_start_preflight_cli.py` subset moved from 234 collected tests / 139.18 seconds to 233 collected tests / 133.93 seconds while retaining the active-state, full-takeover, startup-guidance, and resolved-config assertions.
+
+Use this compact inventory when changing these clusters:
+
+| Category | Current examples | Policy |
+| --- | --- | --- |
+| Keep ordinary | Report closeout trust, startup/preflight routing, proof selection, lifecycle mutation safety, package install behavior | Keep standalone when the behavior is high-risk semantic workflow coverage or transport-specific adapter behavior. |
+| Merge | Repeated mode, section, or branch-shape checks with shared setup | Prefer scenario matrices or shared fixtures when assertions prove the same contract. |
+| Convert | Stable generated command output, deterministic primitive behavior, reusable operation output examples | Move to conformance only when the replacement case names the owner and Python/TypeScript generated target proof runs it. |
+| Delete | Obsolete compatibility fallbacks, duplicate generated-output assertions, dead fixture-shape regressions | Delete only after equivalent coverage is recorded in the replacement inventory. |
 
 ## Contract Ladder
 

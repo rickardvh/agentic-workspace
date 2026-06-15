@@ -23,7 +23,7 @@ If a behavior cannot name one owner yet, keep the ordinary test and mark the blo
 
 | Surface | Current role | Replacement category | Owner |
 | --- | --- | --- | --- |
-| `src/agentic_workspace/contracts/conformance/*.json` | 80 existing process-level conformance cases | Keep and expand as contract-owned command/process cases | AW contracts |
+| `src/agentic_workspace/contracts/conformance/*.json` | 85 existing process-level conformance cases as of the June 15, 2026 #1525 refresh | Keep and expand as contract-owned command/process cases | AW contracts |
 | `tests/test_generated_tool_conformance.py` | Harness and registry checks for process conformance | Keep ordinary runner/harness tests; add converted cases under contracts | AW |
 | `tests/test_generated_command_package_proof_runner.py` | Generated package proof orchestration, freshness, boundary checks, and conformance routing | Keep proof/checker internals ordinary; convert stable command behavior assertions to operation conformance cases | AW |
 | `tests/test_workspace_proof_generated_packages_cli.py` | Proof route selection for generated package paths | Keep ordinary proof-routing tests | AW |

@@ -489,6 +489,11 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
+    assert "1,738 collected tests / 60 files" in strategy
+    assert "| Keep ordinary |" in strategy
+    assert "| Merge |" in strategy
+    assert "| Convert |" in strategy
+    assert "| Delete |" in strategy
     assert "Contract-Owned Cases" in strategy
     assert "Prune only when stronger or equivalent coverage remains" in strategy
     assert "#1373 owns the plan" in strategy
@@ -498,6 +503,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "aw-contract-test-replacement-inventory.md" in strategy
     assert "Do not preserve the current test layout" in replacement_plan
     assert "Delete Or Merge Only With Equivalent Coverage" in replacement_plan
+    assert "85 existing process-level conformance cases" in replacement_plan
     assert "old test name" in replacement_plan
     assert "replacement contract id and case id" in replacement_plan
     assert "rickardvh/command-generation#9" in replacement_plan
@@ -518,7 +524,6 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "config.selected-text.process" in aw_inventory
     assert "delegation-outcome.append-text.process" in aw_inventory
     assert "stdout.contains" in aw_inventory
-    assert "rickardvh/command-generation#10" in aw_inventory
     assert "rickardvh/command-generation#13" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory

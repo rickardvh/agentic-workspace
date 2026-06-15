@@ -32,7 +32,7 @@
     "hard_constraints": "Do not weaken lifecycle, startup/preflight, proof, report, closeout, package install, or generated target freshness coverage.",
     "agent_may_decide": "Choose a bounded reduction slice when equivalent assertions remain and validation can prove the preserved behavior.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Consolidate the next planned workflow test cluster after the #1524 preflight mode matrix slice.",
+    "next_action": "Continue with the next planned reduction slice after the #1525 inventory refresh.",
     "proof_expectations": [
       "Packaging test subset passes with duration output.",
       "Maintainer surface guard for testing strategy passes.",
@@ -45,7 +45,9 @@
       "packages/planning/tests/test_packaging.py",
       "tests/test_generated_command_package_proof_runner.py",
       "docs/maintainer/aw-contract-test-replacement-inventory.md",
+      "docs/maintainer/contract-test-replacement-plan.md",
       "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_maintainer_surfaces.py",
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/github-1521-inventory-and-reduce-slow-or-redundant-remaining.plan.json"
     ],
@@ -55,6 +57,7 @@
       "#1522 planning candidate is closed as covered by this slice.",
       "#1523 stable generated-output assertions are removed from ordinary proof-runner smoke coverage.",
       "#1524 active-only and verbose preflight mode checks are merged into one scenario matrix with before/after evidence.",
+      "#1525 testing-strategy and replacement inventories are refreshed against current counts and guard coverage.",
       "Remaining #1521 work is left open with the next issue in priority order."
     ],
     "continuation_owner": ".agentic-workspace/planning/state.toml",
@@ -76,7 +79,7 @@
     "execution": {
       "milestone": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
       "status": "in-progress",
-      "next_step": "Run selected proof and commit the #1524 preflight mode consolidation slice.",
+      "next_step": "Run selected proof and commit the #1525 inventory refresh slice.",
       "proof": "uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q --durations=20 --durations-min=0.05"
     },
     "scope": {
@@ -87,7 +90,9 @@
         "packages/planning/tests/test_packaging.py",
         "tests/test_generated_command_package_proof_runner.py",
         "docs/maintainer/aw-contract-test-replacement-inventory.md",
-        "tests/test_workspace_start_preflight_cli.py"
+        "tests/test_workspace_start_preflight_cli.py",
+        "docs/maintainer/contract-test-replacement-plan.md",
+        "tests/test_maintainer_surfaces.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -102,27 +107,27 @@
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "Promote the next highest-priority remaining planning candidate, starting with #1525 after the #1524 preflight mode consolidation slice lands."
+    "activation trigger": "Promote the next highest-priority remaining planning candidate, starting with #1526 after the #1525 inventory refresh slice lands."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, and live-checkout preflight modes are grouped as one scenario matrix.",
-    "intentionally deferred": "#1525 through #1527 remain roadmap candidates until their own bounded slices are promoted.",
+    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, live-checkout preflight modes are grouped as one scenario matrix, and maintainer inventory docs now match current counts and conformance surfaces.",
+    "intentionally deferred": "#1526 through #1527 remain roadmap candidates until their own bounded slices are promoted.",
     "discovered implications": "The broad root duration run exceeded 10 minutes; future slices should avoid full-suite proof unless required.",
     "proof achieved now": "packaging subset and lint passed before final proof selection",
     "validation still needed": "workspace implement-selected proof after all touched paths are known",
-    "next likely slice": "#1525 prune or parameterize lifecycle/install workflow tests"
+    "next likely slice": "#1526 prune or parameterize lifecycle/install workflow tests"
   },
   "intent_interpretation": {
     "literal request": "Github 1521 Inventory And Reduce Slow Or Redundant Remaining",
     "inferred intended outcome": "Refresh the test inventory and land a first low-risk reduction without weakening equivalent coverage.",
-    "chosen concrete what": "Reuse package build artifacts inside packaging test modules, update the testing strategy inventory, prune duplicate generated-output assertions from the proof-runner smoke, and merge duplicate preflight mode tests into one scenario matrix.",
+    "chosen concrete what": "Reuse package build artifacts inside packaging test modules, update the testing strategy inventory, prune duplicate generated-output assertions from the proof-runner smoke, merge duplicate preflight mode tests into one scenario matrix, and refresh stale inventory/guard coverage.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_start_preflight_cli.py; planning state/execplan",
-    "max changed files": "9 tracked files plus planning state",
-    "required validation commands": "ruff on touched packaging and preflight tests; packaging pytest subset with durations; proof-runner smoke; generated Python/TypeScript conformance; report/start-preflight subset with durations; maintainer surface guard; AW implement-selected proof",
+    "allowed paths": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; docs/maintainer/contract-test-replacement-plan.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_start_preflight_cli.py; tests/test_maintainer_surfaces.py; planning state/execplan",
+    "max changed files": "11 tracked files plus planning state",
+    "required validation commands": "ruff on touched packaging, preflight, and maintainer tests; packaging pytest subset with durations; proof-runner smoke; generated Python/TypeScript conformance; report/start-preflight subset with durations; maintainer surface guard; AW implement-selected proof",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -138,7 +143,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Continue from #1525 after validating and committing the #1524 preflight mode consolidation slice.",
+    "tiny resumability note": "Continue from #1526 after validating and committing the #1525 inventory refresh slice.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -163,13 +168,13 @@
   "active_milestone": {
     "id": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
     "status": "in-progress",
-    "scope": "Current slice: inventory refresh plus #1522 packaging build reuse, #1523 proof-runner pruning, and #1524 preflight mode consolidation under the #1521 lane.",
+    "scope": "Current slice: inventory refresh plus #1522 packaging build reuse, #1523 proof-runner pruning, #1524 preflight mode consolidation, and #1525 stale inventory refresh under the #1521 lane.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run selected proof, commit the #1524 preflight mode consolidation slice, and leave #1521 open for the next priority slice."
+    "Run selected proof, commit the #1525 inventory refresh slice, and leave #1521 open for the next priority slice."
   ],
   "blockers": [
     "None."
@@ -181,7 +186,9 @@
     "packages/planning/tests/test_packaging.py",
     "tests/test_generated_command_package_proof_runner.py",
     "docs/maintainer/aw-contract-test-replacement-inventory.md",
-    "tests/test_workspace_start_preflight_cli.py"
+    "tests/test_workspace_start_preflight_cli.py",
+    "docs/maintainer/contract-test-replacement-plan.md",
+    "tests/test_maintainer_surfaces.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -192,7 +199,8 @@
     "uv run pytest tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q",
     "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
     "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-    "uv run pytest tests/test_workspace_report_cli.py tests/test_workspace_start_preflight_cli.py -q --durations=20 --durations-min=0.05"
+    "uv run pytest tests/test_workspace_report_cli.py tests/test_workspace_start_preflight_cli.py -q --durations=20 --durations-min=0.05",
+    "uv run pytest tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q"
   ],
   "required_tools": [
     "None."
@@ -204,11 +212,11 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "Collected current root/package test counts, updated testing strategy, changed root/memory/planning packaging tests to reuse built artifacts through module-scoped fixtures, removed two generated-output field assertions from the proof-runner smoke in favor of conformance ownership, and merged active-only/verbose preflight live-checkout checks into one scenario-matrix test.",
-    "scope touched": "testing strategy docs, packaging tests, proof-runner smoke, preflight tests, and planning state",
-    "changed surfaces": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; packaging test files; proof-runner smoke; preflight test file; planning state/execplan",
-    "validations run": "ruff touched packaging tests: passed; packaging pytest subset with durations: 38 passed in 20.10s; proof-runner/maintainer subset: 2 passed; generated Python and TypeScript conformance: passed; report/start-preflight subset: 233 passed in 133.93s",
-    "result for continuation": "continue #1521 with #1525 after final proof",
+    "what happened": "Collected current root/package test counts, updated testing strategy, changed root/memory/planning packaging tests to reuse built artifacts through module-scoped fixtures, removed two generated-output field assertions from the proof-runner smoke in favor of conformance ownership, merged active-only/verbose preflight live-checkout checks into one scenario-matrix test, and refreshed stale maintainer inventory/guard coverage.",
+    "scope touched": "testing strategy docs, replacement inventory docs, packaging tests, proof-runner smoke, preflight tests, maintainer guard, and planning state",
+    "changed surfaces": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; docs/maintainer/contract-test-replacement-plan.md; packaging test files; proof-runner smoke; preflight test file; maintainer guard; planning state/execplan",
+    "validations run": "ruff touched packaging tests: passed; packaging pytest subset with durations: 38 passed in 20.10s; proof-runner/maintainer subset: 2 passed; generated Python and TypeScript conformance: passed; report/start-preflight subset: 233 passed in 133.93s; maintainer guard: passed",
+    "result for continuation": "continue #1521 with #1526 after final proof",
     "next step": "Run AW implement-selected proof for the expanded touched path set."
   },
   "finished_run_review": {
@@ -218,7 +226,7 @@
     "intent served": "partial; #1521 received a current inventory and first concrete reduction, but the larger lane remains open",
     "config compliance": "passed; workspace implement selected proof and required commands were run",
     "misinterpretation risk": "low; #1522 is the packaging-build reduction slice under #1521",
-    "follow-on decision": "continue with #1525 as the next priority candidate"
+    "follow-on decision": "continue with #1526 as the next priority candidate"
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -230,18 +238,18 @@
     "decomposition adjustment": "record #1522 coverage in this plan; leave roadmap cleanup to a supported planning transition"
   },
   "proof_report": {
-    "validation proof": "passed: summary, planning doctor, maintainer surfaces, workspace tests/lint, targeted preflight proof, and report/start-preflight subset proof",
+    "validation proof": "passed: summary, planning doctor, maintainer surfaces, workspace tests/lint, targeted maintainer guard, and touched-test lint",
     "proof achieved now": "yes",
-    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (128.66s); make test-memory: [ok] memory tests (13.56s); make test-planning: [ok] planning tests (12.41s); packaging subset: 38 passed in 20.10s; generated Python/TypeScript conformance passed; report/start-preflight subset: 233 passed in 133.93s"
+    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (123.35s); make test-memory: [ok] memory tests (13.56s); make test-planning: [ok] planning tests (12.41s); packaging subset: 38 passed in 20.10s; generated Python/TypeScript conformance passed; report/start-preflight subset: 233 passed in 133.93s; maintainer guard passed"
   },
   "intent_satisfaction": {
     "original intent": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "Current inventory is recorded, packaging build duplication was reduced while preserving assertions, two generated-output proof-runner assertions were moved back to conformance ownership, and one duplicate live-checkout preflight mode test was merged into a scenario matrix.",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap candidates #1525 through #1527"
+    "evidence of intent satisfaction": "Current inventory is recorded, packaging build duplication was reduced while preserving assertions, two generated-output proof-runner assertions were moved back to conformance ownership, one duplicate live-checkout preflight mode test was merged into a scenario matrix, and stale inventory/guard references were refreshed.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap candidates #1526 through #1527"
   },
   "execution_summary": {
-    "outcome delivered": "Current inventory documented, packaging tests now reuse module-scoped built artifacts, proof-runner smoke no longer duplicates two conformance-owned output field checks, and preflight active/full mode checks are one scenario matrix.",
+    "outcome delivered": "Current inventory documented, packaging tests now reuse module-scoped built artifacts, proof-runner smoke no longer duplicates two conformance-owned output field checks, preflight active/full mode checks are one scenario matrix, and maintainer inventories reflect current counts/conformance surfaces.",
     "validation confirmed": "yes",
     "follow-on routed to": "none yet",
     "post-work posterity capture": "docs/maintainer/testing-strategy.md updated",
@@ -271,9 +279,9 @@
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "#1521 requires more reduction slices; this change completes the inventory refresh, #1522 packaging-build reduction, bounded #1523 proof-runner assertion pruning, and a bounded #1524 preflight mode consolidation.",
-    "evidence carried forward": "Proof commands passed for the packaging, #1523, and #1524 slices, including the expanded implement-selected proof; #1525 remains the next priority candidate.",
-    "reopen trigger": "Packaging tests rebuild duplicate artifacts per assertion, inventory counts drift without documentation, proof-runner smoke starts asserting conformance-owned generated output values again, or preflight mode tests split duplicate live-checkout setup again."
+    "why this decision is honest": "#1521 requires more reduction slices; this change completes the inventory refresh, #1522 packaging-build reduction, bounded #1523 proof-runner assertion pruning, bounded #1524 preflight mode consolidation, and bounded #1525 inventory/guard refresh.",
+    "evidence carried forward": "Proof commands passed for the packaging, #1523, #1524, and #1525 slices, including expanded implement-selected proof; #1526 remains the next priority candidate.",
+    "reopen trigger": "Packaging tests rebuild duplicate artifacts per assertion, inventory counts drift without documentation, proof-runner smoke starts asserting conformance-owned generated output values again, preflight mode tests split duplicate live-checkout setup again, or maintainer docs preserve stale counts/conformance assumptions."
   },
   "improvement_signal_review": {
     "status": "not_checked",

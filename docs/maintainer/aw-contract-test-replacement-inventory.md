@@ -8,7 +8,7 @@ This inventory is the #1374 AW-side implementation record for replacing generate
 
 This inventory now consumes the `rickardvh/command-generation#9` replacement surface from `rickardvh/command-generation#13`: package-owned reusable conformance case resources exposed by `contract_conformance_cases_manifest()` and `load_contract_conformance_case(...)`.
 
-The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage because the shared `command-generation` conformance runner only compared JSON fields. `rickardvh/command-generation#10` adds required stdout substring checks, and this AW branch pins that dependency revision so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
+The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage until the shared `command-generation` conformance runner supported stdout substring checks. The current reusable case-resource surface from `rickardvh/command-generation#13` provides that capability, so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
 
 ## Converted Or Merged
 
