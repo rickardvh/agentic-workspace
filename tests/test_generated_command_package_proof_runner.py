@@ -1104,125 +1104,169 @@ def test_static_generated_package_proof_rejects_python_completion_proof_surface_
     assert any("--python-docker-conformance --require-docker" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-        original_load_json = checker._load_json
+def test_static_generated_package_proof_rejects_full_completion_with_runtime_debt() -> None:
+    scenarios = [
+        (
+            "compatibility-handlers",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+            original_load_json = checker._load_json
 
-        def fake_load_json(path: str) -> dict[str, object]:
-            payload = original_load_json(path)
-            if path == "python_operation_execution_inventory.json":
+            def fake_load_json(path: str) -> dict[str, object]:
+                payload = original_load_json(path)
+                if path == "python_operation_execution_inventory.json":
+                    payload = dict(payload)
+                    entries = [dict(entry) for entry in payload["entries"]]
+                    entries[0]["status"] = "compatibility-runtime-handler"
+                    payload["entries"] = entries
+                return payload
+
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            checker._load_json = fake_load_json
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "compatibility-runtime-handler",
+        ),
+        (
+            "generic-runtime-debt",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+            original_load_json = checker._load_json
+
+            def fake_load_json(path: str) -> dict[str, object]:
+                payload = original_load_json(path)
+                if path == "python_operation_execution_inventory.json":
+                    payload = dict(payload)
+                    entries = [dict(entry) for entry in payload["entries"]]
+                    entries[0]["status"] = "accepted-hand-owned-runtime-primitive"
+                    entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
+                    entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
+                    payload["entries"] = entries
+                return payload
+
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            checker._load_json = fake_load_json
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "generic deterministic behavior as runtime debt",
+        ),
+        (
+            "generated-main-delegates-first",
+            r"""
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+            original_read_text = checker.Path.read_text
+
+            def fake_read_text(self, *args, **kwargs):
+                text = original_read_text(self, *args, **kwargs)
+                if self.as_posix().endswith("generated/workspace/python/cli.py"):
+                    return text.replace(
+                        "    if supports_generated_command(argv_list):\n"
+                        "        try:\n"
+                        "            return run_generated_command(argv_list, _run_command_module)\n"
+                        "        except Exception as exc:\n"
+                        "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+                        "                build_generated_parser().error(str(exc))\n"
+                        "            raise\n\n"
+                        "    build_generated_parser().parse_args(argv_list)\n"
+                        "    return 0\n",
+                        "    return 2\n",
+                    )
+                return text
+
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            checker.Path.read_text = fake_read_text
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "missing generated-main boundary fragment",
+        ),
+        (
+            "product-runtime-source",
+            r"""
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+            original_read_text = checker.Path.read_text
+            original_is_file = checker.Path.is_file
+            product_runtime_source = "scratch/product_runtime.py"
+
+            def fake_read_text(self, *args, **kwargs):
+                if self.as_posix().endswith(product_runtime_source):
+                    return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+                return original_read_text(self, *args, **kwargs)
+
+            def fake_is_file(self):
+                if self.as_posix().endswith(product_runtime_source):
+                    return True
+                return original_is_file(self)
+
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            checker.PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (product_runtime_source,)
+            checker.Path.read_text = fake_read_text
+            checker.Path.is_file = fake_is_file
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "scratch/product_runtime.py owns executable behavior markers",
+        ),
+        (
+            "runtime-outputs-not-rendered",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            completion = ir["generation_policy"]["python_cli_completion"]
+            completion["current_state"] = "full-generated-cli-complete"
+            completion["completion_gate"]["state"] = "satisfied"
+            completion["completion_gate"]["satisfied_by"].append(
+                {
+                    "id": "product-specific-runtime-generated-output-owned",
+                    "evidence": "test fixture claims product runtime files are generated outputs",
+                    "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
+                }
+            )
+
+            original_render_outputs = checker.render_workspace_command_package_outputs
+
+            def fake_render_outputs(manifest, *, repo_root):
+                return [
+                    output
+                    for output in original_render_outputs(manifest, repo_root=repo_root)
+                    if output.path.relative_to(checker.REPO_ROOT).as_posix() != "generated/workspace/python/cli.py"
+                ]
+
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            checker.render_workspace_command_package_outputs = fake_render_outputs
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "not produced by command-generation render_outputs()",
+        ),
+        (
+            "transitional-runtime-projection-debt",
+            """
+            original_manifest = checker.python_runtime_projection_inventory_manifest
+
+            def fake_manifest() -> dict[str, object]:
+                payload = original_manifest()
                 payload = dict(payload)
                 entries = [dict(entry) for entry in payload["entries"]]
-                entries[0]["status"] = "compatibility-runtime-handler"
+                entries[0]["provenance_status"] = "transitional-generated-output-debt"
+                entries[0]["blocking_full_completion"] = True
                 payload["entries"] = entries
-            return payload
+                return payload
 
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        checker._load_json = fake_load_json
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
+            checker.python_runtime_projection_inventory_manifest = fake_manifest
+            _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=True)})
+            """,
+            "transitional-generated-output-debt",
+        ),
+    ]
+    for label, code, expected_fragment in scenarios:
+        errors = _checker_case_errors(code)
 
-    assert any("compatibility-runtime-handler" in error for error in errors)
-
-
-def test_static_generated_package_proof_rejects_full_completion_with_generic_runtime_debt() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-        original_load_json = checker._load_json
-
-        def fake_load_json(path: str) -> dict[str, object]:
-            payload = original_load_json(path)
-            if path == "python_operation_execution_inventory.json":
-                payload = dict(payload)
-                entries = [dict(entry) for entry in payload["entries"]]
-                entries[0]["status"] = "accepted-hand-owned-runtime-primitive"
-                entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
-                entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
-                payload["entries"] = entries
-            return payload
-
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        checker._load_json = fake_load_json
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("generic deterministic behavior as runtime debt" in error for error in errors)
-
-
-def test_static_generated_package_proof_rejects_full_completion_when_generated_main_delegates_first() -> None:
-    errors = _checker_case_errors(
-        r"""
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-        original_read_text = checker.Path.read_text
-
-        def fake_read_text(self, *args, **kwargs):
-            text = original_read_text(self, *args, **kwargs)
-            if self.as_posix().endswith("generated/workspace/python/cli.py"):
-                return text.replace(
-                    "    if supports_generated_command(argv_list):\n"
-                    "        try:\n"
-                    "            return run_generated_command(argv_list, _run_command_module)\n"
-                    "        except Exception as exc:\n"
-                    "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
-                    "                build_generated_parser().error(str(exc))\n"
-                    "            raise\n\n"
-                    "    build_generated_parser().parse_args(argv_list)\n"
-                    "    return 0\n",
-                    "    return 2\n",
-                )
-            return text
-
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        checker.Path.read_text = fake_read_text
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("missing generated-main boundary fragment" in error for error in errors)
-
-
-def test_static_generated_package_proof_rejects_full_completion_with_product_runtime_source() -> None:
-    errors = _checker_case_errors(
-        r"""
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-        original_read_text = checker.Path.read_text
-        original_is_file = checker.Path.is_file
-        product_runtime_source = "scratch/product_runtime.py"
-
-        def fake_read_text(self, *args, **kwargs):
-            if self.as_posix().endswith(product_runtime_source):
-                return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
-            return original_read_text(self, *args, **kwargs)
-
-        def fake_is_file(self):
-            if self.as_posix().endswith(product_runtime_source):
-                return True
-            return original_is_file(self)
-
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        checker.PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (product_runtime_source,)
-        checker.Path.read_text = fake_read_text
-        checker.Path.is_file = fake_is_file
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any(
-        "scratch/product_runtime.py owns executable behavior markers" in error and "parser construction" in error for error in errors
-    )
+        assert any(expected_fragment in error for error in errors), label
 
 
 def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
@@ -1236,39 +1280,6 @@ def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
     assert "read_json_object(resource_root, 'payload.json')" in loader
     assert "agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults" not in loader
     assert (checker.REPO_ROOT / "generated" / "workspace" / "python" / "_contracts" / "payload.json").is_file()
-
-
-def test_static_generated_package_proof_rejects_full_completion_when_runtime_outputs_are_not_rendered() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        completion = ir["generation_policy"]["python_cli_completion"]
-        completion["current_state"] = "full-generated-cli-complete"
-        completion["completion_gate"]["state"] = "satisfied"
-        completion["completion_gate"]["satisfied_by"].append(
-            {
-                "id": "product-specific-runtime-generated-output-owned",
-                "evidence": "test fixture claims product runtime files are generated outputs",
-                "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
-            }
-        )
-
-        original_render_outputs = checker.render_workspace_command_package_outputs
-
-        def fake_render_outputs(manifest, *, repo_root):
-            return [
-                output
-                for output in original_render_outputs(manifest, repo_root=repo_root)
-                if output.path.relative_to(checker.REPO_ROOT).as_posix() != "generated/workspace/python/cli.py"
-            ]
-
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        checker.render_workspace_command_package_outputs = fake_render_outputs
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("not produced by command-generation render_outputs()" in error for error in errors)
 
 
 def test_static_generated_package_proof_rejects_missing_runtime_projection_inventory_entry() -> None:
@@ -1305,28 +1316,6 @@ def test_static_generated_package_proof_rejects_legacy_generated_python_package_
     errors = checker._validate_generated_python_target_layout()
 
     assert any("legacy generated Python package directories" in error for error in errors)
-
-
-def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt() -> None:
-    errors = _checker_case_errors(
-        """
-        original_manifest = checker.python_runtime_projection_inventory_manifest
-
-        def fake_manifest() -> dict[str, object]:
-            payload = original_manifest()
-            payload = dict(payload)
-            entries = [dict(entry) for entry in payload["entries"]]
-            entries[0]["provenance_status"] = "transitional-generated-output-debt"
-            entries[0]["blocking_full_completion"] = True
-            payload["entries"] = entries
-            return payload
-
-        checker.python_runtime_projection_inventory_manifest = fake_manifest
-        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=True)})
-        """
-    )
-
-    assert any("transitional-generated-output-debt" in error for error in errors)
 
 
 def test_static_generated_package_proof_accepts_current_runtime_projection_inventory_for_partial_completion() -> None:

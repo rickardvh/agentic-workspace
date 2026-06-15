@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import fnmatch
 import tomllib
 from datetime import date
@@ -8,6 +9,47 @@ from typing import Any
 
 VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
+EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
+
+DECLARED_STRATEGY_SOURCE_PATHS = [
+    Path("docs/maintainer/testing-strategy.md"),
+    Path("docs/maintainer/aw-contract-test-replacement-inventory.md"),
+    Path(".agentic-workspace/docs/proof-surfaces-contract.md"),
+    Path("docs/host-repo-learning.md"),
+]
+
+STRATEGY_SIGNAL_MARKERS = [
+    ("prefer behavior contracts over one-off regressions", ["behavior contracts", "one-off regressions"]),
+    ("merge repeated mode/section/branch-shape checks", ["Merge", "Repeated mode", "section", "branch-shape"]),
+    ("convert stable generated command output only with named conformance owner", ["Contract-Owned Cases", "conformance"]),
+    ("prune only with equivalent coverage recorded", ["Prune only", "equivalent coverage"]),
+    ("root tests prove product orchestration", ["Root workspace tests prove", "product orchestration"]),
+    ("package-local tests prove module-owned behavior", ["Package-local tests prove", "module-owned behavior"]),
+    ("filenames and markers are hints, not authority", ["suggest discovery questions", "not authority"]),
+]
+
+FIXTURE_VARIANT_TOKENS = {
+    "active",
+    "alias",
+    "aliases",
+    "before",
+    "current",
+    "external",
+    "json",
+    "later",
+    "missing",
+    "mode",
+    "modes",
+    "path",
+    "posix",
+    "raw",
+    "section",
+    "selector",
+    "text",
+    "verbose",
+    "windows",
+    "without",
+}
 
 
 class VerificationUsageError(ValueError):
@@ -50,6 +92,322 @@ def _normalize_changed_paths(paths: list[str] | None) -> list[str]:
         if stripped and stripped not in normalized:
             normalized.append(stripped)
     return normalized
+
+
+def _read_text_if_present(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _declared_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for relative_path in DECLARED_STRATEGY_SOURCE_PATHS:
+        text = _read_text_if_present(target_root / relative_path)
+        if not text:
+            continue
+        signals = [
+            signal
+            for signal, required_markers in STRATEGY_SIGNAL_MARKERS
+            if all(marker.lower() in text.lower() for marker in required_markers)
+        ]
+        if signals:
+            sources.append({"path": relative_path.as_posix(), "signals": signals})
+    return sources
+
+
+def _test_functions_from_path(*, target_root: Path, changed_path: str) -> list[dict[str, Any]]:
+    relative_path = Path(changed_path)
+    if relative_path.suffix != ".py" or not relative_path.name.startswith("test_"):
+        return []
+    absolute_path = relative_path if relative_path.is_absolute() else target_root / relative_path
+    text = _read_text_if_present(absolute_path)
+    if not text:
+        return []
+    try:
+        module = ast.parse(text)
+    except SyntaxError:
+        return []
+    functions: list[dict[str, Any]] = []
+    for node in module.body:
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+            continue
+        assertions: list[str] = []
+        helper_calls: list[str] = []
+        decorator_names: list[str] = []
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call):
+                decorator = decorator.func
+            if isinstance(decorator, ast.Attribute):
+                decorator_names.append(decorator.attr)
+            elif isinstance(decorator, ast.Name):
+                decorator_names.append(decorator.id)
+        for child in ast.walk(node):
+            if isinstance(child, ast.Assert):
+                assertions.append(ast.unparse(child.test) if hasattr(ast, "unparse") else "assert")
+            elif isinstance(child, ast.Call):
+                call = child.func
+                if isinstance(call, ast.Name) and call.id.startswith("_"):
+                    helper_calls.append(call.id)
+                elif isinstance(call, ast.Attribute) and call.attr.startswith("_"):
+                    helper_calls.append(call.attr)
+        functions.append(
+            {
+                "name": node.name,
+                "path": Path(changed_path).as_posix(),
+                "line": node.lineno,
+                "decorators": _dedupe(decorator_names),
+                "helper_calls": _dedupe(helper_calls)[:8],
+                "assertion_fragments": _dedupe(assertions)[:5],
+                "assertion_count": len(assertions),
+            }
+        )
+    return functions
+
+
+def _test_group_key(name: str) -> str:
+    stem = name.removeprefix("test_")
+    parts = stem.split("_")
+    while parts and parts[-1] in FIXTURE_VARIANT_TOKENS:
+        parts.pop()
+    if len(parts) < 3:
+        return stem
+    return "_".join(parts[: min(len(parts), 7)])
+
+
+def _proof_owner_for_path(path: str) -> str:
+    if path.startswith("packages/") and "/tests/" in path:
+        return "package-local-behavior"
+    if "generated_command" in path or "conformance" in path:
+        return "conformance-contract"
+    if path.startswith("docs/") or path.startswith(".agentic-workspace/docs/"):
+        return "docs-manual-review"
+    if path.startswith("tests/"):
+        return "root-orchestration"
+    return "unknown"
+
+
+def _evidence_role_for_test(function: dict[str, Any]) -> str:
+    name = str(function.get("name", "")).lower()
+    path = str(function.get("path", "")).lower()
+    if any(token in name for token in ("reject", "error", "invalid", "fail", "usage")):
+        return "error-path"
+    if any(token in name for token in ("edge", "stale", "missing", "gap", "empty")):
+        return "edge-case"
+    if "generated_command" in path or "generated_package" in name or "conformance" in name:
+        return "generated-output-assertion"
+    if any(token in name for token in ("adapter", "cli", "stdout", "stderr", "exit")):
+        return "transport-adapter-compatibility"
+    if "migration" in name or "residue" in name:
+        return "migration-residue"
+    if "characterization" in name:
+        return "temporary-characterization"
+    return "behavior-class-coverage"
+
+
+def _strategy_disposition(*, role: str, proof_owner: str, group_size: int, declared_sources: list[dict[str, Any]]) -> str:
+    declared_text = " ".join(signal for source in declared_sources for signal in source.get("signals", []))
+    if group_size > 1 and "merge repeated" in declared_text:
+        return "merge"
+    if role == "generated-output-assertion" and proof_owner == "conformance-contract" and "conformance" in declared_text:
+        return "convert-to-conformance"
+    if role == "temporary-characterization":
+        return "record-verification-evidence"
+    if not declared_sources:
+        return "needs-human-strategy-choice"
+    return "keep"
+
+
+def _evidence_strategy_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
+    declared_sources = _declared_strategy_sources(target_root=target_root)
+    test_functions = [
+        function
+        for changed_path in changed_paths
+        for function in _test_functions_from_path(target_root=target_root, changed_path=changed_path)
+    ]
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for function in test_functions:
+        grouped.setdefault((str(function["path"]), _test_group_key(str(function["name"]))), []).append(function)
+
+    observed_signals: list[dict[str, Any]] = []
+    hotspot_paths = [
+        path
+        for path in changed_paths
+        if path
+        in {
+            "tests/test_model_cli_harness.py",
+            "tests/test_workspace_report_cli.py",
+            "tests/test_workspace_start_preflight_cli.py",
+            "tests/test_generated_command_package_proof_runner.py",
+            "tests/test_workspace_proof_cli.py",
+            "tests/test_workspace_implement_cli.py",
+            "packages/planning/tests/test_summary.py",
+            "packages/planning/tests/test_archive.py",
+        }
+    ]
+    if hotspot_paths:
+        observed_signals.append(
+            {
+                "source": "changed_paths",
+                "signal": "hotspot test file touched",
+                "paths": hotspot_paths,
+                "confidence": "medium",
+            }
+        )
+    if test_functions:
+        observed_signals.append(
+            {
+                "source": "test_ast",
+                "signal": "changed Python test functions collected by AST",
+                "paths": _dedupe([str(function["path"]) for function in test_functions]),
+                "confidence": "medium",
+            }
+        )
+    if manifest.get("configured"):
+        observed_signals.append(
+            {
+                "source": "verification_manifest",
+                "signal": "verification manifest is configured",
+                "paths": [str(manifest.get("path", VERIFICATION_MANIFEST_PATH.as_posix()))],
+                "confidence": "medium",
+            }
+        )
+
+    group_entries: list[dict[str, Any]] = []
+    group_size_by_function: dict[str, int] = {}
+    for (path, key), members in sorted(grouped.items()):
+        if len(members) < 2:
+            continue
+        confidence = "high" if declared_sources else "medium"
+        member_names = [str(member["name"]) for member in members]
+        for member in members:
+            group_size_by_function[f"{path}::{member['name']}"] = len(members)
+        group_entries.append(
+            {
+                "id": key.replace("_", "-"),
+                "paths": [path],
+                "members": member_names,
+                "group_role": "fixture-variant",
+                "recommended_disposition": "merge",
+                "confidence": confidence,
+                "explanation": (
+                    "Tests share a path and name prefix, and the declared strategy supports merging repeated checks; "
+                    "inspect setup/assertion shape before merging."
+                    if declared_sources
+                    else "Tests share a path and name prefix; inspect setup/assertion shape before merging."
+                ),
+            }
+        )
+
+    evidence_items: list[dict[str, Any]] = []
+    for function in test_functions:
+        path = str(function["path"])
+        item_id = f"{path}::{function['name']}"
+        proof_owner = _proof_owner_for_path(path)
+        role = _evidence_role_for_test(function)
+        group_size = group_size_by_function.get(item_id, 1)
+        disposition = _strategy_disposition(
+            role="fixture-variant" if group_size > 1 else role,
+            proof_owner=proof_owner,
+            group_size=group_size,
+            declared_sources=declared_sources,
+        )
+        signals = ["changed Python test function", f"proof owner inferred from path: {proof_owner}"]
+        if group_size > 1:
+            signals.append("shares name prefix with sibling tests")
+        if function.get("helper_calls"):
+            signals.append("uses helper calls")
+        evidence_items.append(
+            {
+                "id": item_id,
+                "path": path,
+                "item_type": "test-function",
+                "proof_owner": proof_owner,
+                "evidence_role": "fixture-variant" if group_size > 1 else role,
+                "strategy_fit": "fits-declared-strategy" if declared_sources else "strategy-unclear",
+                "recommended_disposition": disposition,
+                "confidence": "medium" if declared_sources else "low",
+                "explanation": (
+                    "Classification is based on repo-declared strategy signals, changed path ownership, and cheap AST facts; "
+                    "it is diagnostic and not proof-equivalence."
+                ),
+                "observed_signals": signals,
+                "required_replacement_evidence": ["retain behavior-class coverage"] if disposition in {"merge", "prune"} else [],
+                "unsafe_to_prune_because": [] if disposition != "prune" else ["first-slice report does not prove semantic equivalence"],
+            }
+        )
+
+    if declared_sources:
+        declared_state = "declared"
+        strategy_confidence = "high"
+    elif observed_signals:
+        declared_state = "not-declared"
+        strategy_confidence = "low"
+    else:
+        declared_state = "not-declared"
+        strategy_confidence = "unclear"
+    agent_inferences = []
+    if group_entries:
+        agent_inferences.append(
+            {
+                "inference": "changed tests include likely fixture variants under shared behavior classes",
+                "based_on": [
+                    "shared test path",
+                    "shared test name prefix",
+                    "declared merge policy" if declared_sources else "observed AST grouping",
+                ],
+                "confidence": "medium" if declared_sources else "low",
+            }
+        )
+    return {
+        "kind": EVIDENCE_STRATEGY_KIND,
+        "status": "ready" if declared_sources else "unclear" if observed_signals else "unavailable",
+        "strategy_basis": {
+            "declared_strategy_state": declared_state,
+            "declared_strategy_sources": declared_sources,
+            "observed_signal_state": "observed" if observed_signals else "absent",
+            "observed_signals": observed_signals,
+            "agent_inference_state": "inferred" if agent_inferences else "not-inferred",
+            "agent_inferences": agent_inferences,
+            "strategy_confidence": strategy_confidence,
+            "strategy_summary": (
+                "This repo declares behavior-contract coverage, scenario-matrix consolidation for repeated checks, "
+                "contract-owned conformance for suitable generated behavior, and explicit replacement evidence before pruning."
+                if declared_sources
+                else "No declared host testing strategy was found; treat classifications as discovery prompts, not policy."
+            ),
+        },
+        "evidence_items": evidence_items,
+        "groups": group_entries,
+        "summary": {
+            "candidate_count": len(evidence_items),
+            "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),
+            "high_confidence_prune_count": 0,
+            "needs_human_strategy_choice_count": sum(
+                1 for item in evidence_items if item["recommended_disposition"] == "needs-human-strategy-choice"
+            ),
+            "ordinary_tests_touched": len(test_functions),
+            "hotspot_files_touched": hotspot_paths,
+            "candidate_threshold_note": (
+                "Fewer than 10 high-confidence merge candidates were found with the first-slice exact-prefix heuristic; "
+                "broader reductions need human review or stronger equivalence signals."
+                if declared_sources and sum(1 for group in group_entries if group["confidence"] == "high") < 10
+                else ""
+            ),
+        },
+        "limits": [
+            "No automatic deletion.",
+            "No proof-equivalence guarantee.",
+            "No universal testing strategy inferred.",
+        ],
+    }
 
 
 def _required_string(*, payload: dict[str, Any], key: str, surface: str) -> str:
@@ -677,6 +1035,12 @@ def verification_report_payload(
     active_known_gaps = [
         gap for gap in known_gaps if str(gap.get("protocol_id", "")).strip() in active_protocol_ids and gap.get("status") != "closed"
     ]
+    evidence_strategy = _evidence_strategy_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        manifest=manifest,
+    )
     return {
         "kind": "agentic-workspace/verification/v1",
         "status": "attention"
@@ -718,6 +1082,7 @@ def verification_report_payload(
         "active_count": len(active_protocols),
         "evidence_status": evidence_status,
         "evidence_bundle_status": [_bundle_state(bundle, changed_paths=normalized_paths) for bundle in evidence_bundles],
+        "evidence_strategy": evidence_strategy,
         "match_evidence": {
             "observed_scope_source": ", ".join(
                 source

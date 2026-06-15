@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Add Verification evidence strategy report before expanding #1534",
+  "plan_id": "expand-1534-dramatic-test-reduction",
+  "created_at": "2026-06-15T15:29:37.172214+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/expand-1534-dramatic-test-reduction.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/expand-1534-dramatic-test-reduction.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "expand-1534-dramatic-test-reduction",
+    "status": "completed",
+    "scope": "Verification evidence strategy report diagnostic plus high-confidence #1534 dogfood reductions.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the first #1535 Verification evidence strategy report slice and dogfood it on #1534 hotspot tests before expanding test reductions.",
+    "hard constraints": "Keep the first slice diagnostic and read-only: no enforcement, no automatic test mutation, no manifest schema requirement, no new root command, and no universal testing strategy.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the Verification evidence_strategy diagnostic report, dogfooded it on #1534 hotspot files, merged the clearest high-confidence ordinary regression groups, and updated maintainer strategy inventory.",
+    "scope touched": "Verification report runtime primitive, package tests/docs, model harness/generated proof-runner/implement CLI test matrices, maintainer strategy docs, and planning closeout state.",
+    "changed surfaces": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; tests/test_model_cli_harness.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_implement_cli.py; docs/maintainer/testing-strategy.md; tests/test_maintainer_surfaces.py",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from #1534/#1521 follow-up",
+    "next step": "promote the next bounded slice from #1534/#1521 follow-up"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Slice satisfies #1535 evidence_strategy acceptance and improves #1534 reductions; dogfood now reports 3 remaining high-confidence planning-test merge candidates that need owner review before further reduction.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via #1534/#1521 follow-up",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1534/#1521 follow-up"
+  },
+  "proof_report": {
+    "validation proof": "Passed: make test-workspace (122.48s); make lint-workspace; make maintainer-surfaces; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json (repair plan clean, known residue warnings); uv run pytest tests/test_model_cli_harness.py -q (123 passed); focused pytest/ruff; agentic-verification dogfood report; collect-only 1,726 tests in 0.44s; git diff --check only CRLF normalization warning.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Expand #1534 test reduction by behavior class.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "#1534/#1521 follow-up"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when #1534/#1521 follow-up activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #1534/#1521 follow-up.",
+    "motivation worth preserving": "Future agents should continue from #1534/#1521 follow-up rather than rediscover this closeout residue.",
+    "canonical owner now": "#1534/#1521 follow-up",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "agentic-verification report now includes evidence_strategy; hotspot dogfood guided 9 ordinary root test removals and 3 new Verification tests for a net suite count of 1,726.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "#1534/#1521 follow-up",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "#1534/#1521 follow-up",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1534/#1521 follow-up",
+          "owner": "#1534/#1521 follow-up",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

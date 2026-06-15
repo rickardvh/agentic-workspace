@@ -31,6 +31,38 @@ under `packages/verification/src/repo_verification_bootstrap/contracts/operation
 module-owned runtime primitives own manifest semantics, while root workspace
 surfaces adapt the resulting projection.
 
+## Evidence Strategy Report
+
+The Verification report also includes a diagnostic `evidence_strategy` section:
+
+```json
+{
+  "kind": "agentic-workspace/verification-evidence-strategy/v1",
+  "status": "ready"
+}
+```
+
+This section helps an agent classify proposed or existing proof evidence against
+the host repository's own declared or observed strategy. It is intentionally
+host-neutral: Verification does not prescribe a testing pyramid, AW-specific
+coverage style, or conformance-first policy. It separates declared strategy
+sources, observed signals, and confidence-qualified agent inferences so naming
+or path heuristics never become policy by themselves.
+
+The first diagnostic slice uses cheap local inputs only:
+
+- changed paths and task text passed to `agentic-verification report`
+- `.agentic-workspace/verification/manifest.toml`, when present
+- repo-owned strategy and proof docs, when present
+- simple AST facts from changed Python test files
+
+The report may classify evidence owner, evidence role, strategy fit, and a
+recommended disposition such as `keep`, `merge`, `convert-to-conformance`,
+`record-verification-evidence`, or `needs-human-strategy-choice`. These are
+review prompts, not enforcement. The report does not delete tests, prove semantic
+equivalence, require a manifest extension, or create a universal testing
+strategy for the host repository.
+
 ## Manifest Shape
 
 ```toml

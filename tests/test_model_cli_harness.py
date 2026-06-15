@@ -1546,92 +1546,83 @@ def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_co
     assert not any("required command" in message for message in messages)
 
 
-def test_model_cli_harness_forbidden_response_phrases_ignore_tool_echo(tmp_path: Path) -> None:
+def test_model_cli_harness_forbidden_response_phrases_ignore_non_response_text(tmp_path: Path) -> None:
     harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
+    scenarios = [
+        (
+            "tool-echo",
+            False,
+            {
+                "id": "broad-work-decomposition",
+                "forbidden_response_phrases": [".agentic-workspace/planning/records/"],
+            },
+            {
+                "final_message": "Created canonical Planning state and verified summary.",
+                "stdout": "WORKFLOW.md says: Do not route durable Planning state to .agentic-workspace/planning/records/.",
+                "stderr": "",
+            },
+            {"status": "changed", "created": [".agentic-workspace/planning/state.toml"]},
+        ),
+        (
+            "command-prompt-payload",
+            True,
+            {
+                "id": "plain-token-baseline",
+                "no_agentic_workspace_baseline": True,
+                "forbidden_response_phrases": ["agentic-workspace"],
+            },
+            {
+                "stdout": json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": 'codex exec "This prompt mentions agentic-workspace only as injected fixture text."',
+                        },
+                    }
+                ),
+                "final_message": "Updated README without using the workspace package.",
+                "stderr": "",
+                "returncode": 0,
+            },
+            {"status": "changed", "modified": ["README.md"]},
+        ),
+        (
+            "local-file-link-target",
+            True,
+            {
+                "id": "plain-token-baseline",
+                "no_agentic_workspace_baseline": True,
+                "forbidden_response_phrases": ["agentic-workspace"],
+            },
+            {
+                "final_message": (
+                    "Changed [README.md](" + "C:" + "/" + "Users/example/Documents/src/agentic-workspace/scratch/run/repo/README.md)."
+                ),
+                "stdout": "",
+                "stderr": "",
+                "returncode": 0,
+            },
+            {"status": "changed", "modified": ["README.md"]},
+        ),
+    ]
+    for label, write_agents, scenario, result, mutation_summary in scenarios:
+        repo = tmp_path / label
+        repo.mkdir()
+        if write_agents:
+            (repo / "AGENTS.md").write_text(
+                "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
+                encoding="utf-8",
+            )
 
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "broad-work-decomposition",
-            "forbidden_response_phrases": [".agentic-workspace/planning/records/"],
-        },
-        result={
-            "final_message": "Created canonical Planning state and verified summary.",
-            "stdout": "WORKFLOW.md says: Do not route durable Planning state to .agentic-workspace/planning/records/.",
-            "stderr": "",
-        },
-        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/state.toml"]},
-        repo_path=repo,
-    )
+        warnings = harness._metadata_workflow_warnings(
+            scenario=scenario,
+            result=result,
+            mutation_summary=mutation_summary,
+            repo_path=repo,
+        )
 
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_forbidden_response_phrases_ignore_command_prompt_payload(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "AGENTS.md").write_text(
-        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
-        encoding="utf-8",
-    )
-
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "plain-token-baseline",
-            "no_agentic_workspace_baseline": True,
-            "forbidden_response_phrases": ["agentic-workspace"],
-        },
-        result={
-            "stdout": json.dumps(
-                {
-                    "type": "item.completed",
-                    "item": {
-                        "type": "command_execution",
-                        "command": 'codex exec "This prompt mentions agentic-workspace only as injected fixture text."',
-                    },
-                }
-            ),
-            "final_message": "Updated README without using the workspace package.",
-            "stderr": "",
-            "returncode": 0,
-        },
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        repo_path=repo,
-    )
-
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_forbidden_response_phrases_ignore_local_file_link_targets(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "AGENTS.md").write_text(
-        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
-        encoding="utf-8",
-    )
-
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "plain-token-baseline",
-            "no_agentic_workspace_baseline": True,
-            "forbidden_response_phrases": ["agentic-workspace"],
-        },
-        result={
-            "final_message": (
-                "Changed [README.md](" + "C:" + "/" + "Users/example/Documents/src/agentic-workspace/scratch/run/repo/README.md)."
-            ),
-            "stdout": "",
-            "stderr": "",
-            "returncode": 0,
-        },
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        repo_path=repo,
-    )
-
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
+        assert not any("forbidden response phrase" in warning["message"] for warning in warnings), label
 
 
 def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_execution(tmp_path: Path) -> None:
@@ -2153,30 +2144,25 @@ def test_model_cli_harness_postmortem_prompt_truncates_long_evidence() -> None:
     assert len(prompt) < 2500
 
 
-def test_model_cli_harness_postmortem_feedback_warns_on_missing_evidence_claim() -> None:
+def test_model_cli_harness_postmortem_feedback_warns_on_unverified_claims() -> None:
     harness = _load_harness()
-
-    warnings = harness._postmortem_feedback_warnings(
-        result={"stdout": "The evidence block is missing. Please provide the complete evidence.", "stderr": ""}
-    )
-
-    assert warnings == [
-        {
-            "warning_class": "model_cli_postmortem_feedback_failure",
-            "message": "The postmortem agent claimed supplied evidence was missing.",
-        }
+    scenarios = [
+        (
+            "missing-evidence-claim",
+            {"stdout": "The evidence block is missing. Please provide the complete evidence.", "stderr": ""},
+            "The postmortem agent claimed supplied evidence was missing.",
+        ),
+        (
+            "repo-inspection",
+            {"stdout": "● Read AGENTS.md\n✗ List files (shell)\nPermission denied", "stderr": ""},
+            "The postmortem agent inspected files or attempted commands despite the no-inspection rule.",
+        ),
     ]
+    for label, result, expected_message in scenarios:
+        warnings = harness._postmortem_feedback_warnings(result=result)
 
-
-def test_model_cli_harness_postmortem_feedback_warns_on_repo_inspection() -> None:
-    harness = _load_harness()
-
-    warnings = harness._postmortem_feedback_warnings(
-        result={"stdout": "● Read AGENTS.md\n✗ List files (shell)\nPermission denied", "stderr": ""}
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert "The postmortem agent inspected files or attempted commands despite the no-inspection rule." in messages
+        messages = [warning["message"] for warning in warnings]
+        assert expected_message in messages, label
 
 
 def test_model_cli_harness_parser_accepts_postmortem_feedback_flag() -> None:

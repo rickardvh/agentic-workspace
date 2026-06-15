@@ -14,6 +14,9 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["configured"] is False
     assert payload["protocol_count"] == 0
     assert payload["active_count"] == 0
+    assert payload["evidence_strategy"]["kind"] == "agentic-workspace/verification-evidence-strategy/v1"
+    assert payload["evidence_strategy"]["status"] == "unavailable"
+    assert payload["evidence_strategy"]["strategy_basis"]["declared_strategy_state"] == "not-declared"
 
 
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
@@ -155,3 +158,130 @@ stale_when = ["web/**"]
     assert payload["evidence_status"][0]["state"] == "stale-evidence"
     assert payload["evidence_status"][0]["stale_expected_evidence"] == ["ui_review_passed"]
     assert payload["evidence_status"][0]["missing_evidence"] == ["ui_review_passed"]
+
+
+def test_verification_evidence_strategy_reports_declared_host_strategy(tmp_path: Path) -> None:
+    strategy_doc = tmp_path / "docs" / "maintainer" / "testing-strategy.md"
+    strategy_doc.parent.mkdir(parents=True)
+    strategy_doc.write_text(
+        """
+# Testing Strategy
+
+Prefer behavior contracts over one-off regressions. Merge repeated mode, section,
+or branch-shape checks when the same behavior is covered. Contract-Owned Cases
+use conformance when suitable. Prune only when equivalent coverage remains.
+Root workspace tests prove product orchestration. Package-local tests prove
+module-owned behavior.
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    strategy = payload["evidence_strategy"]
+    assert strategy["status"] == "ready"
+    basis = strategy["strategy_basis"]
+    assert basis["declared_strategy_state"] == "declared"
+    assert basis["strategy_confidence"] == "high"
+    assert basis["declared_strategy_sources"] == [
+        {
+            "path": "docs/maintainer/testing-strategy.md",
+            "signals": [
+                "prefer behavior contracts over one-off regressions",
+                "merge repeated mode/section/branch-shape checks",
+                "convert stable generated command output only with named conformance owner",
+                "prune only with equivalent coverage recorded",
+                "root tests prove product orchestration",
+                "package-local tests prove module-owned behavior",
+            ],
+        }
+    ]
+    assert "No universal testing strategy inferred." in strategy["limits"]
+
+
+def test_verification_evidence_strategy_classifies_changed_test_fixture_variants(tmp_path: Path) -> None:
+    strategy_doc = tmp_path / "docs" / "maintainer" / "testing-strategy.md"
+    strategy_doc.parent.mkdir(parents=True)
+    strategy_doc.write_text(
+        """
+# Testing Strategy
+
+Prefer behavior contracts over one-off regressions. Merge repeated mode, section,
+or branch-shape checks when the same behavior is covered.
+""".strip(),
+        encoding="utf-8",
+    )
+    test_file = tmp_path / "tests" / "test_model_cli_harness.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        """
+def _warning_case(value):
+    return value
+
+
+def test_model_cli_harness_scores_raw_read_posix():
+    warnings = _warning_case("posix")
+    assert "raw workspace files" in warnings
+
+
+def test_model_cli_harness_scores_raw_read_windows():
+    warnings = _warning_case("windows")
+    assert "raw workspace files" in warnings
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["tests/test_model_cli_harness.py"],
+        task_text="reduce regression sprawl",
+    )
+
+    strategy = payload["evidence_strategy"]
+    assert strategy["status"] == "ready"
+    assert strategy["summary"]["ordinary_tests_touched"] == 2
+    assert strategy["summary"]["hotspot_files_touched"] == ["tests/test_model_cli_harness.py"]
+    assert strategy["groups"] == [
+        {
+            "id": "model-cli-harness-scores-raw-read",
+            "paths": ["tests/test_model_cli_harness.py"],
+            "members": [
+                "test_model_cli_harness_scores_raw_read_posix",
+                "test_model_cli_harness_scores_raw_read_windows",
+            ],
+            "group_role": "fixture-variant",
+            "recommended_disposition": "merge",
+            "confidence": "high",
+            "explanation": (
+                "Tests share a path and name prefix, and the declared strategy supports merging repeated checks; "
+                "inspect setup/assertion shape before merging."
+            ),
+        }
+    ]
+    assert strategy["summary"]["high_confidence_merge_count"] == 1
+    assert "Fewer than 10 high-confidence merge candidates" in strategy["summary"]["candidate_threshold_note"]
+    assert {item["recommended_disposition"] for item in strategy["evidence_items"]} == {"merge"}
+    assert {item["evidence_role"] for item in strategy["evidence_items"]} == {"fixture-variant"}
+    assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"root-orchestration"}
+
+
+def test_verification_evidence_strategy_keeps_unclear_strategy_host_neutral(tmp_path: Path) -> None:
+    test_file = tmp_path / "tests" / "test_widget.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        """
+def test_widget_handles_error():
+    assert True
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["tests/test_widget.py"], task_text="")
+
+    strategy = payload["evidence_strategy"]
+    assert strategy["status"] == "unclear"
+    assert strategy["strategy_basis"]["declared_strategy_state"] == "not-declared"
+    assert strategy["strategy_basis"]["strategy_confidence"] == "low"
+    assert strategy["evidence_items"][0]["recommended_disposition"] == "needs-human-strategy-choice"
+    assert strategy["evidence_items"][0]["confidence"] == "low"
+    assert "No universal testing strategy inferred." in strategy["limits"]

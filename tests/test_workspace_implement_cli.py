@@ -1522,14 +1522,14 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 
-def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp_path: Path, capsys) -> None:
+def test_implement_allows_completed_archived_plan_residue_with_continuation_evidence(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
-    archive_path = ".agentic-workspace/planning/execplans/archive/completed-slice.plan.json"
-    _write(
-        tmp_path / archive_path,
-        json.dumps(
+    scenarios = [
+        (
+            "completed-slice",
+            ".agentic-workspace/planning/execplans/archive/completed-slice.plan.json",
             {
                 "schema_version": "execplan/v1",
                 "id": "completed-slice",
@@ -1541,53 +1541,12 @@ def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp
                     "larger-intent status": "satisfied",
                     "closure decision": "archive-and-close",
                 },
-            }
+            },
+            {"larger_intent_status": None, "closure_decision": None},
         ),
-    )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/runtime.py",
-                archive_path,
-                "--task",
-                "Publish the completed slice.",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
-    assert gate["status"] == "clear"
-    assert gate["gate_result"] == "direct-work-allowed"
-    assert gate["implementation_allowed"] is True
-    facts = gate["changed_path_facts"]
-    assert facts["dirty_shape"] == "implementation-with-archived-planning-residue"
-    assert facts["planning_paths"] == []
-    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
-    assert facts["archived_planning_residue_paths"] == [archive_path]
-    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
-    assert facts["archived_planning_residue"]["records"][0]["status"] == "completed"
-    assert gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"] == [archive_path]
-    assert any("archived closeout residue" in reason for reason in gate["work_shape_guidance"]["direct_work_is_reasonable_when"])
-
-
-def test_implement_allows_completed_archived_plan_residue_with_routed_continuation(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
-    archive_path = ".agentic-workspace/planning/execplans/archive/partial-slice.plan.json"
-    _write(
-        tmp_path / archive_path,
-        json.dumps(
+        (
+            "routed-continuation",
+            ".agentic-workspace/planning/execplans/archive/partial-slice.plan.json",
             {
                 "schema_version": "execplan/v1",
                 "id": "partial-slice",
@@ -1604,38 +1563,49 @@ def test_implement_allows_completed_archived_plan_residue_with_routed_continuati
                     "larger-intent status": "open",
                     "closure decision": "archive-but-keep-lane-open",
                 },
-            }
+            },
+            {"larger_intent_status": "open", "closure_decision": "archive-but-keep-lane-open"},
         ),
-    )
+    ]
+    for label, archive_path, record, expected_record_fields in scenarios:
+        _write(tmp_path / archive_path, json.dumps(record))
 
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/runtime.py",
-                archive_path,
-                "--task",
-                "Publish the completed slice.",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+        assert (
+            cli.main(
+                [
+                    "implement",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "src/agentic_workspace/runtime.py",
+                    archive_path,
+                    "--task",
+                    "Publish the completed slice.",
+                    "--verbose",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        ), label
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
-    assert gate["status"] == "clear"
-    assert gate["gate_result"] == "direct-work-allowed"
-    facts = gate["changed_path_facts"]
-    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
-    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
-    assert facts["archived_planning_residue"]["records"][0]["larger_intent_status"] == "open"
-    assert facts["archived_planning_residue"]["records"][0]["closure_decision"] == "archive-but-keep-lane-open"
+        payload = json.loads(capsys.readouterr().out)
+        gate = payload["planning_safety_gate"]
+        assert gate["status"] == "clear", label
+        assert gate["gate_result"] == "direct-work-allowed", label
+        assert gate["implementation_allowed"] is True, label
+        facts = gate["changed_path_facts"]
+        assert facts["dirty_shape"] == "implementation-with-archived-planning-residue", label
+        assert facts["planning_paths"] == [], label
+        assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue", label
+        assert facts["archived_planning_residue_paths"] == [archive_path], label
+        assert facts["archived_planning_residue"]["records"][0]["eligible"] is True, label
+        assert facts["archived_planning_residue"]["records"][0]["status"] == "completed", label
+        assert gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"] == [archive_path], label
+        assert any("archived closeout residue" in reason for reason in gate["work_shape_guidance"]["direct_work_is_reasonable_when"])
+        for key, expected in expected_record_fields.items():
+            if expected is not None:
+                assert facts["archived_planning_residue"]["records"][0][key] == expected, label
 
 
 def test_implement_context_surfaces_parent_intent_for_active_slice(tmp_path: Path, capsys) -> None:
