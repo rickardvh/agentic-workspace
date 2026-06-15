@@ -2336,23 +2336,13 @@ candidates = [
     assert "Graceful partial compliance and bypass trust" in state_text
 
 
-def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
-# TODO
-
-## Next
-
-- ID: workspace-result-contract
-  Status: completed
-  Surface: .agentic-workspace/planning/execplans/workspace-result-contract-2026-04-05.md
-  Why now: already finished.
-""",
-    )
-    _write(
-        tmp_path / "ROADMAP.md",
-        """
+def test_archive_execplan_apply_cleanup_removes_matching_candidate_entries(tmp_path: Path) -> None:
+    scenarios = [
+        (
+            "workspace-result-contract",
+            "workspace-result-contract-2026-04-05",
+            _minimal_execplan(status="completed"),
+            """
 # Roadmap
 
 ## Active Handoff
@@ -2365,38 +2355,15 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
     orchestrated module actions and warnings when more module families land.
 - Shared tooling extraction: evaluate a common checker core when repeated maintenance friction appears.
 """,
-    )
-    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "workspace-result-contract-2026-04-05.md"
-    _write(plan_path, _minimal_execplan(status="completed"))
-
-    result = archive_execplan("workspace-result-contract-2026-04-05", target=tmp_path, apply_cleanup=True)
-
-    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
-    assert "Workspace result contract:" not in roadmap_text
-    assert "Shared tooling extraction:" in roadmap_text
-    assert any(
-        action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" and "Next Candidate Queue" in action.detail
-        for action in result.actions
-    )
-
-
-def test_archive_execplan_apply_cleanup_removes_matching_candidate_lane_entry(tmp_path: Path) -> None:
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
-# TODO
-
-## Next
-
-- ID: memory-trust-lane
-  Status: completed
-  Surface: .agentic-workspace/planning/execplans/memory-trust-lane-2026-04-17.md
-  Why now: already finished.
-""",
-    )
-    _write(
-        tmp_path / "ROADMAP.md",
-        """
+            "Workspace result contract:",
+            "Shared tooling extraction:",
+            "Next Candidate Queue",
+        ),
+        (
+            "memory-trust-lane",
+            "memory-trust-lane-2026-04-17",
+            _minimal_execplan(status="completed").replace("plan-alpha", "memory-trust-lane"),
+            """
 # Roadmap
 
 ## Candidate Lanes
@@ -2418,19 +2385,38 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_lane_entry(tm
   Promotion signal: promote when later.
   Suggested first slice: later slice.
 """,
-    )
-    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "memory-trust-lane-2026-04-17.md"
-    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "memory-trust-lane"))
+            "Memory trust, usefulness, and cleanup ergonomics",
+            "Separate lane",
+            "Candidate Lanes",
+        ),
+    ]
+    for label, plan_slug, plan_text, roadmap_text, removed_text, retained_text, action_detail in scenarios:
+        repo = tmp_path / label
+        _write(
+            repo / ".agentic-workspace/planning/state.toml",
+            f"""
+# TODO
 
-    result = archive_execplan("memory-trust-lane-2026-04-17", target=tmp_path, apply_cleanup=True)
+## Next
 
-    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
-    assert "Memory trust, usefulness, and cleanup ergonomics" not in roadmap_text
-    assert "Separate lane" in roadmap_text
-    assert any(
-        action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" and "Candidate Lanes" in action.detail
-        for action in result.actions
-    )
+- ID: {label}
+  Status: completed
+  Surface: .agentic-workspace/planning/execplans/{plan_slug}.md
+  Why now: already finished.
+""",
+        )
+        _write(repo / "ROADMAP.md", roadmap_text)
+        plan_path = repo / ".agentic-workspace" / "planning" / "execplans" / f"{plan_slug}.md"
+        _write(plan_path, plan_text)
+
+        result = archive_execplan(plan_slug, target=repo, apply_cleanup=True)
+
+        updated_roadmap = (repo / "ROADMAP.md").read_text(encoding="utf-8")
+        assert removed_text not in updated_roadmap, label
+        assert retained_text in updated_roadmap, label
+        assert any(
+            action.kind == "updated" and action.path == repo / "ROADMAP.md" and action_detail in action.detail for action in result.actions
+        )
 
 
 def test_archive_execplan_cleanup_does_not_remove_unrelated_candidate_lane_from_generic_plan_stem(tmp_path: Path) -> None:

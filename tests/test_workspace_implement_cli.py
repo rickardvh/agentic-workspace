@@ -935,108 +935,22 @@ elimination_target = "promote"
     assert "route promotion or dismissal during closeout" in source["claim_effect"]["advises"]
 
 
-def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_change_impact(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build change_impact")
-
-    monkeypatch.setattr(cli, "_change_impact_payload", fail_change_impact)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "change_impact" not in payload
-    assert "change_impact" not in payload["context"]
-
-
-def test_implement_tiny_profile_does_not_compute_task_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_task_contract(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build task_contract")
-
-    monkeypatch.setattr(cli, "_task_contract_payload", fail_task_contract)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--task",
-                "Update README wording",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "task_contract" not in payload
-    assert "task_contract" not in payload["context"]
-    assert "task_contract" in payload["drill_down"]["available_selectors"]
-
-
-def test_implement_tiny_profile_does_not_compute_routine_work_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "README.md", "hello\n")
-
-    def fail_routine_context(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build routine_work_context")
-
-    monkeypatch.setattr(cli, "_routine_work_context_payload", fail_routine_context)
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "routine_work_context" not in payload
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
-
-
-def test_implement_tiny_profile_does_not_compute_assurance_requirements(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
+def test_implement_tiny_profile_does_not_compute_deferred_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    scenarios = [
+        ("change_impact", "_change_impact_payload", False, []),
+        ("task_contract", "_task_contract_payload", True, ["task_contract"]),
+        ("routine_work_context", "_routine_work_context_payload", False, ["routine_work_context"]),
+        ("assurance_requirements", "_assurance_requirements_report_payload", True, ["assurance_requirements"]),
+    ]
+    for field, helper_name, include_task, expected_selectors in scenarios:
+        repo = tmp_path / field
+        repo.mkdir()
+        _init_git_repo(repo)
+        _write_empty_planning_state(repo)
+        if field == "assurance_requirements":
+            _write(
+                repo / ".agentic-workspace/config.toml",
+                """
 schema_version = 1
 
 [assurance.requirements.docs_review]
@@ -1046,36 +960,26 @@ required_evidence = ["review_recorded"]
 force = "required-before-closeout"
 blocking_claims = ["claim-work-complete"]
 """,
-    )
-    _write(tmp_path / "README.md", "hello\n")
+            )
+        _write(repo / "README.md", "hello\n")
 
-    def fail_assurance_requirements(**_: object) -> dict[str, object]:
-        raise AssertionError("ordinary tiny implement output should not build assurance_requirements")
+        def fail_deferred_helper(**_: object) -> dict[str, object]:
+            raise AssertionError(f"ordinary tiny implement output should not build {field}")
 
-    monkeypatch.setattr(cli, "_assurance_requirements_report_payload", fail_assurance_requirements)
+        monkeypatch.setattr(cli, helper_name, fail_deferred_helper)
+        args = ["implement", "--target", str(repo), "--changed", "README.md"]
+        if include_task:
+            args.extend(["--task", "Update README wording"])
+        args.extend(["--format", "json"])
 
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "README.md",
-                "--task",
-                "Update README wording",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+        assert cli.main(args) == 0, field
 
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert "assurance_requirements" not in payload
-    assert "assurance_requirements" not in payload["context"]
-    assert "assurance_requirements" in payload["drill_down"]["available_selectors"]
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "implementer-context-tiny/v1", field
+        assert field not in payload, field
+        assert field not in payload["context"], field
+        for selector in expected_selectors:
+            assert selector in payload["drill_down"]["available_selectors"], field
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
@@ -1522,14 +1426,14 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 
-def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp_path: Path, capsys) -> None:
+def test_implement_allows_completed_archived_plan_residue_with_continuation_evidence(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
-    archive_path = ".agentic-workspace/planning/execplans/archive/completed-slice.plan.json"
-    _write(
-        tmp_path / archive_path,
-        json.dumps(
+    scenarios = [
+        (
+            "completed-slice",
+            ".agentic-workspace/planning/execplans/archive/completed-slice.plan.json",
             {
                 "schema_version": "execplan/v1",
                 "id": "completed-slice",
@@ -1541,53 +1445,12 @@ def test_implement_allows_completed_archived_plan_residue_with_changed_paths(tmp
                     "larger-intent status": "satisfied",
                     "closure decision": "archive-and-close",
                 },
-            }
+            },
+            {"larger_intent_status": None, "closure_decision": None},
         ),
-    )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/runtime.py",
-                archive_path,
-                "--task",
-                "Publish the completed slice.",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
-    assert gate["status"] == "clear"
-    assert gate["gate_result"] == "direct-work-allowed"
-    assert gate["implementation_allowed"] is True
-    facts = gate["changed_path_facts"]
-    assert facts["dirty_shape"] == "implementation-with-archived-planning-residue"
-    assert facts["planning_paths"] == []
-    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
-    assert facts["archived_planning_residue_paths"] == [archive_path]
-    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
-    assert facts["archived_planning_residue"]["records"][0]["status"] == "completed"
-    assert gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"] == [archive_path]
-    assert any("archived closeout residue" in reason for reason in gate["work_shape_guidance"]["direct_work_is_reasonable_when"])
-
-
-def test_implement_allows_completed_archived_plan_residue_with_routed_continuation(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
-    archive_path = ".agentic-workspace/planning/execplans/archive/partial-slice.plan.json"
-    _write(
-        tmp_path / archive_path,
-        json.dumps(
+        (
+            "routed-continuation",
+            ".agentic-workspace/planning/execplans/archive/partial-slice.plan.json",
             {
                 "schema_version": "execplan/v1",
                 "id": "partial-slice",
@@ -1604,38 +1467,49 @@ def test_implement_allows_completed_archived_plan_residue_with_routed_continuati
                     "larger-intent status": "open",
                     "closure decision": "archive-but-keep-lane-open",
                 },
-            }
+            },
+            {"larger_intent_status": "open", "closure_decision": "archive-but-keep-lane-open"},
         ),
-    )
+    ]
+    for label, archive_path, record, expected_record_fields in scenarios:
+        _write(tmp_path / archive_path, json.dumps(record))
 
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/runtime.py",
-                archive_path,
-                "--task",
-                "Publish the completed slice.",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+        assert (
+            cli.main(
+                [
+                    "implement",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "src/agentic_workspace/runtime.py",
+                    archive_path,
+                    "--task",
+                    "Publish the completed slice.",
+                    "--verbose",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        ), label
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
-    assert gate["status"] == "clear"
-    assert gate["gate_result"] == "direct-work-allowed"
-    facts = gate["changed_path_facts"]
-    assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
-    assert facts["archived_planning_residue"]["records"][0]["eligible"] is True
-    assert facts["archived_planning_residue"]["records"][0]["larger_intent_status"] == "open"
-    assert facts["archived_planning_residue"]["records"][0]["closure_decision"] == "archive-but-keep-lane-open"
+        payload = json.loads(capsys.readouterr().out)
+        gate = payload["planning_safety_gate"]
+        assert gate["status"] == "clear", label
+        assert gate["gate_result"] == "direct-work-allowed", label
+        assert gate["implementation_allowed"] is True, label
+        facts = gate["changed_path_facts"]
+        assert facts["dirty_shape"] == "implementation-with-archived-planning-residue", label
+        assert facts["planning_paths"] == [], label
+        assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue", label
+        assert facts["archived_planning_residue_paths"] == [archive_path], label
+        assert facts["archived_planning_residue"]["records"][0]["eligible"] is True, label
+        assert facts["archived_planning_residue"]["records"][0]["status"] == "completed", label
+        assert gate["work_shape_guidance"]["scope_factors"]["ancillary_paths"] == [archive_path], label
+        assert any("archived closeout residue" in reason for reason in gate["work_shape_guidance"]["direct_work_is_reasonable_when"])
+        for key, expected in expected_record_fields.items():
+            if expected is not None:
+                assert facts["archived_planning_residue"]["records"][0][key] == expected, label
 
 
 def test_implement_context_surfaces_parent_intent_for_active_slice(tmp_path: Path, capsys) -> None:

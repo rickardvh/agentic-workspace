@@ -719,89 +719,66 @@ def test_model_cli_harness_rejects_unknown_scenario(tmp_path: Path) -> None:
         raise AssertionError("expected missing scenario to fail")
 
 
-def test_model_cli_harness_suite_renders_gemini_adapter(tmp_path: Path) -> None:
+def test_model_cli_harness_suite_renders_adapter_commands(tmp_path: Path) -> None:
     harness = _load_harness()
-
-    payload = harness.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
-        adapter_id="gemini",
-        model=None,
-        scenario_filter="startup-orientation",
-        execute=False,
-        output_root=tmp_path / "out",
-        timeout_seconds=None,
-    )
-
-    result = payload["results"][0]
-    assert payload["adapter"] == "gemini"
-    assert payload["model"] == "gemini-3-flash-preview"
-    assert result["result"]["status"] == "dry-run"
-    assert result["command"][0:5] == [
-        "gemini",
-        "--model",
-        "gemini-3-flash-preview",
-        "--prompt",
-        result["prompt"],
+    scenarios = [
+        (
+            "gemini",
+            "gemini-3-flash-preview",
+            lambda command, result: (
+                command[0:5]
+                == [
+                    "gemini",
+                    "--model",
+                    "gemini-3-flash-preview",
+                    "--prompt",
+                    result["prompt"],
+                ]
+                and "--approval-mode" in command
+                and "--include-directories" in command
+                and result["repo_path"] in command
+            ),
+        ),
+        (
+            "codex",
+            "gpt-5.3-codex-spark",
+            lambda command, result: (
+                command[0:4] == ["codex", "exec", "--model", "gpt-5.3-codex-spark"]
+                and "--cd" in command
+                and result["repo_path"] in command
+                and "--json" in command
+                and "Repository startup instruction from AGENTS.md" in result["prompt"]
+            ),
+        ),
+        (
+            "copilot",
+            "claude-haiku-4.5",
+            lambda command, result: (
+                command[0:3] == ["copilot", "--model", "claude-haiku-4.5"]
+                and command[command.index("-C") + 1] == result["repo_path"]
+                and "--allow-all" in command
+                and "--allow-tool=write" in command
+                and "--add-dir" in command
+                and result["repo_path"] in command
+            ),
+        ),
     ]
-    assert "--approval-mode" in result["command"]
-    assert "--include-directories" in result["command"]
-    assert result["repo_path"] in result["command"]
+    for adapter_id, expected_model, command_check in scenarios:
+        payload = harness.run_suite(
+            suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+            adapter_id=adapter_id,
+            model=None,
+            scenario_filter="startup-orientation",
+            execute=False,
+            output_root=tmp_path / adapter_id,
+            timeout_seconds=None,
+        )
 
-
-def test_model_cli_harness_suite_renders_codex_adapter(tmp_path: Path) -> None:
-    harness = _load_harness()
-
-    payload = harness.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
-        adapter_id="codex",
-        model=None,
-        scenario_filter="startup-orientation",
-        execute=False,
-        output_root=tmp_path / "out",
-        timeout_seconds=None,
-    )
-
-    result = payload["results"][0]
-    assert payload["adapter"] == "codex"
-    assert payload["model"] == "gpt-5.3-codex-spark"
-    assert result["result"]["status"] == "dry-run"
-    assert result["command"][0:4] == [
-        "codex",
-        "exec",
-        "--model",
-        "gpt-5.3-codex-spark",
-    ]
-    assert "--cd" in result["command"]
-    assert result["repo_path"] in result["command"]
-    assert "--json" in result["command"]
-    assert "Repository startup instruction from AGENTS.md" in result["prompt"]
-
-
-def test_model_cli_harness_suite_renders_copilot_adapter_with_explicit_cwd(tmp_path: Path) -> None:
-    harness = _load_harness()
-
-    payload = harness.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
-        adapter_id="copilot",
-        model=None,
-        scenario_filter="startup-orientation",
-        execute=False,
-        output_root=tmp_path / "out",
-        timeout_seconds=None,
-    )
-
-    result = payload["results"][0]
-    command = result["command"]
-    cwd_index = command.index("-C")
-    assert payload["adapter"] == "copilot"
-    assert payload["model"] == "claude-haiku-4.5"
-    assert result["result"]["status"] == "dry-run"
-    assert command[0:3] == ["copilot", "--model", "claude-haiku-4.5"]
-    assert command[cwd_index + 1] == result["repo_path"]
-    assert "--allow-all" in command
-    assert "--allow-tool=write" in command
-    assert "--add-dir" in command
-    assert result["repo_path"] in command
+        result = payload["results"][0]
+        assert payload["adapter"] == adapter_id
+        assert payload["model"] == expected_model
+        assert result["result"]["status"] == "dry-run"
+        assert command_check(result["command"], result), adapter_id
 
 
 def test_model_cli_harness_copilot_uses_per_model_args(tmp_path: Path) -> None:
@@ -1019,136 +996,101 @@ def test_model_cli_harness_warns_on_runtime_failures_and_mutations(tmp_path: Pat
     }.issubset({warning["warning_class"] for warning in warnings})
 
 
-def test_model_cli_harness_warns_on_permission_denied_external_output_attempt(tmp_path: Path) -> None:
+def test_model_cli_harness_classifies_execution_adapter_limitations(tmp_path: Path) -> None:
     harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
+    scenarios = [
+        (
+            "external-output-permission",
+            {
+                "returncode": 0,
+                "stdout": "",
+                "stderr": "",
+                "final_message": (
+                    "Permission denied and could not request permission from user while writing " + "C:" + "\\temp\\handoff_report.txt."
+                ),
+            },
+            {"model_cli_permission_denied", "model_cli_external_output_attempt"},
+        ),
+        (
+            "aw-permission-denied",
+            {
+                "returncode": 0,
+                "stdout": "",
+                "stderr": "",
+                "final_message": "agentic-workspace start: Permission denied and could not request permission from user",
+            },
+            {"model_cli_permission_denied", "model_cli_adapter_tooling_limitation"},
+        ),
+        (
+            "missing-shell-tool",
+            {
+                "returncode": 0,
+                "stdout": "I would run `agentic-workspace start --format json`.",
+                "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+            },
+            {"model_cli_adapter_tooling_limitation"},
+        ),
+    ]
+    for label, result, expected_classes in scenarios:
+        repo = tmp_path / label
+        repo.mkdir()
 
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": "",
-            "stderr": "",
-            "final_message": (
-                "Permission denied and could not request permission from user while writing " + "C:" + "\\temp\\handoff_report.txt."
-            ),
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
+        warnings = harness._execution_warnings(result=result, repo_path=repo, mutation_summary={"status": "clean"})
 
-    classes = {warning["warning_class"] for warning in warnings}
-    assert "model_cli_permission_denied" in classes
-    assert "model_cli_external_output_attempt" in classes
+        assert expected_classes <= {warning["warning_class"] for warning in warnings}, label
 
 
-def test_model_cli_harness_marks_agentic_workspace_permission_denied_as_adapter_limitation(tmp_path: Path) -> None:
+def test_model_cli_harness_warns_on_fallback_workflow_and_substitute_validation(tmp_path: Path) -> None:
     harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": "",
-            "stderr": "",
-            "final_message": "agentic-workspace start: Permission denied and could not request permission from user",
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
-
-    classes = {warning["warning_class"] for warning in warnings}
-    assert "model_cli_permission_denied" in classes
-    assert "model_cli_adapter_tooling_limitation" in classes
-
-
-def test_model_cli_harness_marks_missing_shell_tool_as_adapter_limitation(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": "I would run `agentic-workspace start --format json`.",
-            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
-
-    assert "model_cli_adapter_tooling_limitation" in {warning["warning_class"] for warning in warnings}
-
-
-def test_model_cli_harness_warns_on_raw_planning_before_fallback_workflow(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": ("I will list `.agentic-workspace/planning` first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n"),
-            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
-    signals = harness._quality_signals(
-        scenario_id="next-decision-output-profile",
-        result={"stdout": "agentic-workspace implement --changed README.md --format json"},
-        mutation_summary={"status": "clean"},
-        warnings=warnings,
-    )
-
-    classes = {warning["warning_class"] for warning in warnings}
-    assert "model_cli_adapter_tooling_limitation" in classes
-    assert "model_cli_raw_workspace_before_fallback" in classes
-    assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "weak" for signal in signals)
-
-
-def test_model_cli_harness_warns_on_shorthand_planning_before_fallback_workflow(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": ("I will search within the `planning` directory first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n"),
-            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
-
-    classes = {warning["warning_class"] for warning in warnings}
-    assert "model_cli_raw_workspace_before_fallback" in classes
-
-
-def test_model_cli_harness_warns_on_cli_unavailable_substitute_validation(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    warnings = harness._execution_warnings(
-        result={
-            "returncode": 0,
-            "stdout": (
+    scenarios = [
+        (
+            "raw-planning",
+            "I will list `.agentic-workspace/planning` first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n",
+            {"model_cli_adapter_tooling_limitation", "model_cli_raw_workspace_before_fallback"},
+            True,
+        ),
+        (
+            "shorthand-planning",
+            "I will search within the `planning` directory first.\nLater I read `.agentic-workspace/WORKFLOW.md`.\n",
+            {"model_cli_raw_workspace_before_fallback"},
+            False,
+        ),
+        (
+            "substitute-validation",
+            (
                 "Intended command: `uv run agentic-workspace implement --changed README.md --format json`\n"
                 "Validation command list:\n"
                 "1. `grep README README.md`\n"
                 "2. `read_file README.md`\n"
             ),
-            "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
-        },
-        repo_path=repo,
-        mutation_summary={"status": "clean"},
-    )
+            {"model_cli_cli_unavailable_substitute_validation"},
+            False,
+        ),
+    ]
+    for label, stdout, expected_classes, check_quality in scenarios:
+        repo = tmp_path / label
+        repo.mkdir()
 
-    classes = {warning["warning_class"] for warning in warnings}
-    assert "model_cli_cli_unavailable_substitute_validation" in classes
+        warnings = harness._execution_warnings(
+            result={
+                "returncode": 0,
+                "stdout": stdout,
+                "stderr": 'Error executing tool run_shell_command: Tool "run_shell_command" not found.',
+            },
+            repo_path=repo,
+            mutation_summary={"status": "clean"},
+        )
+
+        classes = {warning["warning_class"] for warning in warnings}
+        assert expected_classes <= classes, label
+        if check_quality:
+            signals = harness._quality_signals(
+                scenario_id="next-decision-output-profile",
+                result={"stdout": "agentic-workspace implement --changed README.md --format json"},
+                mutation_summary={"status": "clean"},
+                warnings=warnings,
+            )
+            assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "weak" for signal in signals), label
 
 
 def test_model_cli_harness_accepts_cli_unavailable_validation_unavailable(tmp_path: Path) -> None:
@@ -1546,92 +1488,83 @@ def test_model_cli_harness_metadata_scoring_uses_full_transcript_for_required_co
     assert not any("required command" in message for message in messages)
 
 
-def test_model_cli_harness_forbidden_response_phrases_ignore_tool_echo(tmp_path: Path) -> None:
+def test_model_cli_harness_forbidden_response_phrases_ignore_non_response_text(tmp_path: Path) -> None:
     harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
+    scenarios = [
+        (
+            "tool-echo",
+            False,
+            {
+                "id": "broad-work-decomposition",
+                "forbidden_response_phrases": [".agentic-workspace/planning/records/"],
+            },
+            {
+                "final_message": "Created canonical Planning state and verified summary.",
+                "stdout": "WORKFLOW.md says: Do not route durable Planning state to .agentic-workspace/planning/records/.",
+                "stderr": "",
+            },
+            {"status": "changed", "created": [".agentic-workspace/planning/state.toml"]},
+        ),
+        (
+            "command-prompt-payload",
+            True,
+            {
+                "id": "plain-token-baseline",
+                "no_agentic_workspace_baseline": True,
+                "forbidden_response_phrases": ["agentic-workspace"],
+            },
+            {
+                "stdout": json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": 'codex exec "This prompt mentions agentic-workspace only as injected fixture text."',
+                        },
+                    }
+                ),
+                "final_message": "Updated README without using the workspace package.",
+                "stderr": "",
+                "returncode": 0,
+            },
+            {"status": "changed", "modified": ["README.md"]},
+        ),
+        (
+            "local-file-link-target",
+            True,
+            {
+                "id": "plain-token-baseline",
+                "no_agentic_workspace_baseline": True,
+                "forbidden_response_phrases": ["agentic-workspace"],
+            },
+            {
+                "final_message": (
+                    "Changed [README.md](" + "C:" + "/" + "Users/example/Documents/src/agentic-workspace/scratch/run/repo/README.md)."
+                ),
+                "stdout": "",
+                "stderr": "",
+                "returncode": 0,
+            },
+            {"status": "changed", "modified": ["README.md"]},
+        ),
+    ]
+    for label, write_agents, scenario, result, mutation_summary in scenarios:
+        repo = tmp_path / label
+        repo.mkdir()
+        if write_agents:
+            (repo / "AGENTS.md").write_text(
+                "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
+                encoding="utf-8",
+            )
 
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "broad-work-decomposition",
-            "forbidden_response_phrases": [".agentic-workspace/planning/records/"],
-        },
-        result={
-            "final_message": "Created canonical Planning state and verified summary.",
-            "stdout": "WORKFLOW.md says: Do not route durable Planning state to .agentic-workspace/planning/records/.",
-            "stderr": "",
-        },
-        mutation_summary={"status": "changed", "created": [".agentic-workspace/planning/state.toml"]},
-        repo_path=repo,
-    )
+        warnings = harness._metadata_workflow_warnings(
+            scenario=scenario,
+            result=result,
+            mutation_summary=mutation_summary,
+            repo_path=repo,
+        )
 
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_forbidden_response_phrases_ignore_command_prompt_payload(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "AGENTS.md").write_text(
-        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
-        encoding="utf-8",
-    )
-
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "plain-token-baseline",
-            "no_agentic_workspace_baseline": True,
-            "forbidden_response_phrases": ["agentic-workspace"],
-        },
-        result={
-            "stdout": json.dumps(
-                {
-                    "type": "item.completed",
-                    "item": {
-                        "type": "command_execution",
-                        "command": 'codex exec "This prompt mentions agentic-workspace only as injected fixture text."',
-                    },
-                }
-            ),
-            "final_message": "Updated README without using the workspace package.",
-            "stderr": "",
-            "returncode": 0,
-        },
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        repo_path=repo,
-    )
-
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_forbidden_response_phrases_ignore_local_file_link_targets(tmp_path: Path) -> None:
-    harness = _load_harness()
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "AGENTS.md").write_text(
-        "# Agent Instructions\n\nThis repository does not use Agentic Workspace.\n",
-        encoding="utf-8",
-    )
-
-    warnings = harness._metadata_workflow_warnings(
-        scenario={
-            "id": "plain-token-baseline",
-            "no_agentic_workspace_baseline": True,
-            "forbidden_response_phrases": ["agentic-workspace"],
-        },
-        result={
-            "final_message": (
-                "Changed [README.md](" + "C:" + "/" + "Users/example/Documents/src/agentic-workspace/scratch/run/repo/README.md)."
-            ),
-            "stdout": "",
-            "stderr": "",
-            "returncode": 0,
-        },
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        repo_path=repo,
-    )
-
-    assert not any("forbidden response phrase" in warning["message"] for warning in warnings)
+        assert not any("forbidden response phrase" in warning["message"] for warning in warnings), label
 
 
 def test_model_cli_harness_metadata_scoring_distinguishes_command_mentions_from_execution(tmp_path: Path) -> None:
@@ -1910,67 +1843,76 @@ def test_model_cli_harness_scores_planning_only_side_docs() -> None:
     assert any("separate architecture or handoff docs" in warning["message"] for warning in warnings)
 
 
-def test_model_cli_harness_quality_signals_capture_proportionality() -> None:
+def test_model_cli_harness_quality_signals_classify_proportionality_and_read_surfaces() -> None:
     harness = _load_harness()
-
-    direct = harness._quality_signals(
-        scenario_id="direct-task-minimal-overhead",
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        warnings=[],
-    )
-    broad = harness._quality_signals(
-        scenario_id="broad-work-decomposition",
-        mutation_summary={
-            "status": "changed",
-            "created": [
-                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
-                "src/app.ts",
-            ],
-        },
-        warnings=[],
-    )
-
-    assert any(signal["id"] == "direct_task_stayed_direct" and signal["status"] == "satisfied" for signal in direct)
-    assert any(signal["id"] == "read_surface_entrypoint_used" and signal["status"] == "weak" for signal in direct)
-    assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "satisfied" for signal in direct)
-    assert any(signal["id"] == "broad_task_created_durable_planning" and signal["status"] == "satisfied" for signal in broad)
-    assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "weak" for signal in broad)
-    assert any(signal["id"] == "read_surface_under_read" and signal["status"] == "satisfied" for signal in broad)
-
-
-def test_model_cli_harness_quality_signals_separate_diagnostic_residue() -> None:
-    harness = _load_harness()
-
-    signals = harness._quality_signals(
-        scenario_id="broad-work-decomposition",
-        mutation_summary={
-            "status": "changed",
-            "created": [
-                ".agentic-workspace/planning/execplans/ecommerce.plan.json",
-                "summary.json",
-            ],
-        },
-        warnings=[],
-    )
-
-    assert any(signal["id"] == "planning_only_avoided_product_scaffold" and signal["status"] == "satisfied" for signal in signals)
-    assert any(signal["id"] == "diagnostic_output_not_persisted" and signal["status"] == "weak" for signal in signals)
-
-
-def test_model_cli_harness_quality_signals_flag_read_surface_over_read() -> None:
-    harness = _load_harness()
-
-    signals = harness._quality_signals(
-        scenario_id="direct-task-minimal-overhead",
-        mutation_summary={"status": "changed", "modified": ["README.md"]},
-        warnings=[],
-        result={
-            "stdout": json.dumps({"response": "I ran agentic-workspace summary --verbose and read .agentic-workspace/planning/state.toml."})
-        },
-    )
-
-    assert any(signal["id"] == "read_surface_entrypoint_used" and signal["status"] == "satisfied" for signal in signals)
-    assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "weak" for signal in signals)
+    scenarios = [
+        (
+            "direct-proportional",
+            {
+                "scenario_id": "direct-task-minimal-overhead",
+                "mutation_summary": {"status": "changed", "modified": ["README.md"]},
+                "warnings": [],
+            },
+            {
+                "direct_task_stayed_direct": "satisfied",
+                "read_surface_entrypoint_used": "weak",
+                "read_surface_over_read": "satisfied",
+            },
+        ),
+        (
+            "broad-with-product-scaffold",
+            {
+                "scenario_id": "broad-work-decomposition",
+                "mutation_summary": {
+                    "status": "changed",
+                    "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json", "src/app.ts"],
+                },
+                "warnings": [],
+            },
+            {
+                "broad_task_created_durable_planning": "satisfied",
+                "planning_only_avoided_product_scaffold": "weak",
+                "read_surface_under_read": "satisfied",
+            },
+        ),
+        (
+            "diagnostic-residue",
+            {
+                "scenario_id": "broad-work-decomposition",
+                "mutation_summary": {
+                    "status": "changed",
+                    "created": [".agentic-workspace/planning/execplans/ecommerce.plan.json", "summary.json"],
+                },
+                "warnings": [],
+            },
+            {
+                "planning_only_avoided_product_scaffold": "satisfied",
+                "diagnostic_output_not_persisted": "weak",
+            },
+        ),
+        (
+            "read-surface-over-read",
+            {
+                "scenario_id": "direct-task-minimal-overhead",
+                "mutation_summary": {"status": "changed", "modified": ["README.md"]},
+                "warnings": [],
+                "result": {
+                    "stdout": json.dumps(
+                        {"response": "I ran agentic-workspace summary --verbose and read .agentic-workspace/planning/state.toml."}
+                    )
+                },
+            },
+            {
+                "read_surface_entrypoint_used": "satisfied",
+                "read_surface_over_read": "weak",
+            },
+        ),
+    ]
+    for label, kwargs, expected in scenarios:
+        signals = harness._quality_signals(**kwargs)
+        by_id = {signal["id"]: signal["status"] for signal in signals}
+        for signal_id, status in expected.items():
+            assert by_id[signal_id] == status, label
 
 
 def test_model_cli_harness_reports_small_work_proportionality_metrics() -> None:
@@ -2153,30 +2095,25 @@ def test_model_cli_harness_postmortem_prompt_truncates_long_evidence() -> None:
     assert len(prompt) < 2500
 
 
-def test_model_cli_harness_postmortem_feedback_warns_on_missing_evidence_claim() -> None:
+def test_model_cli_harness_postmortem_feedback_warns_on_unverified_claims() -> None:
     harness = _load_harness()
-
-    warnings = harness._postmortem_feedback_warnings(
-        result={"stdout": "The evidence block is missing. Please provide the complete evidence.", "stderr": ""}
-    )
-
-    assert warnings == [
-        {
-            "warning_class": "model_cli_postmortem_feedback_failure",
-            "message": "The postmortem agent claimed supplied evidence was missing.",
-        }
+    scenarios = [
+        (
+            "missing-evidence-claim",
+            {"stdout": "The evidence block is missing. Please provide the complete evidence.", "stderr": ""},
+            "The postmortem agent claimed supplied evidence was missing.",
+        ),
+        (
+            "repo-inspection",
+            {"stdout": "● Read AGENTS.md\n✗ List files (shell)\nPermission denied", "stderr": ""},
+            "The postmortem agent inspected files or attempted commands despite the no-inspection rule.",
+        ),
     ]
+    for label, result, expected_message in scenarios:
+        warnings = harness._postmortem_feedback_warnings(result=result)
 
-
-def test_model_cli_harness_postmortem_feedback_warns_on_repo_inspection() -> None:
-    harness = _load_harness()
-
-    warnings = harness._postmortem_feedback_warnings(
-        result={"stdout": "● Read AGENTS.md\n✗ List files (shell)\nPermission denied", "stderr": ""}
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert "The postmortem agent inspected files or attempted commands despite the no-inspection rule." in messages
+        messages = [warning["message"] for warning in warnings]
+        assert expected_message in messages, label
 
 
 def test_model_cli_harness_parser_accepts_postmortem_feedback_flag() -> None:
@@ -2650,67 +2587,39 @@ def test_model_cli_harness_scores_vague_outcome_solution_jump() -> None:
 def test_model_cli_harness_scores_vague_outcome_raw_reads_without_compact_startup() -> None:
     harness = _load_harness()
 
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace/WORKFLOW.md\n"
-                "Read .agentic-workspace/planning/schemas/planning-review.schema.json\n"
-                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
-                "Satisfaction evidence is structured review proof."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
+    raw_read_outputs = [
+        (
+            "posix",
+            "Read .agentic-workspace/WORKFLOW.md\n"
+            "Read .agentic-workspace/planning/schemas/planning-review.schema.json\n"
+            "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+            "Satisfaction evidence is structured review proof.",
+        ),
+        (
+            "windows",
+            "Read .agentic-workspace\\WORKFLOW.md\n"
+            "Read .agentic-workspace\\planning\\schemas\\planning-review.schema.json\n"
+            "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
+            "Satisfaction evidence is structured review proof.",
+        ),
+        (
+            "later-compact-mention",
+            "Read .agentic-workspace\\WORKFLOW.md\n"
+            "The intended outcome is handoff trust. Inspect planning first. "
+            "Satisfaction evidence is structured proof. Later, a next agent could run "
+            "agentic-workspace summary --target . --format json.",
+        ),
+    ]
+    for label, stdout in raw_read_outputs:
+        warnings = harness._semantic_workflow_warnings(
+            scenario_id="intent-satisfaction-review",
+            prompt_variant_id="vague-outcome-trust",
+            result={"stdout": stdout, "stderr": ""},
+            mutation_summary={"status": "clean"},
+        )
 
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
-
-
-def test_model_cli_harness_scores_vague_outcome_windows_raw_reads_without_compact_startup() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace\\WORKFLOW.md\n"
-                "Read .agentic-workspace\\planning\\schemas\\planning-review.schema.json\n"
-                "The intended outcome is handoff trust. Inspect planning-review.schema.json first. "
-                "Satisfaction evidence is structured review proof."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
-
-
-def test_model_cli_harness_scores_vague_outcome_raw_reads_before_later_compact_mention() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="intent-satisfaction-review",
-        prompt_variant_id="vague-outcome-trust",
-        result={
-            "stdout": (
-                "Read .agentic-workspace\\WORKFLOW.md\n"
-                "The intended outcome is handoff trust. Inspect planning first. "
-                "Satisfaction evidence is structured proof. Later, a next agent could run "
-                "agentic-workspace summary --target . --format json."
-            ),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
-
-    messages = [warning["message"] for warning in warnings]
-    assert any("raw workspace files before using compact startup" in message for message in messages)
+        messages = [warning["message"] for warning in warnings]
+        assert any("raw workspace files before using compact startup" in message for message in messages), label
 
 
 def test_model_cli_harness_accepts_vague_outcome_raw_reads_after_compact_startup() -> None:

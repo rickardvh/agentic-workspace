@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import fnmatch
 import tomllib
 from datetime import date
@@ -8,6 +9,37 @@ from typing import Any
 
 VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
+EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
+
+STRATEGY_SOURCE_HINT_PATHS = [
+    Path("docs/maintainer/testing-strategy.md"),
+    Path("docs/maintainer/aw-contract-test-replacement-inventory.md"),
+    Path(".agentic-workspace/docs/proof-surfaces-contract.md"),
+    Path("docs/host-repo-learning.md"),
+]
+
+FIXTURE_VARIANT_TOKENS = {
+    "active",
+    "alias",
+    "aliases",
+    "before",
+    "current",
+    "external",
+    "json",
+    "later",
+    "missing",
+    "mode",
+    "modes",
+    "path",
+    "posix",
+    "raw",
+    "section",
+    "selector",
+    "text",
+    "verbose",
+    "windows",
+    "without",
+}
 
 
 class VerificationUsageError(ValueError):
@@ -50,6 +82,259 @@ def _normalize_changed_paths(paths: list[str] | None) -> list[str]:
         if stripped and stripped not in normalized:
             normalized.append(stripped)
     return normalized
+
+
+def _read_text_if_present(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _candidate_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for relative_path in STRATEGY_SOURCE_HINT_PATHS:
+        absolute_path = target_root / relative_path
+        if not absolute_path.is_file():
+            continue
+        sources.append(
+            {
+                "path": relative_path.as_posix(),
+                "source_role": "candidate-host-strategy-source",
+                "authority": "uninterpreted-source",
+            }
+        )
+    return sources
+
+
+def _test_functions_from_path(*, target_root: Path, changed_path: str) -> list[dict[str, Any]]:
+    relative_path = Path(changed_path)
+    if relative_path.suffix != ".py" or not relative_path.name.startswith("test_"):
+        return []
+    absolute_path = relative_path if relative_path.is_absolute() else target_root / relative_path
+    text = _read_text_if_present(absolute_path)
+    if not text:
+        return []
+    try:
+        module = ast.parse(text)
+    except SyntaxError:
+        return []
+    functions: list[dict[str, Any]] = []
+    for node in module.body:
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+            continue
+        assertions: list[str] = []
+        helper_calls: list[str] = []
+        decorator_names: list[str] = []
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call):
+                decorator = decorator.func
+            if isinstance(decorator, ast.Attribute):
+                decorator_names.append(decorator.attr)
+            elif isinstance(decorator, ast.Name):
+                decorator_names.append(decorator.id)
+        for child in ast.walk(node):
+            if isinstance(child, ast.Assert):
+                assertions.append(ast.unparse(child.test) if hasattr(ast, "unparse") else "assert")
+            elif isinstance(child, ast.Call):
+                call = child.func
+                if isinstance(call, ast.Name) and call.id.startswith("_"):
+                    helper_calls.append(call.id)
+                elif isinstance(call, ast.Attribute) and call.attr.startswith("_"):
+                    helper_calls.append(call.attr)
+        functions.append(
+            {
+                "name": node.name,
+                "path": Path(changed_path).as_posix(),
+                "line": node.lineno,
+                "decorators": _dedupe(decorator_names),
+                "helper_calls": _dedupe(helper_calls)[:8],
+                "assertion_fragments": _dedupe(assertions)[:5],
+                "assertion_count": len(assertions),
+            }
+        )
+    return functions
+
+
+def _test_group_key(name: str) -> str:
+    stem = name.removeprefix("test_")
+    parts = stem.split("_")
+    while parts and parts[-1] in FIXTURE_VARIANT_TOKENS:
+        parts.pop()
+    if len(parts) < 3:
+        return stem
+    return "_".join(parts[: min(len(parts), 7)])
+
+
+def _evidence_strategy_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
+    candidate_sources = _candidate_strategy_sources(target_root=target_root)
+    test_functions = [
+        function
+        for changed_path in changed_paths
+        for function in _test_functions_from_path(target_root=target_root, changed_path=changed_path)
+    ]
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for function in test_functions:
+        grouped.setdefault((str(function["path"]), _test_group_key(str(function["name"]))), []).append(function)
+
+    observed_signals: list[dict[str, Any]] = []
+    if changed_paths:
+        observed_signals.append(
+            {
+                "source": "changed_paths",
+                "signal": "changed paths supplied",
+                "paths": changed_paths,
+                "confidence": "medium",
+            }
+        )
+    if test_functions:
+        observed_signals.append(
+            {
+                "source": "test_ast",
+                "signal": "changed Python test functions collected by AST",
+                "paths": _dedupe([str(function["path"]) for function in test_functions]),
+                "confidence": "medium",
+            }
+        )
+    if manifest.get("configured"):
+        observed_signals.append(
+            {
+                "source": "verification_manifest",
+                "signal": "verification manifest is configured",
+                "paths": [str(manifest.get("path", VERIFICATION_MANIFEST_PATH.as_posix()))],
+                "confidence": "medium",
+            }
+        )
+
+    group_entries: list[dict[str, Any]] = []
+    group_size_by_function: dict[str, int] = {}
+    for (path, key), members in sorted(grouped.items()):
+        if len(members) < 2:
+            continue
+        member_names = [str(member["name"]) for member in members]
+        for member in members:
+            group_size_by_function[f"{path}::{member['name']}"] = len(members)
+        group_entries.append(
+            {
+                "id": key.replace("_", "-"),
+                "paths": [path],
+                "members": member_names,
+                "group_role": "fixture-variant",
+                "recommended_disposition": "needs-human-strategy-choice",
+                "confidence": "low",
+                "explanation": (
+                    "Tests share a path and name prefix. Verification surfaces this as a review question; "
+                    "the agent must decide whether the host strategy supports merging."
+                ),
+            }
+        )
+
+    evidence_items: list[dict[str, Any]] = []
+    for function in test_functions:
+        path = str(function["path"])
+        item_id = f"{path}::{function['name']}"
+        group_size = group_size_by_function.get(item_id, 1)
+        signals = ["changed Python test function"]
+        if group_size > 1:
+            signals.append("shares name prefix with sibling tests")
+        if function.get("helper_calls"):
+            signals.append("uses helper calls")
+        evidence_items.append(
+            {
+                "id": item_id,
+                "path": path,
+                "item_type": "test-function",
+                "proof_owner": "unknown",
+                "evidence_role": "fixture-variant" if group_size > 1 else "unknown",
+                "strategy_fit": "strategy-unclear",
+                "recommended_disposition": "needs-human-strategy-choice",
+                "confidence": "low",
+                "explanation": (
+                    "Verification reports structural evidence facts only. The agent must interpret host strategy and decide disposition."
+                ),
+                "observed_signals": signals,
+                "required_replacement_evidence": [],
+                "unsafe_to_prune_because": [],
+            }
+        )
+
+    if candidate_sources:
+        declared_state = "partially-declared"
+        strategy_confidence = "low"
+    elif observed_signals:
+        declared_state = "not-declared"
+        strategy_confidence = "low"
+    else:
+        declared_state = "not-declared"
+        strategy_confidence = "unclear"
+    agent_inferences = []
+    if group_entries:
+        agent_inferences.append(
+            {
+                "inference": "changed tests include likely fixture variants under shared behavior classes",
+                "based_on": [
+                    "shared test path",
+                    "shared test name prefix",
+                    "observed AST grouping",
+                ],
+                "confidence": "low",
+            }
+        )
+    return {
+        "kind": EVIDENCE_STRATEGY_KIND,
+        "status": "attention" if candidate_sources or observed_signals else "unavailable",
+        "strategy_basis": {
+            "declared_strategy_state": declared_state,
+            "declared_strategy_sources": [],
+            "candidate_strategy_sources": candidate_sources,
+            "matched_strategy_signals": [],
+            "observed_signal_state": "observed" if observed_signals else "absent",
+            "observed_signals": observed_signals,
+            "agent_inference_state": "inferred" if agent_inferences else "not-inferred",
+            "agent_inferences": agent_inferences,
+            "strategy_confidence": strategy_confidence,
+            "strategy_summary": (
+                "Verification found candidate host-owned strategy sources but did not interpret their prose. "
+                "The agent must read them and decide how the evidence fits."
+                if candidate_sources
+                else "No candidate host strategy source was found; the agent must decide how to interpret the evidence."
+            ),
+            "decision_questions": [
+                "Which host-owned strategy source, if any, should govern this evidence?",
+                "Do grouped tests represent one behavior class or separate regression records?",
+                "What replacement evidence would be required before merging, moving, converting, or pruning evidence?",
+            ],
+        },
+        "evidence_items": evidence_items,
+        "groups": group_entries,
+        "summary": {
+            "candidate_count": len(evidence_items),
+            "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),
+            "high_confidence_prune_count": 0,
+            "needs_human_strategy_choice_count": sum(
+                1 for item in evidence_items if item["recommended_disposition"] == "needs-human-strategy-choice"
+            ),
+            "ordinary_tests_touched": len(test_functions),
+            "hotspot_files_touched": [],
+            "candidate_threshold_note": (
+                "Verification does not assign high-confidence merge or prune candidates from prose or name matching; "
+                "the agent must make the strategy decision."
+                if group_entries
+                else ""
+            ),
+        },
+        "limits": [
+            "No automatic deletion.",
+            "No proof-equivalence guarantee.",
+            "No universal testing strategy inferred.",
+        ],
+    }
 
 
 def _required_string(*, payload: dict[str, Any], key: str, surface: str) -> str:
@@ -677,6 +962,12 @@ def verification_report_payload(
     active_known_gaps = [
         gap for gap in known_gaps if str(gap.get("protocol_id", "")).strip() in active_protocol_ids and gap.get("status") != "closed"
     ]
+    evidence_strategy = _evidence_strategy_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        manifest=manifest,
+    )
     return {
         "kind": "agentic-workspace/verification/v1",
         "status": "attention"
@@ -718,6 +1009,7 @@ def verification_report_payload(
         "active_count": len(active_protocols),
         "evidence_status": evidence_status,
         "evidence_bundle_status": [_bundle_state(bundle, changed_paths=normalized_paths) for bundle in evidence_bundles],
+        "evidence_strategy": evidence_strategy,
         "match_evidence": {
             "observed_scope_source": ", ".join(
                 source
