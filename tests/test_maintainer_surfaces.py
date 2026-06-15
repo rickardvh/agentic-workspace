@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
@@ -489,6 +490,11 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
+    assert "1,738 collected tests / 60 files" in strategy
+    assert "| Keep ordinary |" in strategy
+    assert "| Merge |" in strategy
+    assert "| Convert |" in strategy
+    assert "| Delete |" in strategy
     assert "Contract-Owned Cases" in strategy
     assert "Prune only when stronger or equivalent coverage remains" in strategy
     assert "#1373 owns the plan" in strategy
@@ -498,6 +504,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "aw-contract-test-replacement-inventory.md" in strategy
     assert "Do not preserve the current test layout" in replacement_plan
     assert "Delete Or Merge Only With Equivalent Coverage" in replacement_plan
+    assert "85 existing process-level conformance cases" in replacement_plan
     assert "old test name" in replacement_plan
     assert "replacement contract id and case id" in replacement_plan
     assert "rickardvh/command-generation#9" in replacement_plan
@@ -518,12 +525,13 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "config.selected-text.process" in aw_inventory
     assert "delegation-outcome.append-text.process" in aw_inventory
     assert "stdout.contains" in aw_inventory
-    assert "rickardvh/command-generation#10" in aw_inventory
     assert "rickardvh/command-generation#13" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
     assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory
-    assert "tests/test_command_generation_primitive_executor.py" in aw_inventory
+    assert "tests/test_command_generation_integration.py" in aw_inventory
+    assert "tests/test_command_generation_primitive_executor.py" not in replacement_plan
+    assert "tests/test_command_generation_primitive_executor.py" not in aw_inventory
     assert "tests/test_workspace_cli.py" in aw_inventory
     assert "tests/test_workspace_config_cli.py" in aw_inventory
     assert "tests/test_workspace_defaults_cli.py" in aw_inventory
@@ -534,6 +542,12 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "adapter error classification and recovery-message surfaces" in aw_inventory
     assert "proof/checker orchestration" in aw_inventory
     assert "high-risk workflow semantics" in aw_inventory
+
+    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Boundary", 1)[0]
+    active_inventory_paths = sorted(set(re.findall(r"`(tests/[^`]+?\.py)`", kept_ordinary)))
+    assert active_inventory_paths
+    missing_paths = [path for path in active_inventory_paths if not (WORKSPACE_ROOT / path).exists()]
+    assert missing_paths == []
 
 
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:

@@ -157,14 +157,12 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
     assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
-    assert cases[("defaults.root-cli-authority.success", "python")]["selected_fields"]["answer.command"].endswith(
-        "defaults --section root_cli_authority --format json"
-    )
+    assert cases[("defaults.root-cli-authority.success", "python")]["state"] == "pass"
     assert "Kind: agentic-workspace/selected-output/v1" not in capsys.readouterr().out
     assert cases[("config.invalid-format.error", "python")]["exit_code"] == 2
     assert cases[("config.selected-output.success", "python")]["exit_code"] == 0
     assert cases[("defaults.tiny-router-text.success", "python")]["exit_code"] == 0
-    assert cases[("modules.report-router.success", "python")]["selected_fields"]["kind"] == "agentic-workspace/modules-router/v1"
+    assert cases[("modules.report-router.success", "python")]["state"] == "pass"
     assert cases[("delegation-outcome.append-write.boundary", "python")]["selected_fields"]["recorded.outcome"] == "success"
     assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
 

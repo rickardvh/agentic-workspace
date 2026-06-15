@@ -182,32 +182,45 @@ def test_preflight_surfaces_non_default_branch_posture(tmp_path: Path, capsys) -
     assert posture["branch_mutation_policy"]["requires_user_intent_before"][0] == "changing the execution branch"
 
 
-def test_preflight_command_active_only_returns_compact_planning_state(capsys) -> None:
-    """Test that preflight --active-only returns only active planning state for efficient polling."""
-    assert cli.main(["preflight", "--active-only", "--format", "json"]) == 0
+def test_preflight_command_modes_return_expected_context_shapes(capsys) -> None:
+    """Keep the expensive live-checkout preflight modes grouped as one scenario matrix."""
+    scenarios = [
+        {
+            "args": ["preflight", "--active-only", "--format", "json"],
+            "mode": "active-state-only",
+            "assertions": {
+                "required_keys": {"planning_record", "timestamp_hint"},
+                "active_plan_reliance_status": {"no-active-plan", "active-plan-present", "not-needed-for-current-task"},
+            },
+        },
+        {
+            "args": ["preflight", "--verbose", "--format", "json"],
+            "mode": "full-takeover-context",
+            "assertions": {
+                "required_keys": {"startup_guidance", "resolved_config", "active_planning_state", "timestamp_hint"},
+                "active_plan_reliance_permission": True,
+            },
+        },
+    ]
 
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "preflight-response/v1"
-    assert payload["mode"] == "active-state-only"
-    assert payload["planning_revision"]["revision_id"]
-    assert payload["active_plan_reliance"]["status"] in {"no-active-plan", "active-plan-present", "not-needed-for-current-task"}
-    assert "planning_record" in payload
-    assert "timestamp_hint" in payload
+    payloads: dict[str, dict[str, object]] = {}
+    for scenario in scenarios:
+        assert cli.main(scenario["args"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "preflight-response/v1"
+        assert payload["mode"] == scenario["mode"]
+        assert payload["planning_revision"]["revision_id"]
+        required_keys = scenario["assertions"]["required_keys"]
+        assert isinstance(required_keys, set)
+        assert required_keys <= set(payload)
+        allowed_statuses = scenario["assertions"].get("active_plan_reliance_status")
+        if allowed_statuses is not None:
+            assert payload["active_plan_reliance"]["status"] in allowed_statuses
+        if scenario["assertions"].get("active_plan_reliance_permission"):
+            assert payload["active_plan_reliance"]["permission_claim"]
+        payloads[str(scenario["mode"])] = payload
 
-
-def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None:
-    """Test that preflight returns bundled startup + config + active state for takeover recovery."""
-    assert cli.main(["preflight", "--verbose", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "preflight-response/v1"
-    assert payload["mode"] == "full-takeover-context"
-    assert payload["planning_revision"]["revision_id"]
-    assert payload["active_plan_reliance"]["permission_claim"]
-    assert "startup_guidance" in payload
-    assert "resolved_config" in payload
-    assert "active_planning_state" in payload
-    assert "timestamp_hint" in payload
+    payload = payloads["full-takeover-context"]
 
     # Verify startup guidance is present and correct
     startup = payload["startup_guidance"]

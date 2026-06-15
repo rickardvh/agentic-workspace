@@ -9,11 +9,12 @@ import re
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 import tomllib
 from pathlib import Path
 from zipfile import ZipFile
+
+import pytest
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
@@ -43,6 +44,28 @@ def _package_build_lock():
 
 def _source_inventory() -> set[str]:
     return {path.relative_to(PAYLOAD_ROOT).as_posix() for path in PAYLOAD_ROOT.rglob("*") if path.is_file()}
+
+
+@pytest.fixture(scope="module")
+def workspace_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
+    output_dir = tmp_path_factory.mktemp("workspace-artifacts")
+    return _build_artifact(str(output_dir), "wheel"), _build_artifact(str(output_dir), "sdist")
+
+
+@pytest.fixture(scope="module")
+def workspace_wheel(workspace_artifacts: tuple[Path, Path]) -> Path:
+    return workspace_artifacts[0]
+
+
+@pytest.fixture(scope="module")
+def workspace_sdist(workspace_artifacts: tuple[Path, Path]) -> Path:
+    return workspace_artifacts[1]
+
+
+@pytest.fixture(scope="module")
+def workspace_wheelhouse(tmp_path_factory: pytest.TempPathFactory, workspace_wheel: Path) -> list[Path]:
+    output_dir = tmp_path_factory.mktemp("workspace-wheelhouse")
+    return _build_workspace_wheelhouse(str(output_dir), root_wheel=workspace_wheel)
 
 
 def _build_artifact(tmpdir: str, artifact: str) -> Path:
@@ -109,16 +132,13 @@ def _raw_sdist_inventory(path: Path) -> set[str]:
         return {name for name in archive.getnames() if not name.endswith("/")}
 
 
-def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:
+def test_workspace_artifacts_match_checked_in_payload_inventory(workspace_artifacts: tuple[Path, Path], tmp_path: Path) -> None:
     expected_inventory = _source_inventory()
+    wheel_path, sdist_path = workspace_artifacts
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact(tmpdir, "wheel")
-        sdist_path = _build_artifact(tmpdir, "sdist")
-
-        wheel_inventory = _wheel_inventory(wheel_path)
-        sdist_inventory = _sdist_inventory(sdist_path)
-        installed_inventory = _installed_inventory(wheel_path, tmpdir)
+    wheel_inventory = _wheel_inventory(wheel_path)
+    sdist_inventory = _sdist_inventory(sdist_path)
+    installed_inventory = _installed_inventory(wheel_path, str(tmp_path))
 
     assert wheel_inventory == expected_inventory
     assert sdist_inventory == expected_inventory
@@ -163,30 +183,25 @@ def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() ->
     assert missing == []
 
 
-def test_workspace_artifacts_ship_generated_cli_package_import_dependency() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact(tmpdir, "wheel")
-        sdist_path = _build_artifact(tmpdir, "sdist")
+def test_workspace_artifacts_ship_generated_cli_package_import_dependency(workspace_artifacts: tuple[Path, Path]) -> None:
+    wheel_path, sdist_path = workspace_artifacts
+    wheel_inventory = _raw_wheel_inventory(wheel_path)
+    sdist_inventory = _raw_sdist_inventory(sdist_path)
 
-        wheel_inventory = _raw_wheel_inventory(wheel_path)
-        sdist_inventory = _raw_sdist_inventory(sdist_path)
-
-        assert "agentic_workspace/generated_cli_package.py" not in wheel_inventory
-        assert "agentic_workspace/generated_cli_package/__init__.py" not in wheel_inventory
-        assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in wheel_inventory
-        assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in wheel_inventory
-        assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in wheel_inventory
-        assert any(name.endswith("/generated/workspace/python/__init__.py") for name in sdist_inventory)
-        assert any(name.endswith("/generated/workspace/python/command_package.json") for name in sdist_inventory)
-        assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in sdist_inventory)
-        assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
-        assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
+    assert "agentic_workspace/generated_cli_package.py" not in wheel_inventory
+    assert "agentic_workspace/generated_cli_package/__init__.py" not in wheel_inventory
+    assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in wheel_inventory
+    assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in wheel_inventory
+    assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in wheel_inventory
+    assert any(name.endswith("/generated/workspace/python/__init__.py") for name in sdist_inventory)
+    assert any(name.endswith("/generated/workspace/python/command_package.json") for name in sdist_inventory)
+    assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in sdist_inventory)
+    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
+    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
 
 
-def test_root_wheel_ships_generated_cli_package_import_dependency() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact(tmpdir, "wheel")
-        inventory = _raw_wheel_inventory(wheel_path)
+def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_wheel: Path) -> None:
+    inventory = _raw_wheel_inventory(workspace_wheel)
 
     assert "agentic_workspace/generated_command_adapters.py" not in inventory
     assert "agentic_workspace/generated_cli_package.py" not in inventory
@@ -196,10 +211,8 @@ def test_root_wheel_ships_generated_cli_package_import_dependency() -> None:
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
 
 
-def test_root_sdist_ships_generated_cli_package_import_dependency() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sdist_path = _build_artifact(tmpdir, "sdist")
-        inventory = _raw_sdist_inventory(sdist_path)
+def test_root_sdist_ships_generated_cli_package_import_dependency(workspace_sdist: Path) -> None:
+    inventory = _raw_sdist_inventory(workspace_sdist)
 
     assert not any(name.endswith("/src/agentic_workspace/generated_command_adapters.py") for name in inventory)
     assert any(name.endswith("/generated/memory/python/generated_command_adapters.json") for name in inventory)
@@ -212,30 +225,28 @@ def test_root_sdist_ships_generated_cli_package_import_dependency() -> None:
     assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in inventory)
 
 
-def test_installed_workspace_wheel_imports_cli_module() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact(tmpdir, "wheel")
-        install_root = Path(tmpdir) / "installed"
-        subprocess.run(
-            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
-            cwd=WORKSPACE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp_path: Path) -> None:
+    install_root = tmp_path / "installed"
+    subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(workspace_wheel)],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace._generated_cli_package_impl import build_generated_parser",
-            ],
-            cwd=Path(tmpdir),
-            env={**os.environ, "PYTHONPATH": str(install_root)},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from agentic_workspace._generated_cli_package_impl import build_generated_parser",
+        ],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(install_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
     assert result.returncode == 0, result.stderr
 
@@ -247,83 +258,80 @@ def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
     assert pyproject["project"]["scripts"]["agentic-workspace"] == "agentic_workspace.cli:main"
 
 
-def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheelhouse = _build_workspace_wheelhouse(tmpdir)
-        workspace_exe = _install_workspace_stack_venv(wheelhouse=wheelhouse, tmpdir_path=tmpdir_path)
-        assert _venv_site_package_entry_names(tmpdir_path / ".venv", "command_generation") == []
-        target = tmpdir_path / "repo"
-        target.mkdir()
-        subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
+def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheelhouse: list[Path], tmp_path: Path) -> None:
+    workspace_exe = _install_workspace_stack_venv(wheelhouse=workspace_wheelhouse, tmpdir_path=tmp_path)
+    assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []
+    target = tmp_path / "repo"
+    target.mkdir()
+    subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
 
-        init_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "init",
-            "--target",
-            str(target),
-            "--modules",
-            "planning,memory",
-            "--format",
-            "json",
-        )
-        start_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "start",
-            "--target",
-            str(target),
-            "--task",
-            "fresh package proof",
-            "--select",
-            "invoked_cli_identity,active_state_summary,immediate_next_allowed_action",
-            "--format",
-            "json",
-        )
-        summary_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "summary",
-            "--target",
-            str(target),
-            "--verbose",
-            "--format",
-            "json",
-        )
-        implement_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "implement",
-            "--target",
-            str(target),
-            "--changed",
-            "README.md",
-            "--task",
-            "fresh package proof",
-            "--format",
-            "json",
-        )
-        proof_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "proof",
-            "--target",
-            str(target),
-            "--changed",
-            "README.md",
-            "--format",
-            "json",
-        )
-        doctor_payload = _run_workspace_console_json(
-            workspace_exe,
-            tmpdir_path,
-            "doctor",
-            "--target",
-            str(target),
-            "--format",
-            "json",
-        )
+    init_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "init",
+        "--target",
+        str(target),
+        "--modules",
+        "planning,memory",
+        "--format",
+        "json",
+    )
+    start_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "start",
+        "--target",
+        str(target),
+        "--task",
+        "fresh package proof",
+        "--select",
+        "invoked_cli_identity,active_state_summary,immediate_next_allowed_action",
+        "--format",
+        "json",
+    )
+    summary_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "summary",
+        "--target",
+        str(target),
+        "--verbose",
+        "--format",
+        "json",
+    )
+    implement_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "implement",
+        "--target",
+        str(target),
+        "--changed",
+        "README.md",
+        "--task",
+        "fresh package proof",
+        "--format",
+        "json",
+    )
+    proof_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "proof",
+        "--target",
+        str(target),
+        "--changed",
+        "README.md",
+        "--format",
+        "json",
+    )
+    doctor_payload = _run_workspace_console_json(
+        workspace_exe,
+        tmp_path,
+        "doctor",
+        "--target",
+        str(target),
+        "--format",
+        "json",
+    )
 
     assert init_payload["command"] == "init"
     assert init_payload["preset"] is None
@@ -336,8 +344,8 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
     assert doctor_payload["health"] == "healthy"
 
 
-def _build_workspace_wheelhouse(tmpdir: str) -> list[Path]:
-    wheel_paths = [_build_artifact(tmpdir, "wheel")]
+def _build_workspace_wheelhouse(tmpdir: str, *, root_wheel: Path) -> list[Path]:
+    wheel_paths = [root_wheel]
     wheel_paths.extend(_build_artifact_from(package_dir, tmpdir, "wheel") for package_dir in MODULE_PACKAGE_DIRS)
     names = {path.name for path in wheel_paths}
     assert any(name.startswith("agentic_workspace-") for name in names)

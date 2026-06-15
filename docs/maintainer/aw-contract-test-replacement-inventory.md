@@ -8,7 +8,7 @@ This inventory is the #1374 AW-side implementation record for replacing generate
 
 This inventory now consumes the `rickardvh/command-generation#9` replacement surface from `rickardvh/command-generation#13`: package-owned reusable conformance case resources exposed by `contract_conformance_cases_manifest()` and `load_contract_conformance_case(...)`.
 
-The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage because the shared `command-generation` conformance runner only compared JSON fields. `rickardvh/command-generation#10` adds required stdout substring checks, and this AW branch pins that dependency revision so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
+The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage until the shared `command-generation` conformance runner supported stdout substring checks. The current reusable case-resource surface from `rickardvh/command-generation#13` provides that capability, so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
 
 ## Converted Or Merged
 
@@ -32,15 +32,21 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | `tests/test_workspace_config_cli.py::test_config_selected_text_uses_generated_output` | Stable generated selected-output text belonged in a contract-owned config case once `stdout.contains` was available. | New `config.selected-text.process` conformance runs through generated workspace Python and TypeScript command packages. |
 | `tests/test_workspace_config_cli.py::test_note_delegation_outcome_text_uses_generated_output` | Stable generated mutation-output text and write boundary belonged in a contract-owned delegation outcome case once `stdout.contains` was available. | New `delegation-outcome.append-text.process` conformance runs through generated workspace Python and TypeScript command packages. |
 
+## Pruned Ordinary Assertions
+
+| Ordinary test | Removed assertion | Replacement contract id and case id | Remaining ordinary coverage |
+| --- | --- | --- | --- |
+| `tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases` | `defaults.root-cli-authority.success` selected field `answer.command` ends with the root CLI authority command. | `defaults.root-cli-authority.process` / `minimal-repo` | The test still proves the Python conformance runner loads and executes the case successfully. |
+| `tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases` | `modules.report-router.success` selected field `kind` equals the modules router kind. | `modules.report.process` / `minimal-repo` | The test still proves the Python conformance runner loads and executes the case successfully. |
+
 ## Kept Ordinary
 
 | Surface | Keep reason | Future conversion condition |
 | --- | --- | --- |
 | `tests/test_generated_tool_conformance.py` | Conformance harness, registry, and forbidden-write mechanics. These tests validate the runner itself rather than generated command behavior. | Keep ordinary unless a runner contract format is introduced. |
-| `tests/test_generated_command_package_proof_runner.py` | Proof-step selection, crash classification, retry recovery, Docker routing, static drift checks, and checker internals. | Convert only stable command-output examples; keep proof/checker orchestration ordinary. |
+| `tests/test_generated_command_package_proof_runner.py` | Proof-step selection, crash classification, retry recovery, Docker routing, static drift checks, checker internals, and compact conformance-runner smoke coverage. | Convert only stable command-output examples; keep proof/checker orchestration ordinary. |
 | `tests/test_workspace_proof_generated_packages_cli.py` | AW proof routing and verification-lane semantics for generated package proof. | Keep ordinary because it tests AW proof selection, not generated command behavior. |
-| `tests/test_command_generation_primitive_executor.py` | AW dependency wiring and former temporary mirror coverage for command-generation primitive behavior. | Portable generic cases now live upstream under `rickardvh/command-generation#9` / `rickardvh/command-generation#13`; keep only AW integration wiring here. |
-| `tests/test_command_generation_artifacts.py` | Artifact ownership, freshness, and operation fragment support checks. | Keep ordinary as contract/generator integrity checks. |
+| `tests/test_command_generation_integration.py` | AW dependency wiring and integration coverage for command-generation operation fragment support. | Portable generic cases live upstream under `rickardvh/command-generation#9` / `rickardvh/command-generation#13`; keep only AW integration wiring here. |
 | `tests/test_workspace_cli_blackbox.py` | Remaining cases cover invalid target usage errors, near-miss command guidance, selector conflicts, and memory-route misuse. | Keep ordinary because these are adapter error classification and recovery-message surfaces. |
 | `tests/test_workspace_cli.py` | Mixed CLI compatibility, selectors, and orchestration behavior. | Convert stable command-output examples only after operation owners are explicit and the case can name a contract owner. |
 | `tests/test_workspace_config_cli.py` | Detailed config policy, local override, mixed-agent, and authority reporting semantics. Existing `config.report.process` and `config.selected-text.process` own stable generated command examples. | Convert additional stable compact-output examples only when they can be expressed as operation-owned cases without preserving transient policy seams. |
