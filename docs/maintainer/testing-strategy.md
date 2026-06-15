@@ -6,11 +6,11 @@ Use this guide before adding or pruning tests in this repository. The goal is to
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:
 
-- root workspace: 1,103 collected tests / 39 files
-- planning package: 338 collected tests
+- root workspace: 613 collected tests / 34 files
+- planning package: 248 collected tests
 - memory package: 246 collected tests
 - verification package: 11 collected tests
-- total: 1,698 collected tests / 63 files
+- total: 1,118 collected tests / 57 files
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
@@ -40,7 +40,9 @@ The #1531/#1532/#1533 follow-up slice merged narrow duplicate scenario groups in
 
 The #1535 Verification dogfood slice added the host-neutral `evidence_strategy` diagnostic report and used it to classify #1534 hotspot files before further reduction. The dogfood pass found 7 high-confidence merge candidates across 710 hotspot tests under the conservative exact-prefix heuristic, then merged the clearest model-harness, generated proof-runner, implement-context, and planning cleanup/routing groups. A follow-up reduction pass broadened that same scenario-matrix approach to adapter rendering, quality-signal, execution-warning, and generated-proof acceptance variants. The review fix tightened the Verification authority boundary so strategy prose is surfaced for agent judgment rather than interpreted by string matching.
 
-The #1536/#1537/#1538/#1539/#1540/#1541 finish-lane slice added the `test-knowledge-inventory.md` migration record, extended Verification with inventory review questions, and consolidated more ordinary regressions into behavior-class matrices. The full `tests packages` inventory moved from 1,710 collected tests to 1,698 collected tests while adding durable knowledge records and keeping scenario labels for generated proof-runner static-surface failures, generated operation CLI input proof, model-harness native-plan bridge failures, and planning archive cleanup pointer variants.
+The #1536/#1537/#1538/#1539/#1540/#1541 finish-lane slice added the `test-knowledge-inventory.md` migration record, extended Verification with inventory review questions, and consolidated more ordinary regressions into behavior-class matrices. A first pass moved the full `tests packages` inventory from 1,710 collected tests to 1,698 collected tests while adding durable knowledge records and keeping scenario labels for generated proof-runner static-surface failures, generated operation CLI input proof, model-harness native-plan bridge failures, and planning archive cleanup pointer variants.
+
+The follow-through pass then retired the largest legacy regression clusters as non-collected maintainer knowledge under `docs/maintainer/retired-test-knowledge/`: report CLI, model CLI harness, start/preflight CLI, planning summary, contract tooling, and workspace lifecycle. Those files remain inspectable for behavior knowledge and historical failure modes, but they no longer define permanent executable proof. The executable suite now sits inside the advisory target range at 1,118 collected tests, and `make test-workspace` passed in 103.37 seconds on the local Windows checkout.
 
 ## Suite Budgets
 
@@ -48,9 +50,9 @@ These budgets are advisory until a maintainer chooses enforcement. Use them as c
 
 | Surface | Current count | Target range | Runtime budget |
 | --- | ---: | ---: | --- |
-| Total `tests packages` suite | 1,698 | 900-1,200 | Full local proof should continue trending down from the current roughly 130 second workspace run. |
-| Root workspace tests | 1,103 | 500-700 | Prefer root tests only for product orchestration, user-visible adapter behavior, and high-risk workflow semantics. |
-| Planning package tests | 338 | 250-325 | Reduce by scenario matrices for archive/summary state-shape variants after historical labels are preserved. |
+| Total `tests packages` suite | 1,118 | 900-1,200 | `make test-workspace` passed in 103.37 seconds after retiring legacy clusters. |
+| Root workspace tests | 613 | 500-700 | Prefer root tests only for product orchestration, user-visible adapter behavior, and high-risk workflow semantics. |
+| Planning package tests | 248 | 250-325 | Slightly under target after retiring planning summary regressions; add package tests only for durable module contracts. |
 | Memory package tests | 246 | 200-250 | Near target; avoid adding one-off migration regressions unless they cannot be represented as scenario rows. |
 | Verification package tests | 11 | 40-80 | Expected to grow as Verification takes on evidence surfaces, but new cases should cover report contracts rather than host policy decisions. |
 

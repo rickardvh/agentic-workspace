@@ -496,19 +496,22 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "test_archive_execplan_apply_cleanup_removes_active_execplan_pointer_variants" in knowledge_inventory
     assert "test_generated_operation_cli_input_proof_scenarios" in knowledge_inventory
     assert "test_static_generated_package_proof_rejects_static_surface_regressions" in knowledge_inventory
-    assert "tests/test_model_cli_harness.py" in knowledge_inventory
-    assert "tests/test_workspace_report_cli.py" in knowledge_inventory
-    assert "tests/test_workspace_start_preflight_cli.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_model_cli_harness.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_workspace_report_cli.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_workspace_start_preflight_cli.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_contract_tooling.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_workspace_lifecycle_cli.py" in knowledge_inventory
+    assert "docs/maintainer/retired-test-knowledge/planning_test_summary.py" in knowledge_inventory
     assert "tests/test_workspace_implement_cli.py" in knowledge_inventory
     assert "tests/test_workspace_proof_cli.py" in knowledge_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in knowledge_inventory
-    assert "packages/planning/tests/test_summary.py" in knowledge_inventory
     assert "packages/planning/tests/test_archive.py" in knowledge_inventory
     assert "Primitive conformance" in strategy
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
-    assert "1,698 collected tests / 63 files" in strategy
+    assert "1,118 collected tests / 57 files" in strategy
+    assert "retired the largest legacy regression clusters" in strategy
     assert "## Suite Budgets" in strategy
     assert "900-1,200" in strategy
     assert "temporary characterization, conformance evidence, or historical regression residue" in strategy
@@ -566,13 +569,15 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "tests/test_workspace_defaults_cli.py" in aw_inventory
     assert "tests/test_workspace_implement_cli.py" in aw_inventory
     assert "tests/test_workspace_proof_cli.py" in aw_inventory
-    assert "tests/test_workspace_report_cli.py" in aw_inventory
-    assert "tests/test_workspace_start_preflight_cli.py" in aw_inventory
+    assert "Archived Ordinary Regression Knowledge" in aw_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_workspace_report_cli.py" in aw_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_workspace_start_preflight_cli.py" in aw_inventory
+    assert "docs/maintainer/retired-test-knowledge/test_model_cli_harness.py" in aw_inventory
     assert "adapter error classification and recovery-message surfaces" in aw_inventory
     assert "proof/checker orchestration" in aw_inventory
     assert "high-risk workflow semantics" in aw_inventory
 
-    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Boundary", 1)[0]
+    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Archived Ordinary Regression Knowledge", 1)[0]
     active_inventory_paths = sorted(set(re.findall(r"`(tests/[^`]+?\.py)`", kept_ordinary)))
     assert active_inventory_paths
     missing_paths = [path for path in active_inventory_paths if not (WORKSPACE_ROOT / path).exists()]
