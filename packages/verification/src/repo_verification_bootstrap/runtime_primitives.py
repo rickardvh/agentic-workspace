@@ -11,21 +11,11 @@ VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 
-DECLARED_STRATEGY_SOURCE_PATHS = [
+STRATEGY_SOURCE_HINT_PATHS = [
     Path("docs/maintainer/testing-strategy.md"),
     Path("docs/maintainer/aw-contract-test-replacement-inventory.md"),
     Path(".agentic-workspace/docs/proof-surfaces-contract.md"),
     Path("docs/host-repo-learning.md"),
-]
-
-STRATEGY_SIGNAL_MARKERS = [
-    ("prefer behavior contracts over one-off regressions", ["behavior contracts", "one-off regressions"]),
-    ("merge repeated mode/section/branch-shape checks", ["Merge", "Repeated mode", "section", "branch-shape"]),
-    ("convert stable generated command output only with named conformance owner", ["Contract-Owned Cases", "conformance"]),
-    ("prune only with equivalent coverage recorded", ["Prune only", "equivalent coverage"]),
-    ("root tests prove product orchestration", ["Root workspace tests prove", "product orchestration"]),
-    ("package-local tests prove module-owned behavior", ["Package-local tests prove", "module-owned behavior"]),
-    ("filenames and markers are hints, not authority", ["suggest discovery questions", "not authority"]),
 ]
 
 FIXTURE_VARIANT_TOKENS = {
@@ -101,19 +91,19 @@ def _read_text_if_present(path: Path) -> str:
         return ""
 
 
-def _declared_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
+def _candidate_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
     sources: list[dict[str, Any]] = []
-    for relative_path in DECLARED_STRATEGY_SOURCE_PATHS:
-        text = _read_text_if_present(target_root / relative_path)
-        if not text:
+    for relative_path in STRATEGY_SOURCE_HINT_PATHS:
+        absolute_path = target_root / relative_path
+        if not absolute_path.is_file():
             continue
-        signals = [
-            signal
-            for signal, required_markers in STRATEGY_SIGNAL_MARKERS
-            if all(marker.lower() in text.lower() for marker in required_markers)
-        ]
-        if signals:
-            sources.append({"path": relative_path.as_posix(), "signals": signals})
+        sources.append(
+            {
+                "path": relative_path.as_posix(),
+                "source_role": "candidate-host-strategy-source",
+                "authority": "uninterpreted-source",
+            }
+        )
     return sources
 
 
@@ -176,49 +166,6 @@ def _test_group_key(name: str) -> str:
     return "_".join(parts[: min(len(parts), 7)])
 
 
-def _proof_owner_for_path(path: str) -> str:
-    if path.startswith("packages/") and "/tests/" in path:
-        return "package-local-behavior"
-    if "generated_command" in path or "conformance" in path:
-        return "conformance-contract"
-    if path.startswith("docs/") or path.startswith(".agentic-workspace/docs/"):
-        return "docs-manual-review"
-    if path.startswith("tests/"):
-        return "root-orchestration"
-    return "unknown"
-
-
-def _evidence_role_for_test(function: dict[str, Any]) -> str:
-    name = str(function.get("name", "")).lower()
-    path = str(function.get("path", "")).lower()
-    if any(token in name for token in ("reject", "error", "invalid", "fail", "usage")):
-        return "error-path"
-    if any(token in name for token in ("edge", "stale", "missing", "gap", "empty")):
-        return "edge-case"
-    if "generated_command" in path or "generated_package" in name or "conformance" in name:
-        return "generated-output-assertion"
-    if any(token in name for token in ("adapter", "cli", "stdout", "stderr", "exit")):
-        return "transport-adapter-compatibility"
-    if "migration" in name or "residue" in name:
-        return "migration-residue"
-    if "characterization" in name:
-        return "temporary-characterization"
-    return "behavior-class-coverage"
-
-
-def _strategy_disposition(*, role: str, proof_owner: str, group_size: int, declared_sources: list[dict[str, Any]]) -> str:
-    declared_text = " ".join(signal for source in declared_sources for signal in source.get("signals", []))
-    if group_size > 1 and "merge repeated" in declared_text:
-        return "merge"
-    if role == "generated-output-assertion" and proof_owner == "conformance-contract" and "conformance" in declared_text:
-        return "convert-to-conformance"
-    if role == "temporary-characterization":
-        return "record-verification-evidence"
-    if not declared_sources:
-        return "needs-human-strategy-choice"
-    return "keep"
-
-
 def _evidence_strategy_payload(
     *,
     target_root: Path,
@@ -226,7 +173,7 @@ def _evidence_strategy_payload(
     task_text: str | None,
     manifest: dict[str, Any],
 ) -> dict[str, Any]:
-    declared_sources = _declared_strategy_sources(target_root=target_root)
+    candidate_sources = _candidate_strategy_sources(target_root=target_root)
     test_functions = [
         function
         for changed_path in changed_paths
@@ -237,27 +184,12 @@ def _evidence_strategy_payload(
         grouped.setdefault((str(function["path"]), _test_group_key(str(function["name"]))), []).append(function)
 
     observed_signals: list[dict[str, Any]] = []
-    hotspot_paths = [
-        path
-        for path in changed_paths
-        if path
-        in {
-            "tests/test_model_cli_harness.py",
-            "tests/test_workspace_report_cli.py",
-            "tests/test_workspace_start_preflight_cli.py",
-            "tests/test_generated_command_package_proof_runner.py",
-            "tests/test_workspace_proof_cli.py",
-            "tests/test_workspace_implement_cli.py",
-            "packages/planning/tests/test_summary.py",
-            "packages/planning/tests/test_archive.py",
-        }
-    ]
-    if hotspot_paths:
+    if changed_paths:
         observed_signals.append(
             {
                 "source": "changed_paths",
-                "signal": "hotspot test file touched",
-                "paths": hotspot_paths,
+                "signal": "changed paths supplied",
+                "paths": changed_paths,
                 "confidence": "medium",
             }
         )
@@ -285,7 +217,6 @@ def _evidence_strategy_payload(
     for (path, key), members in sorted(grouped.items()):
         if len(members) < 2:
             continue
-        confidence = "high" if declared_sources else "medium"
         member_names = [str(member["name"]) for member in members]
         for member in members:
             group_size_by_function[f"{path}::{member['name']}"] = len(members)
@@ -295,13 +226,11 @@ def _evidence_strategy_payload(
                 "paths": [path],
                 "members": member_names,
                 "group_role": "fixture-variant",
-                "recommended_disposition": "merge",
-                "confidence": confidence,
+                "recommended_disposition": "needs-human-strategy-choice",
+                "confidence": "low",
                 "explanation": (
-                    "Tests share a path and name prefix, and the declared strategy supports merging repeated checks; "
-                    "inspect setup/assertion shape before merging."
-                    if declared_sources
-                    else "Tests share a path and name prefix; inspect setup/assertion shape before merging."
+                    "Tests share a path and name prefix. Verification surfaces this as a review question; "
+                    "the agent must decide whether the host strategy supports merging."
                 ),
             }
         )
@@ -310,16 +239,8 @@ def _evidence_strategy_payload(
     for function in test_functions:
         path = str(function["path"])
         item_id = f"{path}::{function['name']}"
-        proof_owner = _proof_owner_for_path(path)
-        role = _evidence_role_for_test(function)
         group_size = group_size_by_function.get(item_id, 1)
-        disposition = _strategy_disposition(
-            role="fixture-variant" if group_size > 1 else role,
-            proof_owner=proof_owner,
-            group_size=group_size,
-            declared_sources=declared_sources,
-        )
-        signals = ["changed Python test function", f"proof owner inferred from path: {proof_owner}"]
+        signals = ["changed Python test function"]
         if group_size > 1:
             signals.append("shares name prefix with sibling tests")
         if function.get("helper_calls"):
@@ -329,24 +250,23 @@ def _evidence_strategy_payload(
                 "id": item_id,
                 "path": path,
                 "item_type": "test-function",
-                "proof_owner": proof_owner,
-                "evidence_role": "fixture-variant" if group_size > 1 else role,
-                "strategy_fit": "fits-declared-strategy" if declared_sources else "strategy-unclear",
-                "recommended_disposition": disposition,
-                "confidence": "medium" if declared_sources else "low",
+                "proof_owner": "unknown",
+                "evidence_role": "fixture-variant" if group_size > 1 else "unknown",
+                "strategy_fit": "strategy-unclear",
+                "recommended_disposition": "needs-human-strategy-choice",
+                "confidence": "low",
                 "explanation": (
-                    "Classification is based on repo-declared strategy signals, changed path ownership, and cheap AST facts; "
-                    "it is diagnostic and not proof-equivalence."
+                    "Verification reports structural evidence facts only. The agent must interpret host strategy and decide disposition."
                 ),
                 "observed_signals": signals,
-                "required_replacement_evidence": ["retain behavior-class coverage"] if disposition in {"merge", "prune"} else [],
-                "unsafe_to_prune_because": [] if disposition != "prune" else ["first-slice report does not prove semantic equivalence"],
+                "required_replacement_evidence": [],
+                "unsafe_to_prune_because": [],
             }
         )
 
-    if declared_sources:
-        declared_state = "declared"
-        strategy_confidence = "high"
+    if candidate_sources:
+        declared_state = "partially-declared"
+        strategy_confidence = "low"
     elif observed_signals:
         declared_state = "not-declared"
         strategy_confidence = "low"
@@ -361,28 +281,35 @@ def _evidence_strategy_payload(
                 "based_on": [
                     "shared test path",
                     "shared test name prefix",
-                    "declared merge policy" if declared_sources else "observed AST grouping",
+                    "observed AST grouping",
                 ],
-                "confidence": "medium" if declared_sources else "low",
+                "confidence": "low",
             }
         )
     return {
         "kind": EVIDENCE_STRATEGY_KIND,
-        "status": "ready" if declared_sources else "unclear" if observed_signals else "unavailable",
+        "status": "attention" if candidate_sources or observed_signals else "unavailable",
         "strategy_basis": {
             "declared_strategy_state": declared_state,
-            "declared_strategy_sources": declared_sources,
+            "declared_strategy_sources": [],
+            "candidate_strategy_sources": candidate_sources,
+            "matched_strategy_signals": [],
             "observed_signal_state": "observed" if observed_signals else "absent",
             "observed_signals": observed_signals,
             "agent_inference_state": "inferred" if agent_inferences else "not-inferred",
             "agent_inferences": agent_inferences,
             "strategy_confidence": strategy_confidence,
             "strategy_summary": (
-                "This repo declares behavior-contract coverage, scenario-matrix consolidation for repeated checks, "
-                "contract-owned conformance for suitable generated behavior, and explicit replacement evidence before pruning."
-                if declared_sources
-                else "No declared host testing strategy was found; treat classifications as discovery prompts, not policy."
+                "Verification found candidate host-owned strategy sources but did not interpret their prose. "
+                "The agent must read them and decide how the evidence fits."
+                if candidate_sources
+                else "No candidate host strategy source was found; the agent must decide how to interpret the evidence."
             ),
+            "decision_questions": [
+                "Which host-owned strategy source, if any, should govern this evidence?",
+                "Do grouped tests represent one behavior class or separate regression records?",
+                "What replacement evidence would be required before merging, moving, converting, or pruning evidence?",
+            ],
         },
         "evidence_items": evidence_items,
         "groups": group_entries,
@@ -394,11 +321,11 @@ def _evidence_strategy_payload(
                 1 for item in evidence_items if item["recommended_disposition"] == "needs-human-strategy-choice"
             ),
             "ordinary_tests_touched": len(test_functions),
-            "hotspot_files_touched": hotspot_paths,
+            "hotspot_files_touched": [],
             "candidate_threshold_note": (
-                "Fewer than 10 high-confidence merge candidates were found with the first-slice exact-prefix heuristic; "
-                "broader reductions need human review or stronger equivalence signals."
-                if declared_sources and sum(1 for group in group_entries if group["confidence"] == "high") < 10
+                "Verification does not assign high-confidence merge or prune candidates from prose or name matching; "
+                "the agent must make the strategy decision."
+                if group_entries
                 else ""
             ),
         },

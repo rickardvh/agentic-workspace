@@ -42,26 +42,27 @@ The Verification report also includes a diagnostic `evidence_strategy` section:
 }
 ```
 
-This section helps an agent classify proposed or existing proof evidence against
-the host repository's own declared or observed strategy. It is intentionally
-host-neutral: Verification does not prescribe a testing pyramid, AW-specific
-coverage style, or conformance-first policy. It separates declared strategy
-sources, observed signals, and confidence-qualified agent inferences so naming
-or path heuristics never become policy by themselves.
+This section helps an agent inspect proposed or existing proof evidence next to
+candidate host-owned strategy sources. It is intentionally host-neutral:
+Verification does not prescribe a testing pyramid, AW-specific coverage style,
+or conformance-first policy. It surfaces facts and decision questions; the agent
+does the reasoning.
 
 The first diagnostic slice uses cheap local inputs only:
 
 - changed paths and task text passed to `agentic-verification report`
 - `.agentic-workspace/verification/manifest.toml`, when present
-- repo-owned strategy and proof docs, when present
+- candidate repo-owned strategy and proof docs, when present
 - simple AST facts from changed Python test files
 
-The report may classify evidence owner, evidence role, strategy fit, and a
-recommended disposition such as `keep`, `merge`, `convert-to-conformance`,
-`record-verification-evidence`, or `needs-human-strategy-choice`. These are
-review prompts, not enforcement. The report does not delete tests, prove semantic
-equivalence, require a manifest extension, or create a universal testing
-strategy for the host repository.
+The first slice does not interpret prose in those docs and does not infer a
+host strategy from phrase matching. It can report that candidate source files
+exist, list changed test functions, identify simple same-file/name-prefix
+groups, and ask what the agent should decide. Without host-owned structured
+strategy enums or configuration, dispositions remain
+`needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
+The report does not delete tests, prove semantic equivalence, require a manifest
+extension, or create a universal testing strategy for the host repository.
 
 ## Manifest Shape
 
