@@ -154,6 +154,15 @@ evidence can report `current`, `stale`, `expired`, or `invalid` based only on th
 explicit date and changed-path glob fields. The lifecycle state is a prompt for
 agent review; it does not decide whether evidence is sufficient.
 
+The `evidence_strategy.regression_sprawl` block reports ordinary-test growth and
+deletion signals for regression-prone work. It lists changed Python test files,
+deleted or missing changed test paths, AST test-function counts, likely
+same-prefix fixture-variant group counts, shallow generated-output assertion
+signals, and whether the optional proof-decision record is missing, incomplete,
+invalid, or present. These are review facts only. The block never classifies a
+test as redundant and never recommends deletion, merge, or conformance
+conversion.
+
 Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest

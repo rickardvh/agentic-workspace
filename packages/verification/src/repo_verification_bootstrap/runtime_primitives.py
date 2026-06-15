@@ -500,6 +500,65 @@ def _proof_decision_payload(*, target_root: Path, changed_paths: list[str]) -> d
     }
 
 
+def _is_python_test_path(path: str) -> bool:
+    candidate = Path(path)
+    return candidate.suffix == ".py" and candidate.name.startswith("test_")
+
+
+def _regression_sprawl_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    test_functions: list[dict[str, Any]],
+    group_entries: list[dict[str, Any]],
+    proof_decision: dict[str, Any],
+) -> dict[str, Any]:
+    normalized_changed = _normalize_changed_paths(changed_paths)
+    changed_test_paths = [path for path in normalized_changed if _is_python_test_path(path)]
+    deleted_or_missing_test_paths = [
+        path for path in changed_test_paths if not ((Path(path) if Path(path).is_absolute() else target_root / Path(path)).exists())
+    ]
+    generated_output_assertions = [
+        {
+            "id": f"{function['path']}::{function['name']}",
+            "path": function["path"],
+            "matched_fragments": [
+                fragment
+                for fragment in function.get("assertion_fragments", [])
+                if any(token in str(fragment).lower() for token in ("stdout", "stderr", "output", "contains"))
+            ],
+        }
+        for function in test_functions
+    ]
+    generated_output_assertions = [item for item in generated_output_assertions if item["matched_fragments"]]
+    proof_status = str(proof_decision.get("status", "missing"))
+    decision_gap = proof_status in {"missing", "incomplete", "invalid"}
+    return {
+        "kind": "agentic-workspace/verification-regression-sprawl/v1",
+        "status": "attention" if changed_test_paths or decision_gap else "unavailable",
+        "authority": "diagnostic-facts",
+        "test_files_touched": changed_test_paths,
+        "deleted_or_missing_test_files": deleted_or_missing_test_paths,
+        "ordinary_test_function_count": len(test_functions),
+        "likely_fixture_variant_group_count": len(group_entries),
+        "generated_output_assertion_count": len(generated_output_assertions),
+        "generated_output_assertions": generated_output_assertions,
+        "proof_decision_status": proof_status,
+        "missing_or_incomplete_proof_decision": decision_gap,
+        "review_questions": [
+            "Is this evidence preserving a durable behavior class or an incident-specific regression record?",
+            "Can repeated fixtures become a scenario matrix without losing labels or historical facts?",
+            "Should generated output assertions move to a named contract or remain local executable proof?",
+            "What proof-decision record explains any ordinary test growth or deletion?",
+        ],
+        "limits": [
+            "No test is classified as redundant.",
+            "No deletion, merge, or conformance conversion is recommended by this diagnostic.",
+            "Generated-output assertion detection is a shallow AST substring signal.",
+        ],
+    }
+
+
 def _structured_strategy_hints_payload(*, target_root: Path) -> dict[str, Any]:
     strategy_path = target_root / PROOF_STRATEGY_PATH
     base = {
@@ -744,6 +803,13 @@ def _evidence_strategy_payload(
         manifest=manifest,
     )
     proof_decision = _proof_decision_payload(target_root=target_root, changed_paths=changed_paths)
+    regression_sprawl = _regression_sprawl_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        test_functions=test_functions,
+        group_entries=group_entries,
+        proof_decision=proof_decision,
+    )
     return {
         "kind": EVIDENCE_STRATEGY_KIND,
         "status": "attention" if candidate_sources or observed_signals else "unavailable",
@@ -784,6 +850,7 @@ def _evidence_strategy_payload(
         },
         "proof_governance": proof_governance,
         "proof_decision": proof_decision,
+        "regression_sprawl": regression_sprawl,
         "summary": {
             "candidate_count": len(evidence_items),
             "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),
