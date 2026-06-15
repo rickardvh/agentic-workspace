@@ -314,11 +314,11 @@
   },
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
-    "status": "complete",
+    "status": "allowed",
     "active_intent_satisfied": true,
     "human_accepted_partial": false,
-    "claim_level_requested": "full-intent-complete",
-    "claim_level_allowed": "full-intent-complete",
+    "claim_level_requested": "full_intent_complete",
+    "claim_level_allowed": "full_intent_complete",
     "required_next_action": "none",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
@@ -331,8 +331,18 @@
       ],
       "blocked_claim_classes": [],
       "closure_actions": [
-        "archive-and-close",
-        "close-issue-on-pr-merge"
+        {
+          "kind": "issue_closure",
+          "target": "#1535",
+          "authorized": true,
+          "reason": "archive-and-close was authorized after the completion gate marked issue #1535 complete"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1535",
+          "authorized": true,
+          "reason": "close-issue-on-pr-merge was authorized by the PR closure path"
+        }
       ],
       "renderer_rule": "Renderers may claim #1535 implemented when citing this proof and the PR closure path.",
       "diagnostics": {

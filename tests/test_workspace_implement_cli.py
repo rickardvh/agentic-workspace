@@ -379,6 +379,57 @@ authority_refs = ["docs/compliance/privacy.md"]
     assert "does not decide the user's semantic intent" in verification["authority_boundary"]["reporting_rule"]
 
 
+def test_implement_verification_surfaces_proof_governance_and_decision_status(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json",
+        json.dumps(
+            {
+                "selected_decision": "prune",
+                "trust_question": "Is the deleted regression knowledge preserved elsewhere?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "migration-residue",
+                "evidence_durability": "temporary",
+                "narrowest_evidence": "A retained conformance-owned scenario.",
+                "prune_or_replacement_condition": "Equivalent coverage remains documented.",
+                "confidence": "medium",
+                "residual_risk": "Closeout still needs the agent's judgment.",
+                "stale_when": ["tests/**"],
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_removed_regression.py",
+                "--task",
+                "Remove legacy regression test",
+                "--select",
+                "verification",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    verification = json.loads(capsys.readouterr().out)["values"]["verification"]
+    strategy = verification["evidence_strategy"]
+    assert strategy["proof_governance"]["decision_authority"] == "agent"
+    assert strategy["proof_decision"]["status"] == "present"
+    assert strategy["proof_decision"]["lifecycle"]["state"] == "stale"
+    assert strategy["regression_sprawl"]["proof_decision_status"] == "present"
+    assert strategy["regression_sprawl"]["missing_or_incomplete_proof_decision"] is False
+    assert strategy["regression_sprawl"]["deleted_or_missing_test_files"] == ["tests/test_removed_regression.py"]
+
+
 def test_implement_matches_non_code_assurance_requirement(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

@@ -1446,6 +1446,14 @@ def _compact_verification(value: Any) -> dict[str, Any]:
     active = active if isinstance(active, list) else []
     evidence_status = value.get("evidence_status", [])
     evidence_status = evidence_status if isinstance(evidence_status, list) else []
+    evidence_strategy = value.get("evidence_strategy", {})
+    evidence_strategy = evidence_strategy if isinstance(evidence_strategy, dict) else {}
+    proof_governance = evidence_strategy.get("proof_governance", {})
+    proof_governance = proof_governance if isinstance(proof_governance, dict) else {}
+    proof_decision = evidence_strategy.get("proof_decision", {})
+    proof_decision = proof_decision if isinstance(proof_decision, dict) else {}
+    regression_sprawl = evidence_strategy.get("regression_sprawl", {})
+    regression_sprawl = regression_sprawl if isinstance(regression_sprawl, dict) else {}
     return {
         "kind": value.get("kind", "agentic-workspace/verification/v1"),
         "status": value.get("status", "absent"),
@@ -1470,6 +1478,24 @@ def _compact_verification(value: Any) -> dict[str, Any]:
             for item in evidence_status[:3]
             if isinstance(item, dict)
         ],
+        "proof_governance": {
+            "status": proof_governance.get("status", "unavailable"),
+            "decision_authority": proof_governance.get("decision_authority", "agent"),
+            "available_decisions": proof_governance.get("available_decisions", []),
+        },
+        "proof_decision": {
+            "status": proof_decision.get("status", "missing"),
+            "missing_fields": proof_decision.get("missing_fields", []),
+            "invalid_fields": proof_decision.get("invalid_fields", []),
+            "lifecycle": proof_decision.get("lifecycle", {}),
+        },
+        "regression_sprawl": {
+            "status": regression_sprawl.get("status", "unavailable"),
+            "proof_decision_status": regression_sprawl.get("proof_decision_status", "missing"),
+            "missing_or_incomplete_proof_decision": regression_sprawl.get("missing_or_incomplete_proof_decision", False),
+            "ordinary_test_function_count": regression_sprawl.get("ordinary_test_function_count", 0),
+            "likely_fixture_variant_group_count": regression_sprawl.get("likely_fixture_variant_group_count", 0),
+        },
         "detail_command": "agentic-workspace report --target ./repo --section verification --format json",
     }
 

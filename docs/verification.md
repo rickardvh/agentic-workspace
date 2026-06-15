@@ -163,6 +163,12 @@ invalid, or present. These are review facts only. The block never classifies a
 test as redundant and never recommends deletion, merge, or conformance
 conversion.
 
+Root workspace surfaces expose the same Verification report under
+`agentic-workspace report --section verification --format json` and
+`agentic-workspace implement --select verification --format json`. Agents should
+use the proof-governance, proof-decision, lifecycle, and regression-sprawl fields
+as closeout inputs when ordinary tests are added, merged, moved, or removed.
+
 Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest
