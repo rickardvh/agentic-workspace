@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 import tarfile
-import tempfile
 import tomllib
 from pathlib import Path
 from zipfile import ZipFile
@@ -75,6 +74,20 @@ EXECUTABLE_PAYLOAD_SUFFIXES = {
     ".vb",
     ".zsh",
 }
+
+
+@pytest.fixture(scope="module")
+def planning_artifacts(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    output_dir = tmp_path_factory.mktemp("planning-artifacts")
+    return {
+        "wheel": _build_artifact("wheel", output_dir),
+        "sdist": _build_artifact("sdist", output_dir),
+    }
+
+
+@pytest.fixture(scope="module")
+def planning_wheel(planning_artifacts: dict[str, Path]) -> Path:
+    return planning_artifacts["wheel"]
 
 
 def _build_artifact(kind: str, output_dir: Path) -> Path:
@@ -190,18 +203,14 @@ def _iter_tracked_payload_surface_files(root: Path) -> set[str]:
 
 
 @pytest.mark.parametrize("kind", ("wheel", "sdist"))
-def test_planning_artifacts_contain_required_contract_inventory(kind: str) -> None:
+def test_planning_artifacts_contain_required_contract_inventory(kind: str, planning_artifacts: dict[str, Path]) -> None:
     """Verify that the built planning wheel and sdist contain the same contract inventory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        artifact = _build_artifact(kind, Path(tmpdir))
-        _assert_contract_inventory(artifact)
+    _assert_contract_inventory(planning_artifacts[kind])
 
 
 @pytest.mark.parametrize("kind", ("wheel", "sdist"))
-def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: str) -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        artifact = _build_artifact(kind, Path(tmpdir))
-        entries = _raw_artifact_entries(artifact)
+def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: str, planning_artifacts: dict[str, Path]) -> None:
+    entries = _raw_artifact_entries(planning_artifacts[kind])
 
     assert not any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
     assert not any(entry.endswith("repo_planning_bootstrap/generated_cli_package.py") for entry in entries)
@@ -216,31 +225,28 @@ def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: s
         assert any(entry.endswith("src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json") for entry in entries)
 
 
-def test_installed_planning_wheel_imports_cli_module() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact("wheel", tmpdir_path)
-        install_root = tmpdir_path / "installed"
-        subprocess.run(
-            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
-            cwd=PLANNING_PACKAGE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+def test_installed_planning_wheel_imports_cli_module(planning_wheel: Path, tmp_path: Path) -> None:
+    install_root = tmp_path / "installed"
+    subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(planning_wheel)],
+        cwd=PLANNING_PACKAGE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "import repo_planning_bootstrap.cli; from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser",
-            ],
-            cwd=tmpdir_path,
-            env={**os.environ, "PYTHONPATH": str(install_root)},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import repo_planning_bootstrap.cli; from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser",
+        ],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(install_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
     assert result.returncode == 0, result.stderr
 
@@ -293,10 +299,8 @@ def test_payload_surface_classification_identifies_core_and_follow_up_sets() -> 
 
 
 @pytest.mark.parametrize("kind", ("wheel", "sdist"))
-def test_planning_artifacts_do_not_ship_bootstrap_helper_directories(kind: str) -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        artifact = _build_artifact(kind, Path(tmpdir))
-        entries = _artifact_entries(artifact)
+def test_planning_artifacts_do_not_ship_bootstrap_helper_directories(kind: str, planning_artifacts: dict[str, Path]) -> None:
+    entries = _artifact_entries(planning_artifacts[kind])
 
     assert not any(entry.startswith("scripts/") for entry in entries)
     assert not any(entry.startswith("tools/") for entry in entries)
@@ -304,10 +308,8 @@ def test_planning_artifacts_do_not_ship_bootstrap_helper_directories(kind: str) 
 
 
 @pytest.mark.parametrize("kind", ("wheel", "sdist"))
-def test_planning_artifacts_do_not_ship_executable_bootstrap_payload(kind: str) -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        artifact = _build_artifact(kind, Path(tmpdir))
-        entries = _artifact_entries(artifact)
+def test_planning_artifacts_do_not_ship_executable_bootstrap_payload(kind: str, planning_artifacts: dict[str, Path]) -> None:
+    entries = _artifact_entries(planning_artifacts[kind])
 
     executable_entries = sorted(entry for entry in entries if Path(entry).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
     assert executable_entries == []

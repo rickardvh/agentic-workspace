@@ -4,14 +4,14 @@ Use this guide before adding or pruning tests in this repository. The goal is to
 
 ## Current Inventory
 
-The June 2026 inventory for #1366 found 64 Python test files and 1,577 test functions across the root workspace and package suites:
+The June 15, 2026 inventory for #1521 found 60 Python test files and 1,739 collected tests across the root workspace and package suites:
 
-- root workspace: 1,098 collected tests
-- planning package: 337 collected tests
+- root workspace: 1,141 collected tests
+- planning package: 345 collected tests
 - memory package: 247 collected tests
 - verification package: 6 collected tests
 
-Collection is fast, so the immediate problem is not raw collection time. The pressure is readability, duplicate intent, and a growing pile of narrow regression tests around broad workflow surfaces.
+Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
 The largest clusters by test count are:
 
@@ -27,6 +27,8 @@ The largest clusters by test count are:
 - `tests/test_workspace_proof_cli.py`
 
 These clusters are not automatically bad. Treat them as the first places to look for scenario consolidation, table-driven structure, or contract-owned conformance cases when related work changes them.
+
+The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests now reuse module-scoped wheel and sdist artifacts while preserving the same inventory, import, workflow, and install assertions. The packaging subset passes in about 20 seconds on the local Windows checkout.
 
 ## Contract Ladder
 

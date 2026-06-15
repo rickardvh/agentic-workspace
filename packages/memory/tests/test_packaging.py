@@ -6,10 +6,11 @@ import os
 import subprocess
 import sys
 import tarfile
-import tempfile
 import tomllib
 from pathlib import Path
 from zipfile import ZipFile
+
+import pytest
 
 from repo_memory_bootstrap._installer_shared import (
     CURRENT_MEMORY_BASELINE,
@@ -69,31 +70,39 @@ EXECUTABLE_PAYLOAD_SUFFIXES = {
 }
 
 
-def test_memory_wheel_contains_required_payload_files_and_skills() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact("wheel", Path(tmpdir))
-        inventory = _artifact_inventory(wheel_path)
-
-        assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
-        assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
+@pytest.fixture(scope="module")
+def memory_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
+    output_dir = tmp_path_factory.mktemp("memory-artifacts")
+    return _build_artifact("wheel", output_dir), _build_artifact("sdist", output_dir)
 
 
-def test_memory_sdist_contains_required_payload_files_and_skills() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sdist_path = _build_artifact("sdist", Path(tmpdir))
-        inventory = _artifact_inventory(sdist_path)
-
-        assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
-        assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
+@pytest.fixture(scope="module")
+def memory_wheel(memory_artifacts: tuple[Path, Path]) -> Path:
+    return memory_artifacts[0]
 
 
-def test_memory_wheel_and_sdist_share_the_same_managed_inventory() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact("wheel", tmpdir_path)
-        sdist_path = _build_artifact("sdist", tmpdir_path)
+@pytest.fixture(scope="module")
+def memory_sdist(memory_artifacts: tuple[Path, Path]) -> Path:
+    return memory_artifacts[1]
 
-        assert _artifact_inventory(wheel_path) == _artifact_inventory(sdist_path)
+
+def test_memory_wheel_contains_required_payload_files_and_skills(memory_wheel: Path) -> None:
+    inventory = _artifact_inventory(memory_wheel)
+
+    assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
+    assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
+
+
+def test_memory_sdist_contains_required_payload_files_and_skills(memory_sdist: Path) -> None:
+    inventory = _artifact_inventory(memory_sdist)
+
+    assert EXPECTED_CORE_MANAGED_PATHS <= inventory, _missing_paths(inventory, EXPECTED_CORE_MANAGED_PATHS)
+    assert "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md" not in inventory
+
+
+def test_memory_wheel_and_sdist_share_the_same_managed_inventory(memory_artifacts: tuple[Path, Path]) -> None:
+    wheel_path, sdist_path = memory_artifacts
+    assert _artifact_inventory(wheel_path) == _artifact_inventory(sdist_path)
 
 
 def test_current_memory_has_no_required_shipped_baseline() -> None:
@@ -102,10 +111,8 @@ def test_current_memory_has_no_required_shipped_baseline() -> None:
     assert all(not path.as_posix().startswith(".agentic-workspace/memory/repo/current/") for path in PAYLOAD_REQUIRED_FILES)
 
 
-def test_memory_bootstrap_repo_payload_excludes_repo_specific_content() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact("wheel", Path(tmpdir))
-        inventory = _artifact_inventory(wheel_path)
+def test_memory_bootstrap_repo_payload_excludes_repo_specific_content(memory_wheel: Path) -> None:
+    inventory = _artifact_inventory(memory_wheel)
 
     repo_payload = sorted(
         path.removeprefix("bootstrap/.agentic-workspace/memory/repo/")
@@ -123,32 +130,22 @@ def test_memory_bootstrap_repo_payload_excludes_repo_specific_content() -> None:
     assert not any(path.startswith("skills/") for path in repo_payload)
 
 
-def test_memory_artifacts_do_not_ship_root_level_bootstrap_helpers() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact("wheel", tmpdir_path)
-        sdist_path = _build_artifact("sdist", tmpdir_path)
-
-        for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
-            assert not any(path.startswith("bootstrap/scripts/") for path in inventory)
-            assert not any(path.startswith("bootstrap/optional/") for path in inventory)
+def test_memory_artifacts_do_not_ship_root_level_bootstrap_helpers(memory_artifacts: tuple[Path, Path]) -> None:
+    wheel_path, sdist_path = memory_artifacts
+    for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
+        assert not any(path.startswith("bootstrap/scripts/") for path in inventory)
+        assert not any(path.startswith("bootstrap/optional/") for path in inventory)
 
 
-def test_memory_artifacts_do_not_ship_executable_bootstrap_payload() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact("wheel", tmpdir_path)
-        sdist_path = _build_artifact("sdist", tmpdir_path)
-
-        for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
-            executable_entries = sorted(path for path in inventory if Path(path).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
-            assert executable_entries == []
+def test_memory_artifacts_do_not_ship_executable_bootstrap_payload(memory_artifacts: tuple[Path, Path]) -> None:
+    wheel_path, sdist_path = memory_artifacts
+    for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
+        executable_entries = sorted(path for path in inventory if Path(path).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
+        assert executable_entries == []
 
 
-def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        wheel_path = _build_artifact("wheel", Path(tmpdir))
-        inventory = _raw_artifact_inventory(wheel_path)
+def test_memory_wheel_ships_generated_cli_package_import_dependency(memory_wheel: Path) -> None:
+    inventory = _raw_artifact_inventory(memory_wheel)
 
     assert "repo_memory_bootstrap/generated_command_adapters.py" not in inventory
     assert "repo_memory_bootstrap/generated_cli_package.py" not in inventory
@@ -159,10 +156,8 @@ def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
     assert "repo_memory_bootstrap/_generated_cli_package_impl/_contracts/payload_verification.memory.json" in inventory
 
 
-def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sdist_path = _build_artifact("sdist", Path(tmpdir))
-        inventory = _raw_artifact_inventory(sdist_path)
+def test_memory_sdist_ships_generated_cli_package_import_dependency(memory_sdist: Path) -> None:
+    inventory = _raw_artifact_inventory(memory_sdist)
 
     assert "src/repo_memory_bootstrap/generated_command_adapters.py" not in inventory
     assert "src/repo_memory_bootstrap/generated_cli_package.py" not in inventory
@@ -173,37 +168,34 @@ def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/_contracts/payload_verification.memory.json" in inventory
 
 
-def test_installed_memory_wheel_imports_cli_module() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        wheel_path = _build_artifact("wheel", tmpdir_path)
-        install_root = tmpdir_path / "installed"
-        subprocess.run(
-            ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(wheel_path)],
-            cwd=MEMORY_PACKAGE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+def test_installed_memory_wheel_imports_cli_module(memory_wheel: Path, tmp_path: Path) -> None:
+    install_root = tmp_path / "installed"
+    subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(memory_wheel)],
+        cwd=MEMORY_PACKAGE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                (
-                    "import repo_memory_bootstrap.cli; "
-                    "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser; "
-                    "from repo_memory_bootstrap._generated_cli_package_impl.primitives.operation_executor import "
-                    "_handle_context_root_memory_contracts; "
-                    "assert (_handle_context_root_memory_contracts() / 'payload_verification.memory.json').is_file()"
-                ),
-            ],
-            cwd=tmpdir_path,
-            env={**os.environ, "PYTHONPATH": str(install_root)},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import repo_memory_bootstrap.cli; "
+                "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser; "
+                "from repo_memory_bootstrap._generated_cli_package_impl.primitives.operation_executor import "
+                "_handle_context_root_memory_contracts; "
+                "assert (_handle_context_root_memory_contracts() / 'payload_verification.memory.json').is_file()"
+            ),
+        ],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(install_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
     assert result.returncode == 0, result.stderr
 
