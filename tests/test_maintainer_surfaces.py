@@ -484,8 +484,20 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
     replacement_plan = (WORKSPACE_ROOT / "docs" / "maintainer" / "contract-test-replacement-plan.md").read_text(encoding="utf-8")
     aw_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "aw-contract-test-replacement-inventory.md").read_text(encoding="utf-8")
+    knowledge_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "test-knowledge-inventory.md").read_text(encoding="utf-8")
 
     assert "docs/maintainer/testing-strategy.md" in playbook
+    assert "Test Knowledge Inventory" in knowledge_inventory
+    assert "Verification may surface" in knowledge_inventory
+    assert "uninterpreted-source" in knowledge_inventory
+    assert "tests/test_model_cli_harness.py" in knowledge_inventory
+    assert "tests/test_workspace_report_cli.py" in knowledge_inventory
+    assert "tests/test_workspace_start_preflight_cli.py" in knowledge_inventory
+    assert "tests/test_workspace_implement_cli.py" in knowledge_inventory
+    assert "tests/test_workspace_proof_cli.py" in knowledge_inventory
+    assert "tests/test_generated_command_package_proof_runner.py" in knowledge_inventory
+    assert "packages/planning/tests/test_summary.py" in knowledge_inventory
+    assert "packages/planning/tests/test_archive.py" in knowledge_inventory
     assert "Primitive conformance" in strategy
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy

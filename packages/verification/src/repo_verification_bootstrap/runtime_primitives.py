@@ -11,11 +11,12 @@ VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 
-STRATEGY_SOURCE_HINT_PATHS = [
-    Path("docs/maintainer/testing-strategy.md"),
-    Path("docs/maintainer/aw-contract-test-replacement-inventory.md"),
-    Path(".agentic-workspace/docs/proof-surfaces-contract.md"),
-    Path("docs/host-repo-learning.md"),
+SOURCE_HINTS = [
+    (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
+    (Path("docs/maintainer/test-knowledge-inventory.md"), "candidate-test-knowledge-inventory"),
+    (Path("docs/maintainer/aw-contract-test-replacement-inventory.md"), "candidate-host-strategy-source"),
+    (Path(".agentic-workspace/docs/proof-surfaces-contract.md"), "candidate-host-strategy-source"),
+    (Path("docs/host-repo-learning.md"), "candidate-host-strategy-source"),
 ]
 
 FIXTURE_VARIANT_TOKENS = {
@@ -91,16 +92,38 @@ def _read_text_if_present(path: Path) -> str:
         return ""
 
 
+GROUP_DECISION_QUESTIONS = [
+    "Does this group represent one behavior class or separate regression records?",
+    "Which member labels or historical facts must remain visible if this evidence is rewritten?",
+    "What replacement evidence would make it safe to merge, move, convert, or prune this group?",
+    "Which host-owned source should the agent read before deciding?",
+]
+
+ITEM_DECISION_QUESTIONS = [
+    "What behavior claim does this evidence item currently preserve?",
+    "Is this executable proof, historical regression knowledge, or both?",
+    "Which owner should carry this evidence if the test is moved or retired?",
+    "What replacement evidence must exist before changing this item?",
+]
+
+FILE_REVIEW_QUESTIONS = [
+    "Which inventory row or host-owned source should the agent read for this file?",
+    "Which behavior classes in this file are worth preserving as executable proof?",
+    "Which historical regression facts should move to a non-executable record?",
+    "What smaller proof surface should own stable behavior after migration?",
+]
+
+
 def _candidate_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
     sources: list[dict[str, Any]] = []
-    for relative_path in STRATEGY_SOURCE_HINT_PATHS:
+    for relative_path, source_role in SOURCE_HINTS:
         absolute_path = target_root / relative_path
         if not absolute_path.is_file():
             continue
         sources.append(
             {
                 "path": relative_path.as_posix(),
-                "source_role": "candidate-host-strategy-source",
+                "source_role": source_role,
                 "authority": "uninterpreted-source",
             }
         )
@@ -232,6 +255,7 @@ def _evidence_strategy_payload(
                     "Tests share a path and name prefix. Verification surfaces this as a review question; "
                     "the agent must decide whether the host strategy supports merging."
                 ),
+                "decision_questions": GROUP_DECISION_QUESTIONS,
             }
         )
 
@@ -259,8 +283,26 @@ def _evidence_strategy_payload(
                     "Verification reports structural evidence facts only. The agent must interpret host strategy and decide disposition."
                 ),
                 "observed_signals": signals,
+                "decision_questions": ITEM_DECISION_QUESTIONS,
                 "required_replacement_evidence": [],
                 "unsafe_to_prune_because": [],
+            }
+        )
+
+    file_summaries: list[dict[str, Any]] = []
+    functions_by_path: dict[str, list[dict[str, Any]]] = {}
+    for function in test_functions:
+        functions_by_path.setdefault(str(function["path"]), []).append(function)
+    grouped_member_ids = set(group_size_by_function)
+    for path, functions in sorted(functions_by_path.items()):
+        file_summaries.append(
+            {
+                "path": path,
+                "test_function_count": len(functions),
+                "grouped_test_function_count": sum(1 for function in functions if f"{path}::{function['name']}" in grouped_member_ids),
+                "helper_call_count": sum(len(function.get("helper_calls", [])) for function in functions),
+                "assertion_count": sum(int(function.get("assertion_count", 0)) for function in functions),
+                "review_questions": FILE_REVIEW_QUESTIONS,
             }
         )
 
@@ -313,6 +355,16 @@ def _evidence_strategy_payload(
         },
         "evidence_items": evidence_items,
         "groups": group_entries,
+        "inventory_review": {
+            "candidate_inventory_sources": [
+                source for source in candidate_sources if source["source_role"] == "candidate-test-knowledge-inventory"
+            ],
+            "test_file_summaries": file_summaries,
+            "limits": [
+                "Counts are AST diagnostics, not proof of coverage.",
+                "File summaries do not authorize deletion or merge decisions.",
+            ],
+        },
         "summary": {
             "candidate_count": len(evidence_items),
             "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),

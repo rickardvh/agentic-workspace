@@ -52,14 +52,26 @@ The first diagnostic slice uses cheap local inputs only:
 
 - changed paths and task text passed to `agentic-verification report`
 - `.agentic-workspace/verification/manifest.toml`, when present
-- candidate repo-owned strategy and proof docs, when present
+- candidate repo-owned strategy, proof, and test-knowledge inventory docs, when present
 - simple AST facts from changed Python test files
 
 The first slice does not interpret prose in those docs and does not infer a
 host strategy from phrase matching. It can report that candidate source files
 exist, list changed test functions, identify simple same-file/name-prefix
-groups, and ask what the agent should decide. Without host-owned structured
-strategy enums or configuration, dispositions remain
+groups, and ask what the agent should decide. Group questions ask whether the
+members are one behavior class or separate regression records, which labels must
+remain visible, what replacement evidence would be required, and which
+host-owned source the agent should read. Item questions ask what behavior claim
+is preserved, whether the item is executable proof or historical knowledge, who
+should own the evidence after migration, and what replacement evidence must
+exist before changing it.
+
+The report also includes an `inventory_review` diagnostic for migration work.
+It lists candidate test-knowledge inventory sources and per-file AST counts so
+an agent can choose where to inspect first. These counts are routing facts only:
+they do not prove coverage and do not authorize deletion, merging, or conversion.
+
+Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest
 extension, or create a universal testing strategy for the host repository.

@@ -258,6 +258,12 @@ def test_model_cli_harness_scores_raw_read_windows():
                 "Tests share a path and name prefix. Verification surfaces this as a review question; "
                 "the agent must decide whether the host strategy supports merging."
             ),
+            "decision_questions": [
+                "Does this group represent one behavior class or separate regression records?",
+                "Which member labels or historical facts must remain visible if this evidence is rewritten?",
+                "What replacement evidence would make it safe to merge, move, convert, or prune this group?",
+                "Which host-owned source should the agent read before deciding?",
+            ],
         }
     ]
     assert strategy["summary"]["high_confidence_merge_count"] == 0
@@ -265,6 +271,29 @@ def test_model_cli_harness_scores_raw_read_windows():
     assert {item["recommended_disposition"] for item in strategy["evidence_items"]} == {"needs-human-strategy-choice"}
     assert {item["evidence_role"] for item in strategy["evidence_items"]} == {"fixture-variant"}
     assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"unknown"}
+    assert {tuple(item["decision_questions"]) for item in strategy["evidence_items"]} == {
+        (
+            "What behavior claim does this evidence item currently preserve?",
+            "Is this executable proof, historical regression knowledge, or both?",
+            "Which owner should carry this evidence if the test is moved or retired?",
+            "What replacement evidence must exist before changing this item?",
+        )
+    }
+    assert strategy["inventory_review"]["test_file_summaries"] == [
+        {
+            "path": "tests/test_model_cli_harness.py",
+            "test_function_count": 2,
+            "grouped_test_function_count": 2,
+            "helper_call_count": 2,
+            "assertion_count": 2,
+            "review_questions": [
+                "Which inventory row or host-owned source should the agent read for this file?",
+                "Which behavior classes in this file are worth preserving as executable proof?",
+                "Which historical regression facts should move to a non-executable record?",
+                "What smaller proof surface should own stable behavior after migration?",
+            ],
+        }
+    ]
 
 
 def test_verification_evidence_strategy_keeps_unclear_strategy_host_neutral(tmp_path: Path) -> None:
@@ -331,3 +360,54 @@ def test_widget_case_regression_windows():
     assert {group["recommended_disposition"] for group in strategy["groups"]} == {"needs-human-strategy-choice"}
     assert {item["recommended_disposition"] for item in strategy["evidence_items"]} == {"needs-human-strategy-choice"}
     assert strategy["summary"]["high_confidence_merge_count"] == 0
+
+
+def test_verification_evidence_strategy_surfaces_test_knowledge_inventory_without_interpreting_it(
+    tmp_path: Path,
+) -> None:
+    inventory_doc = tmp_path / "docs" / "maintainer" / "test-knowledge-inventory.md"
+    inventory_doc.parent.mkdir(parents=True)
+    inventory_doc.write_text(
+        """
+# Test Knowledge Inventory
+
+This host keeps one executable test for every incident record until a human
+maintainer explicitly migrates that knowledge elsewhere.
+""".strip(),
+        encoding="utf-8",
+    )
+    test_file = tmp_path / "tests" / "test_widget.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        """
+def test_widget_case_regression_posix():
+    assert True
+
+
+def test_widget_case_regression_windows():
+    assert True
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["tests/test_widget.py"], task_text="")
+
+    strategy = payload["evidence_strategy"]
+    assert strategy["strategy_basis"]["candidate_strategy_sources"] == [
+        {
+            "path": "docs/maintainer/test-knowledge-inventory.md",
+            "source_role": "candidate-test-knowledge-inventory",
+            "authority": "uninterpreted-source",
+        }
+    ]
+    assert strategy["strategy_basis"]["declared_strategy_sources"] == []
+    assert strategy["strategy_basis"]["matched_strategy_signals"] == []
+    assert strategy["inventory_review"]["candidate_inventory_sources"] == [
+        {
+            "path": "docs/maintainer/test-knowledge-inventory.md",
+            "source_role": "candidate-test-knowledge-inventory",
+            "authority": "uninterpreted-source",
+        }
+    ]
+    assert {group["recommended_disposition"] for group in strategy["groups"]} == {"needs-human-strategy-choice"}
+    assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"unknown"}
