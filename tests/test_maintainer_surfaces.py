@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
@@ -528,7 +529,9 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
     assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory
-    assert "tests/test_command_generation_primitive_executor.py" in aw_inventory
+    assert "tests/test_command_generation_integration.py" in aw_inventory
+    assert "tests/test_command_generation_primitive_executor.py" not in replacement_plan
+    assert "tests/test_command_generation_primitive_executor.py" not in aw_inventory
     assert "tests/test_workspace_cli.py" in aw_inventory
     assert "tests/test_workspace_config_cli.py" in aw_inventory
     assert "tests/test_workspace_defaults_cli.py" in aw_inventory
@@ -539,6 +542,12 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "adapter error classification and recovery-message surfaces" in aw_inventory
     assert "proof/checker orchestration" in aw_inventory
     assert "high-risk workflow semantics" in aw_inventory
+
+    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Boundary", 1)[0]
+    active_inventory_paths = sorted(set(re.findall(r"`(tests/[^`]+?\.py)`", kept_ordinary)))
+    assert active_inventory_paths
+    missing_paths = [path for path in active_inventory_paths if not (WORKSPACE_ROOT / path).exists()]
+    assert missing_paths == []
 
 
 def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: Path) -> None:
