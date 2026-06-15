@@ -9,6 +9,7 @@ from typing import Any
 
 VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
 PROOF_DECISION_PATH = Path(".agentic-workspace/verification/proof-decision.json")
+PROOF_STRATEGY_PATH = Path(".agentic-workspace/verification/proof-strategy.toml")
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 PROOF_GOVERNANCE_KIND = "agentic-workspace/verification-proof-governance/v1"
@@ -176,6 +177,13 @@ PROOF_DECISION_REQUIRED_FIELDS = [
     "confidence",
     "residual_risk",
 ]
+
+ORDINARY_TEST_GROWTH_OPTIONS = {
+    "allowed",
+    "requires-proof-decision",
+    "discouraged",
+    "unknown",
+}
 
 
 def _candidate_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
@@ -439,6 +447,78 @@ def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _structured_strategy_hints_payload(*, target_root: Path) -> dict[str, Any]:
+    strategy_path = target_root / PROOF_STRATEGY_PATH
+    base = {
+        "path": PROOF_STRATEGY_PATH.as_posix(),
+        "authority": "host-structured-config",
+        "limits": [
+            "Only structured enum fields are interpreted.",
+            "Free-text host strategy prose remains uninterpreted.",
+        ],
+    }
+    if not strategy_path.is_file():
+        return {
+            **base,
+            "status": "absent",
+            "hints": {},
+            "invalid_fields": [],
+        }
+    try:
+        with strategy_path.open("rb") as handle:
+            payload = tomllib.load(handle)
+    except tomllib.TOMLDecodeError as exc:
+        return {
+            **base,
+            "status": "invalid",
+            "parse_error": str(exc),
+            "hints": {},
+            "invalid_fields": ["toml"],
+        }
+    raw_hints = payload.get("proof_strategy", payload)
+    if not isinstance(raw_hints, dict):
+        return {
+            **base,
+            "status": "invalid",
+            "hints": {},
+            "invalid_fields": ["proof_strategy"],
+        }
+    hints = {
+        "strategy_source": str(raw_hints.get("strategy_source", "")).strip(),
+        "ordinary_test_growth": str(raw_hints.get("ordinary_test_growth", "")).strip() or "unknown",
+        "preferred_owner_vocab": [str(item).strip() for item in _list_payload(raw_hints.get("preferred_owner_vocab")) if str(item).strip()],
+        "proof_intent_vocab": [str(item).strip() for item in _list_payload(raw_hints.get("proof_intent_vocab")) if str(item).strip()],
+    }
+    invalid_fields: list[str] = []
+    if hints["ordinary_test_growth"] not in ORDINARY_TEST_GROWTH_OPTIONS:
+        invalid_fields.append("ordinary_test_growth")
+    invalid_owner_values = [
+        item
+        for item in hints["preferred_owner_vocab"]
+        if item
+        not in {
+            "root-orchestration",
+            "package-local-behavior",
+            "conformance-contract",
+            "verification-evidence",
+            "memory-lesson",
+            "docs-manual-review",
+            "unknown",
+        }
+    ]
+    if invalid_owner_values:
+        invalid_fields.append("preferred_owner_vocab")
+    invalid_intents = [item for item in hints["proof_intent_vocab"] if item not in PROOF_INTENT_OPTIONS]
+    if invalid_intents:
+        invalid_fields.append("proof_intent_vocab")
+    return {
+        **base,
+        "status": "invalid" if invalid_fields else "present",
+        "hints": hints,
+        "invalid_fields": invalid_fields,
+    }
+
+
 def _evidence_strategy_payload(
     *,
     target_root: Path,
@@ -447,6 +527,7 @@ def _evidence_strategy_payload(
     manifest: dict[str, Any],
 ) -> dict[str, Any]:
     candidate_sources = _candidate_strategy_sources(target_root=target_root)
+    structured_hints = _structured_strategy_hints_payload(target_root=target_root)
     test_functions = [
         function
         for changed_path in changed_paths
@@ -556,7 +637,10 @@ def _evidence_strategy_payload(
             }
         )
 
-    if candidate_sources:
+    if structured_hints["status"] == "present":
+        declared_state = "declared"
+        strategy_confidence = "medium"
+    elif candidate_sources:
         declared_state = "partially-declared"
         strategy_confidence = "low"
     elif observed_signals:
@@ -593,6 +677,7 @@ def _evidence_strategy_payload(
         "strategy_basis": {
             "declared_strategy_state": declared_state,
             "declared_strategy_sources": [],
+            "structured_strategy_hints": structured_hints,
             "candidate_strategy_sources": candidate_sources,
             "matched_strategy_signals": [],
             "observed_signal_state": "observed" if observed_signals else "absent",
