@@ -32,7 +32,7 @@
     "hard_constraints": "Do not weaken lifecycle, startup/preflight, proof, report, closeout, package install, or generated target freshness coverage.",
     "agent_may_decide": "Choose a bounded reduction slice when equivalent assertions remain and validation can prove the preserved behavior.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Consolidate repeated packaging artifact builds behind shared pytest fixtures and record the refreshed test inventory.",
+    "next_action": "Prune generated-command proof-runner assertions that duplicate conformance-owned generated output fields.",
     "proof_expectations": [
       "Packaging test subset passes with duration output.",
       "Maintainer surface guard for testing strategy passes.",
@@ -43,6 +43,8 @@
       "tests/test_workspace_packaging.py",
       "packages/memory/tests/test_packaging.py",
       "packages/planning/tests/test_packaging.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "docs/maintainer/aw-contract-test-replacement-inventory.md",
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/github-1521-inventory-and-reduce-slow-or-redundant-remaining.plan.json"
     ],
@@ -50,6 +52,7 @@
       "Current root and package test counts are recorded.",
       "Repeated packaging wheel/sdist builds are consolidated without removing artifact, install, or workflow assertions.",
       "#1522 planning candidate is closed as covered by this slice.",
+      "#1523 stable generated-output assertions are removed from ordinary proof-runner smoke coverage.",
       "Remaining #1521 work is left open with the next issue in priority order."
     ],
     "continuation_owner": ".agentic-workspace/planning/state.toml",
@@ -71,7 +74,7 @@
     "execution": {
       "milestone": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
       "status": "in-progress",
-      "next_step": "Run selected proof and close #1522 planning residue if validation stays green.",
+      "next_step": "Run selected proof and commit the #1523 assertion-pruning slice.",
       "proof": "uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q --durations=20 --durations-min=0.05"
     },
     "scope": {
@@ -79,7 +82,9 @@
         "docs/maintainer/testing-strategy.md",
         "tests/test_workspace_packaging.py",
         "packages/memory/tests/test_packaging.py",
-        "packages/planning/tests/test_packaging.py"
+        "packages/planning/tests/test_packaging.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "docs/maintainer/aw-contract-test-replacement-inventory.md"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -94,27 +99,27 @@
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "Promote the next highest-priority remaining planning candidate, starting with #1523 after #1522 is closed."
+    "activation trigger": "Promote the next highest-priority remaining planning candidate, starting with #1524 after the #1523 assertion-pruning slice lands."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, making the next reductions easier to measure.",
-    "intentionally deferred": "#1523 through #1527 remain roadmap candidates until their own bounded slices are promoted.",
+    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, and generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance.",
+    "intentionally deferred": "#1524 through #1527 remain roadmap candidates until their own bounded slices are promoted.",
     "discovered implications": "The broad root duration run exceeded 10 minutes; future slices should avoid full-suite proof unless required.",
     "proof achieved now": "packaging subset and lint passed before final proof selection",
     "validation still needed": "workspace implement-selected proof after all touched paths are known",
-    "next likely slice": "#1523 prune generated-command proof tests after conformance migration"
+    "next likely slice": "#1524 consolidate large report, startup, and preflight test clusters"
   },
   "intent_interpretation": {
     "literal request": "Github 1521 Inventory And Reduce Slow Or Redundant Remaining",
     "inferred intended outcome": "Refresh the test inventory and land a first low-risk reduction without weakening equivalent coverage.",
-    "chosen concrete what": "Reuse package build artifacts inside packaging test modules and update the testing strategy inventory.",
+    "chosen concrete what": "Reuse package build artifacts inside packaging test modules, update the testing strategy inventory, and prune duplicate generated-output assertions from the proof-runner smoke.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "docs/maintainer/testing-strategy.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; planning state/execplan",
-    "max changed files": "6 tracked files plus planning state",
-    "required validation commands": "ruff on touched packaging tests; packaging pytest subset with durations; maintainer surface guard; AW implement-selected proof",
+    "allowed paths": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; tests/test_generated_command_package_proof_runner.py; planning state/execplan",
+    "max changed files": "8 tracked files plus planning state",
+    "required validation commands": "ruff on touched packaging tests; packaging pytest subset with durations; proof-runner smoke; generated Python/TypeScript conformance; maintainer surface guard; AW implement-selected proof",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -130,7 +135,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Continue from #1523 after validating and closing the #1522 planning candidate.",
+    "tiny resumability note": "Continue from #1524 after validating and committing the #1523 assertion-pruning slice.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -161,7 +166,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run selected proof, close the #1522 planning candidate, and leave #1521 open for the next priority slice."
+    "Run selected proof, commit the #1523 assertion-pruning slice, and leave #1521 open for the next priority slice."
   ],
   "blockers": [
     "None."
@@ -170,7 +175,9 @@
     "docs/maintainer/testing-strategy.md",
     "tests/test_workspace_packaging.py",
     "packages/memory/tests/test_packaging.py",
-    "packages/planning/tests/test_packaging.py"
+    "packages/planning/tests/test_packaging.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "docs/maintainer/aw-contract-test-replacement-inventory.md"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -178,7 +185,9 @@
   "validation_commands": [
     "uv run ruff check tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py",
     "uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q --durations=20 --durations-min=0.05",
-    "uv run pytest tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q"
+    "uv run pytest tests/test_generated_command_package_proof_runner.py::test_operation_conformance_runner_executes_python_cases tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
   ],
   "required_tools": [
     "None."
@@ -190,12 +199,12 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "Collected current root/package test counts, updated testing strategy, and changed root/memory/planning packaging tests to reuse built artifacts through module-scoped fixtures.",
+    "what happened": "Collected current root/package test counts, updated testing strategy, changed root/memory/planning packaging tests to reuse built artifacts through module-scoped fixtures, and removed two generated-output field assertions from the proof-runner smoke in favor of conformance ownership.",
     "scope touched": "testing strategy docs and packaging tests only, plus planning state",
-    "changed surfaces": "docs/maintainer/testing-strategy.md; packaging test files; planning state/execplan",
-    "validations run": "ruff touched packaging tests: passed; packaging pytest subset with durations: 38 passed in 20.10s",
-    "result for continuation": "continue #1521 with #1523 after final proof and #1522 planning closeout",
-    "next step": "Run maintainer guard and AW implement-selected proof."
+    "changed surfaces": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; packaging test files; proof-runner smoke; planning state/execplan",
+    "validations run": "ruff touched packaging tests: passed; packaging pytest subset with durations: 38 passed in 20.10s; proof-runner/maintainer subset: 2 passed; generated Python and TypeScript conformance: passed",
+    "result for continuation": "continue #1521 with #1524 after final proof",
+    "next step": "Run AW implement-selected proof for the expanded touched path set."
   },
   "finished_run_review": {
     "review status": "completed",
@@ -210,24 +219,24 @@
     "route chosen": "keep-local",
     "route skipped reason": "scope was bounded and validation was local",
     "expected savings": "medium; packaging tests stop rebuilding the same artifacts for each assertion",
-    "actual friction": "close-item could not remove #1522 while it remained a roadmap candidate with status next",
+    "actual friction": "close-item could not remove #1522 while it remained a roadmap candidate with status next; leave roadmap candidate cleanup to supported planning transitions",
     "proof result": "passed",
     "quality concern": "none after proof",
     "decomposition adjustment": "record #1522 coverage in this plan; leave roadmap cleanup to a supported planning transition"
   },
   "proof_report": {
-    "validation proof": "passed: summary, planning doctor, maintainer surfaces, workspace tests/lint, memory tests/lint, planning tests/lint",
+    "validation proof": "passed: summary, planning doctor, maintainer surfaces, workspace tests/lint, memory tests/lint, planning tests/lint; targeted proof-runner smoke and generated Python/TypeScript conformance also passed",
     "proof achieved now": "yes",
-    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (121.48s); make test-memory: [ok] memory tests (11.95s); make test-planning: [ok] planning tests (11.68s); packaging subset: 38 passed in 20.10s"
+    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (123.85s); make test-memory: [ok] memory tests (13.56s); make test-planning: [ok] planning tests (12.41s); packaging subset: 38 passed in 20.10s; generated Python/TypeScript conformance passed"
   },
   "intent_satisfaction": {
     "original intent": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "Current inventory is recorded and packaging build duplication was reduced while preserving assertions.",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap candidates #1523 through #1527"
+    "evidence of intent satisfaction": "Current inventory is recorded, packaging build duplication was reduced while preserving assertions, and two generated-output proof-runner assertions were moved back to conformance ownership.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap candidates #1524 through #1527"
   },
   "execution_summary": {
-    "outcome delivered": "Current inventory documented and packaging tests now reuse module-scoped built artifacts.",
+    "outcome delivered": "Current inventory documented, packaging tests now reuse module-scoped built artifacts, and proof-runner smoke no longer duplicates two conformance-owned output field checks.",
     "validation confirmed": "yes",
     "follow-on routed to": "none yet",
     "post-work posterity capture": "docs/maintainer/testing-strategy.md updated",
@@ -257,9 +266,9 @@
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "#1521 requires more reduction slices; this change only completes the inventory refresh and #1522 packaging-build reduction.",
-    "evidence carried forward": "Proof commands passed and #1523 remains the next priority candidate.",
-    "reopen trigger": "Packaging tests start rebuilding duplicate artifacts per assertion or inventory counts drift without documentation."
+    "why this decision is honest": "#1521 requires more reduction slices; this change completes the inventory refresh, #1522 packaging-build reduction, and a bounded #1523 proof-runner assertion pruning.",
+    "evidence carried forward": "Proof commands passed for the packaging and #1523 slices, including the expanded implement-selected proof; #1524 remains the next priority candidate.",
+    "reopen trigger": "Packaging tests rebuild duplicate artifacts per assertion, inventory counts drift without documentation, or proof-runner smoke starts asserting conformance-owned generated output values again."
   },
   "improvement_signal_review": {
     "status": "not_checked",
