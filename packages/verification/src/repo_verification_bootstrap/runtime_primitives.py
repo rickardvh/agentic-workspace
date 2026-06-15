@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
+PROOF_DECISION_PATH = Path(".agentic-workspace/verification/proof-decision.json")
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 PROOF_GOVERNANCE_KIND = "agentic-workspace/verification-proof-governance/v1"
+PROOF_DECISION_KIND = "agentic-workspace/verification-proof-decision/v1"
 
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
@@ -93,6 +95,18 @@ def _read_text_if_present(path: Path) -> str:
         return ""
 
 
+def _read_json_if_present(path: Path) -> tuple[bool, Any, str]:
+    text = _read_text_if_present(path)
+    if not text:
+        return False, None, ""
+    import json
+
+    try:
+        return True, json.loads(text), ""
+    except json.JSONDecodeError as exc:
+        return True, None, str(exc)
+
+
 GROUP_DECISION_QUESTIONS = [
     "Does this group represent one behavior class or separate regression records?",
     "Which member labels or historical facts must remain visible if this evidence is rewritten?",
@@ -148,6 +162,19 @@ PROOF_GOVERNANCE_QUESTIONS = [
     "Which owner should hold the evidence?",
     "Is this proof permanent, temporary, or replaceable by a host-preferred proof surface?",
     "What would make it safe to prune later?",
+]
+
+PROOF_DECISION_REQUIRED_FIELDS = [
+    "selected_decision",
+    "trust_question",
+    "host_strategy_source",
+    "proof_owner",
+    "proof_intent",
+    "evidence_durability",
+    "narrowest_evidence",
+    "prune_or_replacement_condition",
+    "confidence",
+    "residual_risk",
 ]
 
 
@@ -326,6 +353,92 @@ def _proof_governance_payload(
     }
 
 
+def _proof_decision_payload(*, target_root: Path) -> dict[str, Any]:
+    decision_path = target_root / PROOF_DECISION_PATH
+    exists, payload, parse_error = _read_json_if_present(decision_path)
+    base = {
+        "kind": PROOF_DECISION_KIND,
+        "path": PROOF_DECISION_PATH.as_posix(),
+        "authority": "agent-authored",
+        "decision_authority": "agent",
+        "limits": [
+            "Verification validates the record shape but does not create the decision.",
+            "No missing field is inferred from prose, paths, names, or AW conventions.",
+        ],
+    }
+    if not exists:
+        return {
+            **base,
+            "status": "missing",
+            "missing_fields": PROOF_DECISION_REQUIRED_FIELDS,
+            "invalid_fields": [],
+            "decision": {},
+        }
+    if parse_error:
+        return {
+            **base,
+            "status": "invalid",
+            "parse_error": parse_error,
+            "missing_fields": [],
+            "invalid_fields": ["json"],
+            "decision": {},
+        }
+    if not isinstance(payload, dict):
+        return {
+            **base,
+            "status": "invalid",
+            "missing_fields": [],
+            "invalid_fields": ["root"],
+            "decision": {},
+        }
+    decision = payload.get("proof_decision", payload)
+    if not isinstance(decision, dict):
+        return {
+            **base,
+            "status": "invalid",
+            "missing_fields": [],
+            "invalid_fields": ["proof_decision"],
+            "decision": {},
+        }
+    missing_fields = [field for field in PROOF_DECISION_REQUIRED_FIELDS if not str(decision.get(field, "")).strip()]
+    invalid_fields: list[str] = []
+    selected_decision = str(decision.get("selected_decision", "")).strip()
+    if selected_decision and selected_decision not in PROOF_GOVERNANCE_DECISIONS:
+        invalid_fields.append("selected_decision")
+    proof_owner = str(decision.get("proof_owner", "")).strip()
+    if proof_owner and proof_owner not in {
+        "root-orchestration",
+        "package-local-behavior",
+        "conformance-contract",
+        "verification-evidence",
+        "memory-lesson",
+        "docs-manual-review",
+        "unknown",
+    }:
+        invalid_fields.append("proof_owner")
+    proof_intent = str(decision.get("proof_intent", "")).strip()
+    if proof_intent and proof_intent not in PROOF_INTENT_OPTIONS:
+        invalid_fields.append("proof_intent")
+    durability = str(decision.get("evidence_durability", "")).strip()
+    if durability and durability not in EVIDENCE_DURABILITY_OPTIONS:
+        invalid_fields.append("evidence_durability")
+    confidence = str(decision.get("confidence", "")).strip()
+    if confidence and confidence not in {"high", "medium", "low"}:
+        invalid_fields.append("confidence")
+    status = "present"
+    if invalid_fields:
+        status = "invalid"
+    elif missing_fields:
+        status = "incomplete"
+    return {
+        **base,
+        "status": status,
+        "missing_fields": missing_fields,
+        "invalid_fields": invalid_fields,
+        "decision": {field: decision.get(field, "") for field in PROOF_DECISION_REQUIRED_FIELDS},
+    }
+
+
 def _evidence_strategy_payload(
     *,
     target_root: Path,
@@ -473,6 +586,7 @@ def _evidence_strategy_payload(
         task_text=task_text,
         manifest=manifest,
     )
+    proof_decision = _proof_decision_payload(target_root=target_root)
     return {
         "kind": EVIDENCE_STRATEGY_KIND,
         "status": "attention" if candidate_sources or observed_signals else "unavailable",
@@ -511,6 +625,7 @@ def _evidence_strategy_payload(
             ],
         },
         "proof_governance": proof_governance,
+        "proof_decision": proof_decision,
         "summary": {
             "candidate_count": len(evidence_items),
             "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),

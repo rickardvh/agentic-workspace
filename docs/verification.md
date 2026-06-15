@@ -90,6 +90,30 @@ the agent to state the trust question, proof intent, narrowest evidence,
 evidence owner, durability, and safe-to-prune condition. Verification does not
 fill those fields from filenames, prose, markers, or AW conventions.
 
+When an agent has made that decision, it can record the answer in
+`.agentic-workspace/verification/proof-decision.json`. Verification reads that
+optional artifact and reports it as `evidence_strategy.proof_decision` with
+status `missing`, `incomplete`, `invalid`, or `present`. The record is
+agent-authored; Verification validates enum values and missing fields, but it
+does not create or complete the decision.
+
+```json
+{
+  "proof_decision": {
+    "selected_decision": "add",
+    "trust_question": "What trust question is this evidence answering?",
+    "host_strategy_source": "docs/maintainer/testing-strategy.md",
+    "proof_owner": "verification-evidence",
+    "proof_intent": "workflow-routing",
+    "evidence_durability": "permanent",
+    "narrowest_evidence": "Focused Verification runtime primitive tests.",
+    "prune_or_replacement_condition": "A stronger contract-owned case replaces this proof.",
+    "confidence": "medium",
+    "residual_risk": "Closeout still needs to cite the decision."
+  }
+}
+```
+
 Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest
