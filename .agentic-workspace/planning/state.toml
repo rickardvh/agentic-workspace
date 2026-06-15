@@ -9,9 +9,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "github-1521-inventory-and-reduce-slow-or-redundant-remaining", maturity = "active", status = "active", priority = "P1", refs = "GitHub #1521", title = "Inventory and reduce slow or redundant remaining AW tests", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.", suggested_first_slice = "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.", path = ".agentic-workspace/planning/execplans/github-1521-inventory-and-reduce-slow-or-redundant-remaining.plan.json" },
-]
+execplans = []
 
 [todo]
 active_items = []

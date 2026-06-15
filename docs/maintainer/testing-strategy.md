@@ -8,9 +8,9 @@ The June 15, 2026 inventory for #1521 was refreshed after the first reduction sl
 
 - root workspace: 1,140 collected tests / 39 files
 - planning package: 345 collected tests
-- memory package: 247 collected tests
+- memory package: 246 collected tests
 - verification package: 6 collected tests
-- total: 1,738 collected tests / 60 files
+- total: 1,737 collected tests / 60 files
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
@@ -34,6 +34,8 @@ The first #1521 reduction slice consolidated repeated packaging builds in `tests
 
 The #1524 workflow-cluster slice merged the live-checkout active-only and verbose preflight mode checks in `tests/test_workspace_start_preflight_cli.py` into one scenario-matrix test. The affected `tests/test_workspace_report_cli.py` plus `tests/test_workspace_start_preflight_cli.py` subset moved from 234 collected tests / 139.18 seconds to 233 collected tests / 133.93 seconds while retaining the active-state, full-takeover, startup-guidance, and resolved-config assertions.
 
+The #1526 ownership slice reviewed root lifecycle/module orchestration against Memory and Planning package-local install/current-state tests. The package-local install/current-memory subset moved from 143 tests / 3.33 seconds to 142 tests / 2.98 seconds by merging duplicate generated `current show` JSON/text view tests in `packages/memory/tests/test_current_memory.py`; the remaining current-memory tests are retained as explicit Memory residue, migration, and stale-active-state guard coverage.
+
 Use this compact inventory when changing these clusters:
 
 | Category | Current examples | Policy |
@@ -42,6 +44,14 @@ Use this compact inventory when changing these clusters:
 | Merge | Repeated mode, section, or branch-shape checks with shared setup | Prefer scenario matrices or shared fixtures when assertions prove the same contract. |
 | Convert | Stable generated command output, deterministic primitive behavior, reusable operation output examples | Move to conformance only when the replacement case names the owner and Python/TypeScript generated target proof runs it. |
 | Delete | Obsolete compatibility fallbacks, duplicate generated-output assertions, dead fixture-shape regressions | Delete only after equivalent coverage is recorded in the replacement inventory. |
+
+## Root Versus Package Ownership
+
+Root workspace tests prove AW product orchestration: root lifecycle front doors, module selection, report/start/doctor routing, installed-state compatibility, cross-module integration, generated-target proof routing, and user-visible adapter behavior.
+
+Package-local tests prove module-owned behavior: install/update/remove mechanics, package payload boundaries, module state mutation, schema/report primitives, package-local doctor/status behavior, and migration or residue checks that belong to that module. Do not duplicate module internals in root tests except through one representative orchestration path.
+
+When root and package tests appear to cover the same behavior, keep the lower-level package test for module internals and keep only the smallest root test that proves integration through the AW front door. If both are retained, name the reason as one of: root orchestration, package boundary, high-risk workflow, migration residue, or adapter compatibility.
 
 ## Contract Ladder
 

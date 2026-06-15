@@ -490,11 +490,15 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
-    assert "1,738 collected tests / 60 files" in strategy
+    assert "1,737 collected tests / 60 files" in strategy
     assert "| Keep ordinary |" in strategy
     assert "| Merge |" in strategy
     assert "| Convert |" in strategy
     assert "| Delete |" in strategy
+    assert "Root Versus Package Ownership" in strategy
+    assert "Root workspace tests prove AW product orchestration" in strategy
+    assert "Package-local tests prove module-owned behavior" in strategy
+    assert "migration residue" in strategy
     assert "Contract-Owned Cases" in strategy
     assert "Prune only when stronger or equivalent coverage remains" in strategy
     assert "#1373 owns the plan" in strategy
