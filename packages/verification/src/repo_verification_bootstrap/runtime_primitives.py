@@ -10,6 +10,7 @@ from typing import Any
 VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
 SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
+PROOF_GOVERNANCE_KIND = "agentic-workspace/verification-proof-governance/v1"
 
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
@@ -113,6 +114,42 @@ FILE_REVIEW_QUESTIONS = [
     "What smaller proof surface should own stable behavior after migration?",
 ]
 
+PROOF_GOVERNANCE_DECISIONS = [
+    "add",
+    "merge",
+    "convert-to-conformance",
+    "record-manual-evidence",
+    "prune",
+    "no-new-proof-needed",
+    "needs-human-strategy-choice",
+]
+
+PROOF_INTENT_OPTIONS = [
+    "behavior-unchanged",
+    "target-parity",
+    "workflow-routing",
+    "migration-residue",
+    "cli-compatibility",
+    "temporary-characterization",
+    "unknown",
+]
+
+EVIDENCE_DURABILITY_OPTIONS = [
+    "permanent",
+    "temporary",
+    "replaceable",
+    "unknown",
+]
+
+PROOF_GOVERNANCE_QUESTIONS = [
+    "What host-repo testing or proof strategy applies to this surface?",
+    "What trust question is being answered?",
+    "What is the narrowest evidence that answers it under that strategy?",
+    "Which owner should hold the evidence?",
+    "Is this proof permanent, temporary, or replaceable by a host-preferred proof surface?",
+    "What would make it safe to prune later?",
+]
+
 
 def _candidate_strategy_sources(*, target_root: Path) -> list[dict[str, Any]]:
     sources: list[dict[str, Any]] = []
@@ -187,6 +224,106 @@ def _test_group_key(name: str) -> str:
     if len(parts) < 3:
         return stem
     return "_".join(parts[: min(len(parts), 7)])
+
+
+def _proof_governance_payload(
+    *,
+    candidate_sources: list[dict[str, Any]],
+    changed_paths: list[str],
+    test_functions: list[dict[str, Any]],
+    group_entries: list[dict[str, Any]],
+    task_text: str | None,
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
+    observed_facts: list[dict[str, Any]] = []
+    if task_text:
+        observed_facts.append(
+            {
+                "source": "task_text",
+                "fact": "task text supplied",
+                "confidence": "medium",
+            }
+        )
+    if changed_paths:
+        observed_facts.append(
+            {
+                "source": "changed_paths",
+                "fact": "changed paths supplied",
+                "paths": changed_paths,
+                "confidence": "medium",
+            }
+        )
+    if test_functions:
+        observed_facts.append(
+            {
+                "source": "test_ast",
+                "fact": "changed Python test functions collected by AST",
+                "paths": _dedupe([str(function["path"]) for function in test_functions]),
+                "count": len(test_functions),
+                "confidence": "medium",
+            }
+        )
+    if group_entries:
+        observed_facts.append(
+            {
+                "source": "test_ast",
+                "fact": "same-file test name-prefix groups detected",
+                "count": len(group_entries),
+                "confidence": "low",
+            }
+        )
+    if manifest.get("configured"):
+        observed_facts.append(
+            {
+                "source": "verification_manifest",
+                "fact": "verification manifest is configured",
+                "paths": [str(manifest.get("path", VERIFICATION_MANIFEST_PATH.as_posix()))],
+                "confidence": "medium",
+            }
+        )
+    status = "attention" if observed_facts or candidate_sources else "unavailable"
+    return {
+        "kind": PROOF_GOVERNANCE_KIND,
+        "status": status,
+        "decision_authority": "agent",
+        "available_decisions": PROOF_GOVERNANCE_DECISIONS,
+        "proof_intent_options": PROOF_INTENT_OPTIONS,
+        "proof_owner_options": [
+            "root-orchestration",
+            "package-local-behavior",
+            "conformance-contract",
+            "verification-evidence",
+            "memory-lesson",
+            "docs-manual-review",
+            "unknown",
+        ],
+        "evidence_durability_options": EVIDENCE_DURABILITY_OPTIONS,
+        "candidate_context": {
+            "changed_path_count": len(changed_paths),
+            "ordinary_test_function_count": len(test_functions),
+            "group_count": len(group_entries),
+            "candidate_strategy_source_count": len(candidate_sources),
+            "verification_manifest_configured": bool(manifest.get("configured")),
+            "task_text_present": bool(task_text),
+        },
+        "observed_facts": observed_facts,
+        "pre_test_decision_questions": PROOF_GOVERNANCE_QUESTIONS,
+        "agent_decision_template": {
+            "selected_decision": "unset-agent-owned",
+            "trust_question": "unset-agent-owned",
+            "proof_intent": "unset-agent-owned",
+            "narrowest_evidence": "unset-agent-owned",
+            "evidence_owner": "unset-agent-owned",
+            "durability": "unset-agent-owned",
+            "safe_to_prune_when": "unset-agent-owned",
+        },
+        "limits": [
+            "No decision is assigned by Verification.",
+            "No host strategy is inferred from prose.",
+            "No new proof requirement is created.",
+            "No pruning, merging, or conversion is authorized.",
+        ],
+    }
 
 
 def _evidence_strategy_payload(
@@ -328,6 +465,14 @@ def _evidence_strategy_payload(
                 "confidence": "low",
             }
         )
+    proof_governance = _proof_governance_payload(
+        candidate_sources=candidate_sources,
+        changed_paths=changed_paths,
+        test_functions=test_functions,
+        group_entries=group_entries,
+        task_text=task_text,
+        manifest=manifest,
+    )
     return {
         "kind": EVIDENCE_STRATEGY_KIND,
         "status": "attention" if candidate_sources or observed_signals else "unavailable",
@@ -365,6 +510,7 @@ def _evidence_strategy_payload(
                 "File summaries do not authorize deletion or merge decisions.",
             ],
         },
+        "proof_governance": proof_governance,
         "summary": {
             "candidate_count": len(evidence_items),
             "high_confidence_merge_count": sum(1 for group in group_entries if group["confidence"] == "high"),
