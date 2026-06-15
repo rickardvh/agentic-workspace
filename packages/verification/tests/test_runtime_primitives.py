@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,9 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["evidence_strategy"]["proof_governance"]["kind"] == "agentic-workspace/verification-proof-governance/v1"
     assert payload["evidence_strategy"]["proof_governance"]["status"] == "unavailable"
     assert payload["evidence_strategy"]["proof_governance"]["decision_authority"] == "agent"
+    assert payload["evidence_strategy"]["proof_decision"]["kind"] == "agentic-workspace/verification-proof-decision/v1"
+    assert payload["evidence_strategy"]["proof_decision"]["status"] == "missing"
+    assert payload["evidence_strategy"]["proof_decision"]["decision_authority"] == "agent"
 
 
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
@@ -457,3 +461,91 @@ def test_widget_case_regression_windows():
     ]
     assert {group["recommended_disposition"] for group in strategy["groups"]} == {"needs-human-strategy-choice"}
     assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"unknown"}
+
+
+def test_verification_proof_decision_reports_complete_agent_authored_record(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "proof_decision": {
+                    "selected_decision": "add",
+                    "trust_question": "Does the new report field preserve host-neutral proof governance?",
+                    "host_strategy_source": "docs/verification.md",
+                    "proof_owner": "verification-evidence",
+                    "proof_intent": "workflow-routing",
+                    "evidence_durability": "permanent",
+                    "narrowest_evidence": "Verification runtime primitive tests.",
+                    "prune_or_replacement_condition": "A schema-owned conformance case replaces the runtime test.",
+                    "confidence": "medium",
+                    "residual_risk": "Closeout surfaces do not consume the decision yet.",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    decision = payload["evidence_strategy"]["proof_decision"]
+    assert decision["status"] == "present"
+    assert decision["authority"] == "agent-authored"
+    assert decision["missing_fields"] == []
+    assert decision["invalid_fields"] == []
+    assert decision["decision"]["selected_decision"] == "add"
+
+
+def test_verification_proof_decision_reports_incomplete_record_without_inference(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "merge",
+                "trust_question": "Can two regression rows become one scenario matrix?",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    decision = payload["evidence_strategy"]["proof_decision"]
+    assert decision["status"] == "incomplete"
+    assert "proof_owner" in decision["missing_fields"]
+    assert decision["invalid_fields"] == []
+    assert "No missing field is inferred" in decision["limits"][1]
+
+
+def test_verification_proof_decision_reports_invalid_enums(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "auto-delete",
+                "trust_question": "Question",
+                "host_strategy_source": "docs/strategy.md",
+                "proof_owner": "magic-owner",
+                "proof_intent": "unknown",
+                "evidence_durability": "forever",
+                "narrowest_evidence": "Evidence",
+                "prune_or_replacement_condition": "Condition",
+                "confidence": "certain",
+                "residual_risk": "Risk",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    decision = payload["evidence_strategy"]["proof_decision"]
+    assert decision["status"] == "invalid"
+    assert set(decision["invalid_fields"]) == {
+        "selected_decision",
+        "proof_owner",
+        "evidence_durability",
+        "confidence",
+    }
