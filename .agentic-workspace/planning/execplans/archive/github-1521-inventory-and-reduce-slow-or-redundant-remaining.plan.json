@@ -32,7 +32,7 @@
     "hard_constraints": "Do not weaken lifecycle, startup/preflight, proof, report, closeout, package install, or generated target freshness coverage.",
     "agent_may_decide": "Choose a bounded reduction slice when equivalent assertions remain and validation can prove the preserved behavior.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Continue with the next planned reduction slice after the #1525 inventory refresh.",
+    "next_action": "Run final selected proof for the #1526/#1527 remainder slice and prepare #1521 closeout.",
     "proof_expectations": [
       "Packaging test subset passes with duration output.",
       "Maintainer surface guard for testing strategy passes.",
@@ -48,6 +48,7 @@
       "docs/maintainer/contract-test-replacement-plan.md",
       "tests/test_workspace_start_preflight_cli.py",
       "tests/test_maintainer_surfaces.py",
+      "packages/memory/tests/test_current_memory.py",
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/github-1521-inventory-and-reduce-slow-or-redundant-remaining.plan.json"
     ],
@@ -58,13 +59,15 @@
       "#1523 stable generated-output assertions are removed from ordinary proof-runner smoke coverage.",
       "#1524 active-only and verbose preflight mode checks are merged into one scenario matrix with before/after evidence.",
       "#1525 testing-strategy and replacement inventories are refreshed against current counts and guard coverage.",
-      "Remaining #1521 work is left open with the next issue in priority order."
+      "#1526 root/package ownership boundaries are documented and duplicate package-local current-memory generated view tests are merged.",
+      "#1527 durable testing strategy coverage is guarded by maintainer tests.",
+      "Remaining #1521 work is either implemented or explicitly retained with reasons."
     ],
-    "continuation_owner": ".agentic-workspace/planning/state.toml",
-    "closeout_decision": "pending"
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
-    "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane."
+    "#1521 now has current inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof."
   ],
   "non_goals": [
     "Leave adjacent backlog or follow-on work out of this plan."
@@ -74,13 +77,14 @@
       "outcome": "Start #1521 with a current test inventory and one concrete low-risk suite reduction.",
       "constraints": "Do not weaken lifecycle, startup/preflight, proof, report, closeout, package install, or generated target freshness coverage.",
       "latitude": "Choose a bounded reduction slice when equivalent assertions remain and validation can prove the preserved behavior.",
-      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset"
     },
     "execution": {
       "milestone": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
-      "status": "in-progress",
-      "next_step": "Run selected proof and commit the #1525 inventory refresh slice.",
-      "proof": "uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q --durations=20 --durations-min=0.05"
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset"
     },
     "scope": {
       "touched": [
@@ -92,7 +96,8 @@
         "docs/maintainer/aw-contract-test-replacement-inventory.md",
         "tests/test_workspace_start_preflight_cli.py",
         "docs/maintainer/contract-test-replacement-plan.md",
-        "tests/test_maintainer_surfaces.py"
+        "tests/test_maintainer_surfaces.py",
+        "packages/memory/tests/test_current_memory.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -101,33 +106,33 @@
   },
   "intent_continuity": {
     "larger intended outcome": "Reduce slow or redundant remaining AW tests while preserving high-risk workflow and generated-target coverage.",
-    "this slice completes the larger intended outcome": "no",
-    "continuation surface": ".agentic-workspace/planning/state.toml"
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "archive"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on for the larger intended outcome": "no",
     "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "Promote the next highest-priority remaining planning candidate, starting with #1526 after the #1525 inventory refresh slice lands."
+    "activation trigger": "Close or archive #1521 after final proof; no known child candidate remains for this lane."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, live-checkout preflight modes are grouped as one scenario matrix, and maintainer inventory docs now match current counts and conformance surfaces.",
-    "intentionally deferred": "#1526 through #1527 remain roadmap candidates until their own bounded slices are promoted.",
+    "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, live-checkout preflight modes are grouped as one scenario matrix, maintainer inventory docs now match current counts and conformance surfaces, and root/package ownership guidance is explicit.",
+    "intentionally deferred": "No known #1521 child slice remains after #1526/#1527; future reductions should be opened from new evidence.",
     "discovered implications": "The broad root duration run exceeded 10 minutes; future slices should avoid full-suite proof unless required.",
     "proof achieved now": "packaging subset and lint passed before final proof selection",
-    "validation still needed": "workspace implement-selected proof after all touched paths are known",
-    "next likely slice": "#1526 prune or parameterize lifecycle/install workflow tests"
+    "validation still needed": "none; final selected proof passed",
+    "next likely slice": "close #1521 if final proof passes"
   },
   "intent_interpretation": {
     "literal request": "Github 1521 Inventory And Reduce Slow Or Redundant Remaining",
     "inferred intended outcome": "Refresh the test inventory and land a first low-risk reduction without weakening equivalent coverage.",
-    "chosen concrete what": "Reuse package build artifacts inside packaging test modules, update the testing strategy inventory, prune duplicate generated-output assertions from the proof-runner smoke, merge duplicate preflight mode tests into one scenario matrix, and refresh stale inventory/guard coverage.",
+    "chosen concrete what": "Reuse package build artifacts inside packaging test modules, update the testing strategy inventory, prune duplicate generated-output assertions from the proof-runner smoke, merge duplicate preflight mode tests into one scenario matrix, refresh stale inventory/guard coverage, merge duplicate Memory current-view generated CLI checks, and record root/package ownership rules.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; docs/maintainer/contract-test-replacement-plan.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_start_preflight_cli.py; tests/test_maintainer_surfaces.py; planning state/execplan",
-    "max changed files": "11 tracked files plus planning state",
-    "required validation commands": "ruff on touched packaging, preflight, and maintainer tests; packaging pytest subset with durations; proof-runner smoke; generated Python/TypeScript conformance; report/start-preflight subset with durations; maintainer surface guard; AW implement-selected proof",
+    "allowed paths": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; docs/maintainer/contract-test-replacement-plan.md; tests/test_workspace_packaging.py; packages/memory/tests/test_packaging.py; packages/planning/tests/test_packaging.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_start_preflight_cli.py; tests/test_maintainer_surfaces.py; packages/memory/tests/test_current_memory.py; planning state/execplan",
+    "max changed files": "12 tracked files plus planning state",
+    "required validation commands": "ruff on touched packaging, preflight, maintainer, and memory current tests; packaging pytest subset with durations; proof-runner smoke; generated Python/TypeScript conformance; report/start-preflight subset with durations; memory current/install ownership subset with durations; maintainer surface guard; AW implement-selected proof",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -143,11 +148,11 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Continue from #1526 after validating and committing the #1525 inventory refresh slice.",
+    "tiny resumability note": "Run final proof and close #1521 if proof passes.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
-    "requested outcome": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
+    "requested outcome": "#1521 now has current inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof.",
     "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
@@ -167,14 +172,14 @@
   "references": [],
   "active_milestone": {
     "id": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
-    "status": "in-progress",
-    "scope": "Current slice: inventory refresh plus #1522 packaging build reuse, #1523 proof-runner pruning, #1524 preflight mode consolidation, and #1525 stale inventory refresh under the #1521 lane.",
+    "status": "completed",
+    "scope": "Current slice: #1521 closeout after #1522 packaging build reuse, #1523 proof-runner pruning, #1524 preflight mode consolidation, #1525 stale inventory refresh, #1526 root/package ownership consolidation, and #1527 durable strategy guard.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run selected proof, commit the #1525 inventory refresh slice, and leave #1521 open for the next priority slice."
+    "Run selected proof, commit the #1526/#1527 remainder slice, and close #1521 if proof passes."
   ],
   "blockers": [
     "None."
@@ -188,7 +193,8 @@
     "docs/maintainer/aw-contract-test-replacement-inventory.md",
     "tests/test_workspace_start_preflight_cli.py",
     "docs/maintainer/contract-test-replacement-plan.md",
-    "tests/test_maintainer_surfaces.py"
+    "tests/test_maintainer_surfaces.py",
+    "packages/memory/tests/test_current_memory.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -200,7 +206,8 @@
     "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
     "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
     "uv run pytest tests/test_workspace_report_cli.py tests/test_workspace_start_preflight_cli.py -q --durations=20 --durations-min=0.05",
-    "uv run pytest tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q"
+    "uv run pytest tests/test_maintainer_surfaces.py::test_testing_strategy_guides_against_one_off_regression_sprawl -q",
+    "uv run pytest packages/memory/tests/test_install.py packages/planning/tests/test_install.py packages/memory/tests/test_current_memory.py -q --durations=20 --durations-min=0.02"
   ],
   "required_tools": [
     "None."
@@ -209,24 +216,24 @@
     "Route the upstream issue into a bounded Agentic Workspace slice before implementation."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "Collected current root/package test counts, updated testing strategy, changed root/memory/planning packaging tests to reuse built artifacts through module-scoped fixtures, removed two generated-output field assertions from the proof-runner smoke in favor of conformance ownership, merged active-only/verbose preflight live-checkout checks into one scenario-matrix test, and refreshed stale maintainer inventory/guard coverage.",
-    "scope touched": "testing strategy docs, replacement inventory docs, packaging tests, proof-runner smoke, preflight tests, maintainer guard, and planning state",
-    "changed surfaces": "docs/maintainer/testing-strategy.md; docs/maintainer/aw-contract-test-replacement-inventory.md; docs/maintainer/contract-test-replacement-plan.md; packaging test files; proof-runner smoke; preflight test file; maintainer guard; planning state/execplan",
-    "validations run": "ruff touched packaging tests: passed; packaging pytest subset with durations: 38 passed in 20.10s; proof-runner/maintainer subset: 2 passed; generated Python and TypeScript conformance: passed; report/start-preflight subset: 233 passed in 133.93s; maintainer guard: passed",
-    "result for continuation": "continue #1521 with #1526 after final proof",
-    "next step": "Run AW implement-selected proof for the expanded touched path set."
+    "what happened": "Finished #1521 by completing the remaining #1526/#1527 slices: merged duplicate Memory current-view generated CLI coverage, documented root/package ownership boundaries, refreshed counts, and guarded the durable testing strategy.",
+    "scope touched": "docs/maintainer/testing-strategy.md; packages/memory/tests/test_current_memory.py; tests/test_maintainer_surfaces.py; planning execplan",
+    "changed surfaces": "testing strategy; Memory current-memory tests; maintainer guard; planning closeout record",
+    "validations run": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
   },
   "finished_run_review": {
-    "review status": "completed",
-    "scope respected": "yes; touched files stayed within testing strategy, packaging tests, and planning state",
+    "review status": "complete",
+    "scope respected": "Scope stayed inside #1521 test-reduction lane; high-risk lifecycle/startup/proof/report/package coverage was retained; remaining tests have owner categories or retained reasons.",
     "proof status": "passed",
-    "intent served": "partial; #1521 received a current inventory and first concrete reduction, but the larger lane remains open",
+    "intent served": "yes",
     "config compliance": "passed; workspace implement selected proof and required commands were run",
     "misinterpretation risk": "low; #1522 is the packaging-build reduction slice under #1521",
-    "follow-on decision": "continue with #1526 as the next priority candidate"
+    "follow-on decision": "none"
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -238,50 +245,50 @@
     "decomposition adjustment": "record #1522 coverage in this plan; leave roadmap cleanup to a supported planning transition"
   },
   "proof_report": {
-    "validation proof": "passed: summary, planning doctor, maintainer surfaces, workspace tests/lint, targeted maintainer guard, and touched-test lint",
+    "validation proof": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
     "proof achieved now": "yes",
-    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (123.35s); make test-memory: [ok] memory tests (13.56s); make test-planning: [ok] planning tests (12.41s); packaging subset: 38 passed in 20.10s; generated Python/TypeScript conformance passed; report/start-preflight subset: 233 passed in 133.93s; maintainer guard passed"
+    "evidence for \"proof achieved\" state": "make test-workspace: [ok] workspace tests (128.26s); make test-memory: [ok] memory tests (7.45s); make test-planning: [ok] planning tests (12.41s); packaging subset: 38 passed in 20.10s; generated Python/TypeScript conformance passed; report/start-preflight subset: 233 passed in 133.93s; Memory current/install ownership subset: 142 passed in 2.98s; maintainer guard passed"
   },
   "intent_satisfaction": {
     "original intent": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "Current inventory is recorded, packaging build duplication was reduced while preserving assertions, two generated-output proof-runner assertions were moved back to conformance ownership, one duplicate live-checkout preflight mode test was merged into a scenario matrix, and stale inventory/guard references were refreshed.",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap candidates #1526 through #1527"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "Current inventory documented, packaging tests now reuse module-scoped built artifacts, proof-runner smoke no longer duplicates two conformance-owned output field checks, preflight active/full mode checks are one scenario matrix, and maintainer inventories reflect current counts/conformance surfaces.",
-    "validation confirmed": "yes",
-    "follow-on routed to": "none yet",
+    "outcome delivered": "#1521 now has current inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof.",
+    "validation confirmed": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
+    "follow-on routed to": "none",
     "post-work posterity capture": "docs/maintainer/testing-strategy.md updated",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
     "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "archive"
   },
   "closure_check": {
+    "closeout scope": "lane",
     "slice status": "completed",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "#1521 requires more reduction slices; this change completes the inventory refresh, #1522 packaging-build reduction, bounded #1523 proof-runner assertion pruning, bounded #1524 preflight mode consolidation, and bounded #1525 inventory/guard refresh.",
-    "evidence carried forward": "Proof commands passed for the packaging, #1523, #1524, and #1525 slices, including expanded implement-selected proof; #1526 remains the next priority candidate.",
-    "reopen trigger": "Packaging tests rebuild duplicate artifacts per assertion, inventory counts drift without documentation, proof-runner smoke starts asserting conformance-owned generated output values again, preflight mode tests split duplicate live-checkout setup again, or maintainer docs preserve stale counts/conformance assumptions."
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -301,19 +308,108 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "agent closeout reflection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
       "continuation": [],
       "memory": [],
-      "config_check": [],
-      "docs": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
       "issue_follow_up": []
     }
   },
   "drift_log": [
     "2026-06-15: Promoted from TODO direct-task shape into an execplan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/state.toml",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset\nChanged surfaces: testing strategy; Memory current-memory tests; maintainer guard; planning closeout record\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
 }
