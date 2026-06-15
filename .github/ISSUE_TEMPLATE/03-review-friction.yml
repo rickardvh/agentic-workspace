@@ -99,44 +99,6 @@ body:
       required: true
 
   - type: textarea
-    id: bounded_slice_success
-    attributes:
-      label: Bounded slice success
-      description: What useful partial correction may land while preserving remaining friction and ownership?
-      placeholder: Describe a coherent partial slice and how remaining review/workflow intent stays visible.
-    validations:
-      required: true
-
-  - type: dropdown
-    id: partial_pr_may_close
-    attributes:
-      label: Partial PR may close
-      description: Can a partial correction close this issue without satisfying the final review/workflow signal?
-      options:
-        - "no"
-        - "yes"
-    validations:
-      required: true
-
-  - type: textarea
-    id: required_follow_up_owner
-    attributes:
-      label: Required follow-up owner
-      description: If a partial correction lands, where must remaining work be owned?
-      placeholder: Issue, parent lane, planning state, doc, module owner, or none.
-    validations:
-      required: true
-
-  - type: textarea
-    id: required_residual_intent
-    attributes:
-      label: Required residual intent
-      description: What review/workflow intent must remain open after a partial correction?
-      placeholder: Name the remaining trust, continuation, or review gap that must not be lost.
-    validations:
-      required: true
-
-  - type: textarea
     id: evidence_required_for_final_completion
     attributes:
       label: Evidence required for final completion
