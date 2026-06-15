@@ -484,13 +484,33 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
     replacement_plan = (WORKSPACE_ROOT / "docs" / "maintainer" / "contract-test-replacement-plan.md").read_text(encoding="utf-8")
     aw_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "aw-contract-test-replacement-inventory.md").read_text(encoding="utf-8")
+    knowledge_inventory = (WORKSPACE_ROOT / "docs" / "maintainer" / "test-knowledge-inventory.md").read_text(encoding="utf-8")
 
     assert "docs/maintainer/testing-strategy.md" in playbook
+    assert "Test Knowledge Inventory" in knowledge_inventory
+    assert "Verification may surface" in knowledge_inventory
+    assert "uninterpreted-source" in knowledge_inventory
+    assert "Historical Regression Migration Path" in knowledge_inventory
+    assert "Migrated Historical Records" in knowledge_inventory
+    assert "test_model_cli_harness_scores_native_plan_bridge_failures" in knowledge_inventory
+    assert "test_archive_execplan_apply_cleanup_removes_active_execplan_pointer_variants" in knowledge_inventory
+    assert "test_generated_operation_cli_input_proof_scenarios" in knowledge_inventory
+    assert "test_static_generated_package_proof_rejects_static_surface_regressions" in knowledge_inventory
+    assert "The legacy source file was deleted" in knowledge_inventory
+    assert "Compact migration record in this table" in knowledge_inventory
+    assert "tests/test_workspace_implement_cli.py" in knowledge_inventory
+    assert "tests/test_workspace_proof_cli.py" in knowledge_inventory
+    assert "tests/test_generated_command_package_proof_runner.py" in knowledge_inventory
+    assert "packages/planning/tests/test_archive.py" in knowledge_inventory
     assert "Primitive conformance" in strategy
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
-    assert "1,710 collected tests / 60 files" in strategy
+    assert "1,118 collected tests / 57 files" in strategy
+    assert "removed the largest legacy regression clusters" in strategy
+    assert "## Suite Budgets" in strategy
+    assert "900-1,200" in strategy
+    assert "temporary characterization, conformance evidence, or historical regression residue" in strategy
     assert "| Keep ordinary |" in strategy
     assert "| Merge |" in strategy
     assert "| Convert |" in strategy
@@ -534,6 +554,8 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "rickardvh/command-generation#13" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
+    assert "test_generated_operation_cli_input_proof_scenarios" in aw_inventory
+    assert "test_static_generated_package_proof_rejects_static_surface_regressions" in aw_inventory
     assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory
     assert "tests/test_command_generation_integration.py" in aw_inventory
     assert "tests/test_command_generation_primitive_executor.py" not in replacement_plan
@@ -543,13 +565,13 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "tests/test_workspace_defaults_cli.py" in aw_inventory
     assert "tests/test_workspace_implement_cli.py" in aw_inventory
     assert "tests/test_workspace_proof_cli.py" in aw_inventory
-    assert "tests/test_workspace_report_cli.py" in aw_inventory
-    assert "tests/test_workspace_start_preflight_cli.py" in aw_inventory
+    assert "Deleted Legacy Regression Clusters" in aw_inventory
+    assert "docs/maintainer/test-knowledge-inventory.md" in aw_inventory
     assert "adapter error classification and recovery-message surfaces" in aw_inventory
     assert "proof/checker orchestration" in aw_inventory
     assert "high-risk workflow semantics" in aw_inventory
 
-    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Boundary", 1)[0]
+    kept_ordinary = aw_inventory.split("## Kept Ordinary", 1)[1].split("## Deleted Legacy Regression Clusters", 1)[0]
     active_inventory_paths = sorted(set(re.findall(r"`(tests/[^`]+?\.py)`", kept_ordinary)))
     assert active_inventory_paths
     missing_paths = [path for path in active_inventory_paths if not (WORKSPACE_ROOT / path).exists()]

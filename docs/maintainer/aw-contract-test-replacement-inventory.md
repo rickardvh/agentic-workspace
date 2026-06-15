@@ -44,6 +44,8 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | Old ordinary tests | Merge reason | Remaining ordinary coverage |
 | --- | --- | --- |
 | `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_python_completion_gate_evidence`, `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence`, `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence` | All three tests remove one required `python_cli_completion.completion_gate.satisfied_by` item and assert that static proof rejects the missing evidence. | `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_completion_gate_evidence` keeps the checker-internal contract as one scenario matrix. |
+| `tests/test_generated_command_package_proof_runner.py::test_generated_operation_cli_input_proof_accepts_current_interfaces`, `tests/test_generated_command_package_proof_runner.py::test_generated_operation_cli_input_proof_rejects_missing_visible_option`, `tests/test_generated_command_package_proof_runner.py::test_generated_operation_cli_input_proof_allows_explicit_runtime_only_input` | These prove one generated operation CLI input contract: accept current interfaces, reject missing visible options, and allow explicit runtime-only inputs. | `tests/test_generated_command_package_proof_runner.py::test_generated_operation_cli_input_proof_scenarios` keeps all labels as a generated proof-runner matrix. |
+| Static generated-package proof rejection tests for read-only mutating targets, Python completion proof-surface drift, missing runtime projection inventory, shipped-source CLI backslide, non-full satisfied gates, and missing primitive conformance cases. | These are checker-internal static-surface error-path variants rather than separate root orchestration behaviors. | `tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_rejects_static_surface_regressions` keeps each error fragment as a named matrix row. |
 
 ## Kept Ordinary
 
@@ -59,8 +61,17 @@ The June 2026 audit found additional stable text-output tests that could not be 
 | `tests/test_workspace_defaults_cli.py` | Large defaults payload semantics and policy/authority regression checks. Existing `defaults.report.process`, `defaults.root-cli-authority.process`, `defaults.selected-text.process`, and `defaults.tiny-text.process` own stable generated command examples. | Convert additional stable section outputs only when they reduce duplicate assertions without hiding policy-review coverage. |
 | `tests/test_workspace_implement_cli.py` | Planning safety, intent, proof, delegation, and generated-conformance proof guidance semantics. | Keep high-risk workflow trust regressions ordinary until operation or fragment owners settle. |
 | `tests/test_workspace_proof_cli.py` | Proof-selection semantics, verification integration, and completion-claim safety. | Keep ordinary until stable proof/report contract owners can express the behavior. |
-| `tests/test_workspace_report_cli.py` | Report UX, closeout, authority boundary, and semantic caveat behavior. | Keep ordinary while report semantics are evolving; convert stable command-facing examples only. |
-| `tests/test_workspace_start_preflight_cli.py` | Startup/preflight routing, intent preservation, and generated-package proof recommendations. | Keep ordinary while startup safety and routing semantics are high-risk. |
+
+## Deleted Legacy Regression Clusters
+
+| Former ordinary surface | Compact record | Future proof direction |
+| --- | --- | --- |
+| `tests/test_workspace_report_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | New report behavior should land as focused scenario tests or contract-owned report cases, not by reviving the full legacy cluster. |
+| `tests/test_workspace_start_preflight_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | Startup/preflight changes should use compact routing matrices and AW workflow contracts. |
+| `tests/test_model_cli_harness.py` | `docs/maintainer/test-knowledge-inventory.md` | Harness behavior should use focused scorer/adapter tests or harness-owned fixtures. |
+| `tests/test_contract_tooling.py` | `docs/maintainer/test-knowledge-inventory.md` | Stable generated behavior should move to generated package checks or conformance cases. |
+| `tests/test_workspace_lifecycle_cli.py` | `docs/maintainer/test-knowledge-inventory.md` | Lifecycle behavior should be covered by small root smoke paths plus package install/lifecycle checks. |
+| `packages/planning/tests/test_summary.py` | `docs/maintainer/test-knowledge-inventory.md` | Planning summary behavior should use focused package contract tests, not broad historical projection fixtures. |
 
 ## Boundary
 

@@ -978,7 +978,7 @@ def test_static_generated_package_proof_fails_when_conformance_coverage_drifts()
     assert "static conformance coverage drift: missing contract-backed case" in errors
 
 
-def test_generated_operation_cli_input_proof_accepts_current_interfaces() -> None:
+def test_generated_operation_cli_input_proof_scenarios(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
 
@@ -986,9 +986,6 @@ def test_generated_operation_cli_input_proof_accepts_current_interfaces() -> Non
 
     assert errors == []
 
-
-def test_generated_operation_cli_input_proof_rejects_missing_visible_option() -> None:
-    checker = _load_checker()
     generated_root = checker.REPO_ROOT / "generated" / "memory" / "python"
     command_package = checker.json.loads((generated_root / "command_package.json").read_text(encoding="utf-8"))
     route_command = copy.deepcopy(
@@ -1010,9 +1007,6 @@ def test_generated_operation_cli_input_proof_rejects_missing_visible_option() ->
         for error in errors
     )
 
-
-def test_generated_operation_cli_input_proof_allows_explicit_runtime_only_input(monkeypatch) -> None:
-    checker = _load_checker()
     interface = {"name": "example", "options": [{"name": "format"}]}
     operation_ref = {"id": "example.report", "path": "operations/example.report.json"}
     operation = {
@@ -1047,20 +1041,99 @@ def test_command_package_ir_records_deferred_shell_transport_evaluation() -> Non
     assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
 
 
-def test_static_generated_package_proof_rejects_read_only_routing_for_mutating_targets() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        memory_package = next(package for package in ir["packages"] if package["id"] == "memory-bootstrap")
-        python_target = next(target for target in memory_package["targets"] if target["kind"] == "python")
-        python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
-        python_target["generation_status"] = "weak-agent-safe-adapter"
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
+def test_static_generated_package_proof_rejects_static_surface_regressions() -> None:
+    scenarios = [
+        (
+            "read-only-routing-for-mutating-targets",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            memory_package = next(package for package in ir["packages"] if package["id"] == "memory-bootstrap")
+            python_target = next(target for target in memory_package["targets"] if target["kind"] == "python")
+            python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
+            python_target["generation_status"] = "weak-agent-safe-adapter"
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "weak-agent-safe-adapter while generated commands include mutation-capable effects",
+        ),
+        (
+            "python-completion-proof-surface-drift",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
+                if item["id"] == "python-docker-conformance":
+                    item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
+                    break
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "--python-docker-conformance --require-docker",
+        ),
+        (
+            "missing-runtime-projection-inventory-entry",
+            """
+            original_manifest = checker.python_runtime_projection_inventory_manifest
 
-    assert any("weak-agent-safe-adapter while generated commands include mutation-capable effects" in error for error in errors)
+            def fake_manifest() -> dict[str, object]:
+                payload = original_manifest()
+                payload = dict(payload)
+                payload["entries"] = list(payload["entries"][:-1])
+                return payload
+
+            checker.python_runtime_projection_inventory_manifest = fake_manifest
+            _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
+            """,
+            "missing runtime projection entries",
+        ),
+        (
+            "shipped-source-cli-backslide",
+            r"""
+            backslid_source = "src/agentic_workspace/cli_backslide.py"
+            original_read_text = checker.Path.read_text
+            original_is_file = checker.Path.is_file
+
+            def fake_read_text(self, *args, **kwargs):
+                if self.as_posix().endswith(backslid_source):
+                    return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+                return original_read_text(self, *args, **kwargs)
+
+            def fake_is_file(self):
+                if self.as_posix().endswith(backslid_source):
+                    return True
+                return original_is_file(self)
+
+            checker._tracked_python_source_files = lambda: [backslid_source]
+            checker.Path.read_text = fake_read_text
+            checker.Path.is_file = fake_is_file
+            _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
+            """,
+            "parser construction",
+        ),
+        (
+            "satisfied-gate-for-non-full-state",
+            """
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
+            ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+            checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "cannot mark the Python CLI completion gate satisfied",
+        ),
+        (
+            "missing-primitive-conformance-case",
+            """
+            checker.REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {"missing.primitive"}
+            _emit({"errors": checker._validate_static_surfaces()})
+            """,
+            "primitive conformance is missing required primitive case: missing.primitive",
+        ),
+    ]
+    for label, source, expected_fragment in scenarios:
+        errors = _checker_case_errors(source)
+
+        assert any(expected_fragment in error for error in errors), label
 
 
 def test_static_generated_package_proof_requires_completion_gate_evidence() -> None:
@@ -1085,23 +1158,6 @@ def test_static_generated_package_proof_requires_completion_gate_evidence() -> N
         )
 
         assert any(item_id in error for error in errors), item_id
-
-
-def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
-            if item["id"] == "python-docker-conformance":
-                item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
-                break
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("--python-docker-conformance --require-docker" in error for error in errors)
 
 
 def test_static_generated_package_proof_rejects_full_completion_with_runtime_debt() -> None:
@@ -1282,25 +1338,6 @@ def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
     assert (checker.REPO_ROOT / "generated" / "workspace" / "python" / "_contracts" / "payload.json").is_file()
 
 
-def test_static_generated_package_proof_rejects_missing_runtime_projection_inventory_entry() -> None:
-    errors = _checker_case_errors(
-        """
-        original_manifest = checker.python_runtime_projection_inventory_manifest
-
-        def fake_manifest() -> dict[str, object]:
-            payload = original_manifest()
-            payload = dict(payload)
-            payload["entries"] = list(payload["entries"][:-1])
-            return payload
-
-        checker.python_runtime_projection_inventory_manifest = fake_manifest
-        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
-        """
-    )
-
-    assert any("missing runtime projection entries" in error for error in errors)
-
-
 def test_static_generated_package_proof_rejects_legacy_generated_python_package_dirs(monkeypatch, tmp_path: Path) -> None:
     checker = _load_checker()
     generated_python = tmp_path / "generated" / "python" / "workspace-cli" / "legacy_package"
@@ -1348,34 +1385,6 @@ def test_static_generated_package_proof_accepts_current_static_surfaces() -> Non
         assert assertion(errors), label
 
 
-def test_static_generated_package_proof_rejects_shipped_source_cli_backslide() -> None:
-    backslid_source = "src/agentic_workspace/cli_backslide.py"
-    errors = _checker_case_errors(
-        r"""
-        backslid_source = "src/agentic_workspace/cli_backslide.py"
-        original_read_text = checker.Path.read_text
-        original_is_file = checker.Path.is_file
-
-        def fake_read_text(self, *args, **kwargs):
-            if self.as_posix().endswith(backslid_source):
-                return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
-            return original_read_text(self, *args, **kwargs)
-
-        def fake_is_file(self):
-            if self.as_posix().endswith(backslid_source):
-                return True
-            return original_is_file(self)
-
-        checker._tracked_python_source_files = lambda: [backslid_source]
-        checker.Path.read_text = fake_read_text
-        checker.Path.is_file = fake_is_file
-        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
-        """
-    )
-
-    assert any(backslid_source in error and "parser construction" in error for error in errors)
-
-
 def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords() -> None:
     errors = _checker_case_errors(
         r"""
@@ -1412,31 +1421,6 @@ def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None
 
     assert "src/agentic_workspace/contract_tooling.py" in sources
     assert "scripts/check/check_generated_command_packages.py" in sources
-
-
-def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state() -> None:
-    errors = _checker_case_errors(
-        """
-        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-        ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
-        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
-
-
-def test_static_generated_package_proof_rejects_missing_primitive_conformance_case() -> None:
-    errors = _checker_case_errors(
-        """
-        checker.REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {"missing.primitive"}
-        _emit({"errors": checker._validate_static_surfaces()})
-        """
-    )
-
-    assert "primitive conformance is missing required primitive case: missing.primitive" in errors
 
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
