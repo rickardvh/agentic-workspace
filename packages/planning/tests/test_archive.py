@@ -2099,11 +2099,13 @@ candidates = []
     assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
 
 
-def test_archive_execplan_apply_cleanup_removes_active_execplan_pointer(tmp_path: Path) -> None:
-    plan_ref = ".agentic-workspace/planning/execplans/intent-validation-and-dangling-debt-2026-04-22.plan.json"
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        f"""
+def test_archive_execplan_apply_cleanup_removes_active_execplan_pointer_variants(tmp_path: Path) -> None:
+    scenarios = [
+        (
+            "path-field-active-execplan",
+            "intent-validation-and-dangling-debt-2026-04-22",
+            ".agentic-workspace/planning/execplans/intent-validation-and-dangling-debt-2026-04-22.plan.json",
+            """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
@@ -2111,74 +2113,39 @@ work_items = []
 
 [active]
 execplans = [
-  {{ id = "#257", path = "{plan_ref}", maturity = "active", status = "active" }},
+  { id = "#257", path = "__PLAN_REF__", maturity = "active", status = "active" },
 ]
 """,
-    )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
-    plan_path = tmp_path / plan_ref
-    _write_execplan_record(plan_path, item_id="intent-validation-and-dangling-debt", status="completed")
-
-    result = archive_execplan("intent-validation-and-dangling-debt-2026-04-22", target=tmp_path, apply_cleanup=True)
-
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    archived_path = (
-        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.plan.json"
-    )
-
-    assert not archived_path.exists()
-    assert not plan_path.exists()
-    assert "intent-validation-and-dangling-debt-2026-04-22" not in state_text
-    assert "execplans = []" in state_text
-    assert any(
-        action.kind == "updated" and "remove active execplan '#257' from live planning state after archive" in action.detail
-        for action in result.actions
-    )
-
-
-def test_archive_execplan_apply_cleanup_removes_active_execplan_and_work_item_pointer(tmp_path: Path) -> None:
-    plan_ref = ".agentic-workspace/planning/execplans/current-lane.plan.json"
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        f"""
+            ["intent-validation-and-dangling-debt-2026-04-22"],
+            ["execplans = []"],
+            "remove active execplan '#257' from live planning state after archive",
+        ),
+        (
+            "active-execplan-and-work-item",
+            "current-lane",
+            ".agentic-workspace/planning/execplans/current-lane.plan.json",
+            """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
 work_items = [
-  {{ id = "current-lane", type = "lane", maturity = "active", status = "active", path = "{plan_ref}" }},
+  { id = "current-lane", type = "lane", maturity = "active", status = "active", path = "__PLAN_REF__" },
 ]
 
 [active]
 execplans = [
-  {{ id = "current-lane", path = "{plan_ref}", maturity = "active", status = "active" }},
+  { id = "current-lane", path = "__PLAN_REF__", maturity = "active", status = "active" },
 ]
 """,
-    )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
-    plan_path = tmp_path / plan_ref
-    _write_execplan_record(plan_path, item_id="current-lane", status="completed")
-
-    result = archive_execplan("current-lane", target=tmp_path, apply_cleanup=True)
-
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/current-lane.plan.json"
-
-    assert not archived_path.exists()
-    assert not plan_path.exists()
-    assert "current-lane" not in state_text
-    assert "work_items = []" in state_text
-    assert "execplans = []" in state_text
-    assert any(
-        action.kind == "updated" and "remove active execplan 'current-lane' from live planning state after archive" in action.detail
-        for action in result.actions
-    )
-
-
-def test_archive_execplan_apply_cleanup_removes_active_execplan_field_pointer(tmp_path: Path) -> None:
-    plan_ref = ".agentic-workspace/planning/execplans/module-manifest-components.plan.json"
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        f"""
+            ["current-lane"],
+            ["work_items = []", "execplans = []"],
+            "remove active execplan 'current-lane' from live planning state after archive",
+        ),
+        (
+            "execplan-field-active-pointer",
+            "module-manifest-components",
+            ".agentic-workspace/planning/execplans/module-manifest-components.plan.json",
+            """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
@@ -2186,79 +2153,72 @@ work_items = []
 
 [todo]
 active_items = [
-  {{ id = "module-manifest-components-todo", execplan = "{plan_ref}", status = "active" }},
+  { id = "module-manifest-components-todo", execplan = "__PLAN_REF__", status = "active" },
 ]
 queued_items = []
 
 [active]
 execplans = [
-  {{ id = "module-manifest-components", execplan = "{plan_ref}", maturity = "active", status = "active" }},
-  {{ id = "unrelated-active-plan", execplan = ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json", maturity = "active", status = "active" }},
+  { id = "module-manifest-components", execplan = "__PLAN_REF__", maturity = "active", status = "active" },
+  { id = "unrelated-active-plan", execplan = ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json", maturity = "active", status = "active" },
 ]
 """,
-    )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
-    plan_path = tmp_path / plan_ref
-    unrelated_path = tmp_path / ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json"
-    _write_execplan_record(plan_path, item_id="module-manifest-components", status="completed")
-    _write_execplan_record(unrelated_path, item_id="unrelated-active-plan", status="active")
-
-    result = archive_execplan("module-manifest-components", target=tmp_path, apply_cleanup=True)
-
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/module-manifest-components.plan.json"
-
-    assert not archived_path.exists()
-    assert not plan_path.exists()
-    assert "module-manifest-components" not in state_text
-    assert "active_items = []" in state_text
-    assert "unrelated-active-plan" in state_text
-    assert any(
-        action.kind == "updated"
-        and "remove active execplan 'module-manifest-components' from live planning state after archive" in action.detail
-        for action in result.actions
-    )
-
-
-def test_archive_execplan_apply_cleanup_removes_work_item_and_string_execplan_pointer(tmp_path: Path) -> None:
-    plan_ref = ".agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json"
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        f"""
+            ["module-manifest-components"],
+            ["active_items = []", "unrelated-active-plan"],
+            "remove active execplan 'module-manifest-components' from live planning state after archive",
+        ),
+        (
+            "work-item-and-string-execplan",
+            "repair-drift-recovery-lane",
+            ".agentic-workspace/planning/execplans/repair-drift-recovery-lane.plan.json",
+            """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
 
 work_items = [
-  {{ id = "repair-drift-recovery-lane", maturity = "active", status = "active", execplan = "{plan_ref}" }},
+  { id = "repair-drift-recovery-lane", maturity = "active", status = "active", execplan = "__PLAN_REF__" },
 ]
 
 [active]
 execplans = [
-  "{plan_ref}",
+  "__PLAN_REF__",
 ]
 
 [todo]
 active_items = [
-  {{ id = "repair-drift-recovery-lane", surface = "{plan_ref}", status = "active" }},
+  { id = "repair-drift-recovery-lane", surface = "__PLAN_REF__", status = "active" },
 ]
 queued_items = []
 """,
-    )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
-    plan_path = tmp_path / plan_ref
-    _write_execplan_record(plan_path, item_id="repair-drift-recovery-lane", status="completed")
+            ["repair-drift-recovery-lane"],
+            ["work_items = []", "execplans = []"],
+            "remove TODO item 'repair-drift-recovery-lane'",
+        ),
+    ]
+    for label, plan_id, plan_ref, state_template, absent_fragments, present_fragments, action_fragment in scenarios:
+        repo = tmp_path / label
+        _write(repo / ".agentic-workspace/planning/state.toml", state_template.replace("__PLAN_REF__", plan_ref))
+        _write(repo / "ROADMAP.md", "# Roadmap\n")
+        plan_path = repo / plan_ref
+        _write_execplan_record(plan_path, item_id=plan_id, status="completed")
+        if label == "execplan-field-active-pointer":
+            _write_execplan_record(
+                repo / ".agentic-workspace/planning/execplans/unrelated-active-plan.plan.json",
+                item_id="unrelated-active-plan",
+                status="active",
+            )
 
-    result = archive_execplan("repair-drift-recovery-lane", target=tmp_path, apply_cleanup=True)
+        result = archive_execplan(plan_id, target=repo, apply_cleanup=True)
 
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/repair-drift-recovery-lane.plan.json"
-
-    assert not archived_path.exists()
-    assert not plan_path.exists()
-    assert "repair-drift-recovery-lane" not in state_text
-    assert "work_items = []" in state_text
-    assert "execplans = []" in state_text
-    assert any(action.kind == "updated" and "remove TODO item 'repair-drift-recovery-lane'" in action.detail for action in result.actions)
+        state_text = (repo / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+        archived_path = repo / ".agentic-workspace" / "planning" / "execplans" / "archive" / f"{plan_id}.plan.json"
+        assert not archived_path.exists(), label
+        assert not plan_path.exists(), label
+        for fragment in absent_fragments:
+            assert fragment not in state_text, label
+        for fragment in present_fragments:
+            assert fragment in state_text, label
+        assert any(action.kind == "updated" and action_fragment in action.detail for action in result.actions), label
 
 
 def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:

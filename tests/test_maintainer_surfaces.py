@@ -490,6 +490,12 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Test Knowledge Inventory" in knowledge_inventory
     assert "Verification may surface" in knowledge_inventory
     assert "uninterpreted-source" in knowledge_inventory
+    assert "Historical Regression Migration Path" in knowledge_inventory
+    assert "Migrated Historical Records" in knowledge_inventory
+    assert "test_model_cli_harness_scores_native_plan_bridge_failures" in knowledge_inventory
+    assert "test_archive_execplan_apply_cleanup_removes_active_execplan_pointer_variants" in knowledge_inventory
+    assert "test_generated_operation_cli_input_proof_scenarios" in knowledge_inventory
+    assert "test_static_generated_package_proof_rejects_static_surface_regressions" in knowledge_inventory
     assert "tests/test_model_cli_harness.py" in knowledge_inventory
     assert "tests/test_workspace_report_cli.py" in knowledge_inventory
     assert "tests/test_workspace_start_preflight_cli.py" in knowledge_inventory
@@ -502,7 +508,10 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "Fragment or subflow behavior" in strategy
     assert "Operation composition" in strategy
     assert "Representative command black-box behavior" in strategy
-    assert "1,710 collected tests / 60 files" in strategy
+    assert "1,698 collected tests / 63 files" in strategy
+    assert "## Suite Budgets" in strategy
+    assert "900-1,200" in strategy
+    assert "temporary characterization, conformance evidence, or historical regression residue" in strategy
     assert "| Keep ordinary |" in strategy
     assert "| Merge |" in strategy
     assert "| Convert |" in strategy
@@ -546,6 +555,8 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "rickardvh/command-generation#13" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
+    assert "test_generated_operation_cli_input_proof_scenarios" in aw_inventory
+    assert "test_static_generated_package_proof_rejects_static_surface_regressions" in aw_inventory
     assert "tests/test_workspace_proof_generated_packages_cli.py" in aw_inventory
     assert "tests/test_command_generation_integration.py" in aw_inventory
     assert "tests/test_command_generation_primitive_executor.py" not in replacement_plan

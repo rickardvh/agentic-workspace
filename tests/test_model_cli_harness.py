@@ -2729,73 +2729,42 @@ def test_model_cli_harness_scores_direct_task_overplanning_as_semantic_failure()
     assert any("direct wording edit" in message for message in messages)
 
 
-def test_model_cli_harness_scores_native_plan_without_bridge_as_semantic_failure() -> None:
+def test_model_cli_harness_scores_native_plan_bridge_failures() -> None:
     harness = _load_harness()
+    scenarios = [
+        (
+            "native-plan-without-bridge",
+            {"stdout": json.dumps({"response": "I made a private plan and a todo list for the cleanup."}), "stderr": ""},
+            {"status": "clean"},
+            "runtime-native planning",
+        ),
+        (
+            "misplaced-workspace-artifact",
+            {"stdout": json.dumps({"response": "I bridged private todos into Agentic Workspace planning."}), "stderr": ""},
+            {"status": "changed", "created": [".agentic-workspace/planning/doc-cleanup-preparation.json"]},
+            "outside canonical Agentic Workspace planning surfaces",
+        ),
+        (
+            "workflow-mutation",
+            {"stdout": json.dumps({"response": "I used private todos and updated the workflow instructions."}), "stderr": ""},
+            {"status": "changed", "modified": [".agentic-workspace/WORKFLOW.md"]},
+            "modified workflow instructions",
+        ),
+        (
+            "freehand-root-plan",
+            {"stdout": json.dumps({"response": "I used private todos and created DOC_CLEANUP_PLAN.md."}), "stderr": ""},
+            {"status": "changed", "created": ["DOC_CLEANUP_PLAN.md"]},
+            "freehand planning or handoff artifact",
+        ),
+    ]
+    for label, result, mutation_summary, expected_fragment in scenarios:
+        warnings = harness._semantic_workflow_warnings(
+            scenario_id="native-plan-bridge",
+            result=result,
+            mutation_summary=mutation_summary,
+        )
 
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="native-plan-bridge",
-        result={
-            "stdout": json.dumps({"response": "I made a private plan and a todo list for the cleanup."}),
-            "stderr": "",
-        },
-        mutation_summary={"status": "clean"},
-    )
-
-    assert any("runtime-native planning" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_scores_native_plan_misplaced_workspace_artifact() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="native-plan-bridge",
-        result={
-            "stdout": json.dumps({"response": "I bridged private todos into Agentic Workspace planning."}),
-            "stderr": "",
-        },
-        mutation_summary={
-            "status": "changed",
-            "created": [".agentic-workspace/planning/doc-cleanup-preparation.json"],
-        },
-    )
-
-    assert any("outside canonical Agentic Workspace planning surfaces" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_scores_native_plan_workflow_mutation() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="native-plan-bridge",
-        result={
-            "stdout": json.dumps({"response": "I used private todos and updated the workflow instructions."}),
-            "stderr": "",
-        },
-        mutation_summary={
-            "status": "changed",
-            "modified": [".agentic-workspace/WORKFLOW.md"],
-        },
-    )
-
-    assert any("modified workflow instructions" in warning["message"] for warning in warnings)
-
-
-def test_model_cli_harness_scores_native_plan_freehand_root_plan() -> None:
-    harness = _load_harness()
-
-    warnings = harness._semantic_workflow_warnings(
-        scenario_id="native-plan-bridge",
-        result={
-            "stdout": json.dumps({"response": "I used private todos and created DOC_CLEANUP_PLAN.md."}),
-            "stderr": "",
-        },
-        mutation_summary={
-            "status": "changed",
-            "created": ["DOC_CLEANUP_PLAN.md"],
-        },
-    )
-
-    assert any("freehand planning or handoff artifact" in warning["message"] for warning in warnings)
+        assert any(expected_fragment in warning["message"] for warning in warnings), label
 
 
 def test_model_cli_harness_uses_final_message_for_semantic_scoring() -> None:
