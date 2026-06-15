@@ -71,6 +71,25 @@ It lists candidate test-knowledge inventory sources and per-file AST counts so
 an agent can choose where to inspect first. These counts are routing facts only:
 they do not prove coverage and do not authorize deletion, merging, or conversion.
 
+The `evidence_strategy.proof_governance` block is the pre-test decision aid for
+regression-prone work. It reports local facts such as changed paths, changed
+test functions, same-file/name-prefix groups, candidate strategy sources, and
+whether a Verification manifest is configured. It also exposes the decision
+vocabulary an agent may consider:
+
+- `add`
+- `merge`
+- `convert-to-conformance`
+- `record-manual-evidence`
+- `prune`
+- `no-new-proof-needed`
+- `needs-human-strategy-choice`
+
+The block leaves every decision unset and agent-owned. Its decision template asks
+the agent to state the trust question, proof intent, narrowest evidence,
+evidence owner, durability, and safe-to-prune condition. Verification does not
+fill those fields from filenames, prose, markers, or AW conventions.
+
 Without host-owned structured strategy enums or configuration, dispositions remain
 `needs-human-strategy-choice`, owners remain `unknown`, and confidence stays low.
 The report does not delete tests, prove semantic equivalence, require a manifest

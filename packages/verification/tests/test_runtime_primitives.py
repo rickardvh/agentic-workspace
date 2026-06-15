@@ -17,6 +17,9 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["evidence_strategy"]["kind"] == "agentic-workspace/verification-evidence-strategy/v1"
     assert payload["evidence_strategy"]["status"] == "unavailable"
     assert payload["evidence_strategy"]["strategy_basis"]["declared_strategy_state"] == "not-declared"
+    assert payload["evidence_strategy"]["proof_governance"]["kind"] == "agentic-workspace/verification-proof-governance/v1"
+    assert payload["evidence_strategy"]["proof_governance"]["status"] == "unavailable"
+    assert payload["evidence_strategy"]["proof_governance"]["decision_authority"] == "agent"
 
 
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
@@ -294,6 +297,44 @@ def test_model_cli_harness_scores_raw_read_windows():
             ],
         }
     ]
+    governance = strategy["proof_governance"]
+    assert governance["status"] == "attention"
+    assert governance["decision_authority"] == "agent"
+    assert governance["available_decisions"] == [
+        "add",
+        "merge",
+        "convert-to-conformance",
+        "record-manual-evidence",
+        "prune",
+        "no-new-proof-needed",
+        "needs-human-strategy-choice",
+    ]
+    assert governance["candidate_context"] == {
+        "changed_path_count": 1,
+        "ordinary_test_function_count": 2,
+        "group_count": 1,
+        "candidate_strategy_source_count": 1,
+        "verification_manifest_configured": False,
+        "task_text_present": True,
+    }
+    assert governance["pre_test_decision_questions"] == [
+        "What host-repo testing or proof strategy applies to this surface?",
+        "What trust question is being answered?",
+        "What is the narrowest evidence that answers it under that strategy?",
+        "Which owner should hold the evidence?",
+        "Is this proof permanent, temporary, or replaceable by a host-preferred proof surface?",
+        "What would make it safe to prune later?",
+    ]
+    assert governance["agent_decision_template"] == {
+        "selected_decision": "unset-agent-owned",
+        "trust_question": "unset-agent-owned",
+        "proof_intent": "unset-agent-owned",
+        "narrowest_evidence": "unset-agent-owned",
+        "evidence_owner": "unset-agent-owned",
+        "durability": "unset-agent-owned",
+        "safe_to_prune_when": "unset-agent-owned",
+    }
+    assert "No decision is assigned by Verification." in governance["limits"]
 
 
 def test_verification_evidence_strategy_keeps_unclear_strategy_host_neutral(tmp_path: Path) -> None:
@@ -316,6 +357,11 @@ def test_widget_handles_error():
     assert strategy["evidence_items"][0]["recommended_disposition"] == "needs-human-strategy-choice"
     assert strategy["evidence_items"][0]["confidence"] == "low"
     assert "No universal testing strategy inferred." in strategy["limits"]
+    governance = strategy["proof_governance"]
+    assert governance["status"] == "attention"
+    assert governance["candidate_context"]["candidate_strategy_source_count"] == 0
+    assert governance["agent_decision_template"]["selected_decision"] == "unset-agent-owned"
+    assert "No host strategy is inferred from prose." in governance["limits"]
 
 
 def test_verification_evidence_strategy_does_not_force_merge_for_different_host_strategy_prose(tmp_path: Path) -> None:
