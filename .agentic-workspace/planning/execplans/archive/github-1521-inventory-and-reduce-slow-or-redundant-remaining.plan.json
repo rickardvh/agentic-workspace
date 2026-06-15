@@ -61,10 +61,10 @@
       "#1525 testing-strategy and replacement inventories are refreshed against current counts and guard coverage.",
       "#1526 root/package ownership boundaries are documented and duplicate package-local current-memory generated view tests are merged.",
       "#1527 durable testing strategy coverage is guarded by maintainer tests.",
-      "Remaining #1521 work is either implemented or explicitly retained with reasons."
+      "#1521 parent-lane remainder is kept open for focused follow-up issues after this slice."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "archive-and-close"
+    "continuation_owner": "GitHub #1531, #1532, and #1533",
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "#1521 now has current inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof."
@@ -83,7 +83,7 @@
     "execution": {
       "milestone": "github-1521-inventory-and-reduce-slow-or-redundant-remaining",
       "status": "completed",
-      "next_step": "No required continuation remains for this archived slice.",
+      "next_step": "Keep #1521 open as the parent lane; continue through GitHub #1531, #1532, and #1533.",
       "proof": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset"
     },
     "scope": {
@@ -106,21 +106,21 @@
   },
   "intent_continuity": {
     "larger intended outcome": "Reduce slow or redundant remaining AW tests while preserving high-risk workflow and generated-target coverage.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "archive"
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub #1521 plus follow-ups #1531, #1532, and #1533"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "Close or archive #1521 after final proof; no known child candidate remains for this lane."
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub #1521",
+    "activation trigger": "Continue with focused follow-up issues #1531, #1532, and #1533 after #1530 lands."
   },
   "iterative_follow_through": {
     "what this slice enabled": "Packaging artifact tests now separate artifact build cost from assertion count, generated-command proof-runner smoke coverage no longer reasserts selected generated output values already owned by conformance, live-checkout preflight modes are grouped as one scenario matrix, maintainer inventory docs now match current counts and conformance surfaces, and root/package ownership guidance is explicit.",
-    "intentionally deferred": "No known #1521 child slice remains after #1526/#1527; future reductions should be opened from new evidence.",
+    "intentionally deferred": "The #1521 parent lane remains open for known follow-up clusters: report/start-preflight (#1531), model CLI harness (#1532), and generated-package proof runner (#1533).",
     "discovered implications": "The broad root duration run exceeded 10 minutes; future slices should avoid full-suite proof unless required.",
     "proof achieved now": "packaging subset and lint passed before final proof selection",
     "validation still needed": "none; final selected proof passed",
-    "next likely slice": "close #1521 if final proof passes"
+    "next likely slice": "Start #1531 after #1530 lands; keep #1521 open until remaining large clusters are reduced or explicitly retained."
   },
   "intent_interpretation": {
     "literal request": "Github 1521 Inventory And Reduce Slow Or Redundant Remaining",
@@ -179,7 +179,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run selected proof, commit the #1526/#1527 remainder slice, and close #1521 if proof passes."
+    "Run selected proof, commit the #1526/#1527 remainder slice, and keep #1521 open for follow-up reductions."
   ],
   "blockers": [
     "None."
@@ -233,7 +233,7 @@
     "intent served": "yes",
     "config compliance": "passed; workspace implement selected proof and required commands were run",
     "misinterpretation risk": "low; #1522 is the packaging-build reduction slice under #1521",
-    "follow-on decision": "none"
+    "follow-on decision": "keep #1521 open; route next reductions to #1531, #1532, and #1533"
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -251,24 +251,24 @@
   },
   "intent_satisfaction": {
     "original intent": "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.",
-    "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
-    "unsolved intent passed to": "none"
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "This slice completed #1526/#1527 and advanced #1521 with current inventory, reductions, and ownership guidance, but the parent lane still has known large clusters needing reduce-or-retain decisions.",
+    "unsolved intent passed to": "GitHub #1521 parent lane, with follow-ups #1531, #1532, and #1533"
   },
   "execution_summary": {
-    "outcome delivered": "#1521 now has current inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof.",
+    "outcome delivered": "#1526/#1527 are complete and #1521 has refreshed inventory, concrete reductions, replacement coverage records, root/package ownership guidance, and passing selected proof.",
     "validation confirmed": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
-    "follow-on routed to": "none",
+    "follow-on routed to": "GitHub #1521, #1531, #1532, and #1533",
     "post-work posterity capture": "docs/maintainer/testing-strategy.md updated",
     "resume from": "archive",
     "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
-    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
-    "canonical owner now": "archive",
-    "promotion trigger": "none",
+    "status": "planning",
+    "learned constraint": "Do not close the #1521 parent lane until remaining large clusters have explicit reduce-or-retain decisions.",
+    "motivation worth preserving": "The completed slice leaves parent-lane follow-up work for report/start-preflight, model CLI harness, and generated-package proof runner clusters.",
+    "canonical owner now": "GitHub #1521",
+    "promotion trigger": "Follow-up issues #1531, #1532, and #1533 are ready after #1530 lands.",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
@@ -284,11 +284,11 @@
   "closure_check": {
     "closeout scope": "lane",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
-    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The slice completed #1526/#1527, but #1521 remains the parent lane for known remaining large clusters.",
     "evidence carried forward": "passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset",
-    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+    "reopen trigger": "#1531, #1532, and #1533 are the current continuation triggers for the parent lane."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -410,6 +410,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset\nChanged surfaces: testing strategy; Memory current-memory tests; maintainer guard; planning closeout record\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.\nIntent satisfied: no; this slice completed #1526/#1527, while #1521 remains open as the parent lane.\nArchive decision: archive-but-keep-lane-open\nProof: passed: maintainer surfaces, workspace tests/lint, memory tests/lint, summary, planning doctor, targeted maintainer/current-memory proof, and Memory current/install ownership subset\nChanged surfaces: testing strategy; Memory current-memory tests; maintainer guard; planning closeout record\nDurable residue: issue (#1521, #1531, #1532, #1533)\nMemory learning: none\nFollow-up: #1531, #1532, and #1533\nCompletion gate: allowed for the slice only\nCompletion claim allowed: bounded-slice-complete"
   }
 }
