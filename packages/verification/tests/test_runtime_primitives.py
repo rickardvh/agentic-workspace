@@ -602,6 +602,98 @@ def test_widget_case_regression_windows():
     assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"unknown"}
 
 
+def test_verification_regression_sprawl_reports_changed_test_facts(tmp_path: Path) -> None:
+    test_file = tmp_path / "tests" / "test_command_output.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        """
+def test_command_output_payload_case_posix():
+    result = {"stdout": "ok"}
+    assert result["stdout"] == "ok"
+
+
+def test_command_output_payload_case_windows():
+    result = {"stdout": "warn"}
+    assert "warn" in result["stdout"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["tests/test_command_output.py"],
+        task_text="reduce regression sprawl",
+    )
+
+    sprawl = payload["evidence_strategy"]["regression_sprawl"]
+    assert sprawl["kind"] == "agentic-workspace/verification-regression-sprawl/v1"
+    assert sprawl["status"] == "attention"
+    assert sprawl["authority"] == "diagnostic-facts"
+    assert sprawl["test_files_touched"] == ["tests/test_command_output.py"]
+    assert sprawl["deleted_or_missing_test_files"] == []
+    assert sprawl["ordinary_test_function_count"] == 2
+    assert sprawl["likely_fixture_variant_group_count"] == 1
+    assert sprawl["generated_output_assertion_count"] == 2
+    assert sprawl["proof_decision_status"] == "missing"
+    assert sprawl["missing_or_incomplete_proof_decision"] is True
+    assert "No deletion, merge, or conformance conversion is recommended by this diagnostic." in sprawl["limits"]
+
+
+def test_verification_regression_sprawl_ignores_missing_decision_without_sprawl_context(tmp_path: Path) -> None:
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["src/widget.py"], task_text="")
+
+    sprawl = payload["evidence_strategy"]["regression_sprawl"]
+    assert sprawl["status"] == "unavailable"
+    assert sprawl["test_files_touched"] == []
+    assert sprawl["proof_decision_status"] == "missing"
+    assert sprawl["missing_or_incomplete_proof_decision"] is False
+
+
+def test_verification_regression_sprawl_reports_deleted_or_missing_test_paths(tmp_path: Path) -> None:
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["tests/test_removed_regression.py"],
+        task_text="remove legacy regression",
+    )
+
+    sprawl = payload["evidence_strategy"]["regression_sprawl"]
+    assert sprawl["test_files_touched"] == ["tests/test_removed_regression.py"]
+    assert sprawl["deleted_or_missing_test_files"] == ["tests/test_removed_regression.py"]
+    assert sprawl["ordinary_test_function_count"] == 0
+
+
+def test_verification_regression_sprawl_reports_present_proof_decision(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "prune",
+                "trust_question": "Is the removed legacy regression covered elsewhere?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "migration-residue",
+                "evidence_durability": "permanent",
+                "narrowest_evidence": "A retained conformance-owned scenario.",
+                "prune_or_replacement_condition": "Equivalent coverage is recorded.",
+                "confidence": "medium",
+                "residual_risk": "Replacement evidence may still need human review.",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["tests/test_removed_regression.py"],
+        task_text="remove legacy regression",
+    )
+
+    sprawl = payload["evidence_strategy"]["regression_sprawl"]
+    assert sprawl["proof_decision_status"] == "present"
+    assert sprawl["missing_or_incomplete_proof_decision"] is False
+
+
 def test_verification_proof_decision_reports_complete_agent_authored_record(tmp_path: Path) -> None:
     decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
     decision_path.parent.mkdir(parents=True)
