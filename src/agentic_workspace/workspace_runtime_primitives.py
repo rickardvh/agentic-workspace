@@ -18483,6 +18483,8 @@ def _next_safe_action_packet(
     skill = ""
     if action == "ask-intent-discovery-question":
         skill = "workspace-intent-discovery"
+    elif action == "present-lane-shaping-prompt":
+        skill = "planning-decompose"
     elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
@@ -18507,11 +18509,19 @@ def _next_safe_action_packet(
         forbidden_actions.extend(["open raw planning files before compact summary", "claim completion"])
     if action == "ask-intent-discovery-question":
         forbidden_actions.extend(["begin implementation", "create planning artifact before clarified intent is captured"])
+    if action == "present-lane-shaping-prompt":
+        forbidden_actions.extend(
+            [
+                "begin implementation",
+                "promote or create a slice before lane shaping is recorded",
+            ]
+        )
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
     if decision in {
         "active-execplan-required",
         "candidate-lane-promotion-required",
+        "lane-shaping-required",
         "lane-owner-artifact-required",
         "parent-decomposition-decision-required",
         "planning-escalation-required",
@@ -18569,6 +18579,8 @@ def _next_safe_action_packet(
         ],
         human_owned_decisions=["missing intent or acceptance boundary when next_safe_action asks for clarification"]
         if action == "ask-intent-discovery-question"
+        else ["lane intent, decomposition shape, and acceptable first slice"]
+        if action == "present-lane-shaping-prompt"
         else [],
         rule=(
             "next_safe_action may enforce forbidden actions and completion gates; otherwise it is structured guidance "
@@ -18863,10 +18875,192 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
     return compact
 
 
+def _configured_lane_shaping_target(config: WorkspaceConfig) -> dict[str, Any] | None:
+    for target in config.local_override.delegation_targets:
+        method_set = set(target.execution_methods)
+        capability_set = set(target.capability_classes) | set(target.safe_task_classes)
+        if "manual" in method_set and target.location in {"external", "either"} and "boundary-shaping" in capability_set:
+            return {
+                "name": target.name,
+                "target_kind": "manual-external",
+                "strength": target.strength,
+                "location": target.location,
+                "execution_methods": list(target.execution_methods),
+                "capability_classes": list(target.capability_classes),
+            }
+    return None
+
+
+def _lane_shaping_gate_payload(
+    *,
+    config: WorkspaceConfig,
+    planning_safety_gate: dict[str, Any],
+    delegation_decision: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    if changed_paths:
+        return {
+            "kind": "agentic-workspace/lane-shaping-gate/v1",
+            "status": "not-applicable",
+            "reason": "changed paths already define a local proof surface",
+        }
+    if planning_safety_gate.get("gate_result") != "candidate-lane-promotion-required":
+        return {
+            "kind": "agentic-workspace/lane-shaping-gate/v1",
+            "status": "not-applicable",
+            "reason": "planning safety did not require candidate lane promotion",
+        }
+    route_evidence = delegation_decision.get("route_evidence", {}) if isinstance(delegation_decision, dict) else {}
+    candidate_pressure = planning_safety_gate.get("candidate_pressure", {}) if isinstance(planning_safety_gate, dict) else {}
+    scope_signal = str(route_evidence.get("scope_signal") or candidate_pressure.get("work_shape") or "unknown")
+    if scope_signal not in {"lane", "epic"}:
+        return {"kind": "agentic-workspace/lane-shaping-gate/v1", "status": "not-applicable", "reason": "scope signal is not lane or epic"}
+
+    target = _configured_lane_shaping_target(config)
+    if target is None:
+        return {
+            "kind": "agentic-workspace/lane-shaping-gate/v1",
+            "status": "not-applicable",
+            "reason": "no configured manual external boundary-shaping target",
+        }
+    candidate_ids = [str(item) for item in candidate_pressure.get("candidate_ids", []) if str(item).strip()]
+    issue_refs = [str(item) for item in planning_safety_gate.get("issue_refs", []) if str(item).strip()]
+    evidence = [
+        f"planning_gate={planning_safety_gate.get('gate_result')}",
+        f"scope_signal={scope_signal}",
+        f"candidate_count={candidate_pressure.get('candidate_count', 0)}",
+        "active_planning_present=False",
+    ]
+    evidence.append("manual_external_boundary_shaping_target=configured")
+    questions = [
+        "What is the larger intended outcome, in host-repo terms?",
+        "What evidence would show the larger intent is fully satisfied, not merely advanced?",
+        "Which bounded first slice is acceptable, and what must remain explicitly open?",
+        "Which proof owner should validate each retained or changed behavior?",
+        "What stop conditions should prevent implementation from continuing?",
+    ]
+    prompt_lines = [
+        "You are being consulted before implementation or slice promotion.",
+        "",
+        f"Task: {task_text.strip() if task_text else '(no task text supplied)'}",
+        "",
+        "AW observed a broad unshaped lane and no active planning owner.",
+        "Use the evidence below to shape the lane, but do not treat it as a decision.",
+        "",
+        "Observed evidence:",
+        *[f"- {item}" for item in evidence],
+    ]
+    if candidate_ids:
+        prompt_lines.extend(["", "Candidate planning refs:", *[f"- {item}" for item in candidate_ids[:8]]])
+    if issue_refs:
+        prompt_lines.extend(["", "External refs mentioned in task:", *[f"- {item}" for item in issue_refs[:8]]])
+    prompt_lines.extend(
+        [
+            "",
+            "Questions to answer:",
+            *[f"- {item}" for item in questions],
+            "",
+            "Return a compact shaping answer only. Leave final reasoning, implementation choices, and proof judgment to the coding agent and human operator.",
+        ]
+    )
+    return {
+        "kind": "agentic-workspace/lane-shaping-gate/v1",
+        "status": "required",
+        "gate_result": "lane-shaping-required",
+        "required_next_action": "present-lane-shaping-prompt",
+        "implementation_allowed": False,
+        "reason": "Broad unshaped lane work needs a shaping answer before implementation or slice promotion.",
+        "target": target,
+        "observed_evidence": evidence,
+        "questions": questions,
+        "candidate_ids": candidate_ids[:8],
+        "external_refs": issue_refs[:8],
+        "ready_to_forward_prompt": {
+            "kind": "agentic-workspace/lane-shaping-prompt/v1",
+            "target": target["name"],
+            "copy_paste": "\n".join(prompt_lines),
+            "constraints": [
+                "Do not write implementation steps.",
+                "Do not assume an external tracker defines AW lane semantics.",
+                "State uncertainty and choices explicitly.",
+                "Keep decisions available to the coding agent and human operator.",
+            ],
+            "return_to": "Paste the shaping answer back into the current agent session before promotion or implementation.",
+        },
+        "recording_options": [
+            _command_with_cli_invoke(
+                command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "record an explicit bounded-slice exception that does not claim parent or lane closure",
+        ],
+        "authority_boundary": _authority_boundary_payload(
+            surface="lane_shaping_gate",
+            enforced_by_aw=["lane-shaping-required"],
+            observed_by_aw=evidence,
+            recommended_by_aw=["present-lane-shaping-prompt"],
+            agent_owned_decisions=[
+                "whether the shaping answer is sufficient",
+                "which lane or slice shape to record",
+                "which proof owner validates the chosen scope",
+            ],
+            human_owned_decisions=["larger intent, acceptable first slice, and stop conditions"],
+            rule="AW surfaces the shaping question and evidence; it does not decide the lane semantics.",
+        ),
+    }
+
+
+def _apply_lane_shaping_gate_to_start_payload(
+    *,
+    payload: dict[str, Any],
+    config: WorkspaceConfig,
+    planning_safety_gate: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+    startup_template: dict[str, Any],
+) -> None:
+    lane_gate = _lane_shaping_gate_payload(
+        config=config,
+        planning_safety_gate=planning_safety_gate,
+        delegation_decision=payload.get("delegation_decision", {}),
+        task_text=task_text,
+        changed_paths=changed_paths,
+        cli_invoke=config.cli_invoke,
+    )
+    if lane_gate.get("status") != "required":
+        return
+    payload["lane_shaping_gate"] = lane_gate
+    payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+        surface="start",
+        decision="lane-shaping-required",
+        reason=str(lane_gate.get("reason", "")),
+        required_next_action="present-lane-shaping-prompt",
+        evidence_required=["captured lane shaping answer before implementation or slice promotion"],
+    )
+    payload["immediate_next_allowed_action"] = {
+        "action": "present-lane-shaping-prompt",
+        "summary": str(lane_gate.get("reason", "")),
+        "command": None,
+        "run": None,
+        "risk": "lane-shaping-required-before-implementation",
+        "required_inputs": ["larger intent", "acceptable first slice", "proof owner", "stop conditions"],
+        "next_proof": "record the shaping answer in Planning or an explicit bounded-slice exception before implementation",
+        "read_first": [],
+        "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        "lane_shaping_prompt": lane_gate.get("ready_to_forward_prompt", {}),
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
-    if not immediate.get("command") and (not immediate.get("read_first")):
+    if (
+        immediate.get("action") not in {"ask-intent-discovery-question", "present-lane-shaping-prompt"}
+        and not immediate.get("command")
+        and (not immediate.get("read_first"))
+    ):
         immediate["required_inputs"] = []
         immediate["next_proof"] = "select proof after changed paths are known"
     skill_routing = payload.get("skill_routing", {})
@@ -18935,6 +19129,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
+        **({"lane_shaping_gate": payload["lane_shaping_gate"]} if "lane_shaping_gate" in payload else {}),
         "package_boundary": payload["package_boundary"],
         "authority_markers": payload["authority_markers"][:1],
         "immediate_next_allowed_action": immediate,
@@ -20083,6 +20278,14 @@ def _start_payload(
             "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
+    _apply_lane_shaping_gate_to_start_payload(
+        payload=payload,
+        config=config,
+        planning_safety_gate=planning_safety_gate,
+        task_text=task_text,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        startup_template=startup_template,
+    )
     cli_compatibility = startup_cli_compatibility
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
@@ -20926,6 +21129,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "intent_discovery_dialogue",
         "vague_outcome_orientation",
         "intent_acknowledgement",
+        "lane_shaping_gate",
     ):
         if optional_key in payload:
             context[optional_key] = payload[optional_key]
@@ -21332,6 +21536,14 @@ def _start_tiny_payload_fast(
                 "read_first": [command],
                 "open_execplan_only_when": startup_template["open_execplan_only_when"],
             }
+    _apply_lane_shaping_gate_to_start_payload(
+        payload=payload,
+        config=config,
+        planning_safety_gate=planning_safety_gate,
+        task_text=task_text,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        startup_template=startup_template,
+    )
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
         proof_command = str(
