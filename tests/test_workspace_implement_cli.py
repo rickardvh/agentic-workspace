@@ -1993,6 +1993,80 @@ candidates = [
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
 
 
+def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
+                'safe_task_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "lane-one", maturity = "candidate", status = "next", priority = "P1", title = "First broad lane", outcome = "Shape the first lane.", reason = "Open lane.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Ask shaping questions." },
+  { id = "lane-two", maturity = "candidate", status = "next", priority = "P1", title = "Second broad lane", outcome = "Shape the second lane.", reason = "Open lane.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Ask shaping questions." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape the workflow lane before implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["next_safe_action"] == "present-lane-shaping-prompt"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert "begin implementation" in payload["next_safe_action"]["forbidden_actions"]
+    assert payload["action_signals"]["allowed_next_action"] == "present-lane-shaping-prompt"
+    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "lane-shaping-required"
+    gate = payload["context"]["lane_shaping_gate"]
+    assert gate["status"] == "required"
+    assert gate["target"]["target_kind"] == "manual-external"
+    assert gate["target"]["name"] == "chatgpt"
+    assert gate["candidate_ids"] == ["lane-one", "lane-two"]
+    prompt = gate["ready_to_forward_prompt"]["copy_paste"]
+    assert "What is the larger intended outcome" in prompt
+    assert "External refs mentioned in task" not in prompt
+    assert "GitHub" not in prompt
+
+
 def test_implement_blocks_parent_lane_slice_without_lane_owner_artifact(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
