@@ -49,7 +49,7 @@
       "Docs explain that proof_governance is advisory fact/question surfacing, not a policy engine."
     ],
     "continuation_owner": "broader #1535 lane",
-    "closeout_decision": "archive-and-close"
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "Implement #1535 by adding host-neutral Verification proof-governance diagnostics."
@@ -258,8 +258,8 @@
   "closure_check": {
     "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
     "why this decision is honest": "The #1535 lane asked for Verification support for sustainable testing strategies. This bounded slice adds the pre-test proof-governance diagnostic, decision vocabulary, agent-owned decision template, tests, docs, and selected proof without claiming broader lane closure.",
     "evidence carried forward": "See proof_report.validation proof.",
     "reopen trigger": "Open a new issue if a future host needs structured strategy configuration, enforcement, budgets, or root command surfaces."
@@ -371,6 +371,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement a bounded #1535 proof-governance diagnostic slice after #1542 merged.\nIntent satisfied: yes for this bounded slice\nArchive decision: archive-and-close for this bounded slice only\nProof: uv run pytest packages/verification/tests/test_runtime_primitives.py -q -> 11 passed; uv run agentic-verification report --target . --changed packages/verification/tests/test_runtime_primitives.py --task 'Should I add a new regression test for issue 1535?' --format json -> proof_governance present with agent-owned unset decisions; make test-workspace -> passed in 101.40s; make lint-workspace -> passed; make maintainer-surfaces -> passed; summary passed; planning doctor exited 0 with existing module-residue warnings\nChanged surfaces: packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; .agentic-workspace/planning/execplans/issue-1535-proof-governance.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: broader #1535 lane closure remains subject to separate review\nMemory learning: none\nFollow-up: broader #1535 lane closure remains subject to separate review\nCompletion gate: slice_complete\nCompletion claim allowed: slice_complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement a bounded #1535 proof-governance diagnostic slice after #1542 merged.\nIntent satisfied: yes for this bounded slice\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest packages/verification/tests/test_runtime_primitives.py -q -> 11 passed; uv run agentic-verification report --target . --changed packages/verification/tests/test_runtime_primitives.py --task 'Should I add a new regression test for issue 1535?' --format json -> proof_governance present with agent-owned unset decisions; make test-workspace -> passed in 101.40s; make lint-workspace -> passed; make maintainer-surfaces -> passed; summary passed; planning doctor exited 0 with existing module-residue warnings\nChanged surfaces: packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; .agentic-workspace/planning/execplans/issue-1535-proof-governance.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: broader #1535 lane closure remains subject to separate review\nMemory learning: none\nFollow-up: broader #1535 lane closure remains subject to separate review\nCompletion gate: slice_complete\nCompletion claim allowed: slice_complete"
   }
 }
