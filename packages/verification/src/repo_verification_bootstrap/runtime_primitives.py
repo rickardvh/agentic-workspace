@@ -533,9 +533,12 @@ def _regression_sprawl_payload(
     generated_output_assertions = [item for item in generated_output_assertions if item["matched_fragments"]]
     proof_status = str(proof_decision.get("status", "missing"))
     decision_gap = proof_status in {"missing", "incomplete", "invalid"}
+    has_sprawl_context = bool(
+        changed_test_paths or deleted_or_missing_test_paths or test_functions or group_entries or generated_output_assertions
+    )
     return {
         "kind": "agentic-workspace/verification-regression-sprawl/v1",
-        "status": "attention" if changed_test_paths or decision_gap else "unavailable",
+        "status": "attention" if has_sprawl_context else "unavailable",
         "authority": "diagnostic-facts",
         "test_files_touched": changed_test_paths,
         "deleted_or_missing_test_files": deleted_or_missing_test_paths,
@@ -544,7 +547,7 @@ def _regression_sprawl_payload(
         "generated_output_assertion_count": len(generated_output_assertions),
         "generated_output_assertions": generated_output_assertions,
         "proof_decision_status": proof_status,
-        "missing_or_incomplete_proof_decision": decision_gap,
+        "missing_or_incomplete_proof_decision": decision_gap if has_sprawl_context else False,
         "review_questions": [
             "Is this evidence preserving a durable behavior class or an incident-specific regression record?",
             "Can repeated fixtures become a scenario matrix without losing labels or historical facts?",

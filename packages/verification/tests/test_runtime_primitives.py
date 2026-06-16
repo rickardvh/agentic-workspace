@@ -639,6 +639,16 @@ def test_command_output_payload_case_windows():
     assert "No deletion, merge, or conformance conversion is recommended by this diagnostic." in sprawl["limits"]
 
 
+def test_verification_regression_sprawl_ignores_missing_decision_without_sprawl_context(tmp_path: Path) -> None:
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["src/widget.py"], task_text="")
+
+    sprawl = payload["evidence_strategy"]["regression_sprawl"]
+    assert sprawl["status"] == "unavailable"
+    assert sprawl["test_files_touched"] == []
+    assert sprawl["proof_decision_status"] == "missing"
+    assert sprawl["missing_or_incomplete_proof_decision"] is False
+
+
 def test_verification_regression_sprawl_reports_deleted_or_missing_test_paths(tmp_path: Path) -> None:
     payload = verification_report_payload(
         target_root=tmp_path,
