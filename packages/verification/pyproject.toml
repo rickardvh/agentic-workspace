@@ -42,6 +42,7 @@ packages = ["src/repo_verification_bootstrap"]
 "../../generated/verification/python/operations" = "src/repo_verification_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/verification/python/commands" = "src/repo_verification_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/verification/python/primitives" = "src/repo_verification_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/verification/python/_contracts" = "src/repo_verification_bootstrap/_generated_cli_package_impl/_contracts"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -58,6 +59,7 @@ include = [
 "../../generated/verification/python/operations" = "src/repo_verification_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/verification/python/commands" = "src/repo_verification_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/verification/python/primitives" = "src/repo_verification_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/verification/python/_contracts" = "src/repo_verification_bootstrap/_generated_cli_package_impl/_contracts"
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
