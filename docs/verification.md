@@ -174,6 +174,50 @@ Without host-owned structured strategy enums or configuration, dispositions rema
 The report does not delete tests, prove semantic equivalence, require a manifest
 extension, or create a universal testing strategy for the host repository.
 
+## Subsystem-Scoped Assurance
+
+Assurance can also be scoped through the host repo's existing ownership model.
+Profiles live in `.agentic-workspace/config.toml` under
+`[assurance.subsystem_profiles.<subsystem-id>]`, where `<subsystem-id>` must refer
+to a subsystem id from `.agentic-workspace/OWNERSHIP.toml`.
+
+This does not create a second taxonomy. Ownership still decides what subsystem a
+path or active plan touches; the profile only says what evidence burden applies
+when that subsystem is in scope.
+
+```toml
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+requirement_refs = ["docs/system-requirements.md#auditability"]
+required_evidence = ["requirement_grounding", "manual_review"]
+proof_profile = "audit"
+force = "required-before-closeout"
+blocked_without_evidence = ["requirement-grounded-completion"]
+claim_boundary = "subsystem-scoped"
+review_owner = "security-review"
+```
+
+`agentic-workspace implement`, `agentic-workspace report`, and
+`agentic-workspace proof` expose the effective subsystem assurance state under
+`assurance_requirements.subsystem_assurance`. The payload reports matched
+subsystem ids, the conservatively composed effective assurance level, required
+and missing evidence, requirement refs, claim boundaries, and the claims blocked
+until evidence is present. Matching profiles are projected as assurance
+requirements with ids like `subsystem:audit-log`, so existing proof-profile and
+Verification routing can consume them without a separate command.
+
+Changed paths match subsystem profiles through `.agentic-workspace/OWNERSHIP.toml`
+path ownership. Active plans may also match by naming the subsystem in explicit
+scope fields such as `canonical_core.touched_scope` with values like
+`subsystem:audit-log`. Multiple matched profiles compose conservatively: the
+highest assurance level is reported, and missing evidence is the union of all
+matched required evidence.
+
+Subsystem assurance remains diagnostic and host-neutral. It surfaces the evidence
+burden and claim boundary for the agent; it does not prove that the evidence is
+sufficient, invent a global compliance rule, or apply high-assurance requirements
+to unrelated subsystems.
+
 ## Manifest Shape
 
 ```toml

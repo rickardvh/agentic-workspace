@@ -1135,6 +1135,203 @@ def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict
     return payloads
 
 
+def _assurance_subsystem_profile_payloads(config: WorkspaceConfig | None) -> list[dict[str, Any]]:
+    profiles = list(config.assurance.subsystem_profiles) if config is not None else []
+    payloads: list[dict[str, Any]] = []
+    for profile in profiles:
+        payloads.append(
+            {
+                "id": profile.id,
+                "subsystem_id": profile.id,
+                "level": profile.assurance_level,
+                "scope_refs": list(profile.scope_refs),
+                "requirement_refs": list(profile.requirement_refs),
+                "required_evidence": list(profile.required_evidence),
+                "proof_profile": profile.proof_profile,
+                "workflow_obligation_refs": list(profile.workflow_obligation_refs),
+                "review_owner": profile.review_owner,
+                "force": profile.force,
+                "blocking_claims": list(profile.blocked_without_evidence),
+                "claim_boundary": profile.claim_boundary,
+                "notes": profile.notes,
+            }
+        )
+    return payloads
+
+
+def _assurance_level_rank(level: str) -> int:
+    return {"low": 0, "medium": 1, "high": 2, "critical": 3}.get(str(level).strip(), 0)
+
+
+def _assurance_profile_scope_tokens(profile: dict[str, Any]) -> set[str]:
+    subsystem_id = str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+    tokens = {subsystem_id, f"subsystem:{subsystem_id}", f"ownership.subsystems.{subsystem_id}"}
+    tokens.update(str(item).strip() for item in _list_payload(profile.get("scope_refs")) if str(item).strip())
+    return {token for token in tokens if token}
+
+
+def _subsystem_assurance_payload(
+    *,
+    config: WorkspaceConfig | None,
+    target_root: Path | None,
+    changed_paths: list[str] | None,
+    active_planning_record: dict[str, Any] | None,
+    planning_facts: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    configured = _assurance_subsystem_profile_payloads(config)
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    ownership_matches = (
+        _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=normalized_paths)
+        if target_root is not None
+        else {
+            "kind": "agentic-workspace/subsystem-ownership-selection/v1",
+            "status": "unavailable",
+            "matched_subsystems": [],
+        }
+    )
+    matched_subsystems = [item for item in _list_payload(ownership_matches.get("matched_subsystems")) if isinstance(item, dict)]
+    matched_tokens = {
+        token
+        for subsystem in matched_subsystems
+        for token in (
+            str(subsystem.get("id") or "").strip(),
+            f"subsystem:{str(subsystem.get('id') or '').strip()}",
+            f"ownership.subsystems.{str(subsystem.get('id') or '').strip()}",
+        )
+        if token and not token.endswith(".")
+    }
+    plan_scope = set()
+    if isinstance(active_planning_record, dict):
+        plan_scope.update(_plan_exact_list(active_planning_record, "canonical_core.touched_scope", "touched_paths"))
+        plan_scope.update(_plan_exact_list(active_planning_record, "execution_bounds.allowed paths"))
+        plan_scope.update(str(item).strip() for item in _list_payload(active_planning_record.get("subsystems")) if str(item).strip())
+    profile_matches: list[dict[str, Any]] = []
+    facts = planning_facts if isinstance(planning_facts, dict) else _assurance_requirement_planning_facts(active_planning_record)
+    evidence_by_requirement = facts.get("evidence_by_requirement", {}) if isinstance(facts, dict) else {}
+    for profile in configured:
+        scope_tokens = _assurance_profile_scope_tokens(profile)
+        matched_scope_tokens = sorted(scope_tokens & matched_tokens)
+        matched_plan_scope = sorted(scope_tokens & plan_scope)
+        if not matched_scope_tokens and not matched_plan_scope:
+            continue
+        subsystem_id = str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        requirement_id = f"subsystem:{subsystem_id}"
+        evidence_present = []
+        if isinstance(evidence_by_requirement, dict):
+            evidence_present = [
+                str(item).strip()
+                for item in _list_payload(evidence_by_requirement.get(requirement_id, evidence_by_requirement.get(subsystem_id, [])))
+                if str(item).strip()
+            ]
+        required_evidence = [str(item).strip() for item in _list_payload(profile.get("required_evidence")) if str(item).strip()]
+        missing_evidence = [item for item in required_evidence if item not in evidence_present]
+        matched_subsystem = next((item for item in matched_subsystems if str(item.get("id") or "").strip() == subsystem_id), {})
+        applies_because = _dedupe(
+            [
+                *(f"changed path matched subsystem {subsystem_id}" for _ in matched_scope_tokens[:1]),
+                *(f"active plan scope matched {item}" for item in matched_plan_scope),
+            ]
+        )
+        state = "satisfied" if not missing_evidence else "review-required" if profile.get("review_owner") else "missing-evidence"
+        profile_matches.append(
+            {
+                **profile,
+                "requirement_id": requirement_id,
+                "subsystem": {
+                    "id": subsystem_id,
+                    "matched_paths": _list_payload(matched_subsystem.get("matched_paths")),
+                    "matched_patterns": _list_payload(matched_subsystem.get("matched_patterns")),
+                    "owns": _list_payload(matched_subsystem.get("owns")),
+                    "does_not_own": _list_payload(matched_subsystem.get("does_not_own")),
+                },
+                "applies_because": applies_because,
+                "evidence_status": {
+                    "requirement_id": requirement_id,
+                    "state": state,
+                    "level": str(profile.get("level", DEFAULT_ASSURANCE_LEVEL)),
+                    "applies_because": applies_because,
+                    "authority_refs": _list_payload(profile.get("requirement_refs")),
+                    "required_evidence": required_evidence,
+                    "evidence_present": evidence_present,
+                    "missing_evidence": missing_evidence,
+                    "waiver": {"status": "none"},
+                    "dismissal": {"status": "none"},
+                    "proof_profile": profile.get("proof_profile"),
+                    "workflow_obligation_refs": _list_payload(profile.get("workflow_obligation_refs")),
+                    "review_owner": profile.get("review_owner"),
+                    "force": str(profile.get("force", "recommended")),
+                    "blocking_claims": _list_payload(profile.get("blocking_claims")),
+                    "claim_boundary": profile.get("claim_boundary"),
+                    "subsystem_id": subsystem_id,
+                    "next_action": {
+                        "id": "record-subsystem-assurance-evidence" if missing_evidence else "none",
+                        "why": "Subsystem-scoped assurance evidence is missing before broad subsystem claims."
+                        if missing_evidence
+                        else "No missing subsystem assurance evidence is currently projected.",
+                    },
+                },
+            }
+        )
+    effective_level = "none"
+    if profile_matches:
+        effective_level = max(
+            (str(profile.get("level", DEFAULT_ASSURANCE_LEVEL)) for profile in profile_matches), key=_assurance_level_rank
+        )
+    missing_required = [
+        profile
+        for profile in profile_matches
+        if _as_dict(profile.get("evidence_status")).get("state") in {"missing-evidence", "review-required"}
+        and str(profile.get("force", "recommended")) in {"required-before-closeout", "blocking"}
+    ]
+    return {
+        "kind": "agentic-workspace/subsystem-assurance/v1",
+        "status": "attention" if missing_required else "matched" if profile_matches else "configured" if configured else "absent",
+        "configured_count": len(configured),
+        "matched_count": len(profile_matches),
+        "effective_assurance_level": effective_level,
+        "matched_subsystem_ids": [str(profile.get("subsystem_id")) for profile in profile_matches],
+        "matched_profiles": profile_matches,
+        "evidence_status": [_as_dict(profile.get("evidence_status")) for profile in profile_matches],
+        "required_evidence": _dedupe(
+            [
+                str(item).strip()
+                for profile in profile_matches
+                for item in _list_payload(profile.get("required_evidence"))
+                if str(item).strip()
+            ]
+        ),
+        "missing_evidence": _dedupe(
+            [
+                str(item).strip()
+                for profile in profile_matches
+                for item in _list_payload(_as_dict(profile.get("evidence_status")).get("missing_evidence"))
+                if str(item).strip()
+            ]
+        ),
+        "requirement_refs": _dedupe(
+            [
+                str(item).strip()
+                for profile in profile_matches
+                for item in _list_payload(profile.get("requirement_refs"))
+                if str(item).strip()
+            ]
+        ),
+        "blocked_claims": _dedupe(
+            [
+                str(item).strip()
+                for profile in profile_matches
+                for item in _list_payload(profile.get("blocking_claims"))
+                if str(item).strip()
+            ]
+        ),
+        "claim_boundaries": _dedupe(
+            [str(profile.get("claim_boundary")).strip() for profile in profile_matches if str(profile.get("claim_boundary") or "").strip()]
+        ),
+        "ownership_selection": ownership_matches,
+        "rule": "Subsystem assurance profiles are scoped by existing ownership subsystem ids; AW surfaces obligations and evidence gaps but does not certify subsystem safety or compliance.",
+    }
+
+
 def _assurance_requirement_planning_facts(active_planning_record: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(active_planning_record, dict):
         return {
@@ -1274,12 +1471,20 @@ def _assurance_status_for_requirement(
 def _assurance_requirements_report_payload(
     *,
     config: WorkspaceConfig | None,
+    target_root: Path | None = None,
     active_planning_record: dict[str, Any] | None = None,
     task_text: str | None = None,
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     configured = _assurance_requirement_payloads(config)
     planning_facts = _assurance_requirement_planning_facts(active_planning_record)
+    subsystem_assurance = _subsystem_assurance_payload(
+        config=config,
+        target_root=target_root,
+        changed_paths=changed_paths,
+        active_planning_record=active_planning_record,
+        planning_facts=planning_facts,
+    )
     matching: list[dict[str, Any]] = []
     active: list[dict[str, Any]] = []
     evidence_status: list[dict[str, Any]] = []
@@ -1328,6 +1533,55 @@ def _assurance_requirements_report_payload(
                 }
             )
             evidence_status.append(status)
+    for profile in _list_payload(subsystem_assurance.get("matched_profiles")):
+        if not isinstance(profile, dict):
+            continue
+        subsystem_id = str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        requirement_id = str(profile.get("requirement_id") or f"subsystem:{subsystem_id}")
+        profile_status = _as_dict(profile.get("evidence_status"))
+        active.append(
+            {
+                "id": requirement_id,
+                "level": str(profile.get("level", DEFAULT_ASSURANCE_LEVEL)),
+                "applies_to_paths": [],
+                "applies_to_task_markers": [],
+                "applies_to_planning_refs": [],
+                "applies_to_proof_profiles": [],
+                "applies_to_risk_refs": [],
+                "applies_to_invariant_refs": [],
+                "authority_refs": _list_payload(profile.get("requirement_refs")),
+                "required_evidence": _list_payload(profile.get("required_evidence")),
+                "proof_profile": profile.get("proof_profile"),
+                "workflow_obligation_refs": _list_payload(profile.get("workflow_obligation_refs")),
+                "review_owner": profile.get("review_owner"),
+                "force": str(profile.get("force", "recommended")),
+                "blocking_claims": _list_payload(profile.get("blocking_claims")),
+                "waiver": {"status": "none"},
+                "dismissal": {"status": "none"},
+                "notes": profile.get("notes"),
+                "source": "subsystem_assurance",
+                "subsystem_id": subsystem_id,
+                "subsystem": profile.get("subsystem", {}),
+                "claim_boundary": profile.get("claim_boundary"),
+                "applies_because": _list_payload(profile.get("applies_because")),
+                "authority_boundary": _authority_boundary_payload(
+                    surface="assurance_requirements.subsystem_profile",
+                    observed_by_aw=[
+                        f"configured subsystem assurance profile {subsystem_id}",
+                        *_list_payload(profile.get("applies_because")),
+                    ],
+                    recommended_by_aw=["honor subsystem-scoped evidence and claim-boundary obligations before closeout"],
+                    agent_owned_decisions=[
+                        "whether the current task intent is satisfied",
+                        "whether evidence is sufficient to claim subsystem-scoped completion",
+                    ],
+                    human_owned_decisions=["waiver, acceptance, or final subsystem safety/compliance claims"],
+                    rule="Subsystem assurance matches are scoped through host-owned ownership subsystems; AW reports obligations and does not certify safety.",
+                ),
+            }
+        )
+        if profile_status:
+            evidence_status.append(profile_status)
     required_missing = [
         item
         for item in evidence_status
@@ -1336,7 +1590,13 @@ def _assurance_requirements_report_payload(
     ]
     return {
         "kind": "agentic-workspace/assurance-requirements/v1",
-        "status": "attention" if required_missing else "matched" if active else "configured" if configured else "absent",
+        "status": "attention"
+        if required_missing
+        else "matched"
+        if active
+        else "configured"
+        if configured or subsystem_assurance.get("configured_count")
+        else "absent",
         "rule": "Repo-declared assurance requirements are domain-generic routing and claim-boundary facts; AW does not certify compliance.",
         "authority_boundary": _authority_boundary_payload(
             surface="assurance_requirements",
@@ -1349,12 +1609,15 @@ def _assurance_requirements_report_payload(
             human_owned_decisions=["waiver, dismissal, or final acceptance for configured assurance exceptions"],
             rule="Assurance requirements are configured claim-boundary evidence; AW does not classify the task's semantic intent.",
         ),
-        "configured_count": len(configured),
+        "configured_count": len(configured) + int(subsystem_assurance.get("configured_count", 0) or 0),
+        "configured_requirement_count": len(configured),
+        "configured_subsystem_profile_count": subsystem_assurance.get("configured_count", 0),
         "active_count": len(active),
         "missing_required_evidence_count": len(required_missing),
         "configured": configured,
         "active": active,
         "evidence_status": evidence_status,
+        "subsystem_assurance": subsystem_assurance,
         "match_evidence": {
             "observed_scope_source": ", ".join(
                 source
@@ -1368,6 +1631,7 @@ def _assurance_requirements_report_payload(
             or "no active planning record, task text, or changed paths",
             "match_count": len(active),
             "matching": matching,
+            "subsystem_profile_match_count": subsystem_assurance.get("matched_count", 0),
         },
         "supported_blocking_claims": list(SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS),
     }
@@ -1380,6 +1644,7 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
     active = active if isinstance(active, list) else []
     evidence_status = value.get("evidence_status", [])
     evidence_status = evidence_status if isinstance(evidence_status, list) else []
+    subsystem_assurance = _as_dict(value.get("subsystem_assurance"))
     required_missing = [
         item for item in evidence_status if isinstance(item, dict) and item.get("state") in {"missing-evidence", "review-required"}
     ]
@@ -1407,6 +1672,14 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
             for item in active[:3]
             if isinstance(item, dict)
         ],
+        "subsystem_assurance": {
+            "status": subsystem_assurance.get("status", "absent"),
+            "matched_count": subsystem_assurance.get("matched_count", 0),
+            "effective_assurance_level": subsystem_assurance.get("effective_assurance_level", "none"),
+            "matched_subsystem_ids": subsystem_assurance.get("matched_subsystem_ids", []),
+            "missing_evidence": subsystem_assurance.get("missing_evidence", []),
+            "blocked_claims": subsystem_assurance.get("blocked_claims", []),
+        },
         "evidence_status": [
             {
                 key: item.get(key)
@@ -7674,6 +7947,7 @@ def _run_report_command(
     )
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        target_root=target_root,
         active_planning_record=raw_active_planning_record or active_planning_record,
     )
     verification = _verification_report_payload(
@@ -11294,6 +11568,7 @@ def _run_lazy_report_section_command(
     if normalized in {"assurance_requirements", "verification", "requirement_grounding", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
+            target_root=target_root,
             active_planning_record=active_planning_record,
         )
         verification = _verification_report_payload(
@@ -11384,6 +11659,7 @@ def _run_lazy_report_section_command(
         )
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
+            target_root=target_root,
             active_planning_record=active_planning_record,
         )
         verification = _verification_report_payload(
@@ -11739,6 +12015,7 @@ def _run_report_router_command(
     )
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        target_root=target_root,
         active_planning_record=active_planning_record,
     )
     verification = _verification_report_payload(
@@ -15284,7 +15561,7 @@ def _report_closeout_trust_payload(
         )
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
-        assurance_requirements = _assurance_requirements_report_payload(config=config)
+        assurance_requirements = _assurance_requirements_report_payload(config=config, target_root=target_root)
         verification = _verification_report_payload(
             target_root=target_root,
             assurance_requirements=assurance_requirements,
@@ -15369,7 +15646,7 @@ def _report_closeout_trust_payload(
         architecture_decision_closeout = _architecture_decision_closeout_payload(
             planning_report=planning_report, target_root=target_root, config=config
         )
-        assurance_requirements = _assurance_requirements_report_payload(config=config)
+        assurance_requirements = _assurance_requirements_report_payload(config=config, target_root=target_root)
         verification = _verification_report_payload(
             target_root=target_root,
             assurance_requirements=assurance_requirements,
@@ -15503,6 +15780,7 @@ def _report_closeout_trust_payload(
     )
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        target_root=target_root,
         active_planning_record=raw_active_planning_record,
     )
     verification = _verification_report_payload(
@@ -19939,6 +20217,7 @@ def _start_payload(
     compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        target_root=target_root,
         active_planning_record=planning_record if isinstance(planning_record, dict) else None,
         task_text=task_text,
         changed_paths=changed_paths,
@@ -21641,6 +21920,7 @@ def _start_tiny_payload_fast(
         payload["cli_compatibility"] = cli_compatibility
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        target_root=target_root,
         active_planning_record=None,
         task_text=task_text,
         changed_paths=changed_paths,
@@ -25107,6 +25387,31 @@ def _requirement_grounding_payload(
                     },
                 }
             )
+    subsystem_assurance = _as_dict(assurance_requirements.get("subsystem_assurance"))
+    for profile in _list_payload(subsystem_assurance.get("matched_profiles")):
+        if not isinstance(profile, dict):
+            continue
+        subsystem_id = str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        for ref in _list_payload(profile.get("requirement_refs")):
+            text = str(ref).strip()
+            if not text:
+                continue
+            requirement_refs.append(
+                {
+                    "ref": text,
+                    "source_type": "subsystem-assurance-profile",
+                    "authority": "repo-configured-subsystem-requirement-ref",
+                    "title": f"Subsystem assurance profile {subsystem_id}",
+                    "provenance": f"assurance.subsystem_profiles.{subsystem_id}",
+                    "source_metadata": {
+                        "source_revision": _git_source_identity(target_root),
+                        "fetched_at": "",
+                        "excerpt_hash": "",
+                        "freshness": "repo-current",
+                        "trust_note": "routing/index metadata only; AW does not copy or store the requirement corpus",
+                    },
+                }
+            )
     seen_refs: set[tuple[str, str]] = set()
     deduped_refs: list[dict[str, Any]] = []
     for item in requirement_refs:
@@ -25133,6 +25438,22 @@ def _requirement_grounding_payload(
                 "authority": "configured-route" if because else "agent-review-required",
             }
         )
+    for profile in _list_payload(subsystem_assurance.get("matched_profiles")):
+        if not isinstance(profile, dict):
+            continue
+        subsystem_id = str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        because = [str(item).strip() for item in _list_payload(profile.get("applies_because")) if str(item).strip()]
+        ref = f"subsystem:{subsystem_id}" if subsystem_id else str(profile.get("id") or "").strip()
+        if ref:
+            applicability.append(
+                {
+                    "ref": ref,
+                    "state": "applicable" if because else "unknown",
+                    "why": "; ".join(because) if because else "Matched subsystem assurance profile without a recorded path rationale.",
+                    "confidence": "medium" if because else "low",
+                    "authority": "subsystem-assurance-profile",
+                }
+            )
     applicable_intent = _as_dict(active_planning_record.get("applicable_intents") or active_planning_record.get("applicable_intent"))
     for source in _list_payload(applicable_intent.get("sources")):
         if not isinstance(source, dict):
@@ -25208,6 +25529,19 @@ def _requirement_grounding_payload(
                 "source": "verification",
             }
         )
+    for status in _list_payload(subsystem_assurance.get("evidence_status")):
+        if not isinstance(status, dict):
+            continue
+        missing_evidence = [str(item).strip() for item in _list_payload(status.get("missing_evidence")) if str(item).strip()]
+        if missing_evidence:
+            known_gaps.append(
+                {
+                    "gap": f"subsystem assurance evidence missing for {status.get('requirement_id')}: {', '.join(missing_evidence)}",
+                    "blocked_claims": [str(item).strip() for item in _list_payload(status.get("blocking_claims")) if str(item).strip()],
+                    "source": "subsystem-assurance",
+                    "subsystem_id": status.get("subsystem_id"),
+                }
+            )
     missing_refs = [str(item).strip() for item in _list_payload(issue_scope_evidence.get("missing_issue_refs")) if str(item).strip()]
     for ref in missing_refs:
         known_gaps.append(
@@ -25231,6 +25565,8 @@ def _requirement_grounding_payload(
         sensitivity_signals.append("task-text-requirement-sensitive")
     if assurance_requirements.get("active_count"):
         sensitivity_signals.append("active-assurance-requirements")
+    if subsystem_assurance.get("matched_count"):
+        sensitivity_signals.append("matched-subsystem-assurance")
     if verification.get("active_count"):
         sensitivity_signals.append("active-verification-routes")
     if sensitivity_signals and not deduped_refs:
@@ -25283,8 +25619,18 @@ def _requirement_grounding_payload(
             "task_issue_refs": sorted(set(re.findall("#\\d+", task_text or ""))),
             "active_plan_present": bool(active_planning_record),
             "assurance_active_count": assurance_requirements.get("active_count", 0),
+            "subsystem_assurance_matched_count": subsystem_assurance.get("matched_count", 0),
             "verification_active_count": verification.get("active_count", 0),
             "sensitivity_signals": sensitivity_signals,
+        },
+        "subsystem_assurance": {
+            "status": subsystem_assurance.get("status", "absent"),
+            "effective_assurance_level": subsystem_assurance.get("effective_assurance_level", "none"),
+            "matched_subsystem_ids": subsystem_assurance.get("matched_subsystem_ids", []),
+            "required_evidence": subsystem_assurance.get("required_evidence", []),
+            "missing_evidence": subsystem_assurance.get("missing_evidence", []),
+            "blocked_claims": subsystem_assurance.get("blocked_claims", []),
+            "claim_boundaries": subsystem_assurance.get("claim_boundaries", []),
         },
         "source_inventory_policy": {
             "role": "compact-routing-index",
@@ -26003,6 +26349,7 @@ def _implement_payload(
     if include_assurance_requirements:
         payload["assurance_requirements"] = _assurance_requirements_report_payload(
             config=config,
+            target_root=target_root,
             active_planning_record=None,
             task_text=task_text,
             changed_paths=normalized_paths,
@@ -26012,6 +26359,7 @@ def _implement_payload(
         if not isinstance(assurance_for_verification, dict):
             assurance_for_verification = _assurance_requirements_report_payload(
                 config=config,
+                target_root=target_root,
                 active_planning_record=None,
                 task_text=task_text,
                 changed_paths=normalized_paths,
@@ -26026,6 +26374,7 @@ def _implement_payload(
     if not isinstance(assurance_for_grounding, dict):
         assurance_for_grounding = _assurance_requirements_report_payload(
             config=config,
+            target_root=target_root,
             active_planning_record=None,
             task_text=task_text,
             changed_paths=normalized_paths,
@@ -36571,6 +36920,7 @@ def _proof_selection_for_changed_paths(
     active_assurance_requirements = (
         _assurance_requirements_report_payload(
             config=config,
+            target_root=target_root,
             active_planning_record=planning_assurance if planning_assurance.get("status") == "present" else None,
             task_text=task_text,
             changed_paths=changed_paths,
@@ -39155,6 +39505,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 for profile in assurance.proof_profiles
             ],
             "requirements": _assurance_requirement_payloads(config),
+            "subsystem_profiles": _assurance_subsystem_profile_payloads(config),
             "test_data_policy": dict(assurance.test_data_policy),
             "decision_record_target": assurance.decision_record_target,
             "invariant_registry": assurance.invariant_registry,
@@ -39232,6 +39583,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "agent_may_deescalate": assurance["agent_may_deescalate"],
             "configured_proof_profile_count": len(assurance["proof_profiles"]),
             "configured_requirement_count": len(assurance.get("requirements", [])),
+            "configured_subsystem_profile_count": len(assurance.get("subsystem_profiles", [])),
         },
         "local_runtime": {
             "local_override_path": local_override["path"],

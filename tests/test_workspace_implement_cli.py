@@ -239,6 +239,229 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert requirements["evidence_status"][0]["missing_evidence"] == ["authority_consulted"]
 
 
+def test_implement_scopes_assurance_by_matched_subsystem(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "audit-log"
+paths = ["src/audit/**"]
+owns = ["audit trail semantics"]
+proof = ["make audit-proof"]
+
+[[subsystems]]
+id = "docs-rendering"
+paths = ["docs/**"]
+owns = ["documentation rendering"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.audit-log"]
+requirement_refs = ["docs/system-requirements.md#auditability"]
+required_evidence = ["requirement_grounding", "manual_review"]
+proof_profile = "audit"
+force = "required-before-closeout"
+blocked_without_evidence = ["auditability-complete", "requirement-grounded-completion"]
+claim_boundary = "subsystem-scoped"
+review_owner = "security-review"
+
+[assurance.subsystem_profiles.docs-rendering]
+assurance_level = "low"
+required_evidence = ["docs_review"]
+force = "recommended"
+blocked_without_evidence = ["docs-rendering-complete"]
+claim_boundary = "changed-scope"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/audit/events.py",
+                "--select",
+                "assurance_requirements,requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assurance = values["assurance_requirements"]
+    subsystem = assurance["subsystem_assurance"]
+    assert subsystem["status"] == "attention"
+    assert subsystem["matched_subsystem_ids"] == ["audit-log"]
+    assert subsystem["effective_assurance_level"] == "high"
+    assert subsystem["missing_evidence"] == ["requirement_grounding", "manual_review"]
+    assert assurance["active"][0]["id"] == "subsystem:audit-log"
+    grounding = values["requirement_grounding"]
+    assert grounding["subsystem_assurance"]["effective_assurance_level"] == "high"
+    assert "matched-subsystem-assurance" in grounding["source_facts"]["sensitivity_signals"]
+    assert "requirement-grounded-completion" in grounding["closeout_claims"]["blocked"]
+
+
+def test_implement_does_not_inherit_unmatched_high_assurance_subsystem(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "audit-log"
+paths = ["src/audit/**"]
+
+[[subsystems]]
+id = "docs-rendering"
+paths = ["docs/**"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+required_evidence = ["manual_review"]
+force = "required-before-closeout"
+blocked_without_evidence = ["auditability-complete"]
+
+[assurance.subsystem_profiles.docs-rendering]
+assurance_level = "low"
+required_evidence = ["docs_review"]
+force = "recommended"
+blocked_without_evidence = ["docs-rendering-complete"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/guide.md",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    subsystem = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]["subsystem_assurance"]
+    assert subsystem["matched_subsystem_ids"] == ["docs-rendering"]
+    assert subsystem["effective_assurance_level"] == "low"
+    assert "manual_review" not in subsystem["missing_evidence"]
+
+
+def test_implement_composes_multiple_subsystem_assurance_profiles_conservatively(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "audit-log"
+paths = ["src/shared/**"]
+
+[[subsystems]]
+id = "analytics"
+paths = ["src/shared/**"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "critical"
+required_evidence = ["tamper_review"]
+force = "blocking"
+blocked_without_evidence = ["security-complete"]
+
+[assurance.subsystem_profiles.analytics]
+assurance_level = "medium"
+required_evidence = ["metric_review"]
+force = "recommended"
+blocked_without_evidence = ["analytics-complete"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/shared/event.py",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    subsystem = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]["subsystem_assurance"]
+    assert subsystem["matched_subsystem_ids"] == ["analytics", "audit-log"]
+    assert subsystem["effective_assurance_level"] == "critical"
+    assert set(subsystem["missing_evidence"]) == {"metric_review", "tamper_review"}
+
+
+def test_implement_reports_no_subsystem_profile_without_extra_burden(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "ordinary"
+paths = ["src/ordinary/**"]
+""",
+    )
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/ordinary/model.py",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    assurance = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]
+    assert assurance["status"] == "absent"
+    assert assurance["subsystem_assurance"]["status"] == "absent"
+
+
 def test_implement_keeps_unmatched_assurance_requirements_out_of_tiny_output(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -2472,6 +2695,99 @@ candidates = []
     assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#report"
     assert grounding["source_inventory_policy"]["role"] == "compact-routing-index"
     assert grounding["agent_interpretation"]["summary"] == "Report the requirement grounding chain."
+
+
+def test_report_section_scopes_subsystem_assurance_from_active_plan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "audit-log"
+paths = ["src/audit/**"]
+owns = ["audit trail semantics"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+requirement_refs = ["docs/system-requirements.md#auditability"]
+required_evidence = ["requirement_grounding"]
+force = "required-before-closeout"
+blocked_without_evidence = ["requirement-grounded-completion"]
+claim_boundary = "subsystem-scoped"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "audit-plan", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/audit-plan.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "audit-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Audit plan",
+            "canonical_core": {"touched_scope": ["subsystem:audit-log"]},
+            "traceability_refs": {"requirement_refs": ["docs/system-requirements.md#auditability"]},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    assurance = json.loads(capsys.readouterr().out)["answer"]
+    assert assurance["status"] == "attention"
+    assert assurance["active"][0]["id"] == "subsystem:audit-log"
+    assert assurance["subsystem_assurance"]["matched_subsystem_ids"] == ["audit-log"]
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    grounding = json.loads(capsys.readouterr().out)["answer"]
+    assert grounding["subsystem_assurance"]["effective_assurance_level"] == "high"
+    assert grounding["applicability"][0]["ref"] == "subsystem:audit-log"
+    assert "requirement-grounded-completion" in grounding["closeout_claims"]["blocked"]
 
 
 def test_implement_projects_ready_plan_delegation_packet(tmp_path: Path, capsys) -> None:
