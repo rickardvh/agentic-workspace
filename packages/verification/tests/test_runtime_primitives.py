@@ -208,6 +208,144 @@ module-owned behavior.
     assert "No universal testing strategy inferred." in strategy["limits"]
 
 
+def test_verification_evidence_strategy_reports_structured_strategy_hints(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+strategy_source = "docs/maintainer/testing-strategy.md"
+ordinary_test_growth = "requires-proof-decision"
+preferred_owner_vocab = ["root-orchestration", "verification-evidence"]
+proof_intent_vocab = ["workflow-routing", "behavior-unchanged"]
+""".strip(),
+        encoding="utf-8",
+    )
+    test_file = tmp_path / "tests" / "test_widget.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        """
+def test_widget_case_regression_posix():
+    assert True
+
+
+def test_widget_case_regression_windows():
+    assert True
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["tests/test_widget.py"], task_text="")
+
+    strategy = payload["evidence_strategy"]
+    basis = strategy["strategy_basis"]
+    assert basis["declared_strategy_state"] == "declared"
+    assert basis["strategy_confidence"] == "medium"
+    assert basis["declared_strategy_sources"] == []
+    assert basis["matched_strategy_signals"] == []
+    assert basis["structured_strategy_hints"] == {
+        "path": ".agentic-workspace/verification/proof-strategy.toml",
+        "authority": "host-structured-config",
+        "limits": [
+            "Only structured enum fields are interpreted.",
+            "Free-text host strategy prose remains uninterpreted.",
+        ],
+        "status": "present",
+        "hints": {
+            "strategy_source": "docs/maintainer/testing-strategy.md",
+            "ordinary_test_growth": "requires-proof-decision",
+            "preferred_owner_vocab": ["root-orchestration", "verification-evidence"],
+            "proof_intent_vocab": ["workflow-routing", "behavior-unchanged"],
+        },
+        "invalid_fields": [],
+    }
+    assert {group["recommended_disposition"] for group in strategy["groups"]} == {"needs-human-strategy-choice"}
+    assert {item["proof_owner"] for item in strategy["evidence_items"]} == {"unknown"}
+
+
+def test_verification_evidence_strategy_reports_absent_structured_strategy_hints(tmp_path: Path) -> None:
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    hints = payload["evidence_strategy"]["strategy_basis"]["structured_strategy_hints"]
+    assert hints == {
+        "path": ".agentic-workspace/verification/proof-strategy.toml",
+        "authority": "host-structured-config",
+        "limits": [
+            "Only structured enum fields are interpreted.",
+            "Free-text host strategy prose remains uninterpreted.",
+        ],
+        "status": "absent",
+        "hints": {},
+        "invalid_fields": [],
+    }
+
+
+def test_verification_evidence_strategy_reports_partial_structured_strategy_hints(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+ordinary_test_growth = "discouraged"
+preferred_owner_vocab = ["verification-evidence"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    basis = payload["evidence_strategy"]["strategy_basis"]
+    assert basis["declared_strategy_state"] == "partially-declared"
+    assert basis["strategy_confidence"] == "low"
+    assert basis["structured_strategy_hints"]["status"] == "present"
+    assert basis["structured_strategy_hints"]["hints"]["strategy_source"] == ""
+
+
+def test_verification_evidence_strategy_reports_source_only_strategy_hints_as_partial(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+strategy_source = "docs/maintainer/testing-strategy.md"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    basis = payload["evidence_strategy"]["strategy_basis"]
+    assert basis["declared_strategy_state"] == "partially-declared"
+    assert basis["strategy_confidence"] == "low"
+    assert basis["structured_strategy_hints"]["hints"]["ordinary_test_growth"] == "unknown"
+
+
+def test_verification_evidence_strategy_reports_invalid_structured_strategy_hints(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+ordinary_test_growth = "always-add"
+preferred_owner_vocab = ["invented-owner"]
+proof_intent_vocab = ["coverage-quota"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    basis = payload["evidence_strategy"]["strategy_basis"]
+    assert basis["declared_strategy_state"] == "not-declared"
+    assert basis["strategy_confidence"] == "unclear"
+    assert basis["structured_strategy_hints"]["status"] == "invalid"
+    assert set(basis["structured_strategy_hints"]["invalid_fields"]) == {
+        "ordinary_test_growth",
+        "preferred_owner_vocab",
+        "proof_intent_vocab",
+    }
+
+
 def test_verification_evidence_strategy_classifies_changed_test_fixture_variants(tmp_path: Path) -> None:
     strategy_doc = tmp_path / "docs" / "maintainer" / "testing-strategy.md"
     strategy_doc.parent.mkdir(parents=True)

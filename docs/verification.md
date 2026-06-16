@@ -71,6 +71,28 @@ It lists candidate test-knowledge inventory sources and per-file AST counts so
 an agent can choose where to inspect first. These counts are routing facts only:
 they do not prove coverage and do not authorize deletion, merging, or conversion.
 
+Hosts may optionally publish structured strategy hints at
+`.agentic-workspace/verification/proof-strategy.toml`. Verification only reads
+enum fields from this file; it does not parse or summarize strategy prose.
+
+```toml
+[proof_strategy]
+strategy_source = "docs/maintainer/testing-strategy.md"
+ordinary_test_growth = "requires-proof-decision"
+preferred_owner_vocab = ["root-orchestration", "verification-evidence"]
+proof_intent_vocab = ["workflow-routing", "behavior-unchanged"]
+```
+
+Supported `ordinary_test_growth` values are `allowed`,
+`requires-proof-decision`, `discouraged`, and `unknown`. `preferred_owner_vocab`
+must use the report's proof-owner enum, and `proof_intent_vocab` must use the
+proof-decision intent enum. A valid hints file marks the strategy state as
+`declared` with medium confidence only when it names a non-empty
+`strategy_source` and includes at least one meaningful structured strategy field.
+Enum-only or source-only hints are reported as `partially-declared` with low
+confidence. They still do not assign evidence ownership, choose dispositions, or
+authorize pruning.
+
 The `evidence_strategy.proof_governance` block is the pre-test decision aid for
 regression-prone work. It reports local facts such as changed paths, changed
 test functions, same-file/name-prefix groups, candidate strategy sources, and
