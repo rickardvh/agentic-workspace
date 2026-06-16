@@ -60,7 +60,7 @@
     "execution": {
       "milestone": "issue-comments-requirement-delegation-test-sustainability",
       "status": "completed",
-      "next_step": "No required continuation remains for this archived slice.",
+      "next_step": "Parent/lane continuation remains routed to GitHub #1556.",
       "proof": "See proof_report.validation proof."
     },
     "scope": {
@@ -84,11 +84,11 @@
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
+    "intentionally deferred": "#1556 parent-lane closure remains routed to GitHub #1556.",
     "discovered implications": "none yet",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
-    "next likely slice": "No required continuation remains for this archived slice."
+    "next likely slice": "Parent/lane continuation remains routed to GitHub #1556."
   },
   "intent_interpretation": {
     "literal request": "Incorporate issue comments for requirement grounding delegation and test sustainability",
@@ -147,7 +147,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "No required continuation remains for this archived slice."
+    "Parent/lane continuation remains routed to GitHub #1556."
   ],
   "blockers": [
     "None."

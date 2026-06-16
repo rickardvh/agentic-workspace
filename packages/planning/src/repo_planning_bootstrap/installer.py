@@ -11814,7 +11814,7 @@ def _prepared_canonical_core_closeout(
     if _closeout_sequence_needs_normalization(canonical_core.get("completion_criteria")):
         canonical_core["completion_criteria"] = [outcome]
     canonical_core["closeout_decision"] = normalized_closure
-    canonical_core["continuation_owner"] = routed_unsolved_intent if normalized_closure == "archive-but-keep-lane-open" else "none"
+    canonical_core["continuation_owner"] = _explicit_closeout_continuation(routed_unsolved_intent) or "none"
     return canonical_core
 
 
@@ -11839,10 +11839,9 @@ def _prepared_machine_readable_contract_closeout(
     if _closeout_sequence_needs_normalization(intent.get("proof")):
         intent["proof"] = proof
     execution["status"] = "completed"
-    execution["next_step"] = (
-        f"Continue via {routed_unsolved_intent}."
-        if normalized_closure == "archive-but-keep-lane-open"
-        else "No required continuation remains for this archived slice."
+    execution["next_step"] = _prepared_closeout_next_step(
+        normalized_closure=normalized_closure,
+        routed_unsolved_intent=routed_unsolved_intent,
     )
     execution["proof"] = proof
     if _closeout_sequence_needs_normalization(scope.get("touched")):
@@ -11919,15 +11918,14 @@ def _prepared_iterative_follow_through(
     if _closeout_value_needs_normalization(prepared.get("validation still needed")):
         prepared["validation still needed"] = "None for this archived slice; reopen only if new evidence invalidates the proof."
     if _closeout_value_needs_normalization(prepared.get("next likely slice")):
-        prepared["next likely slice"] = (
-            f"Continue via {routed_unsolved_intent}."
-            if normalized_closure == "archive-but-keep-lane-open"
-            else "No required continuation remains for this archived slice."
+        prepared["next likely slice"] = _prepared_closeout_next_step(
+            normalized_closure=normalized_closure,
+            routed_unsolved_intent=routed_unsolved_intent,
         )
     if _closeout_value_needs_normalization(prepared.get("intentionally deferred")):
         prepared["intentionally deferred"] = (
             f"Remaining larger intent is routed to {routed_unsolved_intent}."
-            if normalized_closure == "archive-but-keep-lane-open"
+            if _explicit_closeout_continuation(routed_unsolved_intent)
             else "None."
         )
     if _closeout_value_needs_normalization(prepared.get("discovered implications")):
@@ -12031,6 +12029,23 @@ def _closeout_larger_intent_is_unresolved(
         or normalized_follow_on == "yes"
         or (normalized_owner != "" and normalized_owner not in {"none", "n/a", "none yet", "no further action"})
     )
+
+
+def _explicit_closeout_continuation(*values: Any) -> str:
+    ignored = {"", "none", "n/a", "na", "none yet", "no further action", "no", "false", "unknown", "pending"}
+    for value in values:
+        text = str(value or "").strip()
+        if text and text.lower() not in ignored:
+            return text
+    return ""
+
+
+def _prepared_closeout_next_step(*, normalized_closure: str, routed_unsolved_intent: str) -> str:
+    routed = _explicit_closeout_continuation(routed_unsolved_intent)
+    if routed:
+        prefix = "Continue via" if normalized_closure == "archive-but-keep-lane-open" else "Parent/lane continuation remains routed to"
+        return f"{prefix} {routed}."
+    return "No required continuation remains for this archived slice."
 
 
 def _inferred_closeout_scope(
@@ -12187,6 +12202,12 @@ def _prepare_execplan_closeout(
     existing_closure_check = _record_section_dict(record, "closure_check") or {}
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
+    explicit_continuation_owner = _explicit_closeout_continuation(
+        unsolved_intent,
+        intent_continuity.get("continuation surface"),
+        required_continuation.get("owner surface"),
+        intent_continuity.get("parent lane"),
+    )
     continuation_owner = (
         unsolved_intent
         or intent_continuity.get("continuation surface")
@@ -12247,7 +12268,9 @@ def _prepare_execplan_closeout(
         return False
     slice_status = existing_slice_status or "completed"
     larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else (existing_larger_status or "closed")
-    routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
+    routed_unsolved_intent = (
+        continuation_owner if normalized_closure == "archive-but-keep-lane-open" else (explicit_continuation_owner or "none")
+    )
     original_intent = (
         existing_intent_satisfaction.get("original intent")
         or intent_interpretation.get("literal request")
