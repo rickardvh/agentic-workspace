@@ -1997,7 +1997,7 @@ candidates = [
                 "--changed",
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
-                "Implement the command generation extraction epic",
+                "Implement the command package extraction and runtime parity epic",
                 "--format",
                 "json",
             ]
@@ -2015,6 +2015,113 @@ candidates = [
         "github-1202-runtime-parity",
     ]
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
+
+
+def test_implement_keeps_unrelated_roadmap_candidates_advisory(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1522-packaging-tests", maturity = "candidate", status = "next", refs = "GitHub #1522", title = "Packaging test restructuring", outcome = "Reduce package build cost." },
+  { id = "github-1523-generated-proof-tests", maturity = "candidate", status = "next", refs = "GitHub #1523", title = "Generated proof test pruning", outcome = "Prune generated proof tests." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement #1556 #1559 #1560 requirement grounded delegation support",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert gate["implementation_allowed"] is True
+    pressure = gate["candidate_pressure"]
+    assert pressure["status"] == "observed"
+    assert pressure["candidate_ids"] == []
+    assert pressure["advisory_backlog"]["unmatched_candidate_ids"] == [
+        "github-1522-packaging-tests",
+        "github-1523-generated-proof-tests",
+    ]
+
+
+def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {"id": "#1201", "status": "closed", "title": "Old lane"},
+                    {"id": "#1202", "status": "closed", "title": "Old lane 2"},
+                ],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1201-old", maturity = "candidate", status = "next", refs = "GitHub #1201", title = "Old lane one", outcome = "Closed upstream." },
+  { id = "github-1202-old", maturity = "candidate", status = "next", refs = "GitHub #1202", title = "Old lane two", outcome = "Closed upstream." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement unrelated bounded runtime support",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
+    assert pressure["status"] == "observed"
+    assert pressure["stale_or_closed_roadmap_candidate_count"] == 2
+    assert pressure["advisory_backlog"]["stale_or_closed_candidate_ids"] == ["github-1201-old", "github-1202-old"]
 
 
 def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:
@@ -2066,7 +2173,7 @@ candidates = [
                 "--target",
                 str(tmp_path),
                 "--task",
-                "Shape the workflow lane before implementation",
+                "Shape the first broad lane and second broad lane before implementation",
                 "--format",
                 "json",
             ]
@@ -2119,7 +2226,7 @@ candidates = [
                 "--target",
                 str(tmp_path),
                 "--task",
-                "Shape the workflow lane before implementation",
+                "Shape the first broad lane and second broad lane before implementation",
                 "--format",
                 "json",
             ]
@@ -2210,6 +2317,8 @@ candidates = []
     )
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["payload_locations"]["primary_payload_field"] == "values"
+    assert payload["payload_locations"]["selected_payload_paths"]["requirement_grounding"] == "values.requirement_grounding"
     grounding = payload["values"]["requirement_grounding"]
     assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
     assert grounding["status"] in {"ready", "attention"}
@@ -2268,7 +2377,9 @@ candidates = []
         == 0
     )
 
-    grounding = json.loads(capsys.readouterr().out)["values"]["requirement_grounding"]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["payload_locations"]["primary_payload_field"] == "values"
+    grounding = payload["values"]["requirement_grounding"]
     assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
     assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#trace"
     assert grounding["requirement_refs"][0]["source_metadata"]["freshness"] in {"repo-current", "external-or-unverified"}
@@ -2352,7 +2463,10 @@ candidates = []
         == 0
     )
 
-    grounding = json.loads(capsys.readouterr().out)["answer"]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["payload_locations"]["primary_payload_field"] == "answer"
+    assert payload["payload_locations"]["selected_payload_paths"]["answer"] == "answer"
+    grounding = payload["answer"]
     assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
     assert grounding["status"] == "ready"
     assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#report"
@@ -2421,6 +2535,7 @@ candidates = []
     packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
     assert packet["kind"] == "agentic-workspace/plan-delegation-packet/v1"
     assert packet["delegation_ready"] is True
+    assert packet["guided_tightening"]["status"] == "not-needed"
     assert packet["delegation_recommended"] is True
     assert packet["freshness_guard"]["delegate_return_must_cite_revision"] is True
     assert packet["missing_fields"] == []
@@ -2559,6 +2674,12 @@ candidates = []
     assert packet["delegation_ready"] is False
     assert packet["delegation_recommended"] is False
     assert set(packet["ambiguous_fields"]) >= {"allowed_write_scope", "proof_commands"}
+    assert "execution_bounds.allowed paths" in packet["ambiguous_field_paths"]
+    tightening = packet["guided_tightening"]
+    assert tightening["status"] == "available"
+    assert tightening["suggested_updates"]["allowed_write_scope"] == ["src/runtime.py"]
+    assert "proof_commands" in tightening["blocking_fields"]
+    assert "Rerun implement --select plan_delegation_packet before delegating." in tightening["apply_guidance"]
 
 
 def test_implement_projects_validation_delegation_route(tmp_path: Path, capsys) -> None:
@@ -2674,6 +2795,98 @@ def test_runtime_warning_eta(): assert True
     assert check["verification_evidence_surfaces"]["proof_decision_status"]
     assert "standalone-durable-contract-proof" in check["record_disposition_options"]
     assert check["files"][0]["parametrized_test_count"] == 1
+
+
+def test_test_strategy_check_reads_recorded_disposition(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    _write_json(
+        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
+        {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "items": [
+                {
+                    "id": "runtime-matrix",
+                    "disposition": "matrix-merge",
+                    "changed_test_paths": ["tests/test_runtime.py"],
+                    "reason": "The change keeps related behavior cases in one scenario matrix.",
+                    "proof_owner": "root-orchestration",
+                    "replacement_or_follow_up_evidence": ["scenario labels retained"],
+                    "reviewer_requested_coverage": True,
+                }
+            ],
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--task",
+                "Address reviewer requested coverage",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["disposition_record"]["status"] == "recorded"
+    assert check["disposition_record"]["matched_count"] == 1
+    assert check["recorded_disposition"]["id"] == "runtime-matrix"
+    assert check["missing_disposition_paths"] == []
+    assert check["disposition_required_before_closeout"] is False
+
+
+def test_test_strategy_check_requires_temporary_follow_up_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    _write_json(
+        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
+        {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "items": [
+                {
+                    "id": "temporary-runtime",
+                    "disposition": "temporary-with-follow-up-consolidation",
+                    "changed_test_paths": ["tests/test_runtime.py"],
+                    "reason": "Reviewer requested temporary coverage before consolidation.",
+                    "proof_owner": "root-orchestration",
+                    "reviewer_requested_coverage": True,
+                }
+            ],
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["temporary_dispositions_missing_follow_up"] == ["temporary-runtime"]
+    assert check["disposition_required_before_closeout"] is True
 
 
 def test_proof_surfaces_test_strategy_check_for_closeout_visibility(tmp_path: Path, capsys) -> None:
@@ -3354,6 +3567,10 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
     assert "missing" not in payload
     assert "available_selectors" not in payload
+    assert (
+        payload["payload_locations"]["selected_payload_paths"]["context.delegation_decision.required_next_action"]
+        == 'values["context.delegation_decision.required_next_action"]'
+    )
     assert payload["values"]["context.delegation_decision.required_next_action"] == "execute-when-safe"
     assert payload["values"]["context.delegation_decision.delegation_next_step.must_report_if_not_run"] is True
     assert payload["values"]["context.delegation_decision.effort_guidance.cost_posture"] == "save-tokens-where-safe"

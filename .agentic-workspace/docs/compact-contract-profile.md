@@ -24,7 +24,11 @@ The first profile is an answer envelope on existing commands:
   "selector": {"<key>": "<value>"},
   "matched": true,
   "answer": { "...": "..." },
-  "refs": ["docs/...", "agentic-workspace ..."]
+  "refs": ["docs/...", "agentic-workspace ..."],
+  "payload_locations": {
+    "primary_payload_field": "answer",
+    "selected_payload_paths": {"answer": "answer"}
+  }
 }
 ```
 
@@ -36,6 +40,35 @@ Rules:
 - `matched` distinguishes a real answer from a clean no-match response.
 - `answer` carries only the bounded result.
 - `refs` point back to canonical docs or full command surfaces instead of repeating broad explanation.
+- `payload_locations` tells agents and tests where the selected payload lives in the output envelope.
+
+## Output Envelopes
+
+Exact-field `--select` output uses the selected-output envelope:
+
+```json
+{
+  "kind": "agentic-workspace/selected-output/v1",
+  "values": {
+    "<selector>": { "...": "..." }
+  },
+  "payload_locations": {
+    "primary_payload_field": "values",
+    "selected_payload_paths": {
+      "<selector>": "values[\"<selector>\"]"
+    }
+  }
+}
+```
+
+The `values` object is keyed by the literal selector string. For a selector such as
+`context.scope`, the payload path is `values["context.scope"]`, not
+`values.context.scope`.
+
+Report `--section` output and other compact contract answers store the selected
+payload under `answer`. Both envelope families expose `payload_locations` so
+agents and tests can discover the payload path instead of guessing from command
+shape.
 
 ## First Selectors
 

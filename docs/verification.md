@@ -286,6 +286,34 @@ the protocol, scenario, evidence bundle, claim boundary, and known gap. Keep raw
 outputs out of Verification unless they are intentionally retained artifacts;
 prefer compact summaries and stable evidence labels.
 
+When ordinary tests are added, deleted, or materially reshaped, AW can read a
+lightweight disposition record at
+`.agentic-workspace/verification/test-strategy-dispositions.json`:
+
+```json
+{
+  "kind": "agentic-workspace/test-strategy-dispositions/v1",
+  "items": [
+    {
+      "id": "runtime-warning-matrix",
+      "disposition": "matrix-merge",
+      "changed_test_paths": ["tests/test_runtime.py"],
+      "reason": "Related warning variants are retained as one scenario matrix.",
+      "proof_owner": "root-orchestration",
+      "replacement_or_follow_up_evidence": ["scenario labels retained"],
+      "reviewer_requested_coverage": true
+    }
+  ]
+}
+```
+
+Allowed dispositions are `matrix-merge`,
+`standalone-durable-contract-proof`, `conformance-or-contract-owned-proof`,
+`existing-proof-sufficient`, and
+`temporary-with-follow-up-consolidation`. Temporary dispositions should name the
+follow-up consolidation or replacement evidence before closeout claims
+`test-sustainability-reviewed`.
+
 ## Non-Goals
 
 - No generic QA management system.

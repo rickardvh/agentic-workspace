@@ -199,6 +199,21 @@
       "description": "Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification.",
       "additionalProperties": true
     },
+    "requirement_grounding": {
+      "type": "object",
+      "description": "Requirement refs, applicability, interpretation, design effects, verification refs, known gaps, and closeout claim boundaries for the changed paths.",
+      "additionalProperties": true
+    },
+    "plan_delegation_packet": {
+      "type": "object",
+      "description": "Delegation-ready plan packet or guided tightening projection for active-plan work.",
+      "additionalProperties": true
+    },
+    "test_strategy_check": {
+      "type": "object",
+      "description": "Advisory ordinary-test sustainability projection, including recorded disposition state when changed tests are present.",
+      "additionalProperties": true
+    },
     "routine_work_context": {
       "type": "object",
       "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification.",

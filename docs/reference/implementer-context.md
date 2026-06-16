@@ -120,6 +120,9 @@ Cheap implementer context for a bounded changed-path scope.
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |
+| `requirement_grounding` | object | no |  | Requirement refs, applicability, interpretation, design effects, verification refs, known gaps, and closeout claim boundaries for the changed paths. |  |  |
+| `plan_delegation_packet` | object | no |  | Delegation-ready plan packet or guided tightening projection for active-plan work. |  |  |
+| `test_strategy_check` | object | no |  | Advisory ordinary-test sustainability projection, including recorded disposition state when changed tests are present. |  |  |
 | `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification. |  |  |
 | `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
 | `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |

@@ -5232,6 +5232,7 @@ LOCAL_AGENT_INSTRUCTIONS_FILE = Path("AGENTS.local.md")
 LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix()}` if present."
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
+TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\nAGENTS.local.md\n"
 LEGACY_LOCAL_ONLY_IGNORE_BLOCKS = ("# Agentic Workspace local-only storage\n.agentic-workspace/\n",)
@@ -20443,7 +20444,20 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             values[selector] = value
         else:
             missing.append(selector)
-    selected: dict[str, Any] = {"kind": "agentic-workspace/selected-output/v1", "source_command": source_command, "values": values}
+    selected_payload_paths = {
+        selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
+    }
+    selected: dict[str, Any] = {
+        "kind": "agentic-workspace/selected-output/v1",
+        "source_command": source_command,
+        "values": values,
+        "payload_locations": {
+            "kind": "agentic-workspace/output-wrapper-locations/v1",
+            "primary_payload_field": "values",
+            "selected_payload_paths": selected_payload_paths,
+            "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
+        },
+    }
     if missing:
         selected["missing"] = missing
         selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
@@ -20885,7 +20899,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     if isinstance(repair_route, dict) and repair_route.get("status") not in (None, "", "absent"):
         compact["repair_route"] = repair_route
     candidate_pressure = gate.get("candidate_pressure")
-    if isinstance(candidate_pressure, dict) and candidate_pressure.get("status") == "promotion-required":
+    if isinstance(candidate_pressure, dict) and candidate_pressure.get("status") in {"promotion-required", "observed"}:
         compact["candidate_pressure"] = {
             key: candidate_pressure.get(key)
             for key in (
@@ -20894,9 +20908,13 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "work_shape",
                 "candidate_count",
                 "roadmap_candidate_count",
+                "matched_roadmap_candidate_count",
+                "unmatched_roadmap_candidate_count",
+                "stale_or_closed_roadmap_candidate_count",
                 "matched_decomposition_candidate_count",
                 "candidate_ids",
                 "relevance",
+                "advisory_backlog",
                 "reasons",
                 "required_before_implementation",
                 "route_options",
@@ -21977,6 +21995,30 @@ def _planning_roadmap_candidates(target_root: Path) -> list[dict[str, Any]]:
     return [candidate for candidate in candidates if candidate.get("id") or candidate.get("title")]
 
 
+def _external_intent_status_by_ref(target_root: Path) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for relative_path in (EXTERNAL_INTENT_CACHE_RELATIVE_PATH, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH):
+        path = target_root / relative_path
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        for item in _list_payload(payload.get("items")):
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id") or item.get("number") or "").strip()
+            if item_id and item_id.isdigit():
+                item_id = f"#{item_id}"
+            if not item_id.startswith("#"):
+                continue
+            statuses[item_id] = str(item.get("status") or "").strip().lower() or "unknown"
+    return statuses
+
+
 def _candidate_promotion_command(*, candidate_id: str, config: WorkspaceConfig, planning_revision: dict[str, Any]) -> str:
     return str(
         _command_with_expected_planning_revision(
@@ -22055,15 +22097,39 @@ def _planning_candidate_pressure_payload(
     planning_revision: dict[str, Any],
 ) -> dict[str, Any]:
     roadmap_candidates = _planning_roadmap_candidates(target_root)
+    external_status_by_ref = _external_intent_status_by_ref(target_root)
     decomposition_candidates = (
         [candidate for candidate in decomposition_delegation.get("candidates", []) if isinstance(candidate, dict)]
         if isinstance(decomposition_delegation, dict)
         else []
     )
     issue_ref_set = set(issue_refs)
-    matched_roadmap = [
-        candidate for candidate in roadmap_candidates if issue_ref_set and issue_ref_set.intersection(_candidate_refs(candidate))
-    ]
+    roadmap_relevance: dict[str, dict[str, Any]] = {}
+    matched_roadmap: list[dict[str, Any]] = []
+    stale_roadmap: list[dict[str, Any]] = []
+    unmatched_roadmap: list[dict[str, Any]] = []
+    for candidate in roadmap_candidates:
+        candidate_id = str(candidate.get("id", "")).strip()
+        refs = sorted(_candidate_refs(candidate), key=lambda value: int(value.lstrip("#")) if value.lstrip("#").isdigit() else 0)
+        evidence = _candidate_relevance_evidence(candidate, issue_refs=issue_refs, task_text=task_text)
+        ref_statuses = {ref: external_status_by_ref.get(ref, "unknown") for ref in refs if ref in external_status_by_ref}
+        closed_refs = [ref for ref, status in ref_statuses.items() if status in {"closed", "done", "merged", "retired"}]
+        stale_or_closed = bool(refs and closed_refs and not issue_ref_set.intersection(refs))
+        if stale_or_closed:
+            stale_roadmap.append(candidate)
+        elif evidence:
+            matched_roadmap.append(candidate)
+        else:
+            unmatched_roadmap.append(candidate)
+        if candidate_id:
+            roadmap_relevance[candidate_id] = {
+                "id": candidate_id,
+                "title": str(candidate.get("title", "")),
+                "refs": refs,
+                "evidence": evidence,
+                "external_statuses": ref_statuses,
+                "relevance": "matched" if evidence and not stale_or_closed else "stale-or-closed" if stale_or_closed else "unmatched",
+            }
     decomposition_relevance = {
         str(candidate.get("lane_id", "")).strip(): _candidate_relevance_evidence(
             candidate,
@@ -22081,15 +22147,15 @@ def _planning_candidate_pressure_payload(
     if broad_shape and matched_decomposition:
         promotion_required = True
         reasons.append("relevant open decomposition lane candidates exist for broad or lane-shaped work")
-    if broad_shape and len(roadmap_candidates) >= 2:
+    if broad_shape and len(matched_roadmap) >= 2:
         promotion_required = True
-        reasons.append("multiple roadmap candidates exist while the requested work is broad or lane-shaped")
+        reasons.append("multiple relevant roadmap candidates exist while the requested work is broad or lane-shaped")
     if len(matched_roadmap) >= 2:
         promotion_required = True
         reasons.append("multiple roadmap candidates match the requested external issue refs")
 
     include_candidate_detail = promotion_required or bool(matched_roadmap)
-    top_roadmap = (matched_roadmap or roadmap_candidates) if include_candidate_detail else []
+    top_roadmap = matched_roadmap if include_candidate_detail else []
     route_options: list[dict[str, Any]] = []
     for candidate in top_roadmap[:3]:
         candidate_id = str(candidate.get("id", "")).strip()
@@ -22131,11 +22197,13 @@ def _planning_candidate_pressure_payload(
         "work_shape": work_shape or "unknown",
         "roadmap_candidate_count": len(roadmap_candidates),
         "matched_roadmap_candidate_count": len(matched_roadmap),
+        "unmatched_roadmap_candidate_count": len(unmatched_roadmap),
+        "stale_or_closed_roadmap_candidate_count": len(stale_roadmap),
         "decomposition_candidate_count": len(decomposition_candidates),
         "matched_decomposition_candidate_count": len(matched_decomposition),
         "candidate_count": len(roadmap_candidates) + len(decomposition_candidates),
         "candidate_ids": [
-            *[str(candidate.get("id", "")) for candidate in (matched_roadmap or roadmap_candidates)[:5] if candidate.get("id")],
+            *[str(candidate.get("id", "")) for candidate in matched_roadmap[:5] if candidate.get("id")],
             *[str(candidate.get("lane_id", "")) for candidate in matched_decomposition[:5] if str(candidate.get("lane_id", "")).strip()],
         ]
         if include_candidate_detail
@@ -22147,6 +22215,7 @@ def _planning_candidate_pressure_payload(
             if roadmap_candidates or decomposition_candidates
             else "none",
             "rule": "Candidate pressure blocks only when candidates are relevant to task refs or task text; unrelated deferred lanes remain advisory.",
+            "roadmap": [roadmap_relevance[candidate_id] for candidate_id in list(roadmap_relevance)[:8]],
             "decomposition": [
                 {
                     "id": str(candidate.get("lane_id", "")).strip(),
@@ -22155,6 +22224,15 @@ def _planning_candidate_pressure_payload(
                 }
                 for candidate in decomposition_candidates[:5]
             ],
+        },
+        "advisory_backlog": {
+            "unmatched_candidate_ids": [
+                str(candidate.get("id", "")).strip() for candidate in unmatched_roadmap[:5] if str(candidate.get("id", "")).strip()
+            ],
+            "stale_or_closed_candidate_ids": [
+                str(candidate.get("id", "")).strip() for candidate in stale_roadmap[:5] if str(candidate.get("id", "")).strip()
+            ],
+            "rule": "Unmatched or closed external-intent-backed candidates remain visible but do not block current implementation.",
         },
         "reasons": reasons,
         "route_options": route_options,
@@ -25236,7 +25314,7 @@ def _requirement_grounding_payload(
 
 
 def _plan_delegation_packet_payload(
-    *, target_root: Path, config: WorkspaceConfig, proof: dict[str, Any], task_text: str | None
+    *, target_root: Path, config: WorkspaceConfig, proof: dict[str, Any], task_text: str | None, changed_paths: list[str] | None = None
 ) -> dict[str, Any]:
     active_surface, record = _active_execplan_record_payload(target_root=target_root)
     planning_revision = _planning_revision_payload(target_root=target_root)
@@ -25257,6 +25335,7 @@ def _plan_delegation_packet_payload(
         for item in _list_payload(record.get("references"))
         if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
     ]
+    normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
     read_first_refs = _dedupe(read_first_refs + _plan_exact_list(record, "context_budget.live working set"))
     allowed_scope = _dedupe(
         _plan_exact_list(record, "canonical_core.touched_scope", "touched_paths")
@@ -25281,6 +25360,7 @@ def _plan_delegation_packet_payload(
     }
     missing = [field for field, value in required_fields.items() if not value]
     ambiguous_fields = []
+    ambiguous_field_paths: list[str] = []
     for field, values in {
         "allowed_write_scope": allowed_scope,
         "proof_commands": proof_commands,
@@ -25289,7 +25369,14 @@ def _plan_delegation_packet_payload(
         joined = " ".join(values).lower()
         if any(marker in joined for marker in ("fill in", "<", ">", "tbd", "broad", "as needed")):
             ambiguous_fields.append(field)
+            if field == "allowed_write_scope":
+                ambiguous_field_paths.extend(["canonical_core.touched_scope", "execution_bounds.allowed paths"])
+            elif field == "proof_commands":
+                ambiguous_field_paths.extend(["validation_commands", "canonical_core.proof_expectations"])
+            elif field == "acceptance_criteria":
+                ambiguous_field_paths.extend(["completion_criteria", "canonical_core.completion_criteria"])
     ambiguous_fields = _dedupe(ambiguous_fields)
+    ambiguous_field_paths = _dedupe(ambiguous_field_paths)
     route = "implementation-delegate"
     if not allowed_scope:
         route = "exploration-delegate"
@@ -25348,6 +25435,42 @@ def _plan_delegation_packet_payload(
         },
         "missing_fields": missing,
         "ambiguous_fields": ambiguous_fields,
+        "ambiguous_field_paths": ambiguous_field_paths,
+        "guided_tightening": {
+            "kind": "agentic-workspace/plan-delegation-tightening/v1",
+            "status": "not-needed" if delegation_ready else "available",
+            "rule": "Suggestions are confirm-before-use planning context; AW does not invent semantic scope or final delegation decisions.",
+            "blocking_fields": _dedupe(missing + ambiguous_fields),
+            "suggested_updates": {
+                "owned_slice": requested_outcome or str(task_text or "").strip(),
+                "allowed_write_scope": normalized_changed_paths if normalized_changed_paths else [],
+                "stop_conditions": stop_conditions
+                or [
+                    "Stop if proof fails.",
+                    "Stop if implementation needs files outside the confirmed write scope.",
+                    "Stop if the requested outcome or acceptance criteria are ambiguous.",
+                ],
+                "proof_commands": [
+                    str(command).strip() for command in _list_payload(proof.get("required_commands")) if str(command).strip()
+                ],
+                "acceptance_criteria": acceptance_criteria
+                or [
+                    f"Delivered behavior satisfies: {str(task_text or requested_outcome or record.get('title') or 'the active plan').strip()}"
+                ],
+                "return_expectations": [
+                    "changed files",
+                    "proof commands run and results",
+                    "acceptance criteria status",
+                    "uncertainty or stop-condition hits",
+                    "residue or follow-up items",
+                ],
+            },
+            "apply_guidance": [
+                "Copy only suggestions the agent can confirm from task/planning evidence.",
+                "Replace placeholder fields in canonical_core, execution_bounds, validation_commands, and completion_criteria.",
+                "Rerun implement --select plan_delegation_packet before delegating.",
+            ],
+        },
         "recommended_route": route if delegation_ready else "stay-local-until-plan-complete",
         "cheap_bounded_executor_recommended": cheap_bounded,
         "configured_low_cost_targets": [
@@ -25417,6 +25540,83 @@ def _python_test_file_facts(path: Path) -> dict[str, Any]:
     }
 
 
+_TEST_STRATEGY_DISPOSITION_VALUES = {
+    "matrix-merge",
+    "standalone-durable-contract-proof",
+    "conformance-or-contract-owned-proof",
+    "existing-proof-sufficient",
+    "temporary-with-follow-up-consolidation",
+}
+
+
+def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
+    path = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
+    if not path.exists():
+        return {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "status": "absent",
+            "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+            "items": [],
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "status": "invalid",
+            "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+            "items": [],
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "status": "invalid",
+            "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+            "items": [],
+            "error": "record must be a JSON object",
+        }
+    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    normalized_items: list[dict[str, Any]] = []
+    invalid_items: list[dict[str, Any]] = []
+    for index, item in enumerate(items):
+        changed_test_paths = [
+            str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_test_paths")) if str(path).strip()
+        ]
+        disposition = str(item.get("disposition") or "").strip()
+        normalized = {
+            "id": str(item.get("id") or f"item-{index + 1}").strip(),
+            "disposition": disposition,
+            "changed_test_paths": changed_test_paths,
+            "reason": str(item.get("reason") or "").strip(),
+            "proof_owner": str(item.get("proof_owner") or "").strip(),
+            "replacement_or_follow_up_evidence": [
+                str(value).strip() for value in _list_payload(item.get("replacement_or_follow_up_evidence")) if str(value).strip()
+            ],
+            "reviewer_requested_coverage": bool(item.get("reviewer_requested_coverage")),
+        }
+        missing = [
+            field
+            for field, value in {
+                "disposition": disposition if disposition in _TEST_STRATEGY_DISPOSITION_VALUES else "",
+                "changed_test_paths": changed_test_paths,
+                "reason": normalized["reason"],
+                "proof_owner": normalized["proof_owner"],
+            }.items()
+            if not value
+        ]
+        if missing:
+            invalid_items.append({"id": normalized["id"], "missing_or_invalid_fields": missing})
+        normalized_items.append(normalized)
+    return {
+        "kind": "agentic-workspace/test-strategy-dispositions/v1",
+        "status": "invalid" if invalid_items else "recorded",
+        "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+        "items": normalized_items,
+        "invalid_items": invalid_items,
+    }
+
+
 def _test_strategy_check_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
 ) -> dict[str, Any]:
@@ -25427,6 +25627,26 @@ def _test_strategy_check_payload(
     ]
     if not test_paths:
         return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
+    disposition_record = _load_test_strategy_dispositions(target_root)
+    disposition_items = [item for item in _list_payload(disposition_record.get("items")) if isinstance(item, dict)]
+    matched_dispositions = [
+        item
+        for item in disposition_items
+        if set(test_paths).intersection({str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_test_paths"))})
+    ]
+    recorded_paths = {
+        str(path).strip().replace("\\", "/")
+        for item in matched_dispositions
+        for path in _list_payload(item.get("changed_test_paths"))
+        if str(path).strip()
+    }
+    missing_disposition_paths = [path for path in test_paths if path not in recorded_paths]
+    temporary_without_follow_up = [
+        str(item.get("id") or "")
+        for item in matched_dispositions
+        if item.get("disposition") == "temporary-with-follow-up-consolidation"
+        and not _list_payload(item.get("replacement_or_follow_up_evidence"))
+    ]
     evidence_strategy = _as_dict(verification.get("evidence_strategy"))
     proof_governance = _as_dict(evidence_strategy.get("proof_governance"))
     proof_decision = _as_dict(evidence_strategy.get("proof_decision"))
@@ -25477,6 +25697,15 @@ def _test_strategy_check_payload(
             "proof_decision_status": proof_decision.get("status", "unavailable"),
             "regression_sprawl_status": regression_sprawl.get("status", "unavailable"),
         },
+        "recorded_disposition": matched_dispositions[0] if len(matched_dispositions) == 1 else matched_dispositions,
+        "disposition_record": {
+            "status": disposition_record.get("status", "absent"),
+            "path": disposition_record.get("path", TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix()),
+            "matched_count": len(matched_dispositions),
+            "invalid_items": disposition_record.get("invalid_items", []),
+        },
+        "missing_disposition_paths": missing_disposition_paths,
+        "temporary_dispositions_missing_follow_up": [item for item in temporary_without_follow_up if item],
         "record_disposition_options": [
             "matrix-merge",
             "standalone-durable-contract-proof",
@@ -25484,7 +25713,7 @@ def _test_strategy_check_payload(
             "existing-proof-sufficient",
             "temporary-with-follow-up-consolidation",
         ],
-        "disposition_required_before_closeout": True,
+        "disposition_required_before_closeout": bool(missing_disposition_paths or temporary_without_follow_up),
         "closeout_visibility": {
             "missing_disposition_blocks_claim": "test-sustainability-reviewed",
             "rule": "Advisory only during implementation; closeout/report should expose missing disposition when ordinary test mass changed.",
@@ -25824,6 +26053,7 @@ def _implement_payload(
         config=config,
         proof=proof if isinstance(proof, dict) else {},
         task_text=task_text,
+        changed_paths=normalized_paths,
     )
     payload["test_strategy_check"] = _test_strategy_check_payload(
         target_root=target_root,
@@ -26258,7 +26488,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
         compact_gate.pop("work_shape_guidance", None)
-        if compact_gate.get("status") in {"clear", "satisfied"}:
+        if (
+            compact_gate.get("status") in {"clear", "satisfied"}
+            and _as_dict(compact_gate.get("candidate_pressure")).get("status") != "observed"
+        ):
             compact_gate.pop("candidate_pressure", None)
             compact_gate.pop("issue_scope_evidence", None)
         if not (
@@ -31954,6 +32187,12 @@ def _compact_contract_answer(
         "matched": matched,
         "answer": answer,
         "refs": refs,
+        "payload_locations": {
+            "kind": "agentic-workspace/output-wrapper-locations/v1",
+            "primary_payload_field": "answer",
+            "selected_payload_paths": {"answer": "answer"},
+            "rule": "Compact contract answers store the selected payload under answer; --select output stores payloads under values.<selector>.",
+        },
     }
     if target is not None:
         payload["target"] = target
