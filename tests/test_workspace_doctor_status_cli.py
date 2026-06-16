@@ -203,6 +203,35 @@ def test_doctor_ignores_local_scratch_merge_conflict_markers(tmp_path: Path, cap
     assert "resolve-workspace-policy-merge-conflict" not in {action["id"] for action in payload["manual_review_actions"]}
 
 
+def test_workspace_report_buckets_scratch_nested_repo_warnings(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    scratch_repo = ".agentic-workspace/local/scratch/run/repo"
+    ordinary_repo = "vendor/nested"
+
+    payload = cli._workspace_report(
+        target_root=tmp_path,
+        message="Upgrade report",
+        dry_run=True,
+        actions=[],
+        warnings=[
+            {
+                "kind": "manual review",
+                "path": scratch_repo,
+                "detail": "nested repository detected under target; installer will not recurse into repo roots automatically",
+            },
+            {
+                "kind": "manual review",
+                "path": ordinary_repo,
+                "detail": "nested repository detected under target; installer will not recurse into repo roots automatically",
+            },
+        ],
+    )
+
+    assert [item["path"] for item in payload["local_scratch_notices"]] == [scratch_repo]
+    assert payload["local_scratch_notices"][0]["classification"] == "local-scratch-residue"
+    assert [item["path"] for item in payload["warnings"]] == [ordinary_repo]
+
+
 def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templates(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
