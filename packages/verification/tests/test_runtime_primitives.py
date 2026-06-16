@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -632,6 +633,135 @@ def test_verification_proof_decision_reports_complete_agent_authored_record(tmp_
     assert decision["missing_fields"] == []
     assert decision["invalid_fields"] == []
     assert decision["decision"]["selected_decision"] == "add"
+    assert decision["lifecycle"]["state"] == "permanent"
+    assert decision["lifecycle"]["review_needed"] is False
+
+
+def test_verification_proof_decision_reports_current_temporary_lifecycle(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "record-manual-evidence",
+                "trust_question": "Does the temporary evidence cover the migration window?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "temporary-characterization",
+                "evidence_durability": "temporary",
+                "narrowest_evidence": "Short-lived manual record.",
+                "prune_or_replacement_condition": "Replace when the contract proof lands.",
+                "confidence": "low",
+                "residual_risk": "Temporary evidence may go stale.",
+                "retention_until": (date.today() + timedelta(days=7)).isoformat(),
+                "stale_when": ["src/**"],
+                "replacement_owner": "conformance-contract",
+                "review_trigger": "Before retiring the temporary proof.",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=["docs/verification.md"], task_text="")
+
+    lifecycle = payload["evidence_strategy"]["proof_decision"]["lifecycle"]
+    assert lifecycle["state"] == "current"
+    assert lifecycle["review_needed"] is False
+    assert lifecycle["replacement_owner"] == "conformance-contract"
+    assert lifecycle["review_trigger"] == "Before retiring the temporary proof."
+
+
+def test_verification_proof_decision_reports_stale_replaceable_lifecycle(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "add",
+                "trust_question": "Does replaceable evidence cover the current adapter shape?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "temporary-characterization",
+                "evidence_durability": "replaceable",
+                "narrowest_evidence": "Focused runtime primitive test.",
+                "prune_or_replacement_condition": "Replace with protocol conformance.",
+                "confidence": "medium",
+                "residual_risk": "Adapter changes can stale it.",
+                "stale_when": ["packages/verification/src/**"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["packages/verification/src/repo_verification_bootstrap/runtime_primitives.py"],
+        task_text="",
+    )
+
+    lifecycle = payload["evidence_strategy"]["proof_decision"]["lifecycle"]
+    assert lifecycle["state"] == "stale"
+    assert lifecycle["review_needed"] is True
+    assert lifecycle["stale_because"] == ["changed path matched packages/verification/src/**"]
+
+
+def test_verification_proof_decision_reports_expired_temporary_lifecycle(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "record-manual-evidence",
+                "trust_question": "Was the temporary proof still inside its retention window?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "temporary-characterization",
+                "evidence_durability": "temporary",
+                "narrowest_evidence": "Temporary review note.",
+                "prune_or_replacement_condition": "Expires after migration.",
+                "confidence": "low",
+                "residual_risk": "Expired evidence cannot support closeout alone.",
+                "retention_until": (date.today() - timedelta(days=1)).isoformat(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    lifecycle = payload["evidence_strategy"]["proof_decision"]["lifecycle"]
+    assert lifecycle["state"] == "expired"
+    assert lifecycle["review_needed"] is True
+
+
+def test_verification_proof_decision_reports_invalid_lifecycle_date(tmp_path: Path) -> None:
+    decision_path = tmp_path / ".agentic-workspace" / "verification" / "proof-decision.json"
+    decision_path.parent.mkdir(parents=True)
+    decision_path.write_text(
+        json.dumps(
+            {
+                "selected_decision": "record-manual-evidence",
+                "trust_question": "Was the temporary proof date valid?",
+                "host_strategy_source": "docs/verification.md",
+                "proof_owner": "verification-evidence",
+                "proof_intent": "temporary-characterization",
+                "evidence_durability": "temporary",
+                "narrowest_evidence": "Temporary review note.",
+                "prune_or_replacement_condition": "Expires after migration.",
+                "confidence": "low",
+                "residual_risk": "Bad dates hide lifecycle state.",
+                "retention_until": "soon",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    decision = payload["evidence_strategy"]["proof_decision"]
+    assert decision["status"] == "invalid"
+    assert decision["lifecycle"]["state"] == "invalid"
+    assert decision["lifecycle"]["invalid_fields"] == ["retention_until"]
 
 
 def test_verification_proof_decision_reports_incomplete_record_without_inference(tmp_path: Path) -> None:
