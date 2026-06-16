@@ -293,6 +293,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["assurance_onboarding"]["status"] == "absent"
     assert payload["assurance_onboarding"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
     assert payload["assurance_onboarding"]["states"]["usable"].startswith("at least one proof profile")
+    assert ".agentic-workspace/config.toml [assurance.subsystem_profiles]" in payload["assurance_onboarding"]["candidate_seed_surfaces"]
+    assert payload["verification_onboarding"]["command"] == "agentic-workspace defaults --section verification_onboarding --format json"
+    assert ".agentic-workspace/verification/manifest.toml" in payload["verification_onboarding"]["candidate_seed_surfaces"]
     assert payload["ownership_mapping"]["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
@@ -782,6 +785,18 @@ def test_defaults_section_selector_returns_agent_aid_storage_answer(capsys) -> N
         "source-checkout-only",
     ]
     assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_verification_onboarding_answer(capsys) -> None:
+    assert cli.main(["defaults", "--verbose", "--section", "verification_onboarding", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "verification_onboarding"}
+    assert payload["answer"]["command"] == "agentic-workspace defaults --section verification_onboarding --format json"
+    assert payload["answer"]["candidate_seed_surfaces"][0] == ".agentic-workspace/verification/manifest.toml"
+    assert "Do not create a manifest from filenames alone." in payload["answer"]["jumpstart_boundary"]
 
 
 def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:

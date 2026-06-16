@@ -509,6 +509,120 @@
             "additionalProperties": true
           }
         },
+        "subsystem_profiles": {
+          "description": "Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-owned assurance profile for an ownership subsystem.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "assurance_level",
+              "force"
+            ],
+            "properties": {
+              "assurance_level": {
+                "description": "Repo-interpreted assurance level for the matched subsystem.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "level": {
+                "description": "Alias for assurance_level.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "scope_refs": {
+                "description": "Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]].",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "requirement_refs": {
+                "description": "Repo-owned requirement refs normally applying to this subsystem.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Free-form repo vocabulary naming evidence expected before supported subsystem claims.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profile": {
+                "description": "Optional assurance.proof_profiles id to add when this subsystem profile is active.",
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_obligation_refs": {
+                "description": "Workflow obligation ids related to this subsystem profile.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "force": {
+                "description": "How strongly this subsystem profile affects guidance and closeout claim gates.",
+                "enum": [
+                  "informational",
+                  "recommended",
+                  "required-before-closeout",
+                  "blocking"
+                ]
+              },
+              "blocked_without_evidence": {
+                "description": "Claim ids or labels blocked while required subsystem evidence is missing.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this subsystem profile.",
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "description": "Optional repo-local note about this subsystem profile.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
         "test_data_policy": {
           "description": "Repo-specific policy for test data, privacy, fixtures, or generated samples.",
           "type": "object",

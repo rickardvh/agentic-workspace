@@ -1,0 +1,36 @@
+{
+  "command_generation": {
+    "package": "command-generation",
+    "runtime_required": false,
+    "source": "released-wheel",
+    "source_identity": "python-environment:command_generation",
+    "version": "0.1.0"
+  },
+  "installed_at": "2026-06-16T14:13:26+00:00",
+  "installed_by": {
+    "package": "agentic-workspace",
+    "source": "local-source",
+    "source_class": "source-checkout",
+    "source_identity": "git:599804297f0e",
+    "version": "0.1.0"
+  },
+  "kind": "agentic-workspace/payload-provenance/v1",
+  "payload_files": [
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/docs/jumpstart-contract.md",
+    ".agentic-workspace/docs/module-map.md",
+    ".agentic-workspace/docs/setup-findings-contract.md",
+    ".agentic-workspace/skills/REGISTRY.json",
+    ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+    ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+    ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
+    ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+    ".agentic-workspace/system-intent/WORKFLOW.md"
+  ],
+  "payload_schema": "agentic-workspace/payload/v1",
+  "rule": "Repo payload provenance records the executable/source identity that installed or last synced the AW payload."
+}

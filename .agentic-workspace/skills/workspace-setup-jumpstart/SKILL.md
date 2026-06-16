@@ -27,8 +27,13 @@ When the task is to populate durable workspace surfaces after bootstrap, handle 
 - `.agentic-workspace/OWNERSHIP.toml`: keep package-managed module roots, managed surfaces, fences, and authority surfaces generic; add host-specific `[[subsystems]]` only from inspected repo structure, test commands, ownership boundaries, or clear user direction. Do not copy subsystem entries from the Agentic Workspace source repo into a host repo.
 - `.agentic-workspace/system-intent/intent.toml`: run `agentic-workspace system-intent --target . --sync --format json` first, then refine only reviewable interpreted fields that are supported by named repo intent sources such as `README.md`, `SYSTEM_INTENT.md`, product docs, or explicit user direction. Do not mechanically summarize every source file.
 - `.agentic-workspace/system-intent/subsystems.toml`: add scoped durable intent only for subsystem ids already declared in `.agentic-workspace/OWNERSHIP.toml [[subsystems]]`. Leave `subsystems = []` when no host subsystem boundary is clear.
+- `.agentic-workspace/config.toml [assurance]`: run `agentic-workspace defaults --section assurance_onboarding --format json` before seeding assurance. Add proof profiles, requirements, or subsystem profiles only when an inspected host-owned source names the risk, requirement, evidence burden, proof route, or claim boundary. Subsystem profiles must use existing `.agentic-workspace/OWNERSHIP.toml [[subsystems]]` ids.
+- `.agentic-workspace/verification/manifest.toml`: run `agentic-workspace defaults --section verification_onboarding --format json` before seeding Verification. Add protocols, scenarios, proof routes, bundles, or known gaps only when the host repo has a repeatable proof need that ordinary test or command selection does not already express.
+- `.agentic-workspace/verification/proof-strategy.toml`: seed only enum hints that the host repo explicitly owns. Do not summarize strategy prose or infer policy from filenames.
 
 Population rule: host repo values must be derived from the host repo. Package defaults may provide schema shape and managed-surface ownership, but not source-repo product intent, source-repo subsystem ids, source paths, proof commands, or issue references.
+
+Assurance and Verification population rule: AW surfaces questions and templates; the agent decides whether evidence is strong enough to write anything. Prefer leaving these surfaces absent over creating generic placeholder obligations.
 
 ## Seed Bias
 

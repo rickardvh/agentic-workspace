@@ -191,6 +191,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/payload-provenance.json",
+      "format": "json",
+      "owner": "workspace-lifecycle",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._read_payload_provenance",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Payload provenance records the AW executable/source identity that last synced the repo payload and is consumed by installed-state compatibility checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Compact payload provenance is checked in so startup can distinguish observed-compatible payload state from missing-provenance upgrade noise."
+    },
+    {
       "pattern": ".agentic-workspace/agent-aids/**/manifest.json",
       "format": "json",
       "owner": "agent-aids",

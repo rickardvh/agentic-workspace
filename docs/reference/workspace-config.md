@@ -91,6 +91,20 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
 | `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
 | `assurance.requirements.<name>.notes` | string | no |  | Optional repo-local note about this requirement. |  |  |
+| `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
+| `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
+| `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |
+| `assurance.subsystem_profiles.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no |  | Alias for assurance_level. |  |  |
+| `assurance.subsystem_profiles.<name>.scope_refs` | array of string | no | `[]` | Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]. |  |  |
+| `assurance.subsystem_profiles.<name>.requirement_refs` | array of string | no | `[]` | Repo-owned requirement refs normally applying to this subsystem. |  |  |
+| `assurance.subsystem_profiles.<name>.required_evidence` | array of string | no | `[]` | Free-form repo vocabulary naming evidence expected before supported subsystem claims. |  |  |
+| `assurance.subsystem_profiles.<name>.proof_profile` | string | no |  | Optional assurance.proof_profiles id to add when this subsystem profile is active. |  |  |
+| `assurance.subsystem_profiles.<name>.workflow_obligation_refs` | array of string | no | `[]` | Workflow obligation ids related to this subsystem profile. |  |  |
+| `assurance.subsystem_profiles.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
+| `assurance.subsystem_profiles.<name>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | yes |  | How strongly this subsystem profile affects guidance and closeout claim gates. |  |  |
+| `assurance.subsystem_profiles.<name>.blocked_without_evidence` | array of string | no | `[]` | Claim ids or labels blocked while required subsystem evidence is missing. |  |  |
+| `assurance.subsystem_profiles.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this subsystem profile. |  |  |
+| `assurance.subsystem_profiles.<name>.notes` | string | no |  | Optional repo-local note about this subsystem profile. |  |  |
 | `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |

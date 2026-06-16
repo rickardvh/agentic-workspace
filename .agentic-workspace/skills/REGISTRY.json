@@ -235,6 +235,9 @@
           "seed surfaces",
           "durable surfaces",
           "workspace surfaces",
+          "assurance onboarding",
+          "verification onboarding",
+          "verification manifest",
           "new repo adoption"
         ],
         "phrases": [
@@ -244,6 +247,9 @@
           "post-bootstrap setup",
           "populate surfaces",
           "seed surfaces",
+          "populate assurance",
+          "populate verification",
+          "seed verification manifest",
           "newly installed workspace",
           "after install",
           "new repo adoption"

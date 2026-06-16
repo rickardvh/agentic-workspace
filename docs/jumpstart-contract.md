@@ -30,6 +30,10 @@ For mature repos, prefer compact contract-like surfaces over broad prose mirrors
 
 Do not bulk-import README files, issue backlogs, generated references, or design prose simply because they exist. Link to canonical docs instead of copying them when the document is already discoverable and not expensive to reconstruct.
 
+Assurance and Verification are durable seed candidates only when the host repo provides concrete evidence. Use `agentic-workspace defaults --section assurance_onboarding --format json` and `agentic-workspace defaults --section verification_onboarding --format json` before writing those surfaces. The agent should seed assurance requirements, subsystem profiles, verification protocols, proof routes, or known gaps only from inspected host-owned sources such as ownership boundaries, requirement docs, existing proof commands, runbooks, review practice, or explicit user direction.
+
+Leave assurance or verification absent when the only available input is generic risk language, filenames, or Agentic Workspace source-repo policy. A missing durable surface is better than a placeholder obligation that future agents treat as authority.
+
 ## Proof
 
 Before claiming setup follow-through, show:

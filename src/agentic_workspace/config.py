@@ -350,6 +350,22 @@ class AssuranceRequirement:
 
 
 @dataclass(frozen=True)
+class AssuranceSubsystemProfile:
+    id: str
+    assurance_level: str
+    scope_refs: tuple[str, ...]
+    requirement_refs: tuple[str, ...]
+    required_evidence: tuple[str, ...]
+    proof_profile: str | None
+    workflow_obligation_refs: tuple[str, ...]
+    review_owner: str | None
+    force: str
+    blocked_without_evidence: tuple[str, ...]
+    claim_boundary: str | None
+    notes: str | None
+
+
+@dataclass(frozen=True)
 class AssuranceConfig:
     default_level: str
     default_level_source: str
@@ -358,6 +374,7 @@ class AssuranceConfig:
     strict_closeout: bool
     proof_profiles: tuple[AssuranceProofProfile, ...]
     requirements: tuple[AssuranceRequirement, ...]
+    subsystem_profiles: tuple[AssuranceSubsystemProfile, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_format: str | None
@@ -787,6 +804,72 @@ def _load_assurance_requirements(
     return (tuple(requirement for requirement in requirements if requirement.id), warnings)
 
 
+def _load_assurance_subsystem_profiles(
+    *,
+    raw_profiles: Any,
+    config_path: Path,
+) -> tuple[tuple[AssuranceSubsystemProfile, ...], list[str]]:
+    warnings: list[str] = []
+    if raw_profiles is None:
+        raw_profiles = {}
+    if not isinstance(raw_profiles, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.subsystem_profiles] section must be a table.")
+    profiles: list[AssuranceSubsystemProfile] = []
+    supported_fields = {
+        "assurance_level",
+        "level",
+        "scope_refs",
+        "requirement_refs",
+        "required_evidence",
+        "proof_profile",
+        "workflow_obligation_refs",
+        "review_owner",
+        "force",
+        "blocked_without_evidence",
+        "claim_boundary",
+        "notes",
+    }
+    for profile_id, raw_profile in sorted(raw_profiles.items()):
+        profile_path = Path(f"{config_path.as_posix()} assurance.subsystem_profiles.{profile_id}")
+        if not isinstance(raw_profile, dict):
+            raise WorkspaceUsageError(f"{profile_path.as_posix()} must be a table.")
+        unknown_profile = sorted(set(raw_profile) - supported_fields)
+        if unknown_profile:
+            warnings.append(f"{profile_path.as_posix()} contains unsupported field(s): {', '.join(unknown_profile)}.")
+        level_value = raw_profile.get("assurance_level", raw_profile.get("level"))
+        profiles.append(
+            AssuranceSubsystemProfile(
+                id=str(profile_id).strip(),
+                assurance_level=require_required_enum(
+                    payload={**raw_profile, "assurance_level": level_value},
+                    key="assurance_level",
+                    config_path=profile_path,
+                    allowed=SUPPORTED_ASSURANCE_LEVELS,
+                ),
+                scope_refs=require_optional_string_list(payload=raw_profile, key="scope_refs", config_path=profile_path),
+                requirement_refs=require_optional_string_list(payload=raw_profile, key="requirement_refs", config_path=profile_path),
+                required_evidence=require_optional_string_list(payload=raw_profile, key="required_evidence", config_path=profile_path),
+                proof_profile=require_optional_string(payload=raw_profile, key="proof_profile", config_path=profile_path),
+                workflow_obligation_refs=require_optional_string_list(
+                    payload=raw_profile, key="workflow_obligation_refs", config_path=profile_path
+                ),
+                review_owner=require_optional_string(payload=raw_profile, key="review_owner", config_path=profile_path),
+                force=require_required_enum(
+                    payload=raw_profile,
+                    key="force",
+                    config_path=profile_path,
+                    allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
+                ),
+                blocked_without_evidence=require_optional_string_list(
+                    payload=raw_profile, key="blocked_without_evidence", config_path=profile_path
+                ),
+                claim_boundary=require_optional_string(payload=raw_profile, key="claim_boundary", config_path=profile_path),
+                notes=require_optional_string(payload=raw_profile, key="notes", config_path=profile_path),
+            )
+        )
+    return (tuple(profile for profile in profiles if profile.id), warnings)
+
+
 def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
     warnings: list[str] = []
     if raw_assurance is None:
@@ -800,6 +883,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "strict_closeout",
         "proof_profiles",
         "requirements",
+        "subsystem_profiles",
         "test_data_policy",
         "decision_record_target",
         "decision_record_format",
@@ -853,6 +937,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         config_path=config_path,
     )
     warnings.extend(requirement_warnings)
+    subsystem_profiles, subsystem_profile_warnings = _load_assurance_subsystem_profiles(
+        raw_profiles=raw_assurance.get("subsystem_profiles", {}),
+        config_path=config_path,
+    )
+    warnings.extend(subsystem_profile_warnings)
     return (
         AssuranceConfig(
             default_level=default_level,
@@ -862,6 +951,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             strict_closeout=_require_bool(payload=raw_assurance, key="strict_closeout", default=False, config_path=config_path),
             proof_profiles=tuple(profile for profile in profiles if profile.id),
             requirements=requirements,
+            subsystem_profiles=subsystem_profiles,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,

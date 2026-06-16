@@ -154,11 +154,18 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         select="selected_lanes,required_commands",
     )
 
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "contract_tooling",
+        "assurance-requirement:test_evidence_change_decision",
+        "verification:test_evidence_decision",
+    ]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
         "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
         "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+        "make test-workspace",
+        "make lint-workspace",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json",
     ]
     assert "generated_cli_freshness" not in answer
     assert "uv run pytest tests -q" not in answer["required_commands"]

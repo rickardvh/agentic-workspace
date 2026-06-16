@@ -381,8 +381,9 @@ default_level = "medium"
     assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     partial = json.loads(capsys.readouterr().out)
-    assert partial["assurance"]["onboarding"]["status"] == "partial"
+    assert partial["assurance"]["onboarding"]["status"] == "absent"
     assert partial["assurance"]["onboarding"]["configured_profile_count"] == 0
+    assert partial["assurance"]["onboarding"]["configured_subsystem_profile_count"] == 0
 
     _write(
         tmp_path / ".agentic-workspace/config.toml",
@@ -391,12 +392,17 @@ schema_version = 1
 
 [assurance]
 default_level = "medium"
-decision_record_target = "docs/decisions/"
 
 [assurance.proof_profiles.security]
 required_commands = ["uv run pytest tests/security -q"]
 optional_commands = []
 review_aids = []
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+requirement_refs = ["docs/requirements.md#auditability"]
+required_evidence = ["requirement_grounding"]
+force = "required-before-closeout"
 """,
     )
 
@@ -405,7 +411,9 @@ review_aids = []
     usable = json.loads(capsys.readouterr().out)
     assert usable["assurance"]["onboarding"]["status"] == "usable"
     assert usable["assurance"]["onboarding"]["configured_profile_count"] == 1
+    assert usable["assurance"]["onboarding"]["configured_subsystem_profile_count"] == 1
     assert usable["assurance"]["onboarding"]["host_ref_count"] == 1
+    assert ".agentic-workspace/config.toml [assurance.subsystem_profiles]" in usable["assurance"]["onboarding"]["candidate_seed_surfaces"]
 
 
 def test_config_command_reports_assurance_requirements(tmp_path: Path, capsys) -> None:

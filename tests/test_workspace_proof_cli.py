@@ -1293,6 +1293,64 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert lane["applies_because"] == ["changed path matched db/migrations/**"]
 
 
+def test_proof_changed_includes_matched_subsystem_assurance_profile(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "audit-log"
+paths = ["src/audit/**"]
+owns = ["audit trail semantics"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.audit]
+required_commands = ["uv run pytest tests/audit -q"]
+optional_commands = ["uv run pytest tests/audit_integration -q"]
+review_aids = ["docs/reviews/audit.md"]
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+requirement_refs = ["docs/system-requirements.md#auditability"]
+required_evidence = ["requirement_grounding", "manual_review"]
+proof_profile = "audit"
+force = "required-before-closeout"
+blocked_without_evidence = ["auditability-complete"]
+claim_boundary = "subsystem-scoped"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/audit/events.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/audit -q" in answer["required_commands"]
+    assert "uv run pytest tests/audit_integration -q" in answer["optional_commands"]
+    subsystem = answer["assurance_requirements"]["subsystem_assurance"]
+    assert subsystem["matched_subsystem_ids"] == ["audit-log"]
+    assert subsystem["effective_assurance_level"] == "high"
+    lane = [item for item in answer["selected_lanes"] if item.get("requirement_id") == "subsystem:audit-log"][0]
+    assert lane["proof_profile"] == "audit"
+    assert lane["applies_because"] == ["changed path matched subsystem audit-log"]
+
+
 def test_proof_current_includes_active_planning_assurance_requirement_profile(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

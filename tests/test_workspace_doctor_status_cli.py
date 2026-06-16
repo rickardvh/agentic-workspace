@@ -240,6 +240,38 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
 
 
+def test_setup_surfaces_assurance_verification_onboarding_without_optional_module_residue(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    _write(
+        target / ".agentic-workspace" / "verification" / "manifest.toml",
+        'schema_version = "agentic-workspace/verification-manifest/v1"\n',
+    )
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(target), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    routes = payload["onboarding_routes"]
+    assert routes["assurance"]["status"] == "absent"
+    assert routes["assurance"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
+    assert routes["assurance"]["report_command"] == (
+        "agentic-workspace report --target ./repo --section assurance_requirements --format json"
+    )
+    assert routes["verification"]["status"] == "configured"
+    assert routes["verification"]["command"] == "agentic-workspace defaults --section verification_onboarding --format json"
+    assert routes["verification"]["report_command"] == "agentic-workspace report --target ./repo --section verification --format json"
+    assert payload["current"]["installed_modules"]
+    assert not any("installed module 'verification' is not enabled" in warning for warning in payload["current"]["warnings"])
+    assert payload["current"]["optional_module_notices"] == [
+        "Verification is installed and available as an optional module; it is not part of the default enabled module set."
+    ]
+    assert "agentic-workspace defaults --section assurance_onboarding --format json" in payload["next_action"]["commands"]
+    assert "agentic-workspace defaults --section verification_onboarding --format json" in payload["next_action"]["commands"]
+
+
 def test_doctor_module_filter_does_not_require_llms_adapter(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

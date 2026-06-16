@@ -518,11 +518,26 @@
   "assurance_onboarding": {
     "command": "agentic-workspace defaults --section assurance_onboarding --format json",
     "configured_profile_count": 0,
+    "configured_requirement_count": 0,
+    "configured_subsystem_profile_count": 0,
     "has_test_data_policy": false,
     "host_ref_count": 0,
+    "jumpstart_route": "Use workspace-setup-jumpstart after setup discovery; seed only profiles supported by inspected host repo evidence.",
     "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
     "report_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
     "rule": "Host repos own assurance truth; Agentic Workspace only routes levels, gates, refs, proof profiles, and compact evidence state.",
+    "candidate_seed_surfaces": [
+      ".agentic-workspace/config.toml [assurance.proof_profiles]",
+      ".agentic-workspace/config.toml [assurance.requirements]",
+      ".agentic-workspace/config.toml [assurance.subsystem_profiles]"
+    ],
+    "seed_questions": [
+      "Which host-owned source declares the risk, requirement, or review burden?",
+      "Which changed paths or ownership subsystem ids should activate it?",
+      "What evidence label must exist before broad claims are honest?",
+      "Which proof profile or verification protocol should be selected, if any?",
+      "What claim boundary remains when the evidence is missing?"
+    ],
     "smallest_useful_config": [
       "[assurance]",
       "default_level = \"medium\"",
@@ -531,14 +546,62 @@
       "[assurance.proof_profiles.example]",
       "required_commands = [\"uv run pytest tests -q\"]",
       "optional_commands = []",
-      "review_aids = []"
+      "review_aids = []",
+      "",
+      "[assurance.subsystem_profiles.example-subsystem]",
+      "assurance_level = \"high\"",
+      "requirement_refs = [\"docs/requirements.md#example\"]",
+      "required_evidence = [\"requirement_grounding\"]",
+      "force = \"required-before-closeout\""
     ],
     "states": {
       "absent": "no host assurance profile is configured; low-risk installs stay cheap",
-      "partial": "some assurance fields exist, but add at least one proof profile plus a host-owned ref or test-data policy",
-      "usable": "at least one proof profile and one host-owned authority or test-data policy are configured"
+      "partial": "some assurance fields exist, but add host-owned refs, evidence labels, or test-data policy before relying on them",
+      "usable": "at least one proof profile, assurance requirement, or subsystem profile is tied to host-owned authority or test-data policy"
     },
     "status": "absent"
+  },
+  "verification_onboarding": {
+    "status": "available",
+    "command": "agentic-workspace defaults --section verification_onboarding --format json",
+    "report_command": "agentic-workspace report --target ./repo --section verification --format json",
+    "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+    "rule": "Verification jumpstart surfaces candidate protocols, scenarios, proof routes, evidence bundles, and known gaps from host evidence; the agent decides what to seed.",
+    "candidate_seed_surfaces": [
+      ".agentic-workspace/verification/manifest.toml",
+      ".agentic-workspace/verification/proof-strategy.toml",
+      ".agentic-workspace/verification/proof-decision.json"
+    ],
+    "seed_questions": [
+      "Which host workflow needs bounded repeatable verification outside ordinary tests?",
+      "What protocol, scenario, expected evidence, and review owner make the proof repeatable?",
+      "Which command or manual review route produces the evidence?",
+      "Which known gaps block broad closeout claims until replacement evidence exists?",
+      "Which proof-strategy enum hints are host-owned and useful without interpreting prose?"
+    ],
+    "smallest_useful_manifest": [
+      "schema_version = \"agentic-workspace/verification-manifest/v1\"",
+      "",
+      "[protocols.example_review]",
+      "title = \"Example review\"",
+      "purpose = \"Repeatable host-owned verification when ordinary tests are not enough.\"",
+      "applies_to_paths = [\"src/example/**\"]",
+      "scenario_refs = [\"example_walkthrough\"]",
+      "expected_evidence = [\"example_review_passed\"]",
+      "review_owner = \"example-review\"",
+      "",
+      "[scenarios.example_walkthrough]",
+      "protocol_id = \"example_review\"",
+      "title = \"Example walkthrough\"",
+      "steps = [\"Inspect the changed behavior\"]",
+      "expected_observations = [\"The host-owned expectation still holds\"]"
+    ],
+    "jumpstart_boundary": [
+      "Do not create a manifest from filenames alone.",
+      "Do not encode AW's source-repo verification policy into the host repo.",
+      "Prefer no manifest over a generic manifest with no host-owned proof route.",
+      "Record gaps when useful evidence is known but not yet available."
+    ]
   },
   "authority_hierarchy": {
     "inspect": "agentic-workspace report --target ./repo --section authority_hierarchy --format json",
