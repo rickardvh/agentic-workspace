@@ -11,7 +11,8 @@
     "writes_repo_state": false
   },
   "guards": [
-    "Status must remain read-only."
+    "Status must remain read-only.",
+    "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
   ],
   "id": "status.report",
   "inputs": [
@@ -32,6 +33,11 @@
     },
     {
       "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
       "required": false,
       "source": "cli-option"
     },
@@ -80,7 +86,8 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "status command tests remain compatible"
+    "status command tests remain compatible",
+    "status --select command tests cover compact selected-output payloads"
   ],
   "reads": [
     {
@@ -94,6 +101,10 @@
     {
       "required": false,
       "surface": "verbose flag for broad diagnostic output"
+    },
+    {
+      "required": false,
+      "surface": "field selector for exact JSON drill-down"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -112,6 +123,11 @@
       "description": "Assemble status report.",
       "id": "assemble_report",
       "uses": "workspace.report.assemble"
+    },
+    {
+      "description": "Return only requested JSON fields when --select is provided.",
+      "id": "select_fields",
+      "uses": "output.fields.select"
     },
     {
       "description": "Emit status report.",

@@ -734,6 +734,7 @@
           "workspace.root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
+          "output.fields.select",
           "output.emit"
         ]
       },

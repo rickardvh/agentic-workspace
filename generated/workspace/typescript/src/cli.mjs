@@ -3126,6 +3126,13 @@ const commandDefinitions = [
           ],
           "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
           "name": "verbose"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
         }
       ]
     },
