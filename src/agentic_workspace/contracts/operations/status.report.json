@@ -28,6 +28,11 @@
       "required": false
     },
     {
+      "name": "select",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -60,6 +65,10 @@
     {
       "surface": "verbose flag for broad diagnostic output",
       "required": false
+    },
+    {
+      "surface": "field selector for exact JSON drill-down",
+      "required": false
     }
   ],
   "writes": [],
@@ -80,17 +89,24 @@
       "description": "Assemble status report."
     },
     {
+      "id": "select_fields",
+      "uses": "output.fields.select",
+      "description": "Return only requested JSON fields when --select is provided."
+    },
+    {
       "id": "emit_output",
       "uses": "output.emit",
       "description": "Emit status report."
     }
   ],
   "guards": [
-    "Status must remain read-only."
+    "Status must remain read-only.",
+    "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
-    "status command tests remain compatible"
+    "status command tests remain compatible",
+    "status --select command tests cover compact selected-output payloads"
   ],
   "migration_status": "draft-contract-only"
 }

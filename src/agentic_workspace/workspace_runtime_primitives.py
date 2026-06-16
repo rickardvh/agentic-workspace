@@ -21306,8 +21306,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         selectors.extend(
             selector for selector in drill_down.get("available_selectors", []) if isinstance(selector, str) and selector not in selectors
         )
-    if selectors:
-        return selectors
+    if isinstance(payload, dict):
+        selectors.extend(str(key) for key in payload if str(key) not in selectors)
     discovered: list[str] = []
 
     def visit(value: Any, prefix: str) -> None:
@@ -21324,7 +21324,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
                     visit(child, path)
 
     visit(payload, "")
-    return discovered
+    selectors.extend(selector for selector in discovered if selector not in selectors)
+    return selectors
 
 
 def _skill_catalog_summary_from_payload(skills_payload: dict[str, Any]) -> dict[str, Any]:

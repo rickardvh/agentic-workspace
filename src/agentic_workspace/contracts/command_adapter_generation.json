@@ -5444,6 +5444,7 @@
           "workspace.root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -5497,6 +5498,7 @@
           "target root resolution",
           "module selection",
           "status report assembly",
+          "field selection",
           "output emission"
         ]
       },

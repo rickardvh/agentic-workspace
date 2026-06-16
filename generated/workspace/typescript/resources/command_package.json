@@ -4218,6 +4218,13 @@
             ],
             "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
             "name": "verbose"
+          },
+          {
+            "flags": [
+              "--select"
+            ],
+            "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+            "name": "select"
           }
         ]
       },
@@ -4230,6 +4237,7 @@
           "target root resolution",
           "module selection",
           "status report assembly",
+          "field selection",
           "output emission"
         ],
         "target_specific": [
@@ -4254,6 +4262,7 @@
           "workspace.root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
+          "output.fields.select",
           "output.emit"
         ]
       },
