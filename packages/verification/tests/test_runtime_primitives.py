@@ -280,6 +280,46 @@ def test_verification_evidence_strategy_reports_absent_structured_strategy_hints
     }
 
 
+def test_verification_evidence_strategy_reports_partial_structured_strategy_hints(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+ordinary_test_growth = "discouraged"
+preferred_owner_vocab = ["verification-evidence"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    basis = payload["evidence_strategy"]["strategy_basis"]
+    assert basis["declared_strategy_state"] == "partially-declared"
+    assert basis["strategy_confidence"] == "low"
+    assert basis["structured_strategy_hints"]["status"] == "present"
+    assert basis["structured_strategy_hints"]["hints"]["strategy_source"] == ""
+
+
+def test_verification_evidence_strategy_reports_source_only_strategy_hints_as_partial(tmp_path: Path) -> None:
+    strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
+    strategy_path.parent.mkdir(parents=True)
+    strategy_path.write_text(
+        """
+[proof_strategy]
+strategy_source = "docs/maintainer/testing-strategy.md"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    basis = payload["evidence_strategy"]["strategy_basis"]
+    assert basis["declared_strategy_state"] == "partially-declared"
+    assert basis["strategy_confidence"] == "low"
+    assert basis["structured_strategy_hints"]["hints"]["ordinary_test_growth"] == "unknown"
+
+
 def test_verification_evidence_strategy_reports_invalid_structured_strategy_hints(tmp_path: Path) -> None:
     strategy_path = tmp_path / ".agentic-workspace" / "verification" / "proof-strategy.toml"
     strategy_path.parent.mkdir(parents=True)

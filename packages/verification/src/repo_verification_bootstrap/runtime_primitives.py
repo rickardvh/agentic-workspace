@@ -519,6 +519,22 @@ def _structured_strategy_hints_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _structured_strategy_state(structured_hints: dict[str, Any]) -> tuple[str, str]:
+    if structured_hints.get("status") != "present":
+        return "not-declared", "unclear"
+    hints = structured_hints.get("hints")
+    hints = hints if isinstance(hints, dict) else {}
+    strategy_source = str(hints.get("strategy_source", "")).strip()
+    has_meaningful_strategy_field = bool(
+        str(hints.get("ordinary_test_growth", "")).strip() not in {"", "unknown"}
+        or _list_payload(hints.get("preferred_owner_vocab"))
+        or _list_payload(hints.get("proof_intent_vocab"))
+    )
+    if strategy_source and has_meaningful_strategy_field:
+        return "declared", "medium"
+    return "partially-declared", "low"
+
+
 def _evidence_strategy_payload(
     *,
     target_root: Path,
@@ -637,9 +653,13 @@ def _evidence_strategy_payload(
             }
         )
 
-    if structured_hints["status"] == "present":
-        declared_state = "declared"
-        strategy_confidence = "medium"
+    structured_declared_state, structured_strategy_confidence = _structured_strategy_state(structured_hints)
+    if structured_declared_state == "declared":
+        declared_state = structured_declared_state
+        strategy_confidence = structured_strategy_confidence
+    elif structured_declared_state == "partially-declared":
+        declared_state = structured_declared_state
+        strategy_confidence = structured_strategy_confidence
     elif candidate_sources:
         declared_state = "partially-declared"
         strategy_confidence = "low"

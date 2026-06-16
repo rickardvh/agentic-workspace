@@ -86,10 +86,12 @@ proof_intent_vocab = ["workflow-routing", "behavior-unchanged"]
 Supported `ordinary_test_growth` values are `allowed`,
 `requires-proof-decision`, `discouraged`, and `unknown`. `preferred_owner_vocab`
 must use the report's proof-owner enum, and `proof_intent_vocab` must use the
-proof-decision intent enum. Valid structured hints mark the strategy state as
-`declared` with medium confidence because the host provided machine-readable
-configuration. They still do not assign evidence ownership, choose dispositions,
-or authorize pruning.
+proof-decision intent enum. A valid hints file marks the strategy state as
+`declared` with medium confidence only when it names a non-empty
+`strategy_source` and includes at least one meaningful structured strategy field.
+Enum-only or source-only hints are reported as `partially-declared` with low
+confidence. They still do not assign evidence ownership, choose dispositions, or
+authorize pruning.
 
 The `evidence_strategy.proof_governance` block is the pre-test decision aid for
 regression-prone work. It reports local facts such as changed paths, changed
