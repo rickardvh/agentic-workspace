@@ -1,0 +1,388 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Remove module-scoped doctor residue warnings",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Remove misleading residue warnings from module-scoped workspace doctor checks.",
+    "hard_constraints": "Keep scope bounded to workspace lifecycle doctor/status reporting semantics and focused regression coverage.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Fix module-scoped doctor residue classification and validate the scoped doctor output.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_doctor_status_cli.py -q",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+      "rg \"module_scope_explicit|test_doctor_module_filter_does_not_warn_about_omitted_installed_modules\" src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_doctor_status_cli.py",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_doctor_status_cli.py"
+    ],
+    "completion_criteria": [
+      "Module-scoped doctor output does not warn about installed modules omitted only by the command scope.",
+      "Full doctor/status output still reports true repo-config residue.",
+      "The branch remains separate from PR #1575."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Remove misleading residue warnings from module-scoped workspace doctor checks."
+  ],
+  "non_goals": [
+    "Do not change #1575 or Verification packaging resources on this branch.",
+    "Do not remove true residue warnings from unscoped doctor/status output."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Remove misleading residue warnings from module-scoped workspace doctor checks.",
+      "constraints": "Keep scope bounded to workspace lifecycle doctor/status reporting semantics and focused regression coverage.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "doctor-module-scoped-residue-warnings",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_doctor_status_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Remove misleading residue warnings from module-scoped workspace doctor checks.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Module-scoped workspace doctor checks no longer report omitted installed modules as residue.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "make test-workspace; make lint-workspace; scoped doctor reports warnings_count=0.",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Remove module-scoped doctor residue warnings",
+    "inferred intended outcome": "Make `agentic-workspace doctor --modules planning` avoid warning about installed modules omitted by that command scope while preserving real unscoped residue detection.",
+    "chosen concrete what": "Separate command-selected module scope from repo-config enabled module scope in lifecycle doctor/status reporting.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; this execplan/state for planning ownership.",
+    "max changed files": "4",
+    "required validation commands": "uv run pytest tests/test_workspace_doctor_status_cli.py -q; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make test-workspace; make lint-workspace",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from scoped doctor residue warning fix in workspace lifecycle reporting.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove misleading residue warnings from module-scoped workspace doctor checks.",
+    "hard constraints": "Keep scope bounded to workspace lifecycle doctor/status reporting semantics and focused regression coverage.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "doctor-module-scoped-residue-warnings",
+    "status": "completed",
+    "scope": "Workspace lifecycle doctor/status residue reporting.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fix module-scoped doctor residue classification and validate the scoped doctor output."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_doctor_status_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_doctor_status_cli.py -q",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "rg \"module_scope_explicit|test_doctor_module_filter_does_not_warn_about_omitted_installed_modules\" src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_doctor_status_cli.py",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Remove module-scoped doctor residue warnings is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Separated explicit module scope from repo-level residue reporting for lifecycle doctor/status output and added a regression for scoped doctor omitted-module warnings.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; planning closeout metadata",
+    "changed surfaces": "Workspace lifecycle reporting; workspace doctor/status CLI tests; Planning execplan/state closeout",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "No continuation required for this bounded cleanup.",
+    "next step": "Open a separate PR for the doctor-warning cleanup."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; #1575 packaging branch was not changed",
+    "proof status": "complete",
+    "intent served": "yes; scoped planning doctor now reports healthy output without omitted module residue warnings",
+    "config compliance": "used AW startup, summary, implement routing, and planning closeout commands",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "Bounded runtime/test fix stayed local because proof and closeout were already active in this thread.",
+    "expected savings": "none",
+    "actual friction": "none",
+    "proof result": "passed",
+    "quality concern": "none",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_module_filter_does_not_warn_about_omitted_installed_modules -q; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused regression passed, full workspace tests passed, workspace lint passed, summary returned exit 0, and scoped doctor returned health=healthy with warnings_count=0."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Remove module-scoped doctor residue warnings.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Scoped doctor no longer reports omitted installed modules as residue and the branch stays separate from #1575.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Module-scoped doctor/status lifecycle output suppresses repo-level residue warnings when `--modules` explicitly narrows the command scope.",
+    "validation confirmed": "make test-workspace; make lint-workspace; scoped doctor warnings_count=0",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "regression retained in tests/test_workspace_doctor_status_cli.py",
+    "resume from": "archive; no required continuation beyond separate PR review",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded request was to remove the scoped doctor warnings on another branch; the scoped command now returns no warnings and the #1575 branch was left untouched.",
+    "evidence carried forward": "make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "reopen trigger": "Reopen if `agentic-workspace doctor --modules planning` reports memory or verification residue solely because they were omitted from the scoped command."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-16: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "blocked",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "ask-human",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "Planning closeout evidence does not yet support the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": true,
+      "reason": "Planning closeout evidence does not yet support the requested completion claim."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Remove module-scoped doctor residue warnings.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_module_filter_does_not_warn_about_omitted_installed_modules -q; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json\nChanged surfaces: Workspace lifecycle reporting; workspace doctor/status CLI tests; Planning execplan/state closeout\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none\nCompletion gate: blocked\nCompletion claim allowed: partial-progress"
+  }
+}
