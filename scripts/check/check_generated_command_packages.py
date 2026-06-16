@@ -286,6 +286,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
     "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/memory/tests/test_packaging.py": "installed private bridge compatibility proof",
+    "packages/verification/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/planning/hatch_build.py": "sdist wheel rebuild bridge to embedded generated package payload",
     "packages/memory/hatch_build.py": "sdist wheel rebuild bridge to embedded generated package payload",
 }
