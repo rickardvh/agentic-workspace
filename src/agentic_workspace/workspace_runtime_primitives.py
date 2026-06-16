@@ -1055,29 +1055,47 @@ def _runtime_artifact_shim_pattern_payload() -> dict[str, Any]:
 
 def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -> dict[str, Any]:
     configured_profiles = list(assurance.proof_profiles) if assurance is not None else []
+    configured_requirements = list(assurance.requirements) if assurance is not None else []
+    subsystem_profiles = list(assurance.subsystem_profiles) if assurance is not None else []
     host_refs = []
     if assurance is not None:
         host_refs = [ref for ref in [assurance.decision_record_target, assurance.invariant_registry, assurance.risk_registry] if ref]
     has_test_policy = bool(assurance.test_data_policy) if assurance is not None else False
     any_configured = bool(
         configured_profiles
-        or (assurance is not None and assurance.requirements)
+        or configured_requirements
+        or subsystem_profiles
         or host_refs
         or has_test_policy
         or (assurance is not None and assurance.default_level_source != "product-default")
         or (assurance is not None and assurance.strict_closeout)
     )
-    usable = bool(configured_profiles and (host_refs or has_test_policy))
+    usable = bool((configured_profiles or configured_requirements or subsystem_profiles) and (host_refs or has_test_policy))
     status = "usable" if usable else "partial" if any_configured else "absent"
     return {
         "status": status,
         "command": "agentic-workspace defaults --section assurance_onboarding --format json",
         "report_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
         "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "jumpstart_route": "Use workspace-setup-jumpstart after setup discovery; seed only profiles supported by inspected host repo evidence.",
         "rule": "Host repos own assurance truth; Agentic Workspace only routes levels, gates, refs, proof profiles, and compact evidence state.",
         "configured_profile_count": len(configured_profiles),
+        "configured_requirement_count": len(configured_requirements),
+        "configured_subsystem_profile_count": len(subsystem_profiles),
         "host_ref_count": len(host_refs),
         "has_test_data_policy": has_test_policy,
+        "candidate_seed_surfaces": [
+            ".agentic-workspace/config.toml [assurance.proof_profiles]",
+            ".agentic-workspace/config.toml [assurance.requirements]",
+            ".agentic-workspace/config.toml [assurance.subsystem_profiles]",
+        ],
+        "seed_questions": [
+            "Which host-owned source declares the risk, requirement, or review burden?",
+            "Which changed paths or ownership subsystem ids should activate it?",
+            "What evidence label must exist before broad claims are honest?",
+            "Which proof profile or verification protocol should be selected, if any?",
+            "What claim boundary remains when the evidence is missing?",
+        ],
         "smallest_useful_config": [
             "[assurance]",
             'default_level = "medium"',
@@ -1087,11 +1105,17 @@ def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -
             'required_commands = ["uv run pytest tests -q"]',
             "optional_commands = []",
             "review_aids = []",
+            "",
+            "[assurance.subsystem_profiles.example-subsystem]",
+            'assurance_level = "high"',
+            'requirement_refs = ["docs/requirements.md#example"]',
+            'required_evidence = ["requirement_grounding"]',
+            'force = "required-before-closeout"',
         ],
         "states": {
             "absent": "no host assurance profile is configured; low-risk installs stay cheap",
-            "partial": "some assurance fields exist, but add at least one proof profile plus a host-owned ref or test-data policy",
-            "usable": "at least one proof profile and one host-owned authority or test-data policy are configured",
+            "partial": "some assurance fields exist, but add host-owned refs, evidence labels, or test-data policy before relying on them",
+            "usable": "at least one proof profile, assurance requirement, or subsystem profile is tied to host-owned authority or test-data policy",
         },
     }
 

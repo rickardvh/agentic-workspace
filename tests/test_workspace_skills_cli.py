@@ -347,6 +347,40 @@ def test_skills_command_recommends_setup_jumpstart_for_mature_repo_seeding(tmp_p
     assert payload["recommendations"][0]["source_kind"] == "installed-workspace-skills"
     assert payload["recommendations"][0]["scope"] == "routed-support"
     assert "pre-write and pre-seed discovery" in Path("docs/jumpstart-contract.md").read_text(encoding="utf-8")
+    skill_text = Path(".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md").read_text(encoding="utf-8")
+    assert "defaults --section assurance_onboarding" in skill_text
+    assert "defaults --section verification_onboarding" in skill_text
+
+
+def test_skills_command_recommends_jumpstart_for_assurance_verification_population(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "jumpstart assurance onboarding and verification onboarding for a mature repo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
+    jumpstart = next(skill for skill in payload["skills"] if skill["id"] == "workspace-setup-jumpstart")
+    nouns = jumpstart["activation_hints"]["nouns"]
+    assert "assurance onboarding" in nouns
+    assert "verification onboarding" in nouns
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
