@@ -18919,6 +18919,12 @@ def _lane_shaping_gate_payload(
         return {"kind": "agentic-workspace/lane-shaping-gate/v1", "status": "not-applicable", "reason": "scope signal is not lane or epic"}
 
     target = _configured_lane_shaping_target(config)
+    if target is None:
+        return {
+            "kind": "agentic-workspace/lane-shaping-gate/v1",
+            "status": "not-applicable",
+            "reason": "no configured manual external boundary-shaping target",
+        }
     candidate_ids = [str(item) for item in candidate_pressure.get("candidate_ids", []) if str(item).strip()]
     issue_refs = [str(item) for item in planning_safety_gate.get("issue_refs", []) if str(item).strip()]
     evidence = [
@@ -18927,8 +18933,7 @@ def _lane_shaping_gate_payload(
         f"candidate_count={candidate_pressure.get('candidate_count', 0)}",
         "active_planning_present=False",
     ]
-    if target:
-        evidence.append("manual_external_boundary_shaping_target=configured")
+    evidence.append("manual_external_boundary_shaping_target=configured")
     questions = [
         "What is the larger intended outcome, in host-repo terms?",
         "What evidence would show the larger intent is fully satisfied, not merely advanced?",
@@ -18967,19 +18972,14 @@ def _lane_shaping_gate_payload(
         "required_next_action": "present-lane-shaping-prompt",
         "implementation_allowed": False,
         "reason": "Broad unshaped lane work needs a shaping answer before implementation or slice promotion.",
-        "target": target
-        or {
-            "name": "human-or-strong-planner",
-            "target_kind": "human-or-configured-planner",
-            "execution_methods": ["manual"],
-        },
+        "target": target,
         "observed_evidence": evidence,
         "questions": questions,
         "candidate_ids": candidate_ids[:8],
         "external_refs": issue_refs[:8],
         "ready_to_forward_prompt": {
             "kind": "agentic-workspace/lane-shaping-prompt/v1",
-            "target": (target or {}).get("name", "human-or-strong-planner"),
+            "target": target["name"],
             "copy_paste": "\n".join(prompt_lines),
             "constraints": [
                 "Do not write implementation steps.",
