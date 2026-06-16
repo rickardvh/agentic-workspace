@@ -1060,16 +1060,13 @@ def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -
     host_refs = []
     if assurance is not None:
         host_refs = [ref for ref in [assurance.decision_record_target, assurance.invariant_registry, assurance.risk_registry] if ref]
+        for requirement in configured_requirements:
+            host_refs.extend(requirement.authority_refs)
+        for profile in subsystem_profiles:
+            host_refs.extend(profile.requirement_refs)
+        host_refs = _dedupe(host_refs)
     has_test_policy = bool(assurance.test_data_policy) if assurance is not None else False
-    any_configured = bool(
-        configured_profiles
-        or configured_requirements
-        or subsystem_profiles
-        or host_refs
-        or has_test_policy
-        or (assurance is not None and assurance.default_level_source != "product-default")
-        or (assurance is not None and assurance.strict_closeout)
-    )
+    any_configured = bool(configured_profiles or configured_requirements or subsystem_profiles or host_refs or has_test_policy)
     usable = bool((configured_profiles or configured_requirements or subsystem_profiles) and (host_refs or has_test_policy))
     status = "usable" if usable else "partial" if any_configured else "absent"
     return {

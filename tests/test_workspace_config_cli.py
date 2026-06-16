@@ -381,7 +381,7 @@ default_level = "medium"
     assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
 
     partial = json.loads(capsys.readouterr().out)
-    assert partial["assurance"]["onboarding"]["status"] == "partial"
+    assert partial["assurance"]["onboarding"]["status"] == "absent"
     assert partial["assurance"]["onboarding"]["configured_profile_count"] == 0
     assert partial["assurance"]["onboarding"]["configured_subsystem_profile_count"] == 0
 
@@ -392,7 +392,6 @@ schema_version = 1
 
 [assurance]
 default_level = "medium"
-decision_record_target = "docs/decisions/"
 
 [assurance.proof_profiles.security]
 required_commands = ["uv run pytest tests/security -q"]

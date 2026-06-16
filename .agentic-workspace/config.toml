@@ -21,8 +21,72 @@ default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false
 strict_closeout = true
-proof_profiles = {}
 test_data_policy = {}
+
+[assurance.proof_profiles.workspace_behavior]
+required_commands = ["make test-workspace", "make lint-workspace"]
+optional_commands = ["uv run python scripts/run_agentic_workspace.py proof --target . --current --format json"]
+review_aids = ["Compare selected proof to changed ownership subsystem and claim boundary."]
+
+[assurance.proof_profiles.verification_behavior]
+required_commands = ["uv run pytest packages/verification/tests -q"]
+optional_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+review_aids = ["Confirm Verification reports facts and questions without making agent-owned proof decisions."]
+
+[assurance.proof_profiles.test_evidence_change]
+required_commands = ["make test-workspace", "make lint-workspace"]
+optional_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+review_aids = ["Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move."]
+
+[assurance.requirements.test_evidence_change_decision]
+level = "high"
+applies_to_paths = ["tests/**", "packages/**/tests/**", "docs/maintainer/test-knowledge-inventory.md", "docs/maintainer/testing-strategy.md"]
+applies_to_task_markers = ["test reduction", "regression test", "ordinary test", "conformance test", "proof decision"]
+authority_refs = ["docs/maintainer/testing-strategy.md", "docs/maintainer/test-knowledge-inventory.md"]
+required_evidence = ["verification_proof_decision_review"]
+proof_profile = "test_evidence_change"
+review_owner = "maintainer"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+notes = "Changing ordinary test evidence should explain the trust question and replacement/retention decision instead of relying on test count alone."
+
+[assurance.requirements.closeout_intent_satisfaction]
+level = "high"
+applies_to_paths = ["packages/planning/src/**/archive*.py", "packages/planning/src/**/closeout*.py", "packages/planning/tests/**/test_archive*.py", "tests/test_workspace_summary_cli.py", "tests/test_workspace_implement_cli.py"]
+applies_to_task_markers = ["closeout", "intent satisfaction", "parent lane", "completion claim"]
+authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.planning", ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md"]
+required_evidence = ["intent_satisfaction_review", "closeout_trust_review"]
+proof_profile = "workspace_behavior"
+workflow_obligation_refs = ["commit_after_proof"]
+review_owner = "maintainer"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+notes = "Planning and closeout behavior changes need explicit intent-satisfaction and residue-routing evidence before broad completion claims."
+
+[assurance.requirements.workspace_runtime_routing]
+level = "high"
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+applies_to_task_markers = ["workspace runtime", "requirement grounding", "delegation", "assurance"]
+authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime", "src/agentic_workspace/workspace_runtime_primitives.py"]
+required_evidence = ["workspace_runtime_proof", "tiny_surface_compatibility_review"]
+proof_profile = "workspace_behavior"
+workflow_obligation_refs = ["adapter_surface_refresh"]
+review_owner = "maintainer"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+notes = "Workspace runtime routing changes need focused runtime proof and compact-output compatibility review before broad completion claims."
+
+[assurance.requirements.model_harness_evidence]
+level = "high"
+applies_to_paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "docs/maintainer/test-knowledge-inventory.md"]
+applies_to_task_markers = ["model cli harness", "harness scorer", "test knowledge inventory"]
+authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.model-cli-harness", "docs/maintainer/test-knowledge-inventory.md"]
+required_evidence = ["model_harness_scorer_proof", "test_knowledge_inventory_review"]
+proof_profile = "test_evidence_change"
+review_owner = "maintainer"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+notes = "Model harness and test-knowledge changes need scorer proof and inventory review before broad completion claims."
 
 [cli_compatibility]
 enforcement = "advisory"

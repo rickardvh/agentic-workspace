@@ -255,6 +255,7 @@ def test_setup_surfaces_assurance_verification_onboarding_without_optional_modul
 
     payload = json.loads(capsys.readouterr().out)
     routes = payload["onboarding_routes"]
+    assert routes["assurance"]["status"] == "absent"
     assert routes["assurance"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
     assert routes["assurance"]["report_command"] == (
         "agentic-workspace report --target ./repo --section assurance_requirements --format json"
