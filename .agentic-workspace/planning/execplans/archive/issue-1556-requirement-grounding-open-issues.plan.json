@@ -83,21 +83,21 @@
   },
   "intent_continuity": {
     "larger intended outcome": "Make AW carry stated requirements, delegation contracts, and sustainable testing choices through cheap agent-facing projections.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none"
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#1556 remains open until the full requirement-grounded operating loop is implemented and accepted"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": "none",
-    "activation trigger": "none"
+    "required follow-on for the larger intended outcome": "Complete #1556 beyond projection fields: requirement source inventory, applicability recording, implementation decisions, verification evidence, known gaps, and closeout claims must operate as one coherent loop.",
+    "owner surface": "GitHub #1556",
+    "activation trigger": "Resume #1556 parent lane or owner requests full requirement-grounded operating-loop closure."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
+    "what this slice enabled": "report/proof/implement projections for requirement grounding, delegation packets, and test-sustainability checks",
+    "intentionally deferred": "full #1556 closure; this slice does not complete the coherent requirement-grounded operating loop",
+    "discovered implications": "projection fields alone are insufficient parent-lane closure evidence",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
-    "next likely slice": "No required continuation remains for this archived slice."
+    "next likely slice": "Continue #1556 only when ready to complete the remaining operating-loop requirements."
   },
   "intent_interpretation": {
     "literal request": "Implement the open issues in order of priority.",
@@ -238,9 +238,9 @@
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Requirement grounding, delegation packets, and test strategy checks.",
-    "was original intent fully satisfied?": "yes",
+    "was original intent fully satisfied?": "no",
     "evidence of intent satisfaction": "See proof_report.validation proof.",
-    "unsolved intent passed to": "none"
+    "unsolved intent passed to": "GitHub #1556"
   },
   "execution_summary": {
     "outcome delivered": "#1559 and #1560 are implemented; #1556 is materially advanced with an end-to-end implement projection but broader closeout/report/proof-loop integration may still need issue-owner judgment before closing the parent lane.",
@@ -271,7 +271,7 @@
   "closure_check": {
     "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
+    "larger-intent status": "open-routed-to-#1556",
     "closure decision": "archive-and-close",
     "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
     "evidence carried forward": "See proof_report.validation proof.",
@@ -344,28 +344,29 @@
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
     "status": "allowed",
-    "active_intent_satisfied": true,
+    "active_intent_satisfied": false,
     "human_accepted_partial": false,
-    "claim_level_requested": "full-intent-complete",
-    "claim_level_allowed": "full-intent-complete",
+    "claim_level_requested": "slice-complete",
+    "claim_level_allowed": "slice-complete",
     "required_next_action": "close-complete",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
       "allowed_claim_classes": [
         "partial_progress",
-        "slice_complete",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
         "lane_complete",
         "parent_complete",
         "full_intent_complete",
         "issue_closure"
       ],
-      "blocked_claim_classes": [],
       "closure_actions": [
         {
           "kind": "issue_closure",
           "target": "#1556",
-          "authorized": true,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "authorized": false,
+          "reason": "#1556 requires full requirement-grounded operating-loop closure; this archived slice only delivered projections."
         },
         {
           "kind": "issue_closure",
@@ -386,16 +387,16 @@
         "diagnostic_only": true
       }
     },
-    "residual_intent": "",
+    "residual_intent": "#1556 remains open for coherent requirement-grounded operating-loop closure.",
     "self_review": {
       "question": "Does the delivered work satisfy the active human intent?",
-      "answer": "yes",
-      "reason": "Planning closeout evidence supports the requested completion claim."
+      "answer": "no for #1556 parent lane; yes only for this bounded slice",
+      "reason": "Planning closeout evidence supports only the bounded projection slice; #1556 parent closure remains blocked."
     },
     "continuation": {
-      "owner_surface": "",
-      "created_or_required": false,
-      "reason": ""
+      "owner_surface": "GitHub #1556",
+      "created_or_required": true,
+      "reason": "Projection fields are not sufficient parent-lane closure evidence."
     },
     "authority_boundary": {
       "aw_owns": [
@@ -419,6 +420,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Requirement grounding, delegation packets, and test strategy checks.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_implement_cli.py -q -k 'requirement_grounding or plan_delegation_packet or test_strategy_check' passed; uv run ruff check src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_implement_cli.py passed; make test-workspace passed; make lint-workspace passed\nChanged surfaces: none yet; execution has not changed files\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded projection slice for requirement grounding, delegation packets, and test strategy checks.\nIntent satisfied: no for #1556 parent lane; yes only for this bounded slice.\nArchive decision: archive-and-close slice only\nProof: uv run pytest tests/test_workspace_implement_cli.py -q -k 'requirement_grounding or plan_delegation_packet or test_strategy_check' passed; uv run ruff check src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_implement_cli.py passed; make test-workspace passed; make lint-workspace passed\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_implement_cli.py\nDurable residue: #1556 remains open for full operating-loop closure\nMemory learning: none\nFollow-up: continue #1556 when implementing the coherent requirement-grounded operating loop\nCompletion gate: slice-only\nCompletion claim allowed: slice-complete"
   }
 }

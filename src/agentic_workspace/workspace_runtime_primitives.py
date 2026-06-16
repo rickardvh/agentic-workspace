@@ -24936,6 +24936,13 @@ def _plan_string_list(record: dict[str, Any], *keys: str) -> list[str]:
     return _dedupe(values)
 
 
+def _plan_exact_list(record: dict[str, Any], *keys: str) -> list[str]:
+    values: list[str] = []
+    for item in _plan_string_list(record, *keys):
+        values.extend(part.strip() for part in re.split(r"[;,]", item) if part.strip())
+    return _dedupe(values)
+
+
 def _requirement_grounding_payload(
     *,
     target_root: Path,
@@ -25072,7 +25079,15 @@ def _requirement_grounding_payload(
         or interpretation.get("literal request")
         or ""
     ).strip()
+    explicit_grounding = _as_dict(active_planning_record.get("requirement_grounding"))
     design_effects = _plan_string_list(
+        explicit_grounding,
+        "design_effects",
+        "design_effect",
+        "constraints",
+        "implementation_constraints",
+    )
+    planning_context_fallback = _plan_string_list(
         active_planning_record,
         "canonical_core.hard_constraints",
         "canonical_core.agent_may_decide",
@@ -25124,7 +25139,7 @@ def _requirement_grounding_payload(
                 "source": "external-intent",
             }
         )
-    if deduped_refs and not (applicability or interpretation_summary or design_effects):
+    if deduped_refs and not (applicability or interpretation_summary or design_effects or planning_context_fallback):
         known_gaps.append(
             {
                 "gap": "requirement refs exist but no active planning interpretation or design effect was recorded",
@@ -25176,6 +25191,11 @@ def _requirement_grounding_payload(
             "confidence": "medium" if interpretation_summary else "low",
         },
         "design_effects": design_effects,
+        "planning_context_fallback": {
+            "status": "present" if planning_context_fallback else "absent",
+            "items": planning_context_fallback,
+            "rule": "Generic planning fields can help the agent reason, but they are not labeled as requirement-derived design effects.",
+        },
         "decisions": decisions,
         "verification_refs": verification_refs,
         "known_gaps": known_gaps,
@@ -25237,12 +25257,12 @@ def _plan_delegation_packet_payload(
         for item in _list_payload(record.get("references"))
         if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
     ]
-    read_first_refs = _dedupe(read_first_refs + _plan_string_list(record, "context_budget.live working set"))
+    read_first_refs = _dedupe(read_first_refs + _plan_exact_list(record, "context_budget.live working set"))
     allowed_scope = _dedupe(
-        _plan_string_list(record, "canonical_core.touched_scope", "touched_paths")
-        + _plan_string_list(record, "execution_bounds.allowed paths")
+        _plan_exact_list(record, "canonical_core.touched_scope", "touched_paths")
+        + _plan_exact_list(record, "execution_bounds.allowed paths")
     )
-    forbidden_scope = _dedupe(_plan_string_list(record, "non_goals", "execution_bounds.stop before touching"))
+    forbidden_scope = _dedupe(_plan_exact_list(record, "non_goals", "execution_bounds.stop before touching"))
     stop_conditions = _dedupe(_plan_string_list(record, "stop_conditions.stop when", "stop_conditions.escalate on scope drift"))
     proof_commands = _dedupe(
         _plan_string_list(record, "validation_commands", "canonical_core.proof_expectations")
@@ -25268,8 +25288,6 @@ def _plan_delegation_packet_payload(
     }.items():
         joined = " ".join(values).lower()
         if any(marker in joined for marker in ("fill in", "<", ">", "tbd", "broad", "as needed")):
-            ambiguous_fields.append(field)
-        if field == "allowed_write_scope" and any(";" in value or "," in value for value in values):
             ambiguous_fields.append(field)
     ambiguous_fields = _dedupe(ambiguous_fields)
     route = "implementation-delegate"
@@ -26602,6 +26620,7 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
         }
     closure_check = _as_dict(record.get("closure_check"))
     intent_satisfaction = _as_dict(record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(record.get("intent_continuity"))
     canonical_core = _as_dict(record.get("canonical_core"))
     required_continuation = _as_dict(record.get("required_continuation"))
     durable_residue = _as_dict(record.get("durable_residue"))
@@ -26629,10 +26648,11 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower()
     completed = status in {"completed", "complete", "closed", "done"}
     closed = closure_decision == "archive-and-close"
-    continuation_routed = closure_decision == "archive-but-keep-lane-open" and any(
+    continuation_owner_present = any(
         value not in {"", "none", "no", "false", "n/a", "na"}
         for value in [
             str(canonical_core.get("continuation_owner") or "").strip().lower(),
+            str(intent_continuity.get("continuation surface") or "").strip().lower(),
             str(required_continuation.get("owner surface") or "").strip().lower(),
             str(durable_residue.get("canonical owner now") or "").strip().lower(),
             str(execution_summary.get("follow-on routed to") or "").strip().lower(),
@@ -26641,6 +26661,7 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     )
     no_open_larger_intent = larger_intent_status in {"", "satisfied", "complete", "completed", "closed", "done"}
     slice_scope = str(closure_check.get("closeout scope") or "").strip().lower() == "slice"
+    continuation_routed = continuation_owner_present and (closure_decision == "archive-but-keep-lane-open" or slice_scope)
     intent_done = intent_satisfied in {"", "yes", "true", "satisfied", "complete", "completed"} or (slice_scope and continuation_routed)
     eligible = completed and intent_done and ((closed and no_open_larger_intent) or continuation_routed)
     blockers = [
@@ -35763,7 +35784,16 @@ def _proof_confidence_payload(
     }
 
 
-def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _proof_completion_options(
+    *, required_commands: list[str], manual_verification: dict[str, Any] | None, test_strategy_check: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    test_strategy_check = _as_dict(test_strategy_check)
+    test_strategy_missing = (
+        test_strategy_check.get("status") == "advisory"
+        and bool(test_strategy_check.get("disposition_required_before_closeout"))
+        and bool(test_strategy_check.get("changed_test_paths"))
+        and not test_strategy_check.get("recorded_disposition")
+    )
     options: list[dict[str, Any]] = [
         _completion_option(
             "run-proof",
@@ -35794,7 +35824,10 @@ def _proof_completion_options(*, required_commands: list[str], manual_verificati
         _completion_option(
             "route-residue",
             allowed=False,
-            why="proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+            why="test strategy disposition must be recorded before claiming test-sustainability review"
+            if test_strategy_missing
+            else "proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+            blocking_fields=["test_strategy_check.recorded_disposition"] if test_strategy_missing else None,
         ),
         _completion_option(
             "request-review",
@@ -36800,7 +36833,11 @@ def _proof_selection_for_changed_paths(
         ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
-        "completion_options": _proof_completion_options(required_commands=required_commands, manual_verification=manual_verification),
+        "completion_options": _proof_completion_options(
+            required_commands=required_commands,
+            manual_verification=manual_verification,
+            test_strategy_check=test_strategy_check,
+        ),
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions

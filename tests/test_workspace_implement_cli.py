@@ -1521,6 +1521,30 @@ def test_implement_allows_completed_archived_plan_residue_with_continuation_evid
             },
             {"larger_intent_status": "open", "closure_decision": "archive-but-keep-lane-open"},
         ),
+        (
+            "archived-slice-with-routed-parent",
+            ".agentic-workspace/planning/execplans/archive/routed-parent-slice.plan.json",
+            {
+                "schema_version": "execplan/v1",
+                "id": "routed-parent-slice",
+                "machine_readable_contract": {"execution": {"status": "completed"}},
+                "intent_continuity": {
+                    "this slice completes the larger intended outcome": "no",
+                    "continuation surface": "GitHub #1556",
+                },
+                "required_continuation": {
+                    "required follow-on for the larger intended outcome": "Complete the parent lane.",
+                    "owner surface": "GitHub #1556",
+                },
+                "intent_satisfaction": {"was original intent fully satisfied?": "no for parent lane; yes for slice"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "larger-intent status": "open-routed-to-#1556",
+                    "closure decision": "archive-and-close",
+                },
+            },
+            {"larger_intent_status": "open-routed-to-#1556", "closure_decision": "archive-and-close"},
+        ),
     ]
     for label, archive_path, record, expected_record_fields in scenarios:
         _write(tmp_path / archive_path, json.dumps(record))
@@ -2153,6 +2177,7 @@ candidates = []
             "kind": "planning-execplan/v1",
             "title": "Requirement grounding",
             "traceability_refs": {"requirement_refs": ["docs/requirements.md#trace"]},
+            "requirement_grounding": {"design_effects": ["Requirement refs must remain distinct from agent interpretation."]},
             "intent_interpretation": {"chosen concrete what": "Carry requirement refs through planning and closeout."},
             "canonical_core": {
                 "hard_constraints": "Keep observed source separate from agent interpretation.",
@@ -2192,7 +2217,8 @@ candidates = []
     assert grounding["requirement_refs"][0]["source_metadata"]["trust_note"].startswith("routing/index metadata only")
     assert grounding["source_inventory_policy"]["not_a_requirement_corpus"] is True
     assert grounding["agent_interpretation"]["status"] == "present"
-    assert grounding["design_effects"] == ["Keep observed source separate from agent interpretation."]
+    assert grounding["design_effects"] == ["Requirement refs must remain distinct from agent interpretation."]
+    assert grounding["planning_context_fallback"]["items"] == ["Keep observed source separate from agent interpretation."]
     assert grounding["authority_boundary"]["agent_owned_decisions"]
 
 
@@ -2414,6 +2440,66 @@ candidates = []
     ]
 
 
+def test_implement_keeps_exact_semicolon_scope_delegation_ready(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "delegate-semicolon", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/delegate-semicolon.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "delegate-semicolon.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Delegate semicolon slice",
+            "canonical_core": {
+                "requested_outcome": "Implement a bounded runtime packet.",
+                "touched_scope": ["src/runtime.py; tests/test_runtime.py"],
+                "proof_expectations": ["uv run pytest tests/test_runtime.py -q"],
+                "completion_criteria": ["Packet is projected."],
+            },
+            "stop_conditions": {"stop when": "proof fails"},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Continue delegate-semicolon",
+                "--select",
+                "plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
+    assert packet["delegation_ready"] is True
+    assert packet["ambiguous_fields"] == []
+    assert packet["allowed_write_scope"] == ["src/runtime.py", "tests/test_runtime.py"]
+
+
 def test_implement_refuses_ambiguous_plan_delegation_packet(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
@@ -2616,6 +2702,26 @@ def test_proof_surfaces_test_strategy_check_for_closeout_visibility(tmp_path: Pa
     assert check["kind"] == "agentic-workspace/test-strategy-check/v1"
     assert check["status"] == "advisory"
     assert check["closeout_visibility"]["missing_disposition_blocks_claim"] == "test-sustainability-reviewed"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "completion_options",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    options = json.loads(capsys.readouterr().out)["values"]["completion_options"]
+    route_residue = next(option for option in options if option["id"] == "route-residue")
+    assert route_residue["blocking_fields"] == ["test_strategy_check.recorded_disposition"]
 
 
 def test_implement_blocks_parent_lane_slice_without_lane_owner_artifact(tmp_path: Path, capsys) -> None:
