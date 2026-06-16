@@ -22347,10 +22347,14 @@ _CANDIDATE_RELEVANCE_STOPWORDS = {
     "implement",
     "implementation",
     "issue",
+    "jumpstart",
     "lane",
     "planning",
+    "repo",
     "task",
+    "this",
     "work",
+    "workspace",
 }
 
 
@@ -32830,11 +32834,46 @@ def _setup_payload(
         non_interactive=False,
         config=config,
     )
+    installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
+    setup_warnings: list[str] = []
+    optional_module_notices: list[str] = []
+    for warning in status_payload.get("warnings", []):
+        warning_text = str(warning)
+        if "installed module 'verification' is not enabled" in warning_text and "verification" in installed_modules:
+            optional_module_notices.append(
+                "Verification is installed and available as an optional module; it is not part of the default enabled module set."
+            )
+        else:
+            setup_warnings.append(warning_text)
+    setup_status_payload = {**status_payload, "warnings": setup_warnings}
     discovery = setup_discovery_payload(
-        target_root=target_root, status_payload=status_payload, active_todo_surface=_active_todo_surface(target_root=target_root)
+        target_root=target_root, status_payload=setup_status_payload, active_todo_surface=_active_todo_surface(target_root=target_root)
     )
     proof_route_hints = _load_proof_route_hints(target_root=target_root)
     findings_input = _setup_findings_input_payload(target_root=target_root)
+    assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
+    verification_manifest_present = (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists()
+    onboarding_routes = {
+        "assurance": {
+            "status": assurance_onboarding.get("status", "absent"),
+            "command": "agentic-workspace defaults --section assurance_onboarding --format json",
+            "report_command": "agentic-workspace report --target ./repo --section assurance_requirements --format json",
+            "seed_when": "only after inspected host-owned evidence names the requirement, proof route, evidence label, or claim boundary",
+            "candidate_seed_surfaces": assurance_onboarding.get("candidate_seed_surfaces", []),
+        },
+        "verification": {
+            "status": "configured" if verification_manifest_present else "available",
+            "command": "agentic-workspace defaults --section verification_onboarding --format json",
+            "report_command": "agentic-workspace report --target ./repo --section verification --format json",
+            "seed_when": "only for repeatable host proof needs not already expressed by ordinary tests or proof selection",
+            "candidate_seed_surfaces": [
+                ".agentic-workspace/verification/manifest.toml",
+                ".agentic-workspace/verification/proof-strategy.toml",
+                ".agentic-workspace/verification/proof-decision.json",
+            ],
+        },
+        "rule": "Setup surfaces onboarding questions and seed candidates; the agent decides whether host evidence is strong enough to write anything.",
+    }
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
         startup_file = config.agent_instructions_file
@@ -32843,7 +32882,14 @@ def _setup_payload(
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
             "reason": f"{startup_file}, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/agent-manifest.json, and .agentic-workspace/memory/repo/index.md are already present.",
         }
-        next_action = {"summary": "No new seed surfaces needed", "commands": ["agentic-workspace report --target ./repo --format json"]}
+        next_action = {
+            "summary": "No new core seed surfaces needed; inspect onboarding routes before adding assurance or verification seeds",
+            "commands": [
+                "agentic-workspace report --target ./repo --format json",
+                "agentic-workspace defaults --section assurance_onboarding --format json",
+                "agentic-workspace defaults --section verification_onboarding --format json",
+            ],
+        }
     else:
         prioritized = discovery["memory_candidates"] + discovery["planning_candidates"] + discovery["ambiguous"]
         prioritized.sort(key=lambda item: item["confidence"], reverse=True)
@@ -32857,7 +32903,11 @@ def _setup_payload(
             orientation["reason"] = best["reason"]
         next_action = {
             "summary": "Review the compact report surfaces",
-            "commands": ["agentic-workspace report --target ./repo --format json"],
+            "commands": [
+                "agentic-workspace report --target ./repo --format json",
+                "agentic-workspace defaults --section assurance_onboarding --format json",
+                "agentic-workspace defaults --section verification_onboarding --format json",
+            ],
         }
     if findings_input.get("status") == "loaded":
         promotable_count = sum((len(items) for items in findings_input["promotable"].values()))
@@ -32892,12 +32942,14 @@ def _setup_payload(
             "hint_count": len(proof_route_hints.get("hints", [])),
             "rule": "Setup reports lifecycle-discovered advisory proof route hints; proof still live-confirms them before command selection.",
         },
+        "onboarding_routes": onboarding_routes,
         "next_action": next_action,
         "discovery": discovery,
         "current": {
-            "installed_modules": [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")],
-            "warnings": list(status_payload.get("warnings", [])),
-            "needs_review": list(status_payload.get("needs_review", [])),
+            "installed_modules": installed_modules,
+            "warnings": setup_warnings,
+            "optional_module_notices": optional_module_notices,
+            "needs_review": [item for item in status_payload.get("needs_review", []) if str(item) in setup_warnings],
             "stale_generated_surfaces": list(status_payload.get("stale_generated_surfaces", [])),
         },
     }

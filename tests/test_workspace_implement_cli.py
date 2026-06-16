@@ -2464,6 +2464,50 @@ candidates = [
     assert "lane_shaping_gate" not in payload["context"]
 
 
+def test_start_does_not_promote_roadmap_candidates_from_generic_jumpstart_terms(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1601-workspace-cleanup", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1601", title = "Workspace cleanup", outcome = "Improve repo maintenance surfaces.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape cleanup." },
+  { id = "github-1602-setup-followup", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1602", title = "Setup follow-up", outcome = "Review jumpstart residue in this repo.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape setup." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Run workspace setup jumpstart on this repo for dogfooding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["implementation_allowed"] is True
+    assert payload["action_signals"]["allowed_next_action"] != "select-or-promote-candidate-lane"
+    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] != "candidate-lane-promotion-required"
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    assert "lane_shaping_gate" not in payload["context"]
+
+
 def test_implement_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
