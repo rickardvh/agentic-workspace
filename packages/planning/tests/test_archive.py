@@ -749,6 +749,61 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
 
 
+def test_archive_plan_prepare_closeout_keeps_parent_continuation_visible_for_closed_slice(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "yes"
+    record["intent_continuity"]["continuation surface"] = "GitHub #1556"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "Complete the parent operating-loop lane when resumed.",
+        "owner surface": "GitHub #1556",
+        "activation trigger": "when the parent lane resumes",
+    }
+    record["intent_satisfaction"] = {
+        "original intent": "Close this bounded slice without closing the parent lane.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "Slice validation passed.",
+        "unsolved intent passed to": "GitHub #1556",
+    }
+    record["iterative_follow_through"]["next likely slice"] = "continue the current milestone until the completion criteria are met"
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--closure-decision",
+                "archive-and-close",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    detail = next(action["detail"] for action in payload["actions"] if "prepared closeout patch: " in action["detail"])
+    patch = json.loads(detail.split("prepared closeout patch: ", 1)[1])
+
+    assert payload["warnings"] == []
+    assert patch["closure_check"]["closure decision"] == "archive-and-close"
+    assert patch["canonical_core"]["continuation_owner"] == "GitHub #1556"
+    next_step = patch["machine_readable_contract"]["execution"]["next_step"]
+    next_likely_slice = patch["iterative_follow_through"]["next likely slice"]
+    assert next_step == "Parent/lane continuation remains routed to GitHub #1556."
+    assert next_likely_slice == "Parent/lane continuation remains routed to GitHub #1556."
+    assert "No required continuation remains" not in next_step
+    assert "No required continuation remains" not in next_likely_slice
+
+
 def test_planning_closeout_archives_direct_slice_without_manual_closeout_edits(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

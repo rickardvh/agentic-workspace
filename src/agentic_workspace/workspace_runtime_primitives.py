@@ -7681,6 +7681,15 @@ def _run_report_command(
         assurance_requirements=assurance_requirements,
     )
     assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
+    requirement_grounding = _requirement_grounding_payload(
+        target_root=target_root,
+        task_text=None,
+        changed_paths=[],
+        active_planning_record=raw_active_planning_record or active_planning_record or {},
+        issue_scope_evidence={"kind": "agentic-workspace/issue-scope-evidence/v1", "status": "not-applicable", "issue_refs": []},
+        assurance_requirements=assurance_requirements,
+        verification=verification,
+    )
     memory_consult = _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke)
     applicable_intent = _applicable_intent_source_projection_payload(
         target_root=target_root,
@@ -7768,6 +7777,7 @@ def _run_report_command(
         "applicable_intent": applicable_intent,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
+        "requirement_grounding": requirement_grounding,
         "product_managed_enclave": _product_managed_enclave_payload(target_root=target_root, ownership_payload=ownership_payload),
         "ownership_diagnostics": ownership_payload["diagnostics"],
         "surface_value_guardrail": surface_value_guardrail,
@@ -8704,6 +8714,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/verification-report/v1",
         "purpose": "Verification module protocols, routes, evidence bundles, and known gaps",
         "when_to_use": "when evidence production or review provenance matters more than ordinary proof selection",
+    },
+    {
+        "section": "requirement_grounding",
+        "kind": "agentic-workspace/requirement-grounding/v1",
+        "purpose": "requirement refs, applicability, interpretation, design effects, verification evidence, gaps, and claim boundaries",
+        "when_to_use": "when deciding whether work and closeout claims are grounded in the right stated requirements",
     },
     {
         "section": "applicable_intent",
@@ -11274,7 +11290,7 @@ def _run_lazy_report_section_command(
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
-    if normalized in {"assurance_requirements", "verification", "applicable_intent"}:
+    if normalized in {"assurance_requirements", "verification", "requirement_grounding", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
             active_planning_record=active_planning_record,
@@ -11286,6 +11302,20 @@ def _run_lazy_report_section_command(
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        if normalized == "requirement_grounding":
+            payload["requirement_grounding"] = _requirement_grounding_payload(
+                target_root=target_root,
+                task_text=None,
+                changed_paths=[],
+                active_planning_record=active_planning_record,
+                issue_scope_evidence={
+                    "kind": "agentic-workspace/issue-scope-evidence/v1",
+                    "status": "not-applicable",
+                    "issue_refs": [],
+                },
+                assurance_requirements=payload["assurance_requirements"],
+                verification=verification,
+            )
         if normalized == "applicable_intent":
             payload["memory_consult"] = _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke)
             payload["standing_intent"] = standing_intent_payload(
@@ -24878,6 +24908,608 @@ def _task_contract_payload(
     }
 
 
+def _active_execplan_record_payload(*, target_root: Path) -> tuple[str, dict[str, Any]]:
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    active_surface = str(active_summary.get("active_execplan") or "").strip()
+    if not active_surface:
+        return "", {}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return active_surface, {}
+    try:
+        loaded = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return active_surface, {}
+    return active_surface, loaded if isinstance(loaded, dict) else {}
+
+
+def _plan_string_list(record: dict[str, Any], *keys: str) -> list[str]:
+    values: list[str] = []
+    for key in keys:
+        raw: Any = record
+        for part in key.split("."):
+            raw = raw.get(part) if isinstance(raw, dict) else None
+        if isinstance(raw, str):
+            values.extend([line.strip() for line in raw.splitlines() if line.strip()])
+        else:
+            values.extend(str(item).strip() for item in _list_payload(raw) if str(item).strip())
+    return _dedupe(values)
+
+
+def _plan_exact_list(record: dict[str, Any], *keys: str) -> list[str]:
+    values: list[str] = []
+    for item in _plan_string_list(record, *keys):
+        values.extend(part.strip() for part in re.split(r"[;,]", item) if part.strip())
+    return _dedupe(values)
+
+
+def _requirement_grounding_payload(
+    *,
+    target_root: Path,
+    task_text: str | None,
+    changed_paths: list[str],
+    active_planning_record: dict[str, Any],
+    issue_scope_evidence: dict[str, Any],
+    assurance_requirements: dict[str, Any],
+    verification: dict[str, Any],
+) -> dict[str, Any]:
+    def source_metadata(*, ref: str, source_type: str, provenance: str) -> dict[str, Any]:
+        source_path = target_root / provenance if provenance and not provenance.startswith(("http://", "https://")) else None
+        return {
+            "source_revision": _git_source_identity(target_root) if source_type in {"repo-doc", "active-plan-ref"} else "",
+            "fetched_at": "",
+            "excerpt_hash": "",
+            "freshness": "repo-current" if source_path is not None and source_path.exists() else "external-or-unverified",
+            "trust_note": "routing/index metadata only; AW does not copy or store the requirement corpus",
+        }
+
+    requirement_refs: list[dict[str, Any]] = []
+    for issue in _list_payload(issue_scope_evidence.get("evidence")):
+        if not isinstance(issue, dict):
+            continue
+        ref = str(issue.get("id") or "").strip()
+        if ref:
+            provenance = str(issue_scope_evidence.get("source_path") or "").strip()
+            requirement_refs.append(
+                {
+                    "ref": ref,
+                    "source_type": "external-intent",
+                    "authority": "task-referenced-requirement-source",
+                    "title": str(issue.get("title") or "").strip(),
+                    "provenance": provenance,
+                    "source_metadata": {
+                        "source_revision": "",
+                        "fetched_at": str(issue.get("fetched_at") or "").strip(),
+                        "excerpt_hash": str(issue.get("excerpt_hash") or "").strip(),
+                        "freshness": "cached-external-intent" if provenance else "external-or-unverified",
+                        "trust_note": "routing/index metadata only; AW does not copy or store the requirement corpus",
+                    },
+                }
+            )
+    traceability = _as_dict(active_planning_record.get("traceability_refs"))
+    for key, authority in (
+        ("requirement_refs", "active-plan-requirement-ref"),
+        ("acceptance_refs", "active-plan-acceptance-ref"),
+        ("decision_refs", "active-plan-decision-ref"),
+    ):
+        for ref in _list_payload(traceability.get(key)):
+            text = str(ref).strip()
+            if text:
+                requirement_refs.append(
+                    {
+                        "ref": text,
+                        "source_type": "active-plan-ref",
+                        "authority": authority,
+                        "provenance": "active_execplan.traceability_refs",
+                        "source_metadata": source_metadata(
+                            ref=text,
+                            source_type="active-plan-ref",
+                            provenance=str(_active_execplan_record_payload(target_root=target_root)[0] or ""),
+                        ),
+                    }
+                )
+    for requirement in _list_payload(assurance_requirements.get("active")):
+        if not isinstance(requirement, dict):
+            continue
+        requirement_id = str(requirement.get("id") or "").strip()
+        if requirement_id:
+            requirement_refs.append(
+                {
+                    "ref": requirement_id,
+                    "source_type": "assurance-requirement",
+                    "authority": "repo-configured-assurance-requirement",
+                    "title": str(requirement.get("title") or "").strip(),
+                    "provenance": "assurance_requirements.active",
+                    "source_metadata": {
+                        "source_revision": _git_source_identity(target_root),
+                        "fetched_at": "",
+                        "excerpt_hash": "",
+                        "freshness": "repo-current",
+                        "trust_note": "routing/index metadata only; AW does not copy or store the requirement corpus",
+                    },
+                }
+            )
+    seen_refs: set[tuple[str, str]] = set()
+    deduped_refs: list[dict[str, Any]] = []
+    for item in requirement_refs:
+        key = (str(item.get("ref") or ""), str(item.get("provenance") or ""))
+        if key in seen_refs:
+            continue
+        seen_refs.add(key)
+        deduped_refs.append(item)
+
+    applicability: list[dict[str, Any]] = []
+    for requirement in _list_payload(assurance_requirements.get("active")):
+        if not isinstance(requirement, dict):
+            continue
+        ref = str(requirement.get("id") or "").strip()
+        if not ref:
+            continue
+        because = [str(item).strip() for item in _list_payload(requirement.get("applies_because")) if str(item).strip()]
+        applicability.append(
+            {
+                "ref": ref,
+                "state": "applicable" if because else "unknown",
+                "why": "; ".join(because) if because else "No applicability rationale was recorded.",
+                "confidence": "medium" if because else "low",
+                "authority": "configured-route" if because else "agent-review-required",
+            }
+        )
+    applicable_intent = _as_dict(active_planning_record.get("applicable_intents") or active_planning_record.get("applicable_intent"))
+    for source in _list_payload(applicable_intent.get("sources")):
+        if not isinstance(source, dict):
+            continue
+        ref = str(source.get("ref") or source.get("id") or source.get("source") or "").strip()
+        if not ref:
+            continue
+        applicability.append(
+            {
+                "ref": ref,
+                "state": str(source.get("state") or "applicable").strip(),
+                "why": str(source.get("why") or source.get("reason") or "").strip(),
+                "confidence": str(source.get("confidence") or "medium").strip(),
+                "authority": "active-plan-applicability",
+            }
+        )
+
+    interpretation = _as_dict(active_planning_record.get("intent_interpretation"))
+    interpretation_summary = str(
+        interpretation.get("chosen concrete what")
+        or interpretation.get("inferred intended outcome")
+        or interpretation.get("literal request")
+        or ""
+    ).strip()
+    explicit_grounding = _as_dict(active_planning_record.get("requirement_grounding"))
+    design_effects = _plan_string_list(
+        explicit_grounding,
+        "design_effects",
+        "design_effect",
+        "constraints",
+        "implementation_constraints",
+    )
+    planning_context_fallback = _plan_string_list(
+        active_planning_record,
+        "canonical_core.hard_constraints",
+        "canonical_core.agent_may_decide",
+        "execution_bounds.allowed paths",
+        "execution_bounds.stop before touching",
+        "delegated_judgment.hard constraints",
+    )
+    decisions = [
+        {"selected": item, "rejected_alternatives": []}
+        for item in _plan_string_list(active_planning_record, "contract_decisions_to_freeze")
+        if item.lower() not in {"none", "none."}
+    ]
+    verification_refs: list[dict[str, Any]] = []
+    for protocol in _list_payload(verification.get("active_protocols")):
+        if not isinstance(protocol, dict):
+            continue
+        protocol_id = str(protocol.get("id") or "").strip()
+        requirement_refs_for_protocol = [
+            str(item).strip() for item in _list_payload(protocol.get("assurance_requirement_refs")) if str(item).strip()
+        ]
+        if protocol_id:
+            verification_refs.append(
+                {
+                    "protocol_id": protocol_id,
+                    "scenario_refs": [str(item).strip() for item in _list_payload(protocol.get("scenario_refs")) if str(item).strip()],
+                    "requirement_refs": requirement_refs_for_protocol,
+                    "evidence_labels": [
+                        str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()
+                    ],
+                }
+            )
+    known_gaps: list[dict[str, Any]] = []
+    for gap in _list_payload(verification.get("known_gaps")) + _list_payload(verification.get("active_known_gaps")):
+        if not isinstance(gap, dict):
+            continue
+        known_gaps.append(
+            {
+                "gap": str(gap.get("id") or gap.get("reason") or "verification gap").strip(),
+                "blocked_claims": [str(item).strip() for item in _list_payload(gap.get("blocked_claims")) if str(item).strip()],
+                "source": "verification",
+            }
+        )
+    missing_refs = [str(item).strip() for item in _list_payload(issue_scope_evidence.get("missing_issue_refs")) if str(item).strip()]
+    for ref in missing_refs:
+        known_gaps.append(
+            {
+                "gap": f"external requirement source {ref} is not cached",
+                "blocked_claims": ["requirement-grounded-completion"],
+                "source": "external-intent",
+            }
+        )
+    if deduped_refs and not (applicability or interpretation_summary or design_effects or planning_context_fallback):
+        known_gaps.append(
+            {
+                "gap": "requirement refs exist but no active planning interpretation or design effect was recorded",
+                "blocked_claims": ["requirement-grounded-completion"],
+                "source": "planning",
+            }
+        )
+    sensitivity_signals = []
+    task_lower = str(task_text or "").lower()
+    if any(term in task_lower for term in ("security", "privacy", "compliance", "domain", "requirement", "policy", "regulated")):
+        sensitivity_signals.append("task-text-requirement-sensitive")
+    if assurance_requirements.get("active_count"):
+        sensitivity_signals.append("active-assurance-requirements")
+    if verification.get("active_count"):
+        sensitivity_signals.append("active-verification-routes")
+    if sensitivity_signals and not deduped_refs:
+        known_gaps.append(
+            {
+                "gap": "task appears requirement-sensitive but no applicable requirement refs were selected",
+                "blocked_claims": ["requirement-grounded-completion"],
+                "source": "requirement-sensitivity",
+            }
+        )
+    allowed_claims = []
+    if verification_refs:
+        allowed_claims.append("changed scope has requirement-referenced verification evidence")
+    if applicability and design_effects:
+        allowed_claims.append("active plan recorded applicable requirements and design constraints")
+    blocked_claims = _dedupe(
+        [
+            claim
+            for gap in known_gaps
+            for claim in [str(item).strip() for item in _list_payload(gap.get("blocked_claims")) if str(item).strip()]
+        ]
+    )
+    if not deduped_refs and (task_text or changed_paths):
+        blocked_claims.append("requirement-grounded-completion")
+    status = "ready" if deduped_refs and not blocked_claims else "attention" if deduped_refs or task_text else "not-applicable"
+    return {
+        "kind": "agentic-workspace/requirement-grounding/v1",
+        "status": status,
+        "requirement_refs": deduped_refs,
+        "applicability": applicability,
+        "agent_interpretation": {
+            "status": "present" if interpretation_summary else "not-recorded",
+            "summary": interpretation_summary,
+            "assumptions": _plan_string_list(active_planning_record, "intent_interpretation.assumptions"),
+            "needs_human_confirmation": str(interpretation.get("review guidance") or "").strip().lower() not in {"", "none", "none."},
+            "confidence": "medium" if interpretation_summary else "low",
+        },
+        "design_effects": design_effects,
+        "planning_context_fallback": {
+            "status": "present" if planning_context_fallback else "absent",
+            "items": planning_context_fallback,
+            "rule": "Generic planning fields can help the agent reason, but they are not labeled as requirement-derived design effects.",
+        },
+        "decisions": decisions,
+        "verification_refs": verification_refs,
+        "known_gaps": known_gaps,
+        "closeout_claims": {"allowed": allowed_claims, "blocked": _dedupe(blocked_claims)},
+        "source_facts": {
+            "changed_paths": changed_paths,
+            "task_issue_refs": sorted(set(re.findall("#\\d+", task_text or ""))),
+            "active_plan_present": bool(active_planning_record),
+            "assurance_active_count": assurance_requirements.get("active_count", 0),
+            "verification_active_count": verification.get("active_count", 0),
+            "sensitivity_signals": sensitivity_signals,
+        },
+        "source_inventory_policy": {
+            "role": "compact-routing-index",
+            "not_a_requirement_corpus": True,
+            "rule": "Requirement refs point to authority and carry provenance/freshness metadata; AW does not copy source text into long-lived state.",
+        },
+        "authority_boundary": _authority_boundary_payload(
+            surface="requirement_grounding",
+            observed_by_aw=[
+                f"requirement_ref_count={len(deduped_refs)}",
+                f"applicability_count={len(applicability)}",
+                f"verification_ref_count={len(verification_refs)}",
+                f"known_gap_count={len(known_gaps)}",
+            ],
+            recommended_by_aw=["inspect missing grounding before claiming requirement-grounded completion"] if blocked_claims else [],
+            proof_hints=["verification protocols, assurance evidence status, active plan decisions, known gaps"],
+            agent_owned_decisions=[
+                "requirement applicability",
+                "requirement interpretation",
+                "implementation choices shaped by requirements",
+                "completion claim wording",
+            ],
+            human_owned_decisions=["acceptance of requirement interpretation and final compliance/fitness claims"],
+            rule="AW links observed requirement refs, planning residue, verification evidence, and closeout claim boundaries; the agent owns reasoning and decisions.",
+        ),
+    }
+
+
+def _plan_delegation_packet_payload(
+    *, target_root: Path, config: WorkspaceConfig, proof: dict[str, Any], task_text: str | None
+) -> dict[str, Any]:
+    active_surface, record = _active_execplan_record_payload(target_root=target_root)
+    planning_revision = _planning_revision_payload(target_root=target_root)
+    if not record:
+        return {
+            "kind": "agentic-workspace/plan-delegation-packet/v1",
+            "status": "unavailable",
+            "delegation_ready": False,
+            "delegation_recommended": False,
+            "active_execplan": active_surface,
+            "planning_revision": planning_revision,
+            "missing_fields": ["active_execplan"],
+        }
+    core = _as_dict(record.get("canonical_core"))
+    delegated = _as_dict(record.get("delegated_judgment"))
+    read_first_refs = [
+        str(item.get("target") or item.get("label") or "").strip()
+        for item in _list_payload(record.get("references"))
+        if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
+    ]
+    read_first_refs = _dedupe(read_first_refs + _plan_exact_list(record, "context_budget.live working set"))
+    allowed_scope = _dedupe(
+        _plan_exact_list(record, "canonical_core.touched_scope", "touched_paths")
+        + _plan_exact_list(record, "execution_bounds.allowed paths")
+    )
+    forbidden_scope = _dedupe(_plan_exact_list(record, "non_goals", "execution_bounds.stop before touching"))
+    stop_conditions = _dedupe(_plan_string_list(record, "stop_conditions.stop when", "stop_conditions.escalate on scope drift"))
+    proof_commands = _dedupe(
+        _plan_string_list(record, "validation_commands", "canonical_core.proof_expectations")
+        + [str(item).strip() for item in _list_payload(proof.get("required_commands")) if str(item).strip()]
+    )
+    acceptance_criteria = _dedupe(_plan_string_list(record, "completion_criteria", "canonical_core.completion_criteria"))
+    requested_outcome = str(
+        delegated.get("requested outcome") or core.get("requested_outcome") or record.get("title") or task_text or ""
+    ).strip()
+    required_fields = {
+        "owned_slice": requested_outcome,
+        "allowed_write_scope": allowed_scope,
+        "stop_conditions": stop_conditions,
+        "proof_commands": proof_commands,
+        "acceptance_criteria": acceptance_criteria,
+    }
+    missing = [field for field, value in required_fields.items() if not value]
+    ambiguous_fields = []
+    for field, values in {
+        "allowed_write_scope": allowed_scope,
+        "proof_commands": proof_commands,
+        "acceptance_criteria": acceptance_criteria,
+    }.items():
+        joined = " ".join(values).lower()
+        if any(marker in joined for marker in ("fill in", "<", ">", "tbd", "broad", "as needed")):
+            ambiguous_fields.append(field)
+    ambiguous_fields = _dedupe(ambiguous_fields)
+    route = "implementation-delegate"
+    if not allowed_scope:
+        route = "exploration-delegate"
+    elif proof_commands and requested_outcome.lower().startswith(("validate", "verify", "review")):
+        route = "validation-delegate"
+    elif "review" in " ".join(acceptance_criteria).lower():
+        route = "review-delegate"
+    cheap_bounded = not missing and not ambiguous_fields and len(allowed_scope) <= 6 and len(proof_commands) <= 4
+    delegation_ready = not missing and not ambiguous_fields
+    return {
+        "kind": "agentic-workspace/plan-delegation-packet/v1",
+        "status": "ready" if delegation_ready else "ambiguous-fields" if ambiguous_fields else "missing-fields",
+        "delegation_ready": delegation_ready,
+        "delegation_recommended": cheap_bounded,
+        "active_execplan": active_surface,
+        "planning_revision": planning_revision,
+        "freshness_guard": {
+            "revision_id": planning_revision.get("revision_id"),
+            "state_hash": planning_revision.get("state_hash"),
+            "active_execplan_hash": planning_revision.get("active_execplan_hash"),
+            "delegate_return_must_cite_revision": True,
+        },
+        "owned_slice": requested_outcome,
+        "requested_outcome": requested_outcome,
+        "read_first_refs": read_first_refs,
+        "allowed_write_scope": allowed_scope,
+        "forbidden_scope": forbidden_scope,
+        "stop_conditions": stop_conditions,
+        "proof_commands": proof_commands,
+        "acceptance_criteria": acceptance_criteria,
+        "uncertainty_reporting": [
+            "report assumptions and uncertainty before implementation choices",
+            "stop on scope, proof, or authority drift instead of widening silently",
+        ],
+        "expected_evidence_on_return": [
+            "changed files",
+            "proof commands run and results",
+            "acceptance criteria status",
+            "uncertainty or stop-condition hits",
+            "residue or follow-up items",
+        ],
+        "return_contract": {
+            "required_fields": [
+                "changed_files",
+                "changed_surfaces",
+                "proof_run",
+                "proof_result",
+                "result",
+                "uncertainty",
+                "stop_condition_hits",
+                "residue",
+                "allowed_claims",
+                "planning_revision",
+            ],
+            "rule": "Delegation does not lower proof, review, closeout, or acceptance requirements.",
+        },
+        "missing_fields": missing,
+        "ambiguous_fields": ambiguous_fields,
+        "recommended_route": route if delegation_ready else "stay-local-until-plan-complete",
+        "cheap_bounded_executor_recommended": cheap_bounded,
+        "configured_low_cost_targets": [
+            target.name
+            for target in config.local_override.delegation_targets
+            if target.strength in {"weak", "standard"} and "manual" in target.execution_methods
+        ],
+        "source_fields": [
+            "active_execplan.canonical_core",
+            "active_execplan.execution_bounds",
+            "active_execplan.stop_conditions",
+            "active_execplan.validation_commands",
+            "active_execplan.completion_criteria",
+        ],
+        "handoff_prompt": "\n".join(
+            [
+                f"Owned slice: {requested_outcome}",
+                f"Read first: {', '.join(read_first_refs) if read_first_refs else '(none recorded)'}",
+                f"Allowed write scope: {', '.join(allowed_scope) if allowed_scope else '(missing)'}",
+                f"Forbidden scope: {', '.join(forbidden_scope) if forbidden_scope else '(none recorded)'}",
+                f"Stop conditions: {', '.join(stop_conditions) if stop_conditions else '(missing)'}",
+                f"Proof commands: {', '.join(proof_commands) if proof_commands else '(missing)'}",
+                f"Acceptance criteria: {', '.join(acceptance_criteria) if acceptance_criteria else '(missing)'}",
+                "Return: changed files, proof run/results, uncertainty, stop-condition hits, and residue.",
+            ]
+        ),
+        "authority_boundary": _authority_boundary_payload(
+            surface="plan_delegation_packet",
+            observed_by_aw=[f"active_execplan={active_surface}", f"missing_field_count={len(missing)}"],
+            recommended_by_aw=[route] if not missing else ["complete active plan fields before delegating"],
+            proof_hints=["proof commands and acceptance criteria copied from active planning/proof projection"],
+            agent_owned_decisions=["whether delegation is semantically appropriate", "which target receives the packet"],
+            rule="AW derives a handoff contract from checked-in planning fields; the agent owns route choice unless config explicitly automates it.",
+        ),
+    }
+
+
+def _python_test_file_facts(path: Path) -> dict[str, Any]:
+    if not path.exists() or path.suffix != ".py":
+        return {"test_function_count": 0, "parametrized_test_count": 0, "scenario_matrix_candidates": []}
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return {"test_function_count": 0, "parametrized_test_count": 0, "scenario_matrix_candidates": [], "parse_error": True}
+    test_functions: list[str] = []
+    parametrized: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+            continue
+        test_functions.append(node.name)
+        for decorator in node.decorator_list:
+            text = ast.unparse(decorator) if hasattr(ast, "unparse") else ""
+            if "parametrize" in text:
+                parametrized.append(node.name)
+                break
+    prefixes: dict[str, int] = {}
+    for name in test_functions:
+        parts = name.split("_")
+        prefix = "_".join(parts[:4]) if len(parts) >= 4 else name
+        prefixes[prefix] = prefixes.get(prefix, 0) + 1
+    candidates = [prefix for prefix, count in sorted(prefixes.items()) if count >= 2]
+    return {
+        "test_function_count": len(test_functions),
+        "parametrized_test_count": len(parametrized),
+        "scenario_matrix_candidates": candidates[:8],
+        "sample_test_functions": test_functions[:8],
+    }
+
+
+def _test_strategy_check_payload(
+    *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
+) -> dict[str, Any]:
+    test_paths = [
+        path
+        for path in changed_paths
+        if Path(path).name.startswith("test_") and Path(path).suffix == ".py" and ("tests/" in path or path.startswith("tests/"))
+    ]
+    if not test_paths:
+        return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
+    evidence_strategy = _as_dict(verification.get("evidence_strategy"))
+    proof_governance = _as_dict(evidence_strategy.get("proof_governance"))
+    proof_decision = _as_dict(evidence_strategy.get("proof_decision"))
+    regression_sprawl = _as_dict(evidence_strategy.get("regression_sprawl"))
+    hotspot_files = {str(path) for path in _list_payload(_as_dict(evidence_strategy.get("summary")).get("hotspot_files_touched"))}
+    files: list[dict[str, Any]] = []
+    hotspot_count = 0
+    matrix_count = 0
+    deleted_count = 0
+    for rel_path in test_paths:
+        absolute = target_root / rel_path
+        deleted = not absolute.exists()
+        facts = _python_test_file_facts(absolute)
+        hotspot = rel_path in hotspot_files or int(facts.get("test_function_count", 0) or 0) >= 8
+        if hotspot:
+            hotspot_count += 1
+        if deleted:
+            deleted_count += 1
+        if int(facts.get("parametrized_test_count", 0) or 0) or facts.get("scenario_matrix_candidates"):
+            matrix_count += 1
+        files.append(
+            {
+                "path": rel_path,
+                "deleted_or_missing": deleted,
+                "is_hotspot": hotspot,
+                "hotspot_source": "verification-evidence-strategy"
+                if rel_path in hotspot_files
+                else "local-test-function-count"
+                if hotspot
+                else "",
+                **facts,
+            }
+        )
+    task_lower = str(task_text or "").lower()
+    reviewer_requested = any(term in task_lower for term in ("review", "comment", "pr feedback", "requested coverage", "regression"))
+    return {
+        "kind": "agentic-workspace/test-strategy-check/v1",
+        "status": "advisory",
+        "changed_test_paths": test_paths,
+        "hotspot_file_count": hotspot_count,
+        "scenario_matrix_candidate_count": matrix_count,
+        "deleted_or_missing_test_file_count": deleted_count,
+        "files": files,
+        "reviewer_requested_coverage": reviewer_requested,
+        "verification_evidence_surfaces": {
+            "evidence_strategy_status": evidence_strategy.get("status", "unavailable"),
+            "proof_governance_status": proof_governance.get("status", "unavailable"),
+            "proof_decision_status": proof_decision.get("status", "unavailable"),
+            "regression_sprawl_status": regression_sprawl.get("status", "unavailable"),
+        },
+        "record_disposition_options": [
+            "matrix-merge",
+            "standalone-durable-contract-proof",
+            "conformance-or-contract-owned-proof",
+            "existing-proof-sufficient",
+            "temporary-with-follow-up-consolidation",
+        ],
+        "disposition_required_before_closeout": True,
+        "closeout_visibility": {
+            "missing_disposition_blocks_claim": "test-sustainability-reviewed",
+            "rule": "Advisory only during implementation; closeout/report should expose missing disposition when ordinary test mass changed.",
+        },
+        "agent_prompt": (
+            "Before adding or expanding standalone regression tests, record why the evidence belongs in a matrix, standalone "
+            "contract-boundary test, conformance/contract proof, existing proof, or follow-up consolidation."
+        ),
+        "blocking": False,
+        "authority_boundary": _authority_boundary_payload(
+            surface="test_strategy_check",
+            observed_by_aw=[
+                f"changed_test_path_count={len(test_paths)}",
+                f"hotspot_file_count={hotspot_count}",
+                f"scenario_matrix_candidate_count={matrix_count}",
+                f"deleted_or_missing_test_file_count={deleted_count}",
+            ],
+            recommended_by_aw=["record the testing evidence disposition before closeout"],
+            proof_hints=["evidence_strategy.proof_governance", "proof_decision", "regression_sprawl", "nearby parametrized tests"],
+            agent_owned_decisions=["whether a new test is justified", "which evidence disposition fits the host repo"],
+            rule="AW reports local test facts and asks for a disposition; it does not prescribe a testing strategy.",
+        ),
+    }
+
+
 def _implement_payload(
     *,
     target_root: Path,
@@ -25161,6 +25793,44 @@ def _implement_payload(
             task_text=task_text,
             assurance_requirements=assurance_for_verification,
         )
+    assurance_for_grounding = payload.get("assurance_requirements", {})
+    if not isinstance(assurance_for_grounding, dict):
+        assurance_for_grounding = _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=None,
+            task_text=task_text,
+            changed_paths=normalized_paths,
+        )
+    verification_for_grounding = payload.get("verification", {})
+    if not isinstance(verification_for_grounding, dict):
+        verification_for_grounding = _verification_report_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            assurance_requirements=assurance_for_grounding,
+        )
+    issue_scope_evidence = _as_dict(planning_safety_gate.get("issue_scope_evidence"))
+    payload["requirement_grounding"] = _requirement_grounding_payload(
+        target_root=target_root,
+        task_text=task_text,
+        changed_paths=normalized_paths,
+        active_planning_record=active_planning_record_for_intent,
+        issue_scope_evidence=issue_scope_evidence,
+        assurance_requirements=assurance_for_grounding,
+        verification=verification_for_grounding,
+    )
+    payload["plan_delegation_packet"] = _plan_delegation_packet_payload(
+        target_root=target_root,
+        config=config,
+        proof=proof if isinstance(proof, dict) else {},
+        task_text=task_text,
+    )
+    payload["test_strategy_check"] = _test_strategy_check_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        verification=verification_for_grounding,
+    )
     workflow_obligations = _workflow_obligations_report_payload(
         config=config,
         active_planning_record=active_planning_record_for_intent,
@@ -25306,6 +25976,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.reuse_pressure",
                 "context.guidance",
                 "context.delegation_decision",
+                "requirement_grounding",
+                "plan_delegation_packet",
+                "test_strategy_check",
                 "routine_work_context",
             ],
             agent_judgment="Agent owns semantic work shape and completion judgment after proof and acceptance reconciliation.",
@@ -25436,6 +26109,58 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "delegation_decision": _compact_start_delegation_decision(
                 execution_posture.get("delegation_decision", {}), include_manual_handoff_detail=False
             ),
+            "requirement_grounding": {
+                "status": payload.get("requirement_grounding", {}).get("status", "not-applicable")
+                if isinstance(payload.get("requirement_grounding"), dict)
+                else "not-applicable",
+                "requirement_ref_count": len(payload.get("requirement_grounding", {}).get("requirement_refs", []))
+                if isinstance(payload.get("requirement_grounding"), dict)
+                else 0,
+                "known_gap_count": len(payload.get("requirement_grounding", {}).get("known_gaps", []))
+                if isinstance(payload.get("requirement_grounding"), dict)
+                else 0,
+                "blocked_claims": payload.get("requirement_grounding", {}).get("closeout_claims", {}).get("blocked", [])
+                if isinstance(payload.get("requirement_grounding"), dict)
+                and isinstance(payload.get("requirement_grounding", {}).get("closeout_claims"), dict)
+                else [],
+                "detail_selector": "requirement_grounding",
+            },
+            "plan_delegation_packet": {
+                "status": payload.get("plan_delegation_packet", {}).get("status", "unavailable")
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else "unavailable",
+                "delegation_ready": payload.get("plan_delegation_packet", {}).get("delegation_ready", False)
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else False,
+                "delegation_recommended": payload.get("plan_delegation_packet", {}).get("delegation_recommended", False)
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else False,
+                "recommended_route": payload.get("plan_delegation_packet", {}).get("recommended_route", "")
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else "",
+                "missing_fields": payload.get("plan_delegation_packet", {}).get("missing_fields", [])
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else [],
+                "ambiguous_fields": payload.get("plan_delegation_packet", {}).get("ambiguous_fields", [])
+                if isinstance(payload.get("plan_delegation_packet"), dict)
+                else [],
+                "detail_selector": "plan_delegation_packet",
+            },
+            "test_strategy_check": {
+                "status": payload.get("test_strategy_check", {}).get("status", "not-applicable")
+                if isinstance(payload.get("test_strategy_check"), dict)
+                else "not-applicable",
+                "changed_test_paths": payload.get("test_strategy_check", {}).get("changed_test_paths", [])
+                if isinstance(payload.get("test_strategy_check"), dict)
+                else [],
+                "hotspot_file_count": payload.get("test_strategy_check", {}).get("hotspot_file_count", 0)
+                if isinstance(payload.get("test_strategy_check"), dict)
+                else 0,
+                "scenario_matrix_candidate_count": payload.get("test_strategy_check", {}).get("scenario_matrix_candidate_count", 0)
+                if isinstance(payload.get("test_strategy_check"), dict)
+                else 0,
+                "detail_selector": "test_strategy_check",
+            },
         },
         "drill_down": {
             "ordinary_profile": "primary=next;proof=summary;context=selector-backed diagnostics",
@@ -25465,6 +26190,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "routine_work_context",
                 "context.delegation_decision",
                 "context.guidance",
+                "context.requirement_grounding",
+                "context.plan_delegation_packet",
+                "context.test_strategy_check",
+                "requirement_grounding",
+                "plan_delegation_packet",
+                "test_strategy_check",
             ],
         },
     }
@@ -25889,6 +26620,7 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
         }
     closure_check = _as_dict(record.get("closure_check"))
     intent_satisfaction = _as_dict(record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(record.get("intent_continuity"))
     canonical_core = _as_dict(record.get("canonical_core"))
     required_continuation = _as_dict(record.get("required_continuation"))
     durable_residue = _as_dict(record.get("durable_residue"))
@@ -25916,10 +26648,11 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower()
     completed = status in {"completed", "complete", "closed", "done"}
     closed = closure_decision == "archive-and-close"
-    continuation_routed = closure_decision == "archive-but-keep-lane-open" and any(
+    continuation_owner_present = any(
         value not in {"", "none", "no", "false", "n/a", "na"}
         for value in [
             str(canonical_core.get("continuation_owner") or "").strip().lower(),
+            str(intent_continuity.get("continuation surface") or "").strip().lower(),
             str(required_continuation.get("owner surface") or "").strip().lower(),
             str(durable_residue.get("canonical owner now") or "").strip().lower(),
             str(execution_summary.get("follow-on routed to") or "").strip().lower(),
@@ -25928,6 +26661,7 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     )
     no_open_larger_intent = larger_intent_status in {"", "satisfied", "complete", "completed", "closed", "done"}
     slice_scope = str(closure_check.get("closeout scope") or "").strip().lower() == "slice"
+    continuation_routed = continuation_owner_present and (closure_decision == "archive-but-keep-lane-open" or slice_scope)
     intent_done = intent_satisfied in {"", "yes", "true", "satisfied", "complete", "completed"} or (slice_scope and continuation_routed)
     eligible = completed and intent_done and ((closed and no_open_larger_intent) or continuation_routed)
     blockers = [
@@ -32063,6 +32797,18 @@ def _selector_requests_reuse_pressure(select: str | None) -> bool:
     return any(token == "reuse_pressure" or token.startswith("reuse_pressure.") for token in _selector_tokens(select))
 
 
+def _selector_requests_requirement_grounding(select: str | None) -> bool:
+    return any(token == "requirement_grounding" or token.startswith("requirement_grounding.") for token in _selector_tokens(select))
+
+
+def _selector_requests_plan_delegation_packet(select: str | None) -> bool:
+    return any(token == "plan_delegation_packet" or token.startswith("plan_delegation_packet.") for token in _selector_tokens(select))
+
+
+def _selector_requests_test_strategy_check(select: str | None) -> bool:
+    return any(token == "test_strategy_check" or token.startswith("test_strategy_check.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -32080,6 +32826,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     verification_selected = _selector_requests_verification(selected_fields)
     routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
     reuse_pressure_selected = _selector_requests_reuse_pressure(selected_fields)
+    requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
+    plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
+    test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
     full_payload = _implement_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
@@ -32111,6 +32860,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["active_intent_contract"] = full_payload["active_intent_contract"]
         if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
             payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
+        if requirement_grounding_selected:
+            payload["requirement_grounding"] = full_payload["requirement_grounding"]
+        if plan_delegation_packet_selected:
+            payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
+        if test_strategy_check_selected:
+            payload["test_strategy_check"] = full_payload["test_strategy_check"]
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,
@@ -35029,7 +35784,16 @@ def _proof_confidence_payload(
     }
 
 
-def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _proof_completion_options(
+    *, required_commands: list[str], manual_verification: dict[str, Any] | None, test_strategy_check: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    test_strategy_check = _as_dict(test_strategy_check)
+    test_strategy_missing = (
+        test_strategy_check.get("status") == "advisory"
+        and bool(test_strategy_check.get("disposition_required_before_closeout"))
+        and bool(test_strategy_check.get("changed_test_paths"))
+        and not test_strategy_check.get("recorded_disposition")
+    )
     options: list[dict[str, Any]] = [
         _completion_option(
             "run-proof",
@@ -35060,7 +35824,10 @@ def _proof_completion_options(*, required_commands: list[str], manual_verificati
         _completion_option(
             "route-residue",
             allowed=False,
-            why="proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+            why="test strategy disposition must be recorded before claiming test-sustainability review"
+            if test_strategy_missing
+            else "proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+            blocking_fields=["test_strategy_check.recorded_disposition"] if test_strategy_missing else None,
         ),
         _completion_option(
             "request-review",
@@ -35922,6 +36689,37 @@ def _proof_selection_for_changed_paths(
         proof_confidence=proof_confidence,
         manual_verification=manual_verification,
     )
+    active_planning_record_for_requirement = (
+        _active_planning_record_for_report_section(target_root=target_root) if target_root is not None else {}
+    )
+    issue_scope_evidence_for_requirement = (
+        _issue_scope_evidence_payload(
+            target_root=target_root,
+            config=config,
+            issue_refs=sorted(set(re.findall("#\\d+", task_text or ""))),
+        )
+        if target_root is not None and config is not None
+        else {"kind": "agentic-workspace/issue-scope-evidence/v1", "status": "not-applicable", "issue_refs": []}
+    )
+    requirement_grounding = _requirement_grounding_payload(
+        target_root=target_root or Path("."),
+        task_text=task_text,
+        changed_paths=changed_paths,
+        active_planning_record=active_planning_record_for_requirement,
+        issue_scope_evidence=issue_scope_evidence_for_requirement,
+        assurance_requirements=active_assurance_requirements,
+        verification=verification,
+    )
+    test_strategy_check = (
+        _test_strategy_check_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            verification=verification,
+        )
+        if target_root is not None
+        else {"kind": "agentic-workspace/test-strategy-check/v1", "status": "unavailable", "changed_test_paths": []}
+    )
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -35974,6 +36772,8 @@ def _proof_selection_for_changed_paths(
         "intent_proof": intent_proof,
         "proof_confidence": proof_confidence,
         "proof_adequacy": proof_adequacy,
+        "requirement_grounding": requirement_grounding,
+        "test_strategy_check": test_strategy_check,
         "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
@@ -36033,7 +36833,11 @@ def _proof_selection_for_changed_paths(
         ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
-        "completion_options": _proof_completion_options(required_commands=required_commands, manual_verification=manual_verification),
+        "completion_options": _proof_completion_options(
+            required_commands=required_commands,
+            manual_verification=manual_verification,
+            test_strategy_check=test_strategy_check,
+        ),
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions

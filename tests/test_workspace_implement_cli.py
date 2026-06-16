@@ -1521,6 +1521,30 @@ def test_implement_allows_completed_archived_plan_residue_with_continuation_evid
             },
             {"larger_intent_status": "open", "closure_decision": "archive-but-keep-lane-open"},
         ),
+        (
+            "archived-slice-with-routed-parent",
+            ".agentic-workspace/planning/execplans/archive/routed-parent-slice.plan.json",
+            {
+                "schema_version": "execplan/v1",
+                "id": "routed-parent-slice",
+                "machine_readable_contract": {"execution": {"status": "completed"}},
+                "intent_continuity": {
+                    "this slice completes the larger intended outcome": "no",
+                    "continuation surface": "GitHub #1556",
+                },
+                "required_continuation": {
+                    "required follow-on for the larger intended outcome": "Complete the parent lane.",
+                    "owner surface": "GitHub #1556",
+                },
+                "intent_satisfaction": {"was original intent fully satisfied?": "no for parent lane; yes for slice"},
+                "closure_check": {
+                    "closeout scope": "slice",
+                    "larger-intent status": "open-routed-to-#1556",
+                    "closure decision": "archive-and-close",
+                },
+            },
+            {"larger_intent_status": "open-routed-to-#1556", "closure_decision": "archive-and-close"},
+        ),
     ]
     for label, archive_path, record, expected_record_fields in scenarios:
         _write(tmp_path / archive_path, json.dumps(record))
@@ -2108,6 +2132,596 @@ candidates = [
     assert payload["action_signals"]["allowed_next_action"] == "select-or-promote-candidate-lane"
     assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
     assert "lane_shaping_gate" not in payload["context"]
+
+
+def test_implement_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#1556",
+                        "system": "tracker",
+                        "status": "open",
+                        "kind": "capability-lane",
+                        "title": "Support requirement-grounded agent work end to end",
+                    }
+                ],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "requirement-grounding", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/requirement-grounding.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "requirement-grounding.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Requirement grounding",
+            "traceability_refs": {"requirement_refs": ["docs/requirements.md#trace"]},
+            "requirement_grounding": {"design_effects": ["Requirement refs must remain distinct from agent interpretation."]},
+            "intent_interpretation": {"chosen concrete what": "Carry requirement refs through planning and closeout."},
+            "canonical_core": {
+                "hard_constraints": "Keep observed source separate from agent interpretation.",
+                "touched_scope": ["src/runtime.py"],
+                "proof_expectations": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+                "completion_criteria": ["Requirement grounding packet is visible."],
+            },
+            "validation_commands": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+            "completion_criteria": ["Requirement grounding packet is visible."],
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Implement #1556",
+                "--select",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    grounding = payload["values"]["requirement_grounding"]
+    assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
+    assert grounding["status"] in {"ready", "attention"}
+    assert {item["ref"] for item in grounding["requirement_refs"]} >= {"#1556", "docs/requirements.md#trace"}
+    assert grounding["requirement_refs"][0]["source_metadata"]["trust_note"].startswith("routing/index metadata only")
+    assert grounding["source_inventory_policy"]["not_a_requirement_corpus"] is True
+    assert grounding["agent_interpretation"]["status"] == "present"
+    assert grounding["design_effects"] == ["Requirement refs must remain distinct from agent interpretation."]
+    assert grounding["planning_context_fallback"]["items"] == ["Keep observed source separate from agent interpretation."]
+    assert grounding["authority_boundary"]["agent_owned_decisions"]
+
+
+def test_proof_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "proof-grounding", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/proof-grounding.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "proof-grounding.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Proof grounding",
+            "traceability_refs": {"requirement_refs": ["docs/requirements.md#trace"]},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--select",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    grounding = json.loads(capsys.readouterr().out)["values"]["requirement_grounding"]
+    assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
+    assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#trace"
+    assert grounding["requirement_refs"][0]["source_metadata"]["freshness"] in {"repo-current", "external-or-unverified"}
+    assert grounding["closeout_claims"]["blocked"] == ["requirement-grounded-completion"]
+
+
+def test_requirement_grounding_reports_missing_sensitive_refs(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Update privacy policy handling",
+                "--select",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    grounding = json.loads(capsys.readouterr().out)["values"]["requirement_grounding"]
+    assert grounding["status"] == "attention"
+    assert grounding["source_facts"]["sensitivity_signals"] == ["task-text-requirement-sensitive"]
+    assert grounding["known_gaps"][0]["gap"] == "task appears requirement-sensitive but no applicable requirement refs were selected"
+
+
+def test_report_section_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "report-grounding", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/report-grounding.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "report-grounding.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Report grounding",
+            "traceability_refs": {"requirement_refs": ["docs/requirements.md#report"]},
+            "intent_interpretation": {"chosen concrete what": "Report the requirement grounding chain."},
+            "canonical_core": {"hard_constraints": "Keep report facts separate from agent decisions."},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    grounding = json.loads(capsys.readouterr().out)["answer"]
+    assert grounding["kind"] == "agentic-workspace/requirement-grounding/v1"
+    assert grounding["status"] == "ready"
+    assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#report"
+    assert grounding["source_inventory_policy"]["role"] == "compact-routing-index"
+    assert grounding["agent_interpretation"]["summary"] == "Report the requirement grounding chain."
+
+
+def test_implement_projects_ready_plan_delegation_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "delegate-ready", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/delegate-ready.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "delegate-ready.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Delegate ready slice",
+            "canonical_core": {
+                "requested_outcome": "Implement a bounded runtime packet.",
+                "touched_scope": ["src/runtime.py"],
+                "proof_expectations": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+                "completion_criteria": ["Packet is projected."],
+            },
+            "execution_bounds": {"allowed paths": "src/runtime.py", "stop before touching": "generated files"},
+            "stop_conditions": {"stop when": "proof fails"},
+            "validation_commands": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+            "completion_criteria": ["Packet is projected."],
+            "references": [{"target": "docs/design.md", "label": "Design"}],
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Continue delegate-ready",
+                "--select",
+                "plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
+    assert packet["kind"] == "agentic-workspace/plan-delegation-packet/v1"
+    assert packet["delegation_ready"] is True
+    assert packet["delegation_recommended"] is True
+    assert packet["freshness_guard"]["delegate_return_must_cite_revision"] is True
+    assert packet["missing_fields"] == []
+    assert packet["recommended_route"] == "implementation-delegate"
+    assert "Allowed write scope: src/runtime.py" in packet["handoff_prompt"]
+    assert packet["return_contract"]["required_fields"] == [
+        "changed_files",
+        "changed_surfaces",
+        "proof_run",
+        "proof_result",
+        "result",
+        "uncertainty",
+        "stop_condition_hits",
+        "residue",
+        "allowed_claims",
+        "planning_revision",
+    ]
+
+
+def test_implement_keeps_exact_semicolon_scope_delegation_ready(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "delegate-semicolon", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/delegate-semicolon.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "delegate-semicolon.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Delegate semicolon slice",
+            "canonical_core": {
+                "requested_outcome": "Implement a bounded runtime packet.",
+                "touched_scope": ["src/runtime.py; tests/test_runtime.py"],
+                "proof_expectations": ["uv run pytest tests/test_runtime.py -q"],
+                "completion_criteria": ["Packet is projected."],
+            },
+            "stop_conditions": {"stop when": "proof fails"},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Continue delegate-semicolon",
+                "--select",
+                "plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
+    assert packet["delegation_ready"] is True
+    assert packet["ambiguous_fields"] == []
+    assert packet["allowed_write_scope"] == ["src/runtime.py", "tests/test_runtime.py"]
+
+
+def test_implement_refuses_ambiguous_plan_delegation_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "delegate-ambiguous", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/delegate-ambiguous.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "delegate-ambiguous.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Ambiguous delegate slice",
+            "canonical_core": {
+                "requested_outcome": "Implement a bounded runtime packet.",
+                "touched_scope": ["src/runtime.py; tests as needed"],
+                "proof_expectations": ["Fill in proof later."],
+                "completion_criteria": ["Packet is projected."],
+            },
+            "stop_conditions": {"stop when": "proof fails"},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Continue delegate-ambiguous",
+                "--select",
+                "plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
+    assert packet["status"] == "ambiguous-fields"
+    assert packet["delegation_ready"] is False
+    assert packet["delegation_recommended"] is False
+    assert set(packet["ambiguous_fields"]) >= {"allowed_write_scope", "proof_commands"}
+
+
+def test_implement_projects_validation_delegation_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "delegate-validation", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/delegate-validation.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "delegate-validation.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Delegate validation slice",
+            "canonical_core": {
+                "requested_outcome": "Validate the bounded runtime packet.",
+                "touched_scope": ["src/runtime.py"],
+                "proof_expectations": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+                "completion_criteria": ["Validation result is reported."],
+            },
+            "stop_conditions": {"stop when": "proof fails"},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Continue delegate-validation",
+                "--select",
+                "plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["plan_delegation_packet"]
+    assert packet["delegation_ready"] is True
+    assert packet["recommended_route"] == "validation-delegate"
+
+
+def test_implement_surfaces_test_strategy_check_for_hotspot_tests(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / "tests" / "test_runtime.py",
+        """
+import pytest
+
+
+@pytest.mark.parametrize("case", ["a", "b"])
+def test_runtime_matrix_case(case):
+    assert case
+
+
+def test_runtime_warning_alpha(): assert True
+def test_runtime_warning_beta(): assert True
+def test_runtime_warning_gamma(): assert True
+def test_runtime_warning_delta(): assert True
+def test_runtime_warning_epsilon(): assert True
+def test_runtime_warning_zeta(): assert True
+def test_runtime_warning_eta(): assert True
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--task",
+                "Address review feedback by adding regression coverage",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["kind"] == "agentic-workspace/test-strategy-check/v1"
+    assert check["status"] == "advisory"
+    assert check["blocking"] is False
+    assert check["hotspot_file_count"] == 1
+    assert check["scenario_matrix_candidate_count"] == 1
+    assert check["reviewer_requested_coverage"] is True
+    assert check["disposition_required_before_closeout"] is True
+    assert check["verification_evidence_surfaces"]["proof_decision_status"]
+    assert "standalone-durable-contract-proof" in check["record_disposition_options"]
+    assert check["files"][0]["parametrized_test_count"] == 1
+
+
+def test_proof_surfaces_test_strategy_check_for_closeout_visibility(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_contract():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["kind"] == "agentic-workspace/test-strategy-check/v1"
+    assert check["status"] == "advisory"
+    assert check["closeout_visibility"]["missing_disposition_blocks_claim"] == "test-sustainability-reviewed"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "completion_options",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    options = json.loads(capsys.readouterr().out)["values"]["completion_options"]
+    route_residue = next(option for option in options if option["id"] == "route-residue")
+    assert route_residue["blocking_fields"] == ["test_strategy_check.recorded_disposition"]
 
 
 def test_implement_blocks_parent_lane_slice_without_lane_owner_artifact(tmp_path: Path, capsys) -> None:
