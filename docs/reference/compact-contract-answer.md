@@ -17,4 +17,5 @@ Envelope for compact contract answers returned by workspace query commands.
 | `matched` | boolean | yes |  | Matched true/false policy flag used by this contract. |  |  |
 | `answer` |  | yes |  | The compact answer payload for the selected surface; shape is owned by the surface-specific contract. |  |  |
 | `refs` | array of string | yes |  | References that help interpret or verify this record. |  |  |
+| `payload_locations` | object | no |  | Machine-readable wrapper discovery for the selected payload. Compact contract answers store the selected payload under `answer`; selected-output envelopes store selected payloads under `values` keyed by the selector string. |  |  |
 | `target` | string | no |  | Destination file, surface, package, or record referenced by this entry. |  |  |

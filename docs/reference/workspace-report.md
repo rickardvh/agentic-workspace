@@ -141,6 +141,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |
+| `requirement_grounding` | object | no |  | Report-visible requirement grounding projection for selected report sections. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |

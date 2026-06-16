@@ -260,6 +260,10 @@
       "type": "object",
       "description": "Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification."
     },
+    "requirement_grounding": {
+      "type": "object",
+      "description": "Report-visible requirement grounding projection for selected report sections."
+    },
     "authority_hierarchy": {
       "type": "object",
       "description": "Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit."
