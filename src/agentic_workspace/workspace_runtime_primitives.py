@@ -1269,12 +1269,14 @@ def _subsystem_assurance_payload(
         required_evidence = [str(item).strip() for item in _list_payload(profile.get("required_evidence")) if str(item).strip()]
         missing_evidence = [item for item in required_evidence if item not in evidence_present]
         matched_subsystem = next((item for item in matched_subsystems if str(item.get("id") or "").strip() == subsystem_id), {})
+        matched_paths = [str(path) for path in _list_payload(matched_subsystem.get("matched_paths")) if str(path).strip()]
         applies_because = _dedupe(
             [
                 *(f"changed path matched subsystem {subsystem_id}" for _ in matched_scope_tokens[:1]),
                 *(f"active plan scope matched {item}" for item in matched_plan_scope),
             ]
         )
+        activation_evidence = _activation_kind_facts(paths=matched_paths, source=f"changed path matched subsystem {subsystem_id}")
         state = "satisfied" if not missing_evidence else "review-required" if profile.get("review_owner") else "missing-evidence"
         profile_matches.append(
             {
@@ -1282,17 +1284,25 @@ def _subsystem_assurance_payload(
                 "requirement_id": requirement_id,
                 "subsystem": {
                     "id": subsystem_id,
-                    "matched_paths": _list_payload(matched_subsystem.get("matched_paths")),
+                    "matched_paths": matched_paths,
                     "matched_patterns": _list_payload(matched_subsystem.get("matched_patterns")),
                     "owns": _list_payload(matched_subsystem.get("owns")),
                     "does_not_own": _list_payload(matched_subsystem.get("does_not_own")),
                 },
                 "applies_because": applies_because,
+                "activation_kinds": sorted(
+                    {str(item.get("activation_kind")) for item in activation_evidence if item.get("activation_kind")}
+                ),
+                "activation_evidence": activation_evidence,
                 "evidence_status": {
                     "requirement_id": requirement_id,
                     "state": state,
                     "level": str(profile.get("level", DEFAULT_ASSURANCE_LEVEL)),
                     "applies_because": applies_because,
+                    "activation_kinds": sorted(
+                        {str(item.get("activation_kind")) for item in activation_evidence if item.get("activation_kind")}
+                    ),
+                    "activation_evidence": activation_evidence,
                     "authority_refs": _list_payload(profile.get("requirement_refs")),
                     "required_evidence": required_evidence,
                     "evidence_present": evidence_present,
@@ -1444,20 +1454,175 @@ def _assurance_requirement_planning_facts(active_planning_record: dict[str, Any]
     }
 
 
+def _load_assurance_evidence_records(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "status": "unavailable",
+            "path": ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix(),
+            "records": [],
+            "evidence_by_requirement": {},
+        }
+    path = target_root / ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH
+    if not path.exists():
+        return {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "status": "absent",
+            "path": ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix(),
+            "records": [],
+            "evidence_by_requirement": {},
+            "record_shape": {
+                "fields": [
+                    "requirement_id",
+                    "evidence_label",
+                    "status",
+                    "source_kind",
+                    "command",
+                    "review_ref",
+                    "changed_paths",
+                    "recorded_by",
+                ],
+                "rule": "Record compact evidence labels and refs only; do not store raw command transcripts.",
+            },
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "status": "invalid",
+            "path": ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix(),
+            "records": [],
+            "evidence_by_requirement": {},
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "status": "invalid",
+            "path": ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix(),
+            "records": [],
+            "evidence_by_requirement": {},
+            "error": "record must be a JSON object",
+        }
+    records: list[dict[str, Any]] = []
+    invalid_records: list[dict[str, Any]] = []
+    evidence_by_requirement: dict[str, list[str]] = {}
+    raw_records = payload.get("records", payload.get("items", []))
+    for index, item in enumerate(_list_payload(raw_records)):
+        if not isinstance(item, dict):
+            invalid_records.append({"index": index, "reason": "record must be an object"})
+            continue
+        requirement_id = str(item.get("requirement_id") or "").strip()
+        evidence_label = str(item.get("evidence_label") or item.get("label") or "").strip()
+        status = str(item.get("status") or "satisfied").strip()
+        if not requirement_id or not evidence_label or status not in {"satisfied", "reviewed", "waived", "stale"}:
+            invalid_records.append(
+                {
+                    "index": index,
+                    "missing_or_invalid_fields": [
+                        field
+                        for field, value in {
+                            "requirement_id": requirement_id,
+                            "evidence_label": evidence_label,
+                            "status": status if status in {"satisfied", "reviewed", "waived", "stale"} else "",
+                        }.items()
+                        if not value
+                    ],
+                }
+            )
+            continue
+        normalized = {
+            "requirement_id": requirement_id,
+            "evidence_label": evidence_label,
+            "status": status,
+            "source_kind": str(item.get("source_kind") or "agent-recorded").strip(),
+            "command": str(item.get("command") or "").strip(),
+            "review_ref": str(item.get("review_ref") or "").strip(),
+            "changed_paths": [
+                str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_paths")) if str(path).strip()
+            ],
+            "recorded_by": str(item.get("recorded_by") or "").strip(),
+        }
+        records.append(normalized)
+        if status in {"satisfied", "reviewed", "waived"}:
+            evidence_by_requirement.setdefault(requirement_id, [])
+            if evidence_label not in evidence_by_requirement[requirement_id]:
+                evidence_by_requirement[requirement_id].append(evidence_label)
+    return {
+        "kind": "agentic-workspace/assurance-evidence-records/v1",
+        "status": "invalid" if invalid_records else "recorded",
+        "path": ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix(),
+        "records": records,
+        "record_count": len(records),
+        "invalid_records": invalid_records,
+        "evidence_by_requirement": evidence_by_requirement,
+        "rule": "Evidence records are agent-populated labels and refs; AW uses them as evidence inputs but does not decide acceptance.",
+    }
+
+
+def _merge_evidence_by_requirement(*evidence_maps: Any) -> dict[str, list[str]]:
+    merged: dict[str, list[str]] = {}
+    for evidence_map in evidence_maps:
+        if not isinstance(evidence_map, dict):
+            continue
+        for requirement_id, values in evidence_map.items():
+            key = str(requirement_id).strip()
+            if not key:
+                continue
+            merged.setdefault(key, [])
+            for value in _list_payload(values):
+                text = str(value).strip()
+                if text and text not in merged[key]:
+                    merged[key].append(text)
+    return merged
+
+
+def _activation_kind_for_path(path: str) -> str:
+    normalized = path.replace("\\", "/").strip("/")
+    name = Path(normalized).name
+    if normalized.startswith((".agentic-workspace/local/", "scratch/")):
+        return "setup-local-state"
+    if normalized.startswith(("generated/", "docs/reference/")):
+        return "generated-projection"
+    if normalized.startswith("docs/") or normalized.endswith((".md", ".rst")):
+        return "docs-manual-review"
+    if name.startswith("test_") and normalized.endswith(".py") and ("/tests/" in f"/{normalized}" or normalized.startswith("tests/")):
+        return "test-evidence"
+    if normalized.endswith((".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".cs", ".rb", ".php")):
+        return "source-behavior"
+    if normalized.startswith((".agentic-workspace/", "tools/setup-findings.json")):
+        return "setup-local-state"
+    return "unknown"
+
+
+def _activation_kind_facts(*, paths: list[str], source: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "path": path,
+            "activation_kind": _activation_kind_for_path(path),
+            "source": source,
+        }
+        for path in paths
+    ]
+
+
 def _assurance_requirement_match(
     *,
     requirement: dict[str, Any],
     changed_paths: list[str] | None,
     task_text: str | None,
     planning_facts: dict[str, Any],
-) -> tuple[bool, list[str]]:
+) -> tuple[bool, list[str], list[dict[str, Any]]]:
     applies_because: list[str] = []
+    activation_facts: list[dict[str, Any]] = []
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     for path in normalized_paths:
         for pattern in _list_payload(requirement.get("applies_to_paths")):
             pattern_text = str(pattern).strip()
             if pattern_text and fnmatch.fnmatch(path, pattern_text):
                 applies_because.append(f"changed path matched {pattern_text}")
+                activation_facts.extend(_activation_kind_facts(paths=[path], source=f"changed path matched {pattern_text}"))
     normalized_task = (task_text or "").lower()
     for marker in _list_payload(requirement.get("applies_to_task_markers")):
         marker_text = str(marker).strip()
@@ -1474,11 +1639,15 @@ def _assurance_requirement_match(
         for matched in sorted(configured & facts):
             applies_because.append(f"{label} matched {matched}")
     applies_because = _dedupe(applies_because)
-    return (bool(applies_because), applies_because)
+    return (bool(applies_because), applies_because, activation_facts)
 
 
 def _assurance_status_for_requirement(
-    *, requirement: dict[str, Any], applies_because: list[str], planning_facts: dict[str, Any]
+    *,
+    requirement: dict[str, Any],
+    applies_because: list[str],
+    planning_facts: dict[str, Any],
+    activation_facts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     required_evidence = [str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()]
     evidence_by_requirement = planning_facts.get("evidence_by_requirement", {})
@@ -1506,6 +1675,8 @@ def _assurance_status_for_requirement(
         "state": state,
         "level": str(requirement.get("level", DEFAULT_ASSURANCE_LEVEL)),
         "applies_because": applies_because,
+        "activation_kinds": sorted({str(item.get("activation_kind")) for item in activation_facts or [] if item.get("activation_kind")}),
+        "activation_evidence": activation_facts or [],
         "authority_refs": _list_payload(requirement.get("authority_refs")),
         "required_evidence": required_evidence,
         "evidence_present": evidence_present,
@@ -1536,6 +1707,13 @@ def _assurance_requirements_report_payload(
 ) -> dict[str, Any]:
     configured = _assurance_requirement_payloads(config)
     planning_facts = _assurance_requirement_planning_facts(active_planning_record)
+    evidence_records = _load_assurance_evidence_records(target_root=target_root)
+    planning_facts = {
+        **planning_facts,
+        "evidence_by_requirement": _merge_evidence_by_requirement(
+            planning_facts.get("evidence_by_requirement"), evidence_records.get("evidence_by_requirement")
+        ),
+    }
     subsystem_assurance = _subsystem_assurance_payload(
         config=config,
         target_root=target_root,
@@ -1547,7 +1725,7 @@ def _assurance_requirements_report_payload(
     active: list[dict[str, Any]] = []
     evidence_status: list[dict[str, Any]] = []
     for requirement in configured:
-        matched, applies_because = _assurance_requirement_match(
+        matched, applies_because, activation_facts = _assurance_requirement_match(
             requirement=requirement,
             changed_paths=changed_paths,
             task_text=task_text,
@@ -1557,12 +1735,15 @@ def _assurance_requirements_report_payload(
             requirement=requirement,
             applies_because=applies_because,
             planning_facts=planning_facts,
+            activation_facts=activation_facts,
         )
         matching.append(
             {
                 "id": requirement["id"],
                 "matched": matched,
                 "applies_because": applies_because,
+                "activation_kinds": sorted({str(item.get("activation_kind")) for item in activation_facts if item.get("activation_kind")}),
+                "activation_evidence": activation_facts,
                 "non_match_reason": "" if matched else "no configured activation signal matched current work",
                 "level": requirement["level"],
                 "force": requirement["force"],
@@ -1574,6 +1755,10 @@ def _assurance_requirements_report_payload(
                 {
                     **requirement,
                     "applies_because": applies_because,
+                    "activation_kinds": sorted(
+                        {str(item.get("activation_kind")) for item in activation_facts if item.get("activation_kind")}
+                    ),
+                    "activation_evidence": activation_facts,
                     "authority_boundary": _authority_boundary_payload(
                         surface="assurance_requirements.requirement",
                         observed_by_aw=[
@@ -1622,6 +1807,8 @@ def _assurance_requirements_report_payload(
                 "subsystem": profile.get("subsystem", {}),
                 "claim_boundary": profile.get("claim_boundary"),
                 "applies_because": _list_payload(profile.get("applies_because")),
+                "activation_kinds": _list_payload(profile.get("activation_kinds")),
+                "activation_evidence": _list_payload(profile.get("activation_evidence")),
                 "authority_boundary": _authority_boundary_payload(
                     surface="assurance_requirements.subsystem_profile",
                     observed_by_aw=[
@@ -1675,6 +1862,17 @@ def _assurance_requirements_report_payload(
         "configured": configured,
         "active": active,
         "evidence_status": evidence_status,
+        "evidence_records": {
+            "status": evidence_records.get("status", "unavailable"),
+            "path": evidence_records.get("path", ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH.as_posix()),
+            "record_count": evidence_records.get("record_count", 0),
+            "invalid_records": evidence_records.get("invalid_records", []),
+            "records": evidence_records.get("records", []),
+            "rule": evidence_records.get(
+                "rule",
+                "Evidence records are compact agent-populated labels and refs; AW does not decide acceptance.",
+            ),
+        },
         "subsystem_assurance": subsystem_assurance,
         "match_evidence": {
             "observed_scope_source": ", ".join(
@@ -4661,13 +4859,36 @@ def _workspace_report(
     manual_review_actions: list[dict[str, Any]] | None = None,
     repair_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    local_scratch_notices: list[dict[str, str]] = []
+    host_warnings: list[dict[str, str]] = []
+    for warning in warnings:
+        warning_path = Path(str(warning.get("path", ""))) if isinstance(warning, dict) else Path("")
+        warning_detail = str(warning.get("detail", "")) if isinstance(warning, dict) else ""
+        if (
+            isinstance(warning, dict)
+            and warning_detail == "nested repository detected under target; installer will not recurse into repo roots automatically"
+            and (
+                _is_workspace_local_scratch_path(path=target_root / warning_path, target_root=target_root)
+                or str(warning_path).replace("\\", "/").startswith("scratch/")
+            )
+        ):
+            local_scratch_notices.append(
+                {
+                    **warning,
+                    "classification": "local-scratch-residue",
+                    "rule": "Scratch-local nested repos are surfaced separately from host setup warnings.",
+                }
+            )
+        else:
+            host_warnings.append(warning)
     payload: dict[str, Any] = {
         "module": "workspace",
         "message": message,
         "target_root": target_root.as_posix(),
         "dry_run": dry_run,
         "actions": actions,
-        "warnings": warnings,
+        "warnings": host_warnings,
+        "local_scratch_notices": local_scratch_notices,
     }
     if repair_actions is not None:
         payload["repair_actions"] = repair_actions
@@ -5564,6 +5785,7 @@ LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
 TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
+ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "assurance-evidence-records.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\nAGENTS.local.md\n"
 LEGACY_LOCAL_ONLY_IGNORE_BLOCKS = ("# Agentic Workspace local-only storage\n.agentic-workspace/\n",)
@@ -25948,6 +26170,143 @@ def _python_test_file_facts(path: Path) -> dict[str, Any]:
     }
 
 
+def _git_file_text_at_head(*, target_root: Path, rel_path: str) -> str | None:
+    if not (target_root / ".git").exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "show", f"HEAD:{rel_path}"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def _python_test_text_facts(text: str | None) -> dict[str, Any]:
+    if text is None:
+        return {"test_function_count": None, "parametrized_test_count": None}
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return {"test_function_count": None, "parametrized_test_count": None, "parse_error": True}
+    test_count = 0
+    parametrized_count = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+            continue
+        test_count += 1
+        if any("parametrize" in (ast.unparse(decorator) if hasattr(ast, "unparse") else "") for decorator in node.decorator_list):
+            parametrized_count += 1
+    return {"test_function_count": test_count, "parametrized_test_count": parametrized_count}
+
+
+def _git_path_change_state(*, target_root: Path, rel_path: str) -> str:
+    if not (target_root / ".git").exists():
+        return "unknown"
+    try:
+        tracked = subprocess.run(
+            ["git", "-C", str(target_root), "ls-files", "--error-unmatch", rel_path],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return "unknown"
+    exists = (target_root / rel_path).exists()
+    if tracked.returncode != 0 and exists:
+        return "added"
+    if tracked.returncode == 0 and not exists:
+        return "deleted"
+    try:
+        full_porcelain = subprocess.run(
+            ["git", "-C", str(target_root), "status", "--porcelain"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        full_porcelain = None
+    if full_porcelain is not None:
+        for line in full_porcelain.stdout.splitlines():
+            if "R" in line[:2] and line.rstrip().endswith(f" -> {rel_path}"):
+                return "renamed"
+    try:
+        porcelain = subprocess.run(
+            ["git", "-C", str(target_root), "status", "--porcelain", "--", rel_path],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        porcelain = None
+    if porcelain is not None:
+        status_line = (porcelain.stdout.strip().splitlines() or [""])[0]
+        status_code = status_line[:2]
+        if "R" in status_code:
+            return "renamed"
+        if "A" in status_code:
+            return "added"
+        if "D" in status_code:
+            return "deleted"
+        if "M" in status_code:
+            return "modified"
+    try:
+        diff = subprocess.run(
+            ["git", "-C", str(target_root), "diff", "--name-status", "--", rel_path],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return "unknown"
+    status = (diff.stdout.strip().splitlines() or [""])[0].split("\t", 1)[0]
+    if status.startswith("R"):
+        return "renamed"
+    if status.startswith("A"):
+        return "added"
+    if status.startswith("D"):
+        return "deleted"
+    if status.startswith("M"):
+        return "modified"
+    return "unchanged" if tracked.returncode == 0 else "unknown"
+
+
+def _test_evidence_materiality_payload(*, target_root: Path, rel_path: str, current_facts: dict[str, Any]) -> dict[str, Any]:
+    current_count = current_facts.get("test_function_count")
+    head_text = _git_file_text_at_head(target_root=target_root, rel_path=rel_path)
+    head_facts = _python_test_text_facts(head_text)
+    previous_count = head_facts.get("test_function_count")
+    count_delta = None
+    if isinstance(current_count, int) and isinstance(previous_count, int):
+        count_delta = current_count - previous_count
+    change_state = _git_path_change_state(target_root=target_root, rel_path=rel_path)
+    material_reasons = []
+    if change_state in {"added", "deleted", "renamed"}:
+        material_reasons.append(f"path state is {change_state}")
+    if isinstance(count_delta, int) and count_delta != 0:
+        material_reasons.append(f"test function count changed by {count_delta}")
+    material = bool(material_reasons)
+    return {
+        "kind": "agentic-workspace/test-evidence-materiality/v1",
+        "path": rel_path,
+        "change_state": change_state,
+        "previous_test_function_count": previous_count,
+        "current_test_function_count": current_count,
+        "test_function_count_delta": count_delta,
+        "material_evidence_change": material,
+        "material_reasons": material_reasons,
+        "route_pressure": "proof-decision" if material else "ordinary-test-edit",
+        "rule": "AW reports evidence-set materiality facts; the agent decides the host-repo test strategy disposition.",
+    }
+
+
 _TEST_STRATEGY_DISPOSITION_VALUES = {
     "matrix-merge",
     "standalone-durable-contract-proof",
@@ -26064,15 +26423,22 @@ def _test_strategy_check_payload(
     hotspot_count = 0
     matrix_count = 0
     deleted_count = 0
+    material_count = 0
+    unknown_materiality_count = 0
     for rel_path in test_paths:
         absolute = target_root / rel_path
         deleted = not absolute.exists()
         facts = _python_test_file_facts(absolute)
+        materiality = _test_evidence_materiality_payload(target_root=target_root, rel_path=rel_path, current_facts=facts)
         hotspot = rel_path in hotspot_files or int(facts.get("test_function_count", 0) or 0) >= 8
         if hotspot:
             hotspot_count += 1
         if deleted:
             deleted_count += 1
+        if materiality.get("material_evidence_change"):
+            material_count += 1
+        if materiality.get("change_state") == "unknown":
+            unknown_materiality_count += 1
         if int(facts.get("parametrized_test_count", 0) or 0) or facts.get("scenario_matrix_candidates"):
             matrix_count += 1
         files.append(
@@ -26085,6 +26451,8 @@ def _test_strategy_check_payload(
                 else "local-test-function-count"
                 if hotspot
                 else "",
+                "activation_kind": _activation_kind_for_path(rel_path),
+                "materiality": materiality,
                 **facts,
             }
         )
@@ -26097,6 +26465,8 @@ def _test_strategy_check_payload(
         "hotspot_file_count": hotspot_count,
         "scenario_matrix_candidate_count": matrix_count,
         "deleted_or_missing_test_file_count": deleted_count,
+        "material_evidence_change_count": material_count,
+        "unknown_materiality_count": unknown_materiality_count,
         "files": files,
         "reviewer_requested_coverage": reviewer_requested,
         "verification_evidence_surfaces": {
@@ -26121,7 +26491,13 @@ def _test_strategy_check_payload(
             "existing-proof-sufficient",
             "temporary-with-follow-up-consolidation",
         ],
-        "disposition_required_before_closeout": bool(missing_disposition_paths or temporary_without_follow_up),
+        "disposition_required_before_closeout": bool(
+            ((material_count or unknown_materiality_count) and missing_disposition_paths) or temporary_without_follow_up
+        ),
+        "materiality_rule": (
+            "Disposition pressure is strongest when tests are added, deleted, renamed, or change test function count. "
+            "Ordinary edits inside retained tests remain visible but do not by themselves imply evidence-set churn."
+        ),
         "closeout_visibility": {
             "missing_disposition_blocks_claim": "test-sustainability-reviewed",
             "rule": "Advisory only during implementation; closeout/report should expose missing disposition when ordinary test mass changed.",
@@ -26138,6 +26514,8 @@ def _test_strategy_check_payload(
                 f"hotspot_file_count={hotspot_count}",
                 f"scenario_matrix_candidate_count={matrix_count}",
                 f"deleted_or_missing_test_file_count={deleted_count}",
+                f"material_evidence_change_count={material_count}",
+                f"unknown_materiality_count={unknown_materiality_count}",
             ],
             recommended_by_aw=["record the testing evidence disposition before closeout"],
             proof_hints=["evidence_strategy.proof_governance", "proof_decision", "regression_sprawl", "nearby parametrized tests"],

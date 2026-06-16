@@ -370,6 +370,125 @@ blocked_without_evidence = ["docs-rendering-complete"]
     assert "manual_review" not in subsystem["missing_evidence"]
 
 
+def test_assurance_reads_compact_evidence_records(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.runtime]
+level = "high"
+applies_to_paths = ["src/runtime.py"]
+required_evidence = ["workspace_runtime_proof"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+""",
+    )
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write_json(
+        tmp_path / ".agentic-workspace" / "verification" / "assurance-evidence-records.json",
+        {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "records": [
+                {
+                    "requirement_id": "runtime",
+                    "evidence_label": "workspace_runtime_proof",
+                    "status": "satisfied",
+                    "source_kind": "command",
+                    "command": "make test-workspace",
+                    "changed_paths": ["src/runtime.py"],
+                    "recorded_by": "agent",
+                }
+            ],
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    assurance = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]
+    assert assurance["status"] == "matched"
+    assert assurance["missing_required_evidence_count"] == 0
+    assert assurance["evidence_status"][0]["state"] == "satisfied"
+    assert assurance["evidence_status"][0]["evidence_present"] == ["workspace_runtime_proof"]
+    assert assurance["evidence_records"]["status"] == "recorded"
+    assert assurance["evidence_records"]["records"][0]["command"] == "make test-workspace"
+
+
+def test_assurance_reports_activation_kinds_for_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.mixed]
+level = "medium"
+applies_to_paths = ["src/**", "docs/**", "generated/**", "tests/**"]
+required_evidence = ["reviewed"]
+force = "recommended"
+""",
+    )
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    _write(tmp_path / "docs" / "runtime.md", "# Runtime\n")
+    _write(tmp_path / "generated" / "workspace" / "python" / "cli.py", "# generated\n")
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--changed",
+                "docs/runtime.md",
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    status = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]["evidence_status"][0]
+    assert set(status["activation_kinds"]) == {
+        "docs-manual-review",
+        "generated-projection",
+        "source-behavior",
+        "test-evidence",
+    }
+    assert {item["path"] for item in status["activation_evidence"]} >= {
+        "src/runtime.py",
+        "docs/runtime.md",
+        "generated/workspace/python/cli.py",
+        "tests/test_runtime.py",
+    }
+
+
 def test_implement_ignores_subsystem_profile_not_declared_in_ownership(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -3333,6 +3452,179 @@ def test_test_strategy_check_reads_recorded_disposition(tmp_path: Path, capsys) 
     assert check["recorded_disposition"]["id"] == "runtime-matrix"
     assert check["missing_disposition_paths"] == []
     assert check["disposition_required_before_closeout"] is False
+
+
+def test_test_strategy_check_distinguishes_non_material_retained_test_edit(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert 1 == 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    materiality = check["files"][0]["materiality"]
+    assert materiality["change_state"] == "modified"
+    assert materiality["test_function_count_delta"] == 0
+    assert materiality["material_evidence_change"] is False
+    assert materiality["route_pressure"] == "ordinary-test-edit"
+    assert check["material_evidence_change_count"] == 0
+    assert check["disposition_required_before_closeout"] is False
+
+
+def test_test_strategy_check_marks_added_test_as_material(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_planning_state(tmp_path)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    materiality = check["files"][0]["materiality"]
+    assert materiality["change_state"] == "added"
+    assert materiality["material_evidence_change"] is True
+    assert materiality["route_pressure"] == "proof-decision"
+    assert check["material_evidence_change_count"] == 1
+    assert check["disposition_required_before_closeout"] is True
+
+
+def test_test_strategy_check_marks_deleted_test_as_material(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    (tmp_path / "tests" / "test_runtime.py").unlink()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    materiality = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]["files"][0]["materiality"]
+    assert materiality["change_state"] == "deleted"
+    assert materiality["material_evidence_change"] is True
+    assert materiality["route_pressure"] == "proof-decision"
+
+
+def test_test_strategy_check_marks_count_change_as_material(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(
+        tmp_path / "tests" / "test_runtime.py",
+        "def test_runtime_case():\n    assert True\n\n\ndef test_runtime_other():\n    assert True\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    materiality = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]["files"][0]["materiality"]
+    assert materiality["change_state"] == "modified"
+    assert materiality["test_function_count_delta"] == 1
+    assert materiality["material_evidence_change"] is True
+
+
+def test_test_strategy_check_marks_renamed_test_as_material(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "mv", "tests/test_runtime.py", "tests/test_runtime_new.py"], cwd=tmp_path, check=True)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime_new.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    materiality = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]["files"][0]["materiality"]
+    assert materiality["change_state"] == "renamed"
+    assert materiality["material_evidence_change"] is True
 
 
 def test_test_strategy_check_requires_temporary_follow_up_evidence(tmp_path: Path, capsys) -> None:

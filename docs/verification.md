@@ -218,6 +218,34 @@ burden and claim boundary for the agent; it does not prove that the evidence is
 sufficient, invent a global compliance rule, or apply high-assurance requirements
 to unrelated subsystems.
 
+## Assurance Evidence Records
+
+Agents can record compact satisfied evidence labels in
+`.agentic-workspace/verification/assurance-evidence-records.json`. The record is
+read by `assurance_requirements` and can satisfy required evidence labels without
+storing raw command transcripts or making AW the acceptance authority.
+
+```json
+{
+  "kind": "agentic-workspace/assurance-evidence-records/v1",
+  "records": [
+    {
+      "requirement_id": "workspace_runtime_routing",
+      "evidence_label": "workspace_runtime_proof",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "make test-workspace",
+      "changed_paths": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+      "recorded_by": "agent"
+    }
+  ]
+}
+```
+
+This is a handoff surface, not a proof archive. Store labels, commands, review
+refs, changed paths, and short provenance only. Keep raw logs in local scratch or
+external systems unless the host repo explicitly wants a retained artifact.
+
 ## Manifest Shape
 
 ```toml
