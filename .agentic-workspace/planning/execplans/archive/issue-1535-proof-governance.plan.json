@@ -26,9 +26,9 @@
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
   "canonical_core": {
-    "requested_outcome": "Finish #1535 by adding a host-neutral Verification proof-governance diagnostic to the existing evidence_strategy report.",
+    "requested_outcome": "Implement a bounded #1535 proof-governance diagnostic slice by adding a host-neutral Verification proof-governance diagnostic to the existing evidence_strategy report.",
     "hard_constraints": "Keep reasoning and disposition decisions agent-owned; Verification may surface facts, candidate enums, and questions but must not infer host strategy from prose or prescribe a testing policy.",
-    "agent_may_decide": "Exact JSON shape, field naming, tests, docs wording, and whether #1535 can honestly close after the diagnostic lands.",
+    "agent_may_decide": "Exact JSON shape, field naming, tests, docs wording, and whether this bounded slice is complete.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
     "next_action": "Add the proof_governance diagnostic to Verification report output, validate it with package tests, and update docs.",
     "proof_expectations": [
@@ -48,8 +48,8 @@
       "Tests cover host-neutral proof-governance questions for proposed test evidence and absent strategy.",
       "Docs explain that proof_governance is advisory fact/question surfacing, not a policy engine."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "archive-and-close"
+    "continuation_owner": "broader #1535 lane",
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "Implement #1535 by adding host-neutral Verification proof-governance diagnostics."
@@ -61,16 +61,16 @@
   ],
   "machine_readable_contract": {
     "intent": {
-      "outcome": "Finish #1535 by adding a host-neutral Verification proof-governance diagnostic to the existing evidence_strategy report.",
+      "outcome": "Implement a bounded #1535 proof-governance diagnostic slice by adding a host-neutral Verification proof-governance diagnostic to the existing evidence_strategy report.",
       "constraints": "Keep reasoning and disposition decisions agent-owned; Verification may surface facts, candidate enums, and questions but must not infer host strategy from prose or prescribe a testing policy.",
-      "latitude": "Exact JSON shape, field naming, tests, docs wording, and whether #1535 can honestly close after the diagnostic lands.",
+      "latitude": "Exact JSON shape, field naming, tests, docs wording, and whether this bounded slice is complete.",
       "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
       "proof": "See proof_report.validation proof."
     },
     "execution": {
       "milestone": "issue-1535-proof-governance",
       "status": "completed",
-      "next_step": "none; #1535 is implemented by this slice.",
+      "next_step": "broader #1535 lane closure remains subject to separate review.",
       "proof": "See proof_report.validation proof."
     },
     "scope": {
@@ -98,7 +98,7 @@
   },
   "iterative_follow_through": {
     "what this slice enabled": "A report-level proof_governance block can let agents answer #1535's pre-test questions without adding a new root command or policy engine.",
-    "intentionally deferred": "none for #1535; future refinements should be new issues.",
+    "intentionally deferred": "broader #1535 lane closure remains subject to separate review.",
     "discovered implications": "none requiring continuation.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
@@ -197,8 +197,8 @@
     "scope touched": "Verification runtime report projection, Verification runtime tests, Verification docs, active planning record.",
     "changed surfaces": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; .agentic-workspace/planning/execplans/issue-1535-proof-governance.plan.json; .agentic-workspace/planning/state.toml",
     "validations run": "See proof_report.validation proof.",
-    "result for continuation": "none; #1535 is implemented by this slice.",
-    "next step": "open PR and close #1535 on merge."
+    "result for continuation": "broader #1535 lane closure remains subject to separate review.",
+    "next step": "open PR for this bounded slice; do not close the broader #1535 lane from this record alone."
   },
   "finished_run_review": {
     "review status": "complete",
@@ -258,9 +258,9 @@
   "closure_check": {
     "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
-    "why this decision is honest": "The remaining open #1535 issue asked for Verification support for sustainable testing strategies. This slice adds the pre-test proof-governance diagnostic, decision vocabulary, agent-owned decision template, tests, docs, and full selected proof.",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The #1535 lane asked for Verification support for sustainable testing strategies. This bounded slice adds the pre-test proof-governance diagnostic, decision vocabulary, agent-owned decision template, tests, docs, and selected proof without claiming broader lane closure.",
     "evidence carried forward": "See proof_report.validation proof.",
     "reopen trigger": "Open a new issue if a future host needs structured strategy configuration, enforcement, budgets, or root command surfaces."
   },
@@ -314,42 +314,40 @@
   },
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
-    "status": "complete",
+    "status": "allowed",
     "active_intent_satisfied": true,
     "human_accepted_partial": false,
-    "claim_level_requested": "full-intent-complete",
-    "claim_level_allowed": "full-intent-complete",
+    "claim_level_requested": "slice_complete",
+    "claim_level_allowed": "slice_complete",
     "required_next_action": "none",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
       "allowed_claim_classes": [
         "partial_progress",
-        "slice_complete",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
         "parent_complete",
         "full_intent_complete",
         "issue_closure"
       ],
-      "blocked_claim_classes": [],
-      "closure_actions": [
-        "archive-and-close",
-        "close-issue-on-pr-merge"
-      ],
-      "renderer_rule": "Renderers may claim #1535 implemented when citing this proof and the PR closure path.",
+      "closure_actions": [],
+      "renderer_rule": "Renderers may claim only this bounded #1535 proof-governance slice complete when citing this proof; broader lane or issue closure requires separate review.",
       "diagnostics": {
         "unsafe_claim_examples": [],
         "diagnostic_only": true
       }
     },
-    "residual_intent": "none",
+    "residual_intent": "Broader #1535 lane closure remains subject to separate review.",
     "self_review": {
       "question": "Does the delivered work satisfy the active human intent?",
       "answer": "yes",
-      "reason": "The remaining #1535 issue is implemented by the proof_governance diagnostic, tests, docs, and proof."
+      "reason": "This bounded #1535 proof-governance slice is implemented by the proof_governance diagnostic, tests, docs, and proof."
     },
     "continuation": {
-      "owner_surface": "none",
-      "created_or_required": false,
-      "reason": "none"
+      "owner_surface": "broader #1535 lane",
+      "created_or_required": true,
+      "reason": "This archived record does not authorize parent-lane or issue closure."
     },
     "authority_boundary": {
       "aw_owns": [
@@ -373,6 +371,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the remaining open issue #1535 after #1542 merged.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest packages/verification/tests/test_runtime_primitives.py -q -> 11 passed; uv run agentic-verification report --target . --changed packages/verification/tests/test_runtime_primitives.py --task 'Should I add a new regression test for issue 1535?' --format json -> proof_governance present with agent-owned unset decisions; make test-workspace -> passed in 101.40s; make lint-workspace -> passed; make maintainer-surfaces -> passed; summary passed; planning doctor exited 0 with existing module-residue warnings\nChanged surfaces: packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; .agentic-workspace/planning/execplans/issue-1535-proof-governance.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: none\nMemory learning: none\nFollow-up: none\nCompletion gate: complete\nCompletion claim allowed: full-intent-complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement a bounded #1535 proof-governance diagnostic slice after #1542 merged.\nIntent satisfied: yes for this bounded slice\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest packages/verification/tests/test_runtime_primitives.py -q -> 11 passed; uv run agentic-verification report --target . --changed packages/verification/tests/test_runtime_primitives.py --task 'Should I add a new regression test for issue 1535?' --format json -> proof_governance present with agent-owned unset decisions; make test-workspace -> passed in 101.40s; make lint-workspace -> passed; make maintainer-surfaces -> passed; summary passed; planning doctor exited 0 with existing module-residue warnings\nChanged surfaces: packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; packages/verification/tests/test_runtime_primitives.py; docs/verification.md; .agentic-workspace/planning/execplans/issue-1535-proof-governance.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: broader #1535 lane closure remains subject to separate review\nMemory learning: none\nFollow-up: broader #1535 lane closure remains subject to separate review\nCompletion gate: slice_complete\nCompletion claim allowed: slice_complete"
   }
 }
