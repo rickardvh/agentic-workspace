@@ -370,6 +370,59 @@ blocked_without_evidence = ["docs-rendering-complete"]
     assert "manual_review" not in subsystem["missing_evidence"]
 
 
+def test_implement_ignores_subsystem_profile_not_declared_in_ownership(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "ordinary"
+paths = ["src/audit/**"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+required_evidence = ["manual_review"]
+force = "required-before-closeout"
+blocked_without_evidence = ["auditability-complete"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/audit/events.py",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    subsystem = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]["subsystem_assurance"]
+    assert subsystem["status"] == "invalid-config"
+    assert subsystem["configured_count"] == 1
+    assert subsystem["active_configured_count"] == 0
+    assert subsystem["invalid_profile_count"] == 1
+    assert subsystem["invalid_profiles"][0]["id"] == "audit-log"
+    assert subsystem["matched_count"] == 0
+    assert subsystem["matched_subsystem_ids"] == []
+    assert subsystem["missing_evidence"] == []
+    assert "audit-log" in subsystem["warnings"][0]
+
+
 def test_implement_composes_multiple_subsystem_assurance_profiles_conservatively(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -2832,6 +2885,82 @@ candidates = []
     assert grounding["subsystem_assurance"]["effective_assurance_level"] == "high"
     assert grounding["applicability"][0]["ref"] == "subsystem:audit-log"
     assert "requirement-grounded-completion" in grounding["closeout_claims"]["blocked"]
+
+
+def test_report_section_ignores_active_plan_scope_for_unknown_subsystem_profile(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "ordinary"
+paths = ["src/ordinary/**"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit-log]
+assurance_level = "high"
+required_evidence = ["requirement_grounding"]
+force = "required-before-closeout"
+blocked_without_evidence = ["requirement-grounded-completion"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "audit-plan", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/audit-plan.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "audit-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Audit plan",
+            "canonical_core": {"touched_scope": ["subsystem:audit-log"]},
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    assurance = json.loads(capsys.readouterr().out)["answer"]
+    subsystem = assurance["subsystem_assurance"]
+    assert assurance["status"] == "configured"
+    assert assurance["active"] == []
+    assert subsystem["status"] == "invalid-config"
+    assert subsystem["invalid_profiles"][0]["id"] == "audit-log"
+    assert subsystem["matched_count"] == 0
+    assert subsystem["matched_subsystem_ids"] == []
+    assert subsystem["missing_evidence"] == []
 
 
 def test_implement_projects_ready_plan_delegation_packet(tmp_path: Path, capsys) -> None:

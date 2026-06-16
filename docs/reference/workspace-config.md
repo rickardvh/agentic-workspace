@@ -95,7 +95,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |
 | `assurance.subsystem_profiles.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no |  | Alias for assurance_level. |  |  |
-| `assurance.subsystem_profiles.<name>.scope_refs` | array of string | no | `[]` | Existing subsystem scope refs that activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id is also treated as a scope ref. |  |  |
+| `assurance.subsystem_profiles.<name>.scope_refs` | array of string | no | `[]` | Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]. |  |  |
 | `assurance.subsystem_profiles.<name>.requirement_refs` | array of string | no | `[]` | Repo-owned requirement refs normally applying to this subsystem. |  |  |
 | `assurance.subsystem_profiles.<name>.required_evidence` | array of string | no | `[]` | Free-form repo vocabulary naming evidence expected before supported subsystem claims. |  |  |
 | `assurance.subsystem_profiles.<name>.proof_profile` | string | no |  | Optional assurance.proof_profiles id to add when this subsystem profile is active. |  |  |

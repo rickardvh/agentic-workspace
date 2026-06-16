@@ -541,7 +541,7 @@
                 ]
               },
               "scope_refs": {
-                "description": "Existing subsystem scope refs that activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id is also treated as a scope ref.",
+                "description": "Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]].",
                 "type": "array",
                 "items": {
                   "type": "string",

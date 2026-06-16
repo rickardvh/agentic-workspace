@@ -1200,6 +1200,28 @@ def _subsystem_assurance_payload(
     planning_facts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     configured = _assurance_subsystem_profile_payloads(config)
+    ownership_subsystems = _load_ownership_subsystems(target_root=target_root)
+    declared_subsystem_ids = {
+        str(subsystem.get("id") or "").strip() for subsystem in ownership_subsystems if str(subsystem.get("id") or "").strip()
+    }
+    invalid_profiles = [
+        {
+            "id": str(profile.get("subsystem_id") or profile.get("id") or "").strip(),
+            "reason": "subsystem profile id is not declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]",
+            "surface": ".agentic-workspace/config.toml [assurance.subsystem_profiles]",
+            "authority_surface": ".agentic-workspace/OWNERSHIP.toml [[subsystems]]",
+        }
+        for profile in configured
+        if str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        and str(profile.get("subsystem_id") or profile.get("id") or "").strip() not in declared_subsystem_ids
+    ]
+    invalid_profile_ids = {str(profile.get("id") or "").strip() for profile in invalid_profiles if str(profile.get("id") or "").strip()}
+    active_configured = [
+        profile
+        for profile in configured
+        if str(profile.get("subsystem_id") or profile.get("id") or "").strip()
+        and str(profile.get("subsystem_id") or profile.get("id") or "").strip() in declared_subsystem_ids
+    ]
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     ownership_matches = (
         _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=normalized_paths)
@@ -1229,7 +1251,7 @@ def _subsystem_assurance_payload(
     profile_matches: list[dict[str, Any]] = []
     facts = planning_facts if isinstance(planning_facts, dict) else _assurance_requirement_planning_facts(active_planning_record)
     evidence_by_requirement = facts.get("evidence_by_requirement", {}) if isinstance(facts, dict) else {}
-    for profile in configured:
+    for profile in active_configured:
         scope_tokens = _assurance_profile_scope_tokens(profile)
         matched_scope_tokens = sorted(scope_tokens & matched_tokens)
         matched_plan_scope = sorted(scope_tokens & plan_scope)
@@ -1306,8 +1328,23 @@ def _subsystem_assurance_payload(
     ]
     return {
         "kind": "agentic-workspace/subsystem-assurance/v1",
-        "status": "attention" if missing_required else "matched" if profile_matches else "configured" if configured else "absent",
+        "status": "attention"
+        if missing_required
+        else "matched"
+        if profile_matches
+        else "configured"
+        if active_configured
+        else "invalid-config"
+        if invalid_profiles
+        else "absent",
         "configured_count": len(configured),
+        "active_configured_count": len(active_configured),
+        "invalid_profile_count": len(invalid_profiles),
+        "invalid_profiles": invalid_profiles,
+        "warnings": [
+            f"assurance.subsystem_profiles.{profile_id} is ignored because {profile_id!r} is not declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]."
+            for profile_id in sorted(invalid_profile_ids)
+        ],
         "matched_count": len(profile_matches),
         "effective_assurance_level": effective_level,
         "matched_subsystem_ids": [str(profile.get("subsystem_id")) for profile in profile_matches],
