@@ -1215,6 +1215,28 @@
               "nargs": "*",
               "default": [],
               "help": "Explicit routing surfaces."
+            },
+            {
+              "name": "task",
+              "flags": [
+                "--task"
+              ],
+              "default": "",
+              "help": "Task text for route context. Task prose is not routing authority."
+            },
+            {
+              "name": "stage",
+              "flags": [
+                "--stage"
+              ],
+              "choices": [
+                "startup",
+                "implement",
+                "closeout",
+                "report"
+              ],
+              "default": "",
+              "help": "Structured workflow stage to use as an explicit routing surface."
             }
           ],
           "role": "core_context_router",
@@ -1349,6 +1371,28 @@
               "nargs": "*",
               "default": [],
               "help": "Explicit routing surfaces."
+            },
+            {
+              "name": "task",
+              "flags": [
+                "--task"
+              ],
+              "default": "",
+              "help": "Task text for capture context."
+            },
+            {
+              "name": "stage",
+              "flags": [
+                "--stage"
+              ],
+              "choices": [
+                "startup",
+                "implement",
+                "closeout",
+                "report"
+              ],
+              "default": "",
+              "help": "Structured workflow stage associated with the learning."
             },
             {
               "name": "existing_note",

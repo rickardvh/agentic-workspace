@@ -36,6 +36,15 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
 | `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
 | `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
+| `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent. |  |  |
+| `memory_decision_packet.kind` | const `"agentic-workspace/memory-decision-packet/v1"` | yes |  | Discriminator for the Memory decision packet. |  |  |
+| `memory_decision_packet.stage` | string | yes |  | Workflow stage that produced the packet. |  |  |
+| `memory_decision_packet.force` | string | yes |  | Whether Memory pull/capture is not applicable, recommended, or required before a claim. |  |  |
+| `memory_decision_packet.why_visible` | string | no |  | Short reason this packet is visible to the agent. |  |  |
+| `memory_decision_packet.pull` | object | yes |  | Memory pull status, route command, route candidates, and read budget. |  |  |
+| `memory_decision_packet.capture` | object | yes |  | Durable-learning capture status, candidate owner surfaces, and capture commands. |  |  |
+| `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
+| `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |
 | `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | no |  | Observed identity of the Agentic Workspace CLI that produced this payload. |  |  |
 | `invoked_cli_identity.kind` | const `"agentic-workspace/invoked-cli-identity/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `invoked_cli_identity.package` | const `"agentic-workspace"` | yes |  | Fixed package value required by this contract. |  |  |

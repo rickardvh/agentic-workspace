@@ -26,6 +26,10 @@
       "$ref": "#/$defs/task_posture_packet",
       "description": "Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing."
     },
+    "memory_decision_packet": {
+      "$ref": "#/$defs/memory_decision_packet",
+      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
+    },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
       "description": "Observed identity of the Agentic Workspace CLI that produced this payload."
@@ -440,6 +444,60 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "memory_decision_packet": {
+      "type": "object",
+      "description": "Command-backed Memory pull/capture decision packet surfaced during startup.",
+      "required": [
+        "kind",
+        "stage",
+        "force",
+        "pull",
+        "capture",
+        "authority_boundary"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/memory-decision-packet/v1",
+          "description": "Discriminator for the Memory decision packet."
+        },
+        "stage": {
+          "type": "string",
+          "description": "Workflow stage that produced the packet."
+        },
+        "force": {
+          "type": "string",
+          "description": "Whether Memory pull/capture is not applicable, recommended, or required before a claim."
+        },
+        "why_visible": {
+          "type": "string",
+          "description": "Short reason this packet is visible to the agent."
+        },
+        "pull": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Memory pull status, route command, route candidates, and read budget."
+        },
+        "capture": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Durable-learning capture status, candidate owner surfaces, and capture commands."
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Boundary separating what AW observes and recommends from agent and human decisions."
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One guardrail or limitation for interpreting the packet."
+          },
+          "description": "Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims."
+        }
+      },
+      "additionalProperties": true
+    },
     "task_posture_packet": {
       "type": "object",
       "required": [

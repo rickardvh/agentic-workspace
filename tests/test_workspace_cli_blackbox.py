@@ -68,7 +68,35 @@ def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:
         cwd=Path.cwd(),
     )
 
-    _assert_usage_error_without_traceback(result, expected="Memory task tip")
-    assert "'memory route' routes touched files or explicit surfaces" in result.stderr
-    assert 'start --task "<task>" --select memory_consult --format json' in result.stderr
-    assert "report --section memory_consult --format json" in result.stderr
+    assert result.returncode == 0
+    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
+    assert '"task_supplied": true' in result.stdout
+    assert '"task_used_for_matching": false' in result.stdout
+
+
+def test_blackbox_memory_capture_note_accepts_stage_and_task_context() -> None:
+    result = _run_cli(
+        "memory",
+        "capture-note",
+        "--target",
+        ".",
+        "--slug",
+        "memory-decision-packet-closeout-state-evidence",
+        "--summary",
+        "Closeout Memory decision states are enforced by runtime contract and tests.",
+        "--files",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_summary_cli.py",
+        "--stage",
+        "closeout",
+        "--task",
+        "Route reusable learning before completion",
+        "--format",
+        "json",
+        cwd=Path.cwd(),
+    )
+
+    assert result.returncode == 0
+    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
+    assert '"stage": "closeout"' in result.stdout
+    assert '"task_supplied": true' in result.stdout

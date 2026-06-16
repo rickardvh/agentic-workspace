@@ -101,6 +101,87 @@ surfaces = ["api"]
     assert result.route_summary["weak_signal_note_count"] == 0
 
 
+def test_route_memory_uses_stage_as_structured_signal_not_task_prose(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    note = target / ".agentic-workspace" / "memory" / "repo" / "domains" / "startup.md"
+    note.parent.mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    note.write_text("# Startup\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/startup.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/startup.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["startup"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    first = installer.route_memory(target=target, stage="startup", task="memory memory startup memory")
+    second = installer.route_memory(target=target, task="startup memory memory")
+    first_optional = {action.source for action in first.actions if action.kind == "optional"}
+    second_optional = {action.source for action in second.actions if action.kind == "optional"}
+
+    assert ".agentic-workspace/memory/repo/domains/startup.md" in first_optional
+    assert ".agentic-workspace/memory/repo/domains/startup.md" not in second_optional
+    assert first.route_summary["route_context"]["stage"] == "startup"
+    assert first.route_summary["route_context"]["task_supplied"] is True
+    assert first.route_summary["route_context"]["task_used_for_matching"] is False
+
+
+def test_capture_note_exposes_non_memory_owner_routes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = installer.suggest_memory_note_capture(
+        target=target,
+        summary="Repeated workflow correction should be preserved if reusable.",
+        stage="closeout",
+        task="Finish implementation and route durable learning.",
+    )
+
+    assert payload["kind"] == "agentic-memory/capture-recommendation/v1"
+    assert payload["status"] == "ready"
+    assert "planning" in payload["non_memory_owner_routes"]
+    assert "docs" in payload["non_memory_owner_routes"]
+    assert payload["route_context"]["stage"] == "closeout"
+
+
 def test_route_memory_exposes_selected_note_freshness_trust(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
