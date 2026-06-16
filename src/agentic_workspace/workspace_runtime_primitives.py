@@ -6993,6 +6993,7 @@ def _run_lifecycle_command(
     non_interactive: bool,
     config: WorkspaceConfig,
     compact_status: bool = True,
+    module_scope_explicit: bool = False,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
@@ -7079,10 +7080,13 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
-    enabled_set = set(selected_modules)
+    selected_set = set(selected_modules)
+    enabled_set = set(config.enabled_modules)
     installed_set = {entry.name for entry in registry if entry.installed}
     missing_enabled_modules = [module_name for module_name in selected_modules if module_name not in installed_set]
-    residue_modules = [entry.name for entry in registry if entry.installed and entry.name not in enabled_set]
+    residue_modules = (
+        [] if module_scope_explicit else [entry.name for entry in registry if entry.installed and entry.name not in enabled_set]
+    )
     for module_name in missing_enabled_modules:
         warnings.append(f"enabled module '{module_name}' is not installed")
     for module_name in residue_modules:
@@ -7120,15 +7124,15 @@ def _run_lifecycle_command(
                 "lifecycle_hook_expectations": list(entry.lifecycle_hook_expectations),
                 "autodetects_installation": entry.autodetects_installation,
                 "installed": entry.installed,
-                "enabled": entry.name in enabled_set,
-                "current": bool(entry.installed and entry.name in enabled_set and entry.name not in stale_generated_surfaces),
+                "enabled": entry.name in selected_set,
+                "current": bool(entry.installed and entry.name in selected_set and entry.name not in stale_generated_surfaces),
                 "state": (
                     "current"
-                    if entry.installed and entry.name in enabled_set and entry.name not in stale_generated_surfaces
+                    if entry.installed and entry.name in selected_set and entry.name not in stale_generated_surfaces
                     else "missing"
-                    if entry.name in enabled_set and not entry.installed
+                    if entry.name in selected_set and not entry.installed
                     else "residue"
-                    if entry.installed and entry.name not in enabled_set
+                    if entry.installed and entry.name not in selected_set
                     else "available"
                 ),
                 "dry_run_commands": list(entry.dry_run_commands),
@@ -34367,6 +34371,7 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         non_interactive=bool(getattr(args, "non_interactive", False)),
         config=config,
         compact_status=_diagnostic_profile(args, default="tiny") == "tiny",
+        module_scope_explicit=bool(getattr(args, "modules", None)),
     )
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command=command_name)
@@ -34472,6 +34477,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         dry_run=bool(getattr(args, "dry_run", False)),
         non_interactive=args.non_interactive,
         config=config,
+        module_scope_explicit=bool(getattr(args, "modules", None)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

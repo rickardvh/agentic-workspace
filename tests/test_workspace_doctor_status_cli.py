@@ -316,6 +316,32 @@ def test_doctor_module_filter_does_not_require_llms_adapter(tmp_path: Path, caps
     assert not any(action["path"] == "llms.txt" for action in workspace_report["actions"])
 
 
+def test_doctor_module_filter_does_not_warn_about_omitted_installed_modules(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    _write(
+        target / ".agentic-workspace" / "verification" / "manifest.toml",
+        'schema_version = "agentic-workspace/verification-manifest/v1"\n',
+    )
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["modules"] == ["planning"]
+    assert payload["residue_modules"] == []
+    assert not any("installed module 'memory' is not enabled" in warning for warning in payload["warnings"])
+    assert not any("installed module 'verification' is not enabled" in warning for warning in payload["warnings"])
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    unscoped_payload = json.loads(capsys.readouterr().out)
+    assert unscoped_payload["residue_modules"] == ["verification"]
+    assert any("installed module 'verification' is not enabled" in warning for warning in unscoped_payload["warnings"])
+
+
 def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
