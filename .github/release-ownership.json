@@ -1,0 +1,74 @@
+{
+  "schema_version": "agentic-workspace/release-ownership/v1",
+  "release_model": "coordinated-workspace",
+  "canonical_version_source": "pyproject.toml",
+  "semver_labels": [
+    "semver:major",
+    "semver:minor",
+    "semver:patch"
+  ],
+  "release_commit_allowed_paths": [
+    "pyproject.toml",
+    "packages/memory/pyproject.toml",
+    "packages/planning/pyproject.toml",
+    "packages/verification/pyproject.toml",
+    "uv.lock"
+  ],
+  "package_affecting_paths": [
+    ".github/release-ownership.json",
+    ".github/release.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/pr-semver-label.yml",
+    ".github/workflows/release-from-semver-label.yml",
+    ".github/workflows/release.yml",
+    "docs/release-and-versioning.md",
+    "generated/",
+    "packages/",
+    "pyproject.toml",
+    "src/",
+    "tests/test_release_workflows.py",
+    "uv.lock"
+  ],
+  "packages": [
+    {
+      "name": "agentic-workspace",
+      "pyproject": "pyproject.toml",
+      "wheel_prefix": "agentic_workspace",
+      "sdist_prefix": "agentic_workspace",
+      "payload_schema": "agentic-workspace/payload/v1",
+      "payload_provenance": ".agentic-workspace/payload-provenance.json",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "agentic-memory",
+      "pyproject": "packages/memory/pyproject.toml",
+      "wheel_prefix": "agentic_memory",
+      "sdist_prefix": "agentic_memory",
+      "payload_schema": "agentic-memory/payload/v1",
+      "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "agentic-planning",
+      "pyproject": "packages/planning/pyproject.toml",
+      "wheel_prefix": "agentic_planning",
+      "sdist_prefix": "agentic_planning",
+      "payload_schema": "agentic-planning/payload/v1",
+      "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "agentic-verification",
+      "pyproject": "packages/verification/pyproject.toml",
+      "wheel_prefix": "agentic_verification",
+      "sdist_prefix": "agentic_verification",
+      "payload_schema": "agentic-workspace/verification-manifest/v1",
+      "payload_provenance": ".agentic-workspace/verification/manifest.toml",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    }
+  ],
+  "first_coordinated_release": {
+    "floor_version": "0.4.0",
+    "rule": "The first coordinated release must not downgrade any package version."
+  }
+}

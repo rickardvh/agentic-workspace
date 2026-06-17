@@ -411,11 +411,20 @@ def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/payload-provenance/v1",
         "payload_schema": WORKSPACE_PAYLOAD_SCHEMA,
+        "release_identity": {
+            "release_model": "coordinated-workspace",
+            "package": "agentic-workspace",
+            "version": __version__,
+            "tag": f"v{__version__}",
+        },
         "installed_by": _payload_installer_identity(target_root=target_root),
         "command_generation": _command_generation_package_identity(),
         "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "payload_files": [relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
-        "rule": "Repo payload provenance records the executable/source identity that installed or last synced the AW payload.",
+        "rule": (
+            "Repo payload provenance records the coordinated AW release identity and executable/source identity "
+            "that installed or last synced the AW payload."
+        ),
     }
 
 
@@ -457,6 +466,26 @@ def _validate_payload_provenance(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if payload.get("payload_schema") != WORKSPACE_PAYLOAD_SCHEMA:
         errors.append("payload_schema must be agentic-workspace/payload/v1")
+    release_identity = payload.get("release_identity")
+    if not isinstance(release_identity, dict):
+        errors.append("release_identity must be an object")
+    else:
+        required_release_identity = {
+            "release_model": "coordinated-workspace",
+            "package": "agentic-workspace",
+            "version": None,
+            "tag": None,
+        }
+        for field, expected in required_release_identity.items():
+            value = release_identity.get(field)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"release_identity.{field} must be a non-empty string")
+            elif isinstance(expected, str) and value != expected:
+                errors.append(f"release_identity.{field} must be {expected}")
+        version = release_identity.get("version") if isinstance(release_identity.get("version"), str) else ""
+        tag = release_identity.get("tag") if isinstance(release_identity.get("tag"), str) else ""
+        if version and tag and tag != f"v{version}":
+            errors.append("release_identity.tag must match release_identity.version")
     installed_by = payload.get("installed_by")
     if not isinstance(installed_by, dict):
         errors.append("installed_by must be an object")
@@ -714,8 +743,15 @@ def _installed_state_compatibility_payload(
     payload_warnings = list((summary or {}).get("warnings", []))
     provenance_status = _read_payload_provenance(target_root=config.target_root)
     provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
+    release_identity = provenance_payload.get("release_identity", {}) if isinstance(provenance_payload, dict) else {}
     installed_by = provenance_payload.get("installed_by", {}) if isinstance(provenance_payload, dict) else {}
-    installed_version = str(installed_by.get("version", "")) if isinstance(installed_by, dict) else ""
+    installed_version = (
+        str(release_identity.get("version", ""))
+        if isinstance(release_identity, dict) and release_identity.get("version")
+        else str(installed_by.get("version", ""))
+        if isinstance(installed_by, dict)
+        else ""
+    )
     current_identity = _payload_installer_identity(target_root=config.target_root)
     initialized_payload_present = (config.target_root / WORKSPACE_CONFIG_PATH).is_file() or bool(installed_modules)
     payload_provenance_drift = "none"
@@ -786,6 +822,7 @@ def _installed_state_compatibility_payload(
         },
         "payload": {
             "status": payload_status,
+            "release_identity": release_identity if isinstance(release_identity, dict) else {},
             "selected_modules": list(selected_modules),
             "installed_modules": list(installed_modules),
             "warning_count": len(payload_warnings),

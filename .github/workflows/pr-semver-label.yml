@@ -1,0 +1,88 @@
+name: PR Semver Label
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  require-semver-label:
+    name: Require semver label for package changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Validate semver label
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_PATH: ${{ github.event_path }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          watched_paths = tuple(ownership["package_affecting_paths"])
+          semver_labels = set(ownership["semver_labels"])
+
+          subprocess.run(
+              ["git", "fetch", "origin", f"{os.environ['BASE_REF']}:refs/remotes/origin/{os.environ['BASE_REF']}"],
+              check=True,
+          )
+          base = subprocess.run(
+              ["git", "merge-base", "HEAD", f"origin/{os.environ['BASE_REF']}"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+          changed = subprocess.run(
+              ["git", "diff", "--name-only", f"{base}...HEAD"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.splitlines()
+          package_changed = any(
+              path == watched or path.startswith(watched)
+              for path in changed
+              for watched in watched_paths
+          )
+
+          if not package_changed:
+              print("No package-affecting changes detected; semver label not required.")
+              raise SystemExit(0)
+
+          with open(os.environ["EVENT_PATH"], encoding="utf-8") as handle:
+              event = json.load(handle)
+          labels = {label["name"] for label in event["pull_request"].get("labels", [])}
+          selected = sorted(labels & semver_labels)
+
+          if len(selected) != 1:
+              print(
+                  "Package-affecting PRs must have exactly one semver label: "
+                  + ", ".join(sorted(semver_labels)),
+                  file=sys.stderr,
+              )
+              print(f"Current semver labels: {selected or 'none'}", file=sys.stderr)
+              print("Changed package paths:", file=sys.stderr)
+              for path in changed:
+                  if any(path == watched or path.startswith(watched) for watched in watched_paths):
+                      print(f"  {path}", file=sys.stderr)
+              raise SystemExit(1)
+
+          print(f"Semver label accepted: {selected[0]}")
+          PY
