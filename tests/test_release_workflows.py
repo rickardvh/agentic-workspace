@@ -86,14 +86,23 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
 
     assert "branches:" in workflow
     assert "master" in workflow
+    assert "pull_request:" in workflow
+    assert "closed" in workflow
+    assert "github.event.pull_request.merged == true" in workflow
     assert "contents: write" in workflow
-    assert "issues: read" in workflow
     assert "pull-requests: read" in workflow
     assert ".github/release-ownership.json" in workflow
     assert 'ownership["packages"]' in workflow
     assert 'ownership["first_coordinated_release"]["floor_version"]' in workflow
-    assert "Merge pull request #(\\d+)" in workflow
-    assert "Package-affecting direct push did not change package versions" in workflow
+    assert 'pull_request.get("labels", [])' in workflow
+    assert ".[].filename" in workflow
+    assert "associated_pr_numbers" in workflow
+    assert "commits/{commit_sha}/pulls" in workflow
+    assert "pull_request.closed handles the release decision" in workflow
+    assert "def skip_release(reason: str) -> None:" in workflow
+    assert 'output("release_needed", "false")' in workflow
+    assert "Merge pull request #" not in workflow
+    assert "Package-affecting push has no semver-label context and no coordinated explicit version bump" in workflow
     assert "must have exactly one semver label before release" in workflow
     assert "for pyproject in package_pyprojects:" in workflow
     assert "uv lock" in workflow

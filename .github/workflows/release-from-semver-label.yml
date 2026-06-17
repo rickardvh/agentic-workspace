@@ -4,21 +4,27 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
 
 permissions:
   contents: write
-  issues: read
   pull-requests: read
 
 jobs:
   release-from-label:
     name: Bump coordinated workspace version and tag merged package changes
+    if: github.event_name == 'push' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
@@ -36,6 +42,8 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           GITHUB_ACTOR: ${{ github.actor }}
           HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -96,29 +104,73 @@ jobs:
               output("version", version)
               output("tag", f"v{version}")
 
-          message = os.environ["HEAD_COMMIT_MESSAGE"]
-          if os.environ["GITHUB_ACTOR"] == "github-actions[bot]" and re.match(r"^Release v\d+\.\d+\.\d+$", message.strip()):
-              print("Release bump commit detected; no additional release bump needed.")
+          def skip_release(reason: str) -> None:
+              print(f"::notice::{reason}")
               output("release_needed", "false")
               raise SystemExit(0)
 
-          pr_match = re.search(r"Merge pull request #(\d+)", message) or re.search(r"\(#(\d+)\)", message)
-          before = os.environ["BEFORE_SHA"]
-          if not before or set(before) == {"0"}:
-              before = run("git", "rev-list", "--max-parents=0", "HEAD").stdout.splitlines()[0]
-          elif run("git", "cat-file", "-e", f"{before}^{{commit}}", check=False).returncode != 0:
-              before = run("git", "rev-parse", "HEAD^").stdout.strip()
+          def associated_pr_numbers(commit_sha: str) -> list[str]:
+              result = run(
+                  "gh",
+                  "api",
+                  "-H",
+                  "Accept: application/vnd.github+json",
+                  f"repos/{os.environ['REPOSITORY']}/commits/{commit_sha}/pulls",
+                  "--jq",
+                  ".[].number",
+                  check=False,
+              )
+              if result.returncode != 0:
+                  return []
+              return result.stdout.splitlines()
 
-          changed = run("git", "diff", "--name-only", f"{before}...HEAD").stdout.splitlines()
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          message = os.environ.get("HEAD_COMMIT_MESSAGE", "")
+          if (
+              event_name == "push"
+              and os.environ["GITHUB_ACTOR"] == "github-actions[bot]"
+              and re.match(r"^Release v\d+\.\d+\.\d+$", message.strip())
+          ):
+              skip_release("Release bump commit detected; no additional release bump needed.")
+
+          pr_number = ""
+          selected: list[str] = []
+          if event_name == "pull_request":
+              pull_request = event.get("pull_request", {})
+              if not pull_request.get("merged"):
+                  skip_release("Pull request was closed without merge; no release bump needed.")
+              pr_number = str(pull_request["number"])
+              changed = run(
+                  "gh",
+                  "api",
+                  f"repos/{os.environ['REPOSITORY']}/pulls/{pr_number}/files",
+                  "--paginate",
+                  "--jq",
+                  ".[].filename",
+              ).stdout.splitlines()
+              labels = {label["name"] for label in pull_request.get("labels", [])}
+              selected = sorted(labels & semver_labels)
+          elif event_name == "push":
+              before = os.environ["BEFORE_SHA"]
+              if not before or set(before) == {"0"}:
+                  before = run("git", "rev-list", "--max-parents=0", "HEAD").stdout.splitlines()[0]
+              elif run("git", "cat-file", "-e", f"{before}^{{commit}}", check=False).returncode != 0:
+                  before = run("git", "rev-parse", "HEAD^").stdout.strip()
+              changed = run("git", "diff", "--name-only", f"{before}...HEAD").stdout.splitlines()
+          else:
+              raise SystemExit(f"Unsupported release event: {event_name}")
+
           package_changed = any(
               path == watched or path.startswith(watched)
               for path in changed
               for watched in watched_paths
           )
           if not package_changed:
-              print("No package-affecting changes detected; no release bump needed.")
-              output("release_needed", "false")
-              raise SystemExit(0)
+              skip_release("No package-affecting changes detected; no release bump needed.")
+
+          if event_name == "push" and associated_pr_numbers(event["after"]):
+              skip_release("Package-affecting push is associated with a merged PR; pull_request.closed handles the release decision.")
 
           versions = [version_text(path) for path in package_pyprojects]
           for version in versions:
@@ -127,32 +179,25 @@ jobs:
           current_floor = max_version([current_package_floor, floor_version])
           needs_first_normalization = parse_version(current_package_floor) < parse_version(floor_version)
 
-          if not pr_match:
+          if event_name == "push":
               if not any(path in changed for path in package_pyprojects):
-                  print("Package-affecting direct push did not change package versions; skipping release.")
-                  output("release_needed", "false")
-                  raise SystemExit(0)
+                  skip_release(
+                      "Package-affecting push has no semver-label context and no coordinated explicit version bump."
+                  )
               explicit_versions = {version_text(path) for path in package_pyprojects}
               if len(explicit_versions) != 1:
-                  raise SystemExit(f"Direct release push must set every package to the same version, got {sorted(explicit_versions)}")
+                  skip_release(f"Direct release push must set every package to the same version, got {sorted(explicit_versions)}.")
               current_version = explicit_versions.pop()
               if parse_version(current_version) < parse_version(current_floor):
-                  raise SystemExit(f"Direct release version {current_version} would downgrade below floor {current_floor}")
+                  skip_release(f"Direct release version {current_version} would downgrade below floor {current_floor}.")
               tag = f"v{current_version}"
               if run("git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}", check=False).returncode == 0:
-                  print(f"Explicit release version {current_version} already has tag {tag}; skipping release.")
-                  output("release_needed", "false")
-                  raise SystemExit(0)
+                  skip_release(f"Explicit release version {current_version} already has tag {tag}; skipping release.")
               set_release_outputs(current_version)
               raise SystemExit(0)
 
-          pr_number = pr_match.group(1)
-          labels_json = run("gh", "api", f"repos/{os.environ['REPOSITORY']}/issues/{pr_number}/labels").stdout
-          labels = {label["name"] for label in json.loads(labels_json)}
-          selected = sorted(labels & semver_labels)
           if len(selected) != 1:
-              print(f"PR #{pr_number} must have exactly one semver label before release; got {selected or 'none'}.", file=sys.stderr)
-              raise SystemExit(1)
+              skip_release(f"PR #{pr_number} must have exactly one semver label before release; got {selected or 'none'}.")
 
           if needs_first_normalization:
               next_version = floor_version
@@ -160,7 +205,7 @@ jobs:
               next_version = bump_version(current_floor, selected[0])
           tag = f"v{next_version}"
           if run("git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}", check=False).returncode == 0:
-              raise SystemExit(f"Release tag {tag} already exists.")
+              skip_release(f"Release tag {tag} already exists; skipping release.")
 
           for pyproject in package_pyprojects:
               path = Path(pyproject)

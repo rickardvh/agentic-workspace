@@ -1595,6 +1595,18 @@
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
+      "pattern": ".github/release.yml",
+      "format": "yml",
+      "owner": "github-integration",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "GitHub release notes category configuration",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Host-repo release notes configuration is platform metadata, not package runtime state.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
+    },
+    {
       "pattern": ".pre-commit-config.yaml",
       "format": "yaml",
       "owner": "developer-tooling",
