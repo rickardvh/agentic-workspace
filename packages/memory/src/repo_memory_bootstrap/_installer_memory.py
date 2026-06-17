@@ -2284,7 +2284,7 @@ def _evaluate_route_report_fixtures(
         over_target = 0
         over_strong = 0
 
-    summary = {
+    summary: dict[str, object] = {
         "fixture_count": fixture_count,
         "passing_fixture_count": passing_count,
         "failing_fixture_count": failing_count,
