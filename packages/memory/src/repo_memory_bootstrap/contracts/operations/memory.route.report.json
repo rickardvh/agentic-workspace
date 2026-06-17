@@ -25,6 +25,16 @@
       "required": false
     },
     {
+      "name": "task",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "stage",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -90,6 +100,12 @@
           },
           "surfaces": {
             "value": "surface"
+          },
+          "task": {
+            "value": "task"
+          },
+          "stage": {
+            "value": "stage"
           }
         },
         "outputs": [

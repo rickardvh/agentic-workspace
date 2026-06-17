@@ -198,6 +198,33 @@ Startup and work-shaping commands should apply this sequence:
 This keeps ordinary startup small while making high-consequence knowledge
 visible before work begins.
 
+## Memory Decision Packet
+
+When durable Memory knowledge or closeout residue may affect work shape,
+Workspace surfaces a `memory_decision_packet` in `start`, `implement`, and
+closeout-oriented report output. The packet is a decision aid, not a policy
+engine.
+
+The packet separates:
+
+- `pull`: whether route inspection is unchecked, checked with no matches,
+  matched, stale, unavailable, or dismissed;
+- `capture`: whether reusable learning is not evaluated, absent, a Memory
+  capture candidate, routed elsewhere, dismissed, or still needs follow-up;
+- `authority_boundary`: what AW observed, what AW recommends inspecting, and
+  which decisions remain agent- or human-owned.
+
+The route command is selector-backed:
+
+```bash
+agentic-workspace memory route --target . --stage implement --files <paths> --task "<task>" --format json
+```
+
+`--stage`, changed files, explicit surfaces, manifest metadata, and existing
+workflow obligations are structured route signals. Task prose is context for the
+agent and for capture scaffolds; it must not become keyword authority for
+requiring Memory or choosing a disposition.
+
 ## Closeout And Capture
 
 Closeout should account for routed knowledge when it affected the work. Useful

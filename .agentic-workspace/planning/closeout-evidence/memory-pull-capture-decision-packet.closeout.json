@@ -1,0 +1,67 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Memory pull/capture decision packet",
+  "plan_id": "memory-pull-capture-decision-packet",
+  "created_at": "2026-06-17T08:20:00+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/archive/memory-pull-capture-decision-packet.plan.json",
+  "retention": {
+    "state": "retained-closeout-evidence",
+    "reason": "PR #1580 closure depends on explicit end-to-end Memory pull/capture dogfooding evidence, not only implementation tests.",
+    "rule": "Full #1579 closure requires evidence that relevant Memory was pulled without exact surface wording and reusable learning was captured or routed before completion."
+  },
+  "dogfooding_evidence": {
+    "memory_pull": {
+      "status": "passed",
+      "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --stage closeout --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py --task \"Finish the pull capture loop evidence\" --format json",
+      "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+      "match_source": "surface",
+      "confidence": "high",
+      "task_used_for_matching": false,
+      "evidence_summary": "Structured stage/file context found the relevant Memory note without requiring exact prompt wording."
+    },
+    "surface_order_robustness": {
+      "status": "passed",
+      "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --files tests/test_workspace_summary_cli.py --stage closeout --task \"Equivalent context in another order\" --format json",
+      "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+      "match_source": "surface",
+      "task_used_for_matching": false,
+      "evidence_summary": "Equivalent structured inputs in a different option order returned the same relevant Memory route."
+    },
+    "capture_or_route": {
+      "status": "captured-existing-memory-note",
+      "command": "uv run python scripts/run_agentic_workspace.py memory capture-note --target . --slug memory-decision-packet-closeout-state-evidence --summary \"Closeout Memory decision states are enforced by runtime contract and tests; no new Memory note is needed beyond existing agent-judgment guidance.\" --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py docs/reference/startup-context.md docs/reference/implementer-context.md --stage closeout --task \"Route reusable #1579 learning before completion\" --format json",
+      "recommended_action": "update-existing-note",
+      "owner_surface": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+      "non_memory_owner_routes_visible": [
+        "planning",
+        "docs",
+        "tests",
+        "contracts",
+        "config",
+        "review",
+        "issue"
+      ],
+      "applied_change": "Updated the existing Memory note with the #1579 route/capture verification and last-confirmed date."
+    }
+  },
+  "closure_check": {
+    "closeout scope": "issue",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The PR includes runtime support, root command support, state-level tests, schema docs, dogfooding route evidence, and applied Memory capture evidence for the full #1579 pull/capture loop.",
+    "evidence carried forward": "Relevant Memory route found the existing note by structured closeout/file context with task_used_for_matching=false; capture-note routed reusable learning to the existing Memory owner and the note was updated.",
+    "reopen trigger": "Reopen if Memory route stops finding the note from structured stage/file context, or if closeout can no longer distinguish no-write, dismissed, capture, routed, and unresolved states."
+  },
+  "proof_report": {
+    "validation proof": "root Memory route/capture dogfooding commands; focused packet/Memory pytest; uv run python scripts/generate/generate_command_packages.py --check; make schema-reference-docs; make check-planning; make test-workspace; make lint-workspace",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Root Memory route/capture dogfooding commands passed; focused blackbox and Memory tests passed; generated package check passed; schema-reference docs passed; check-planning passed; workspace tests and lint passed."
+  },
+  "durable_residue": {
+    "status": "memory",
+    "learned constraint": "Memory pull/capture closure must show both route evidence and a capture-or-route decision; prompt wording alone is not evidence.",
+    "canonical owner now": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+    "retention after promotion": "retain"
+  }
+}

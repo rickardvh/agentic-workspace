@@ -82,6 +82,34 @@ surfaces = ["architecture", "decision"]
 routes_from = [".agentic-workspace/memory/repo/index.md"]
 stale_when = [".agentic-workspace/memory/repo/index.md"]
 
+[notes.".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md"
+authority = "advisory"
+audience = "agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "optional"
+subsystems = ["workspace", "memory-system", "verification"]
+surfaces = ["routing", "skills", "memory", "verification", "closeout", "delegation"]
+routes_from = [
+  ".agentic-workspace/memory/repo/index.md",
+  ".agentic-workspace/memory/repo/current/routing-feedback.md",
+]
+stale_when = [
+  ".agentic-workspace/WORKFLOW.md",
+  "src/agentic_workspace/contracts/skill_specs.json",
+  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+]
+memory_role = "durable_truth"
+promotion_target = ".agentic-workspace/WORKFLOW.md and skill/report contracts that expose agent-owned decision support"
+promotion_trigger = "Any workflow feature proposes prompt keyword matching as decision authority, or Memory/Verification/delegation guidance is updated."
+retention_after_promotion = "shrink"
+preferred_remediation = "skill"
+elimination_target = "promote"
+config_treatment = "promote"
+config_note = "This is a core AW agent-judgment rule, not repo-local preference."
+
 [notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
 note_type = "current"
 canonical_home = ".agentic-workspace/memory/repo/current/routing-feedback.md"

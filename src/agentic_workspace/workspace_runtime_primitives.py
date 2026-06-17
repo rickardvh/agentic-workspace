@@ -3422,6 +3422,8 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
     for option, attr in (
         ("--target", "target"),
         ("--summary", "summary"),
+        ("--task", "task"),
+        ("--stage", "stage"),
         ("--existing-note", "existing_note"),
         ("--force-new-reason", "force_new_reason"),
         ("--mode", "mode"),
@@ -13456,7 +13458,10 @@ def _memory_consult_payload(
     read_first = [str(path) for path in always_load]
     route_actions: list[dict[str, Any]] = []
     normalized_paths = _normalize_changed_paths(changed_paths or [])
+    route_inspection_state = "not_checked"
+    route_signal_count = 0
     if normalized_paths:
+        route_inspection_state = "checked"
         try:
             route_result = route_memory(target=target_root, files=normalized_paths)
             for action in route_result.actions:
@@ -13466,8 +13471,11 @@ def _memory_consult_payload(
                 if source not in read_first:
                     read_first.append(source)
                 route_actions.append({"kind": action.kind, "path": source, "reason": action.detail, "match_source": action.match_source})
+                if action.match_source != "routing-baseline":
+                    route_signal_count += 1
         except Exception:
             route_actions = []
+            route_inspection_state = "unavailable"
     max_notes = int(bundle.get("working_set_target", 3) or 3)
     if max_notes > 0:
         read_first = read_first[:max_notes]
@@ -13500,6 +13508,8 @@ def _memory_consult_payload(
         "do_not_bulk_read": True,
         "selection_rule": bundle.get("route_rule", ""),
         "changed_path_route_count": len(route_actions),
+        "route_inspection_state": route_inspection_state,
+        "route_signal_count": route_signal_count,
         "route_matches": route_actions[:max_notes],
         "evidence": evidence if isinstance(evidence, dict) else {},
         "capture_helper": capture_helper,
@@ -13523,12 +13533,216 @@ def _memory_consult_payload(
             "max_notes",
             "do_not_bulk_read",
             "changed_path_route_count",
+            "route_inspection_state",
+            "route_signal_count",
             "route_matches",
             "consultation_protocol",
         )
         keys = (*keys, "why", "selection_rule")
         return {key: payload[key] for key in keys if key in payload}
     return payload
+
+
+_MEMORY_DECISION_OWNER_SURFACES = ["memory", "planning", "docs", "tests", "contracts", "config", "review", "issue"]
+_MEMORY_PULL_STATUSES = {"not_checked", "checked_none", "relevant_notes_found", "stale", "unavailable", "dismissed"}
+_MEMORY_CAPTURE_STATUSES = {
+    "not_evaluated",
+    "none_found",
+    "capture_candidate",
+    "routed_elsewhere",
+    "dismissed",
+    "follow_up_required",
+}
+
+
+def _memory_route_command(
+    *,
+    cli_invoke: str,
+    stage: str,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+) -> str:
+    parts = ["agentic-workspace memory route --target .", f"--stage {stage}"]
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if normalized_paths:
+        parts.append("--files " + " ".join(normalized_paths))
+    if task_text and task_text.strip():
+        parts.append('--task "<task>"')
+    parts.append("--format json")
+    return _command_with_cli_invoke(command=" ".join(parts), cli_invoke=cli_invoke)
+
+
+def _memory_capture_command(
+    *,
+    cli_invoke: str,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+) -> str:
+    parts = ["agentic-workspace memory capture-note --target . --slug <slug> --summary <text>"]
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if normalized_paths:
+        parts.append("--files " + " ".join(normalized_paths))
+    if task_text and task_text.strip():
+        parts.append('--task "<task>"')
+    parts.append("--format json")
+    return _command_with_cli_invoke(command=" ".join(parts), cli_invoke=cli_invoke)
+
+
+def _memory_decision_packet_payload(
+    *,
+    stage: str,
+    cli_invoke: str,
+    memory_consult: dict[str, Any] | None = None,
+    changed_paths: list[str] | None = None,
+    task_text: str | None = None,
+    closeout_trust: dict[str, Any] | None = None,
+    routine_work_context: dict[str, Any] | None = None,
+    force: str | None = None,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    consult = _as_dict(memory_consult)
+    closeout = _as_dict(closeout_trust)
+    routine = _as_dict(routine_work_context)
+    observed: list[str] = []
+    recommends: list[str] = []
+    if consult.get("status") == "recommended":
+        observed.append("Memory consult reports routeable repository Memory is available.")
+        recommends.append("Inspect route-matched Memory before decisions where durable knowledge may affect work shape.")
+    if int(consult.get("changed_path_route_count", 0) or 0) > 0:
+        observed.append("Changed paths produced Memory route matches.")
+    if normalized_paths:
+        observed.append("Changed paths are available for selector-backed Memory routing.")
+    if closeout:
+        observed.append("Closeout trust state is visible for residue and completion-claim review.")
+    residue = closeout.get("durable_residue_action", {}) if isinstance(closeout, dict) else {}
+    lower_trust_count = _as_int(closeout.get("lower_trust_closeout_count"))
+    durable_pressure = bool(
+        closeout.get("memory_decision_required")
+        or lower_trust_count > 0
+        or str(closeout.get("trust") or "").strip() in {"lower-trust", "unavailable"}
+        or _as_int(closeout.get("promotion_candidate_count")) > 0
+    )
+    residue_action = str(residue.get("action") or "").strip() if isinstance(residue, dict) else ""
+    residue_owner = str(
+        (residue.get("owner") if isinstance(residue, dict) else "")
+        or (residue.get("residue_owner") if isinstance(residue, dict) else "")
+        or (residue.get("destination") if isinstance(residue, dict) else "")
+        or (residue.get("route_to") if isinstance(residue, dict) else "")
+        or ""
+    ).strip()
+    explicit_pull_status = str(closeout.get("memory_pull_status") or consult.get("pull_status") or "").strip()
+    explicit_capture_status = str(closeout.get("memory_capture_status") or consult.get("capture_status") or "").strip()
+    if isinstance(residue, dict) and residue_action and durable_pressure:
+        recommends.append(
+            "Before closeout, decide whether reusable learning should be captured, routed elsewhere, dismissed, or left unwritten."
+        )
+    if routine:
+        for item in _list_payload(routine.get("cards")):
+            if isinstance(item, dict) and str(item.get("fronted_by", "")) in {"memory_consult", "closeout_trust"}:
+                observed.append(f"Routine work context fronts {item.get('fronted_by')} for this stage.")
+                break
+
+    if force is None:
+        if stage == "closeout":
+            force = "required_at_closeout" if durable_pressure else "not_applicable"
+        elif normalized_paths and (consult.get("status") == "recommended" or int(consult.get("changed_path_route_count", 0) or 0) > 0):
+            force = "recommended_before_work"
+        elif consult.get("status") == "recommended":
+            force = "recommended_before_work"
+        else:
+            force = "not_applicable"
+
+    route_matches = [
+        {
+            "path": item.get("path") or item.get("source"),
+            "kind": item.get("kind"),
+            "reason": item.get("reason") or item.get("detail"),
+            "match_source": item.get("match_source"),
+        }
+        for item in _list_payload(consult.get("route_matches"))
+        if isinstance(item, dict)
+    ]
+    relevant_route_matches = [item for item in route_matches if item.get("match_source") != "routing-baseline"]
+    route_inspection_state = str(consult.get("route_inspection_state") or "not_checked")
+    route_signal_count = _as_int(consult.get("route_signal_count"))
+    pull_status = explicit_pull_status if explicit_pull_status in _MEMORY_PULL_STATUSES else "not_checked"
+    if pull_status == "not_checked" and consult.get("status") == "unavailable":
+        pull_status = "unavailable"
+    elif pull_status == "not_checked" and route_inspection_state == "unavailable":
+        pull_status = "unavailable"
+    elif pull_status == "not_checked" and route_inspection_state == "checked" and (route_signal_count > 0 or relevant_route_matches):
+        pull_status = "relevant_notes_found"
+    elif pull_status == "not_checked" and route_inspection_state == "checked":
+        pull_status = "checked_none"
+
+    capture_status = explicit_capture_status if explicit_capture_status in _MEMORY_CAPTURE_STATUSES else "not_evaluated"
+    if capture_status == "not_evaluated" and stage == "closeout" and force == "not_applicable":
+        capture_status = "none_found"
+    elif capture_status == "not_evaluated" and stage == "closeout" and residue_action in {"dismissed", "dismiss", "no-action"}:
+        capture_status = "dismissed"
+    elif (
+        capture_status == "not_evaluated"
+        and stage == "closeout"
+        and residue_owner
+        and residue_owner.lower() not in {"memory", ".agentic-workspace/memory", ".agentic-workspace/memory/repo"}
+    ):
+        capture_status = "routed_elsewhere"
+    elif capture_status == "not_evaluated" and stage == "closeout" and _as_int(closeout.get("promotion_candidate_count")) > 0:
+        capture_status = "capture_candidate"
+    elif capture_status == "not_evaluated" and stage == "closeout" and force == "required_at_closeout":
+        capture_status = "follow_up_required"
+    elif capture_status == "not_evaluated" and normalized_paths:
+        capture_status = "not_evaluated"
+
+    if not observed:
+        observed.append("No structured Memory or closeout signal requires a Memory decision.")
+    if not recommends:
+        recommends.append("Treat Memory as optional unless route inspection or closeout residue changes the work.")
+
+    return {
+        "kind": "agentic-workspace/memory-decision-packet/v1",
+        "stage": stage,
+        "force": force,
+        "why_visible": (
+            "Memory pull/capture is surfaced as an explicit agent decision; AW provides selector-backed commands and facts, not semantic conclusions."
+        ),
+        "pull": {
+            "status": pull_status,
+            "recommended_command": _memory_route_command(
+                cli_invoke=cli_invoke,
+                stage=stage,
+                task_text=task_text,
+                changed_paths=normalized_paths,
+            ),
+            "alternate_commands": [],
+            "candidate_routes": route_matches,
+            "read_budget": "selector",
+            "agent_decision_required": force != "not_applicable",
+        },
+        "capture": {
+            "status": capture_status,
+            "candidate_owner_surfaces": list(_MEMORY_DECISION_OWNER_SURFACES),
+            "recommended_commands": [_memory_capture_command(cli_invoke=cli_invoke, task_text=task_text, changed_paths=normalized_paths)]
+            if force != "not_applicable"
+            else [],
+            "agent_decision_required": force in {"required_before_claim", "required_at_closeout"},
+        },
+        "authority_boundary": {
+            "aw_observes": observed,
+            "aw_recommends": recommends,
+            "agent_owns": [
+                "whether Memory is relevant to the current decision",
+                "whether reusable learning exists",
+                "whether residue belongs in Memory or a different owner surface",
+            ],
+            "human_owns": ["intent changes", "accepted narrowing", "policy decisions not already present in repo-owned guidance"],
+        },
+        "limits": [
+            "No keyword-triggered Memory requirement.",
+            "No hidden Memory writes.",
+            "No bulk-read diligence claim.",
+        ],
+    }
 
 
 def _maintenance_pressure_payload(
@@ -16140,6 +16354,23 @@ def _report_closeout_trust_payload(
         cli_invoke=cli_invoke,
     )
     completion_options = allow_archived_slice_claim(completion_options, slice_closeout_evidence)
+    memory_consult = (
+        _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=cli_invoke)
+        if target_root is not None
+        else {"status": "unavailable", "consultation_state": "not-checked", "read_first": [], "do_not_bulk_read": True}
+    )
+    memory_decision_packet = _memory_decision_packet_payload(
+        stage="closeout",
+        cli_invoke=cli_invoke,
+        memory_consult=memory_consult,
+        closeout_trust={
+            "trust": trust,
+            "lower_trust_closeout_count": effective_lower_trust_count,
+            "durable_residue_action": residue_action,
+            "promotion_candidate_count": _as_int(knowledge_authority_review.get("promotion_candidate_count")),
+            "memory_decision_required": effective_lower_trust_count > 0,
+        },
+    )
     return {
         "status": "present",
         "trust": trust,
@@ -16164,6 +16395,8 @@ def _report_closeout_trust_payload(
         "proof_confidence": proof_confidence,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
+        "memory_consult": memory_consult,
+        "memory_decision_packet": memory_decision_packet,
         "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -19746,6 +19979,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "read_first": payload.get("memory_consult", {}).get("read_first", []),
             "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
         },
+        "memory_decision_packet": payload.get("memory_decision_packet", {}),
         **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
         **(
             {"continuation_reorientation": payload["continuation_reorientation"]}
@@ -20617,6 +20851,13 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    payload["memory_decision_packet"] = _memory_decision_packet_payload(
+        stage="startup",
+        cli_invoke=config.cli_invoke,
+        memory_consult=payload.get("memory_consult", {}),
+        changed_paths=changed_paths,
+        task_text=task_text,
+    )
     if parent_intent_status.get("status") != "guidance-only":
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
@@ -21663,10 +21904,12 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             advisory_selectors=[
                 "skill_routing",
                 "workflow_sufficiency",
+                "memory_decision_packet",
             ],
             agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
         ),
         "next_safe_action": next_safe_action,
+        "memory_decision_packet": payload.get("memory_decision_packet", {}),
         "skills": _startup_skills_projection(
             payload=payload,
             next_safe_action=next_safe_action,
@@ -21891,6 +22134,13 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    payload["memory_decision_packet"] = _memory_decision_packet_payload(
+        stage="startup",
+        cli_invoke=config.cli_invoke,
+        memory_consult=payload.get("memory_consult", {}),
+        changed_paths=changed_paths,
+        task_text=task_text,
+    )
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
@@ -26727,6 +26977,9 @@ def _implement_payload(
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
+        "memory_consult": _memory_consult_payload(
+            target_root=target_root, changed_paths=normalized_paths, compact=True, cli_invoke=config.cli_invoke
+        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
@@ -26776,6 +27029,14 @@ def _implement_payload(
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    payload["memory_decision_packet"] = _memory_decision_packet_payload(
+        stage="implement",
+        cli_invoke=config.cli_invoke,
+        memory_consult=payload.get("memory_consult", {}),
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        force="required_before_claim" if normalized_paths and payload.get("memory_consult", {}).get("status") == "recommended" else None,
+    )
     if include_task_contract:
         payload["task_contract"] = _task_contract_payload(
             changed_paths=normalized_paths,
@@ -27049,6 +27310,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("task_posture_packet"), dict)
             else {}
         ),
+        "memory_decision_packet": payload.get("memory_decision_packet", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
             "adaptive_routing": _tiny_adaptive_routing_payload(

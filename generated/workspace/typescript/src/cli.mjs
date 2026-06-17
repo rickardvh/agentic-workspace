@@ -1553,6 +1553,28 @@ const commandDefinitions = [
               "nargs": "*"
             },
             {
+              "default": "",
+              "flags": [
+                "--task"
+              ],
+              "help": "Task text for route context. Task prose is not routing authority.",
+              "name": "task"
+            },
+            {
+              "choices": [
+                "startup",
+                "implement",
+                "closeout",
+                "report"
+              ],
+              "default": "",
+              "flags": [
+                "--stage"
+              ],
+              "help": "Structured workflow stage to use as an explicit routing surface.",
+              "name": "stage"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -1712,6 +1734,28 @@ const commandDefinitions = [
               "help": "Explicit routing surfaces.",
               "name": "surfaces",
               "nargs": "*"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--task"
+              ],
+              "help": "Task text for capture context.",
+              "name": "task"
+            },
+            {
+              "choices": [
+                "startup",
+                "implement",
+                "closeout",
+                "report"
+              ],
+              "default": "",
+              "flags": [
+                "--stage"
+              ],
+              "help": "Structured workflow stage associated with the learning.",
+              "name": "stage"
             },
             {
               "default": "",

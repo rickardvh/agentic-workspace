@@ -210,6 +210,37 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     ]
 
 
+def test_start_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["memory_decision_packet"]
+
+    assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
+    assert packet["stage"] == "startup"
+    assert packet["pull"]["status"] == "not_checked"
+    assert "memory route" in packet["pull"]["recommended_command"]
+    assert "--stage startup" in packet["pull"]["recommended_command"]
+    assert packet["authority_boundary"]["agent_owns"]
+    assert "No keyword-triggered Memory requirement." in packet["limits"]
+
+
 def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

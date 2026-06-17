@@ -34,6 +34,16 @@
       "source": "cli-option"
     },
     {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "stage",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"
@@ -47,11 +57,17 @@
           "files": {
             "value": "files"
           },
+          "stage": {
+            "value": "stage"
+          },
           "surfaces": {
             "value": "surface"
           },
           "target": {
             "value": "target"
+          },
+          "task": {
+            "value": "task"
           }
         },
         "description": "Load the Memory routing recommendation.",

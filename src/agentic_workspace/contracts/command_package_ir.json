@@ -2396,6 +2396,28 @@
                     "help": "Explicit routing surfaces."
                   },
                   {
+                    "name": "task",
+                    "flags": [
+                      "--task"
+                    ],
+                    "default": "",
+                    "help": "Task text for route context. Task prose is not routing authority."
+                  },
+                  {
+                    "name": "stage",
+                    "flags": [
+                      "--stage"
+                    ],
+                    "choices": [
+                      "startup",
+                      "implement",
+                      "closeout",
+                      "report"
+                    ],
+                    "default": "",
+                    "help": "Structured workflow stage to use as an explicit routing surface."
+                  },
+                  {
                     "name": "format",
                     "flags": [
                       "--format"
@@ -2543,6 +2565,28 @@
                     "nargs": "*",
                     "default": [],
                     "help": "Explicit routing surfaces."
+                  },
+                  {
+                    "name": "task",
+                    "flags": [
+                      "--task"
+                    ],
+                    "default": "",
+                    "help": "Task text for capture context."
+                  },
+                  {
+                    "name": "stage",
+                    "flags": [
+                      "--stage"
+                    ],
+                    "choices": [
+                      "startup",
+                      "implement",
+                      "closeout",
+                      "report"
+                    ],
+                    "default": "",
+                    "help": "Structured workflow stage associated with the learning."
                   },
                   {
                     "name": "existing_note",
@@ -9384,6 +9428,16 @@
               "default": []
             },
             {
+              "name": "task",
+              "arg": "task",
+              "default": ""
+            },
+            {
+              "name": "stage",
+              "arg": "stage",
+              "default": ""
+            },
+            {
               "name": "mode",
               "arg": "mode",
               "default": null
@@ -9833,6 +9887,12 @@
                 "surfaces": {
                   "value": "surface"
                 },
+                "task": {
+                  "value": "task"
+                },
+                "stage": {
+                  "value": "stage"
+                },
                 "existing_note": {
                   "value": "existing_note"
                 },
@@ -9911,6 +9971,12 @@
                 },
                 "surfaces": {
                   "value": "surface"
+                },
+                "task": {
+                  "value": "task"
+                },
+                "stage": {
+                  "value": "stage"
                 }
               }
             },
@@ -11159,6 +11225,28 @@
                 "help": "Explicit routing surfaces."
               },
               {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "default": "",
+                "help": "Task text for capture context."
+              },
+              {
+                "name": "stage",
+                "flags": [
+                  "--stage"
+                ],
+                "choices": [
+                  "startup",
+                  "implement",
+                  "closeout",
+                  "report"
+                ],
+                "default": "",
+                "help": "Structured workflow stage associated with the learning."
+              },
+              {
                 "name": "existing_note",
                 "flags": [
                   "--existing-note"
@@ -11910,6 +11998,28 @@
                 "nargs": "*",
                 "default": [],
                 "help": "Explicit routing surfaces."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "default": "",
+                "help": "Task text for route context. Task prose is not routing authority."
+              },
+              {
+                "name": "stage",
+                "flags": [
+                  "--stage"
+                ],
+                "choices": [
+                  "startup",
+                  "implement",
+                  "closeout",
+                  "report"
+                ],
+                "default": "",
+                "help": "Structured workflow stage to use as an explicit routing surface."
               },
               {
                 "name": "format",

@@ -48,6 +48,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'notes': getattr(args, 'notes', None),
                 'files': getattr(args, 'files', []),
                 'surface': getattr(args, 'surface', []),
+                'task': getattr(args, 'task', ''),
+                'stage': getattr(args, 'stage', ''),
                 'mode': getattr(args, 'mode', None),
                 'slug': getattr(args, 'slug', ''),
                 'title': getattr(args, 'title', None),
@@ -100,6 +102,8 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'notes': values.get('notes', None),
                 'files': values.get('files', []),
                 'surface': values.get('surface', []),
+                'task': values.get('task', ''),
+                'stage': values.get('stage', ''),
                 'mode': values.get('mode', None),
                 'slug': values.get('slug', ''),
                 'title': values.get('title', None),
@@ -307,7 +311,7 @@ def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[st
 def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.installer import suggest_memory_note_capture
 
-    return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
+    return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), stage=values.get('stage'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'), task=values.get('task'))
 
 
 def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
@@ -319,7 +323,7 @@ def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any
 def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.installer import route_memory
 
-    return route_memory(files=values.get('files'), surfaces=values.get('surface'), target=values.get('target'))
+    return route_memory(files=values.get('files'), stage=values.get('stage'), surfaces=values.get('surface'), target=values.get('target'), task=values.get('task'))
 
 
 def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

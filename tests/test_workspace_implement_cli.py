@@ -63,6 +63,98 @@ def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) 
     assert "knowledge_gates" not in packet
 
 
+def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "docs" / "package" / "knowledge-routing.md", "# Knowledge Routing\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/package/knowledge-routing.md",
+                "--task",
+                "Improve Memory routing guidance",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["memory_decision_packet"]
+    assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
+    assert packet["stage"] == "implement"
+    assert packet["force"] in {"recommended_before_work", "required_before_claim"}
+    assert packet["pull"]["status"] == "checked_none"
+    assert "--stage implement" in packet["pull"]["recommended_command"]
+    assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
+    assert "memory" in packet["capture"]["candidate_owner_surfaces"]
+    assert "planning" in packet["capture"]["candidate_owner_surfaces"]
+    assert packet["authority_boundary"]["agent_owns"]
+
+
+def test_implement_memory_decision_packet_reports_relevant_route_matches(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    note = tmp_path / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text("# API\n", encoding="utf-8")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["src/api.py"]
+""",
+    )
+    _write(tmp_path / "src" / "api.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/api.py",
+                "--task",
+                "Update API behavior",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["memory_decision_packet"]
+
+    assert packet["pull"]["status"] == "relevant_notes_found"
+    assert any(route["path"] == ".agentic-workspace/memory/repo/domains/api.md" for route in packet["pull"]["candidate_routes"])
+
+
 def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path)]) == 0
@@ -708,7 +800,9 @@ evidence = ["Memory fixture"]
 
     routine = json.loads(capsys.readouterr().out)["values"]["routine_work_context"]
     review = routine["knowledge_authority_review"]
-    source = review["matched_sources"][0]
+    source = next(
+        source for source in review["matched_sources"] if source["owner_surface"] == ".agentic-workspace/memory/repo/domains/parser.md"
+    )
     assert source["owner_surface"] == ".agentic-workspace/memory/repo/domains/parser.md"
     assert source["authority"] == "learned"
     assert source["applies_because"] == ["task text matched parser refactor"]
@@ -1461,6 +1555,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "next",
         "proof",
         "generated_surface_trust",
+        "memory_decision_packet",
         "reuse_pressure",
         "context",
         "drill_down",
@@ -1547,7 +1642,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         label="implement generated-surface trust compact projection",
         sort_keys=False,
     )
-    _assert_json_payload_under(payload, 15850, label="implement generated-surface tiny payload", sort_keys=False)
+    _assert_json_payload_under(payload, 17000, label="implement generated-surface tiny payload", sort_keys=False)
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:

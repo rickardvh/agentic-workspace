@@ -644,6 +644,8 @@ def suggest_memory_note_capture(
     summary: str = "",
     files: Iterable[str] | None = None,
     surfaces: Iterable[str] | None = None,
+    task: str | None = None,
+    stage: str | None = None,
     existing_note: str = "",
     force_new_reason: str = "",
 ) -> dict[str, object]:
@@ -654,11 +656,19 @@ def suggest_memory_note_capture(
     manifest = _load_memory_manifest(manifest_path)
     normalized_files = _normalise_string_tuple(files)
     normalized_surfaces = _normalise_string_tuple(surfaces)
+    normalized_stage = _normalise_surface_name(stage or "")
+    effective_surfaces = [*normalized_surfaces, *([normalized_stage] if normalized_stage else [])]
     safe_slug = _safe_note_slug(slug or _title_from_slug(summary or "memory-note").lower())
-    tokens = _tokenize_capture_text(summary, *normalized_files, *normalized_surfaces, safe_slug)
+    tokens = _tokenize_capture_text(summary, *(task or "",), *normalized_files, *effective_surfaces, safe_slug)
     routed_paths: set[str] = set()
-    if normalized_files or normalized_surfaces:
-        routed = route_memory(target=target_root, files=list(normalized_files), surfaces=list(normalized_surfaces))
+    if normalized_files or effective_surfaces:
+        routed = route_memory(
+            target=target_root,
+            files=list(normalized_files),
+            surfaces=list(effective_surfaces),
+            task=task,
+            stage=normalized_stage,
+        )
         routed_paths = {
             action.source
             for action in routed.actions
@@ -740,6 +750,17 @@ def suggest_memory_note_capture(
         "force_new_reason": force_reason,
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
+        "non_memory_owner_routes": ["planning", "docs", "tests", "contracts", "config", "review", "issue"],
+        "route_elsewhere_rule": (
+            "Choose a non-Memory owner when the learning is task state, canonical policy, enforceable config, proof evidence, "
+            "or backlog work rather than compact anti-rediscovery knowledge."
+        ),
+        "route_context": {
+            "files": list(normalized_files),
+            "surfaces": list(effective_surfaces),
+            "stage": normalized_stage,
+            "task_supplied": bool(task and task.strip()),
+        },
         "commands": [next_command, "agentic-memory doctor --target ./repo --format json"],
     }
     promotion_guidance = _promotion_metadata_guidance(summary=summary, best=best)
@@ -1566,22 +1587,42 @@ def route_memory(
     target: str | Path | None = None,
     files: list[str] | None = None,
     surfaces: list[str] | None = None,
+    task: str | None = None,
+    stage: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=True, message="Memory routing suggestions")
-    if not files and not surfaces:
+    normalized_stage = _normalise_surface_name(stage or "")
+    if not files and not surfaces and not normalized_stage:
         result.add(
             "manual review",
             target_root / Path(".agentic-workspace/memory/repo/index.md"),
-            "provide --files and/or --surface to request routing suggestions",
+            "provide --files, --surface, or --stage to request routing suggestions",
             role="memory-route",
             safety="manual",
             source=".agentic-workspace/memory/repo/index.md",
             category="manual-review",
         )
+        result.route_summary = {
+            "routed_note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "confidence": "low",
+            "confidence_reasons": ["no structured route signal was supplied"],
+            "route_context": {
+                "files": [],
+                "surfaces": [],
+                "stage": "",
+                "task_supplied": bool(task and task.strip()),
+                "task_used_for_matching": False,
+                "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority.",
+            },
+        }
         return result
 
     selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
+    if normalized_stage:
+        selected_surfaces.add(normalized_stage)
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     routing_baseline = _routing_baseline_paths(manifest)
@@ -1664,6 +1705,14 @@ def route_memory(
 
     kept_suggestions = [*required, *kept_optionals]
     result.route_summary = _build_route_summary(kept_suggestions)
+    result.route_summary["route_context"] = {
+        "files": list(files or []),
+        "surfaces": sorted(selected_surfaces),
+        "stage": normalized_stage,
+        "task_supplied": bool(task and task.strip()),
+        "task_used_for_matching": False,
+        "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority.",
+    }
     result.route_summary["selected_note_trust"] = _selected_route_note_trust(
         manifest=manifest,
         kept_suggestions=kept_suggestions,

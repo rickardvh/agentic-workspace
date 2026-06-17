@@ -8,6 +8,8 @@ from pathlib import Path
 from repo_planning_bootstrap.installer import install_bootstrap
 from tests.workspace_cli_support import cli
 
+from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload
+
 
 def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -81,6 +83,122 @@ candidates = [
         "memory_consult",
     }
     assert "candidate_lanes" not in payload["roadmap"]
+
+
+def test_report_closeout_trust_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    closeout = payload["answer"]
+    packet = closeout["memory_decision_packet"]
+
+    assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
+    assert packet["stage"] == "closeout"
+    assert packet["force"] == "not_applicable"
+    assert packet["capture"]["status"] == "none_found"
+    assert "planning" in packet["capture"]["candidate_owner_surfaces"]
+    assert packet["capture"]["agent_decision_required"] is False
+
+
+def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
+    base = {
+        "stage": "closeout",
+        "cli_invoke": "agentic-workspace",
+        "memory_consult": {"status": "not-recommended", "route_inspection_state": "not_checked"},
+    }
+
+    clean = _memory_decision_packet_payload(
+        **base,
+        closeout_trust={"trust": "normal", "lower_trust_closeout_count": 0},
+    )
+    dismissed = _memory_decision_packet_payload(
+        **base,
+        closeout_trust={
+            "trust": "lower-trust",
+            "lower_trust_closeout_count": 1,
+            "durable_residue_action": {"action": "dismissed"},
+        },
+    )
+    capture = _memory_decision_packet_payload(
+        **base,
+        closeout_trust={"trust": "lower-trust", "lower_trust_closeout_count": 1, "promotion_candidate_count": 1},
+    )
+    routed_packets = [
+        _memory_decision_packet_payload(
+            **base,
+            closeout_trust={
+                "trust": "lower-trust",
+                "lower_trust_closeout_count": 1,
+                "durable_residue_action": {"action": "route-durable-residue", "owner": owner},
+            },
+        )
+        for owner in ["planning", "docs", "tests", "contracts", "config", "review", "issue"]
+    ]
+    follow_up = _memory_decision_packet_payload(
+        **base,
+        closeout_trust={"trust": "lower-trust", "lower_trust_closeout_count": 1},
+    )
+
+    assert clean["force"] == "not_applicable"
+    assert clean["capture"]["status"] == "none_found"
+    assert dismissed["capture"]["status"] == "dismissed"
+    assert capture["capture"]["status"] == "capture_candidate"
+    assert {packet["capture"]["status"] for packet in routed_packets} == {"routed_elsewhere"}
+    assert follow_up["force"] == "required_at_closeout"
+    assert follow_up["capture"]["status"] == "follow_up_required"
+
+
+def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:
+    checked_none = _memory_decision_packet_payload(
+        stage="implement",
+        cli_invoke="agentic-workspace",
+        memory_consult={
+            "status": "recommended",
+            "route_inspection_state": "checked",
+            "route_signal_count": 0,
+            "read_first": [".agentic-workspace/memory/repo/index.md"],
+            "route_matches": [{"path": ".agentic-workspace/memory/repo/index.md", "match_source": "routing-baseline"}],
+        },
+        changed_paths=["src/example.py"],
+    )
+    relevant = _memory_decision_packet_payload(
+        stage="implement",
+        cli_invoke="agentic-workspace",
+        memory_consult={
+            "status": "recommended",
+            "route_inspection_state": "checked",
+            "route_signal_count": 1,
+            "route_matches": [{"path": ".agentic-workspace/memory/repo/domains/api.md", "match_source": "routes_from"}],
+        },
+        changed_paths=["src/api.py"],
+    )
+    hinted_only = _memory_decision_packet_payload(
+        stage="startup",
+        cli_invoke="agentic-workspace",
+        memory_consult={
+            "status": "recommended",
+            "route_inspection_state": "not_checked",
+            "read_first": [".agentic-workspace/memory/repo/index.md"],
+        },
+        task_text="memory memory memory",
+    )
+
+    assert checked_none["pull"]["status"] == "checked_none"
+    assert relevant["pull"]["status"] == "relevant_notes_found"
+    assert hinted_only["pull"]["status"] == "not_checked"
 
 
 def test_workspace_summary_json_warns_on_closed_lanes_in_live_state(tmp_path: Path, capsys) -> None:

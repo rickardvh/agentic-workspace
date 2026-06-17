@@ -1,0 +1,397 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Integrate Memory pull/capture decisions",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1579 by adding a command-backed Memory pull/capture decision packet to startup, implement, and closeout/report surfaces.",
+    "hard_constraints": "Preserve agent-owned judgment; do not add keyword-triggered policy; keep Memory as anti-rediscovery knowledge, not task state, backlog, or docs mirror.",
+    "agent_may_decide": "Exact packet derivation, first-slice scope, tests, docs, and command wiring that satisfy the accepted #1579 shaping.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Implement the first useful #1579 slice: packet contract/projection, structured Memory route input, capture/routing status tests, and guidance updates.",
+    "proof_expectations": [
+      "Focused startup/implement/report tests for memory_decision_packet.",
+      "Focused Memory route/capture tests for structured context and owner routing.",
+      "make test-workspace and make lint-workspace before PR."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+      "tests/",
+      "packages/memory/tests/",
+      "docs/package/",
+      ".agentic-workspace/WORKFLOW.md",
+      ".agentic-workspace/memory/repo/"
+    ],
+    "completion_criteria": [
+      "start emits memory_decision_packet for durable-knowledge pressure with a concrete memory route command.",
+      "implement emits memory_decision_packet for changed-path or active-state durable/capture pressure.",
+      "closeout/report exposes unresolved Memory decision state before completion claims.",
+      "Memory route/capture surfaces distinguish checked_none, capture_candidate, routed_elsewhere, dismissed, and not_checked without keyword authority."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Integrate Memory pull/capture decisions."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1579 by adding a command-backed Memory pull/capture decision packet to startup, implement, and closeout/report surfaces.",
+      "constraints": "Preserve agent-owned judgment; do not add keyword-triggered policy; keep Memory as anti-rediscovery knowledge, not task state, backlog, or docs mirror.",
+      "latitude": "Exact packet derivation, first-slice scope, tests, docs, and command wiring that satisfy the accepted #1579 shaping.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "uv run python scripts/generate/generate_command_packages.py --check; focused packet/Memory pytest; make test-workspace; make lint-workspace"
+    },
+    "execution": {
+      "milestone": "memory-pull-capture-decision-packet",
+      "status": "completed",
+      "next_step": "PR comment follow-up added end-to-end pull/capture dogfooding evidence and schema-reference validation.",
+      "proof": "uv run python scripts/generate/generate_command_packages.py --check; focused packet/Memory pytest; make test-workspace; make lint-workspace"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+        "tests/",
+        "packages/memory/tests/",
+        "docs/package/",
+        ".agentic-workspace/WORKFLOW.md",
+        ".agentic-workspace/memory/repo/"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement #1579 so AW makes Memory pull/capture decisions visible, command-backed, and agent-owned.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains after PR comment follow-up validation."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the issue",
+    "inferred intended outcome": "Implement #1579: integrate Memory pull/capture decisions into startup, implementation, and closeout.",
+    "chosen concrete what": "Add memory_decision_packet projections and cheap structured Memory route/capture support.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime primitives, Memory runtime primitives/tests, focused workspace tests, docs/package guidance, and Memory/Core guidance notes.",
+    "max changed files": "Aim under 12 source/test/doc files plus planning state.",
+    "required validation commands": "Focused pytest for changed packet and Memory behavior; make test-workspace; make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from #1579 accepted shaping: memory_decision_packet first, no keyword policy, explicit agent-owned pull/capture decision.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1579 by adding a command-backed Memory pull/capture decision packet to startup, implement, and closeout/report surfaces.",
+    "hard constraints": "Preserve agent-owned judgment; do not add keyword-triggered policy; keep Memory as anti-rediscovery knowledge, not task state, backlog, or docs mirror.",
+    "agent may decide locally": "Exact packet derivation, first-slice scope, tests, docs, and command wiring that satisfy the accepted #1579 shaping.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "memory-pull-capture-decision-packet",
+    "status": "completed",
+    "scope": "Implement the accepted #1579 first useful slice across startup, implement, report, and Memory route/capture surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement memory_decision_packet projection and focused tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_report_cli.py",
+    "packages/memory/tests/test_runtime_primitives.py",
+    "docs/package/knowledge-routing.md",
+    "docs/package/ordinary-continuity-loop.md",
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_report_cli.py packages/memory/tests/test_runtime_primitives.py -q",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "memory_decision_packet is emitted by startup, implement, and closeout/report surfaces when durable/capture pressure is active.",
+    "Memory route accepts structured context sufficient to find relevant notes without perfect surface phrase ordering.",
+    "Memory capture guidance can route reusable learning to Memory or non-Memory owner surfaces.",
+    "Guardrails prevent keyword-only Memory gates and preserve agent-owned judgment.",
+    "Docs and Memory note capture the durable guidance."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1579 Memory pull/capture decision packet across startup, implement, and closeout/report surfaces; added structured Memory route/capture inputs, root capture-note stage/task support, closeout decision-state semantics, dogfooding evidence, and guardrail tests.",
+    "scope touched": "Workspace runtime/reporting, Memory routing/capture, contracts/generated command packages, docs, tests, Memory guidance.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; packages/memory/src/repo_memory_bootstrap/installer.py; contracts/generated packages; docs/package/knowledge-routing.md; tests; Memory guidance note.",
+    "validations run": "root Memory route/capture dogfooding commands; uv run python scripts/generate/generate_command_packages.py --check; make schema-reference-docs; make check-planning; focused packet/Memory pytest including not_checked/checked_none/relevant_notes_found and none_found/dismissed/capture_candidate/routed_elsewhere/follow_up_required states; make test-workspace; make lint-workspace",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within #1579. The packet is command-backed, selector-first, and preserves agent-owned judgment. Task prose is carried as context and is not routing authority; closeout force now derives from durable-residue pressure rather than the closeout surface itself. The root capture command now accepts the stage/task context that packets recommend.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "root Memory route/capture dogfooding commands; uv run python scripts/generate/generate_command_packages.py --check; make schema-reference-docs; make check-planning; focused packet/Memory pytest including pull/capture decision-state coverage; make test-workspace; make lint-workspace",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/planning/closeout-evidence/memory-pull-capture-decision-packet.closeout.json plus generated/schema/focused/workspace validation"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Integrate Memory pull/capture decisions.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR comment follow-up added state-level coverage, changed closeout behavior so no-pressure closeout reports none_found/not_applicable, added root capture-note stage/task support, and checked in end-to-end route/capture dogfooding evidence.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "start, implement, and closeout_trust report surfaces now expose memory_decision_packet; memory route/capture accept structured stage/task/path inputs through the root and package commands; closeout distinguishes no write needed, dismissed, capture candidate, routed elsewhere, and unresolved follow-up; dogfooding evidence proves route and capture decisions.",
+    "validation confirmed": "root Memory route/capture dogfooding commands; uv run python scripts/generate/generate_command_packages.py --check; make schema-reference-docs; make check-planning; focused packet/Memory pytest including pull/capture decision-state coverage; make test-workspace; make lint-workspace",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": ".agentic-workspace/planning/closeout-evidence/memory-pull-capture-decision-packet.closeout.json records route evidence, capture recommendation, applied Memory update, and final owner routing.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "PR review found closeout packet over-forced required_at_closeout and did not distinguish no-write/dismissed/capture/routed states."
+    ],
+    "signals fixed": [
+      "Closeout packet force now depends on durable residue pressure and tests cover explicit pull/capture states."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off execution chronology remains discarded; route/capture evidence is retained separately.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [
+        {
+          "summary": "Updated the agent-judgment Memory note with #1579 route/capture verification instead of creating a duplicate task-local note.",
+          "owner": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+          "source": "memory capture-note dogfooding"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-16: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "none",
+    "target": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+    "reason": "Root memory capture-note recommended updating the existing agent-judgment note; the note was updated with route/capture dogfooding verification instead of creating a duplicate task-local note."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Integrate Memory pull/capture decisions.\nIntent satisfied: yes after PR comment follow-up tightened closeout decision-state semantics and added end-to-end pull/capture dogfooding evidence.\nArchive decision: archive-and-close\nProof: root Memory route/capture dogfooding commands; uv run python scripts/generate/generate_command_packages.py --check; make schema-reference-docs; make check-planning; focused packet/Memory pytest including pull/capture decision-state coverage; make test-workspace; make lint-workspace\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; packages/memory/src/repo_memory_bootstrap/installer.py; contracts/generated packages; schema reference docs; docs/package/knowledge-routing.md; tests; Memory guidance note; closeout evidence.\nDurable residue: Memory note updated; closeout evidence retained\nMemory learning: existing Memory note covers agent judgment over keyword matching and now records #1579 route/capture verification\nFollow-up: none after validation\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

@@ -39,6 +39,16 @@
       "source": "cli-option"
     },
     {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "stage",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "existing_note",
       "required": false,
       "source": "cli-option"
@@ -76,6 +86,9 @@
           "slug": {
             "value": "slug"
           },
+          "stage": {
+            "value": "stage"
+          },
           "summary": {
             "value": "summary"
           },
@@ -84,6 +97,9 @@
           },
           "target": {
             "value": "target"
+          },
+          "task": {
+            "value": "task"
           }
         },
         "description": "Load the Memory capture recommendation.",
