@@ -4844,10 +4844,71 @@ purpose = "This file defines Agentic Workspace managed surfaces and optional hos
 """
 
 
+def _toml_quote(value: str) -> str:
+    return json.dumps(value)
+
+
+def _render_toml_value(value: Any) -> str:
+    if isinstance(value, str):
+        return _toml_quote(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_render_toml_value(item) for item in value) + "]"
+    return _toml_quote(str(value))
+
+
+def _render_host_subsystem_overlay(subsystems: Any) -> str:
+    if not isinstance(subsystems, list) or not subsystems:
+        return ""
+    blocks: list[str] = []
+    for subsystem in subsystems:
+        if not isinstance(subsystem, dict):
+            continue
+        subsystem_id = str(subsystem.get("id", "")).strip()
+        if not subsystem_id:
+            continue
+        lines = ["[[subsystems]]"]
+        for key, value in subsystem.items():
+            if key == "id":
+                lines.append(f"id = {_toml_quote(subsystem_id)}")
+            elif key and value is not None:
+                lines.append(f"{key} = {_render_toml_value(value)}")
+        blocks.append("\n".join(lines))
+    if not blocks:
+        return ""
+    return "\n\n" + "\n\n".join(blocks) + "\n"
+
+
+def _host_ownership_ledger_text_for_target(*, target_root: Path) -> str:
+    base = _host_ownership_ledger_text()
+    ownership_path = target_root / ".agentic-workspace" / "OWNERSHIP.toml"
+    if not ownership_path.is_file():
+        return base
+    try:
+        existing_payload = tomllib.loads(ownership_path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return base
+    return base + _render_host_subsystem_overlay(existing_payload.get("subsystems"))
+
+
 def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) -> bytes:
     if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
-        return _host_ownership_ledger_text().encode("utf-8")
+        return _host_ownership_ledger_text_for_target(target_root=target_root).encode("utf-8")
     return _workspace_payload_bytes(relative)
+
+
+def _workspace_payload_current_detail(*, relative: Path, target_root: Path) -> str:
+    if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
+        try:
+            payload = tomllib.loads((target_root / relative).read_text(encoding="utf-8-sig"))
+        except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+            return "workspace shared-layer file already current"
+        if isinstance(payload.get("subsystems"), list) and payload["subsystems"]:
+            return "workspace ownership ledger already current with host-owned subsystem overlay preserved"
+    return "workspace shared-layer file already current"
 
 
 def _workspace_report(
@@ -6238,7 +6299,13 @@ def _workspace_init_or_upgrade_report(
             )
             continue
         if destination.read_bytes() == source_bytes:
-            actions.append({"kind": "current", "path": relative.as_posix(), "detail": "workspace shared-layer file already current"})
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": relative.as_posix(),
+                    "detail": _workspace_payload_current_detail(relative=relative, target_root=target_root),
+                }
+            )
             continue
         if conservative:
             actions.append(
@@ -6255,7 +6322,9 @@ def _workspace_init_or_upgrade_report(
             {
                 "kind": "would update" if dry_run else "updated",
                 "path": relative.as_posix(),
-                "detail": "refresh workspace shared-layer file from package payload",
+                "detail": "refresh workspace shared-layer file from package payload while preserving host-owned subsystem overlay"
+                if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root)
+                else "refresh workspace shared-layer file from package payload",
             }
         )
     actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run))
@@ -6381,6 +6450,9 @@ def _workspace_init_or_upgrade_report(
     )
     actions.extend(policy_actions)
     warnings.extend(policy_warnings)
+    verification_next_action = _verification_manifest_next_action(target_root=target_root, selected_modules=selected_modules, config=config)
+    if verification_next_action is not None:
+        actions.append(verification_next_action)
     if local_only_repo_root is not None:
         actions.append(_write_local_only_state(target_root=target_root, dry_run=dry_run))
         actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
@@ -6470,22 +6542,34 @@ def _workspace_uninstall_report(
     return _workspace_report(target_root=target_root, message="Uninstall report", dry_run=dry_run, actions=actions, warnings=warnings)
 
 
+def _module_arg_text(module_arg: str | list[str] | None) -> str | None:
+    if module_arg is None:
+        return None
+    if isinstance(module_arg, list):
+        tokens: list[str] = []
+        for item in module_arg:
+            tokens.extend(token.strip() for token in str(item).split(",") if token.strip())
+        return ",".join(tokens)
+    return str(module_arg)
+
+
 def _selected_modules(
     *,
     command_name: str,
     preset_name: str | None,
-    module_arg: str | None,
+    module_arg: str | list[str] | None,
     target_root: Path,
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> tuple[list[str], str | None]:
     ordered_module_names = _ordered_module_names(descriptors)
-    if preset_name and module_arg:
+    module_arg_text = _module_arg_text(module_arg)
+    if preset_name and module_arg_text:
         raise ModuleSelectionError("Use --modules; --preset is no longer supported.")
     if preset_name:
         raise ModuleSelectionError("--preset is no longer supported; use --modules or [modules].enabled.")
-    if module_arg:
-        requested = _parse_modules(module_arg, ordered_module_names=ordered_module_names)
+    if module_arg_text:
+        requested = _parse_modules(module_arg_text, ordered_module_names=ordered_module_names)
         return ([module_name for module_name in ordered_module_names if module_name in requested], None)
     enabled = [module_name for module_name in ordered_module_names if module_name in set(config.enabled_modules)]
     return (enabled, None)
@@ -7403,14 +7487,14 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
         return None
     target = target_root.as_posix()
     dry_run = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --module {module} --dry-run --format json", cli_invoke=cli_invoke
+        command=f"agentic-workspace upgrade --target {target} --modules {module} --dry-run --format json", cli_invoke=cli_invoke
     )
     command = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --module {module} --format json", cli_invoke=cli_invoke
+        command=f"agentic-workspace upgrade --target {target} --modules {module} --format json", cli_invoke=cli_invoke
     )
     proof_after = [
         _command_with_cli_invoke(
-            command=f"agentic-workspace doctor --target {target} --module {module} --format json", cli_invoke=cli_invoke
+            command=f"agentic-workspace doctor --target {target} --modules {module} --format json", cli_invoke=cli_invoke
         )
     ]
     return {
@@ -7479,11 +7563,11 @@ def _lifecycle_review_remediations(
         if not any(relative in message for message in messages):
             continue
         dry_run = _command_with_cli_invoke(
-            command=f"agentic-workspace upgrade --target {target} --module {module_name} --dry-run --format json",
+            command=f"agentic-workspace upgrade --target {target} --modules {module_name} --dry-run --format json",
             cli_invoke=cli_invoke,
         )
         refresh = _command_with_cli_invoke(
-            command=f"agentic-workspace upgrade --target {target} --module {module_name} --format json",
+            command=f"agentic-workspace upgrade --target {target} --modules {module_name} --format json",
             cli_invoke=cli_invoke,
         )
         remediations.append(
@@ -7495,7 +7579,7 @@ def _lifecycle_review_remediations(
                 "review_first": dry_run,
                 "refresh_command": refresh,
                 "proof_after": _command_with_cli_invoke(
-                    command=f"agentic-workspace doctor --target {target} --module {module_name} --format json",
+                    command=f"agentic-workspace doctor --target {target} --modules {module_name} --format json",
                     cli_invoke=cli_invoke,
                 ),
                 "rule": (
@@ -7906,9 +7990,7 @@ def _root_upgrade_front_door_payload(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     target = target_root.as_posix()
-    module_args: list[str] = []
-    for module_name in selected_modules:
-        module_args.extend(["--module", module_name])
+    module_args = ["--modules", ",".join(selected_modules)] if selected_modules else ["--modules", "none"]
     dry_run_command = _command_with_cli_invoke(
         command=" ".join(["agentic-workspace", "upgrade", "--target", target, *module_args, "--dry-run", "--format", "json"]),
         cli_invoke=cli_invoke,
@@ -8096,8 +8178,7 @@ def _lifecycle_apply_command(
     dry_run: bool = False,
 ) -> str:
     parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
-    for module_name in selected_modules:
-        parts.extend(["--module", module_name])
+    parts.extend(["--modules", ",".join(selected_modules) if selected_modules else "none"])
     if local_only and command_name != "upgrade":
         parts.append("--local-only")
     if dry_run:
@@ -33531,7 +33612,7 @@ def _setup_payload(
     proof_route_hints = _load_proof_route_hints(target_root=target_root)
     findings_input = _setup_findings_input_payload(target_root=target_root)
     assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
-    verification_manifest_present = (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists()
+    verification_guidance = _verification_enablement_guidance(target_root=target_root, config=config)
     onboarding_routes = {
         "assurance": {
             "status": assurance_onboarding.get("status", "absent"),
@@ -33541,10 +33622,11 @@ def _setup_payload(
             "candidate_seed_surfaces": assurance_onboarding.get("candidate_seed_surfaces", []),
         },
         "verification": {
-            "status": "configured" if verification_manifest_present else "available",
+            "status": verification_guidance["status"],
             "command": "agentic-workspace defaults --section verification_onboarding --format json",
             "report_command": "agentic-workspace report --target ./repo --section verification --format json",
             "seed_when": "only for repeatable host proof needs not already expressed by ordinary tests or proof selection",
+            "enablement": verification_guidance,
             "candidate_seed_surfaces": [
                 ".agentic-workspace/verification/manifest.toml",
                 ".agentic-workspace/verification/proof-strategy.toml",
@@ -40659,6 +40741,7 @@ def _sync_update_policy_actions(
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
+    today = date.today().isoformat()
     for module_name in selected_modules:
         if module_name not in config.update_modules or module_name not in MODULE_UPGRADE_SOURCE_PATHS:
             continue
@@ -40666,7 +40749,9 @@ def _sync_update_policy_actions(
         relative = MODULE_UPGRADE_SOURCE_PATHS[module_name]
         destination = target_root / relative
         current_payload, sync_status = _current_module_upgrade_source_state(target_root=target_root, module_name=module_name, policy=policy)
-        if sync_status == "current":
+        current_recorded_at = str(current_payload.get("recorded_at", "")) if current_payload else ""
+        refresh_upgrade_date = command_name == "upgrade" and current_recorded_at != today
+        if sync_status == "current" and not refresh_upgrade_date:
             actions.append(
                 {
                     "kind": "current",
@@ -40677,7 +40762,11 @@ def _sync_update_policy_actions(
             continue
         if not apply and sync_status == "missing" and (not config.exists):
             continue
-        detail = "sync module upgrade source metadata from the resolved workspace policy"
+        detail = (
+            "refresh module upgrade source metadata recorded_at after successful upgrade"
+            if refresh_upgrade_date and sync_status == "current"
+            else "sync module upgrade source metadata from the resolved workspace policy"
+        )
         if not apply:
             actions.append(
                 {
@@ -40693,9 +40782,7 @@ def _sync_update_policy_actions(
                 }
             )
             continue
-        recorded_at = current_payload.get("recorded_at") if current_payload else None
-        if sync_status != "current" or not recorded_at:
-            recorded_at = date.today().isoformat()
+        recorded_at = today if command_name == "upgrade" or sync_status != "current" or not current_recorded_at else current_recorded_at
         rendered = _render_upgrade_source_text(policy=policy, recorded_at=str(recorded_at))
         existing = destination.read_text(encoding="utf-8") if destination.exists() else None
         if existing == rendered:
@@ -40706,6 +40793,49 @@ def _sync_update_policy_actions(
             destination.write_text(rendered, encoding="utf-8")
         actions.append({"kind": _write_action_kind(dry_run=dry_run, existing=existing), "path": relative.as_posix(), "detail": detail})
     return (actions, warnings)
+
+
+def _verification_enablement_status(*, target_root: Path, config: WorkspaceConfig) -> str:
+    enabled = "verification" in set(config.enabled_modules)
+    manifest_present = (target_root / ".agentic-workspace" / "verification" / "manifest.toml").is_file()
+    if enabled and manifest_present:
+        return "configured"
+    if manifest_present:
+        return "installed"
+    if enabled:
+        return "enabled-unconfigured"
+    return "available"
+
+
+def _verification_enablement_guidance(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    status = _verification_enablement_status(target_root=target_root, config=config)
+    enabled_modules = list(config.enabled_modules)
+    if "verification" not in enabled_modules:
+        enabled_modules = [*enabled_modules, "verification"]
+    return {
+        "status": status,
+        "config_snippet": "[modules]\nenabled = " + json.dumps(enabled_modules),
+        "manifest_path": ".agentic-workspace/verification/manifest.toml",
+        "manifest_created": False,
+        "manual_config_required": status in {"available", "installed", "enabled-unconfigured"},
+        "rule": "Verification enablement is repo-owned: modules.enabled selects participation, and manifest.toml records host proof protocols.",
+    }
+
+
+def _verification_manifest_next_action(*, target_root: Path, selected_modules: list[str], config: WorkspaceConfig) -> dict[str, str] | None:
+    if "verification" not in set(selected_modules):
+        return None
+    guidance = _verification_enablement_guidance(target_root=target_root, config=config)
+    if guidance["status"] == "configured":
+        return None
+    return {
+        "kind": "manual review",
+        "path": str(guidance["manifest_path"]),
+        "detail": (
+            "Verification is selected but no repo-owned manifest is configured; add [modules].enabled with verification "
+            "and create .agentic-workspace/verification/manifest.toml before treating Verification as active."
+        ),
+    }
 
 
 def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:

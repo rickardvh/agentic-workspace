@@ -181,7 +181,7 @@ PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "not accepted as generic output",
 )
 COMMAND_GENERATION_RELEASE_BASE_URL = "https://github.com/rickardvh/command-generation/releases/download"
-COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.1.0,<0.2.0"
+COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.2.0,<0.3.0"
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",

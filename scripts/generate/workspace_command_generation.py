@@ -9,7 +9,6 @@ from command_generation import (
     GeneratedOutput,
     PrimitiveRegistry,
     command_package_schema_path,
-    generate_command_packages,
     load_command_package_ir,
     render_outputs,
 )
@@ -246,21 +245,26 @@ def render_workspace_command_package_outputs(
     repo_root: Path = REPO_ROOT,
 ) -> list[GeneratedOutput]:
     effective_manifest = manifest if manifest is not None else load_workspace_command_package_ir(repo_root=repo_root)
-    return render_outputs(
+    outputs = render_outputs(
         effective_manifest,
         repo_root=repo_root,
         source_path=SOURCE_PATH,
         regenerate_command=REGENERATE_COMMAND,
         host_manifest=workspace_command_generation_host_manifest(repo_root=repo_root),
     )
+    return outputs
 
 
 def generate_workspace_command_packages(*, repo_root: Path = REPO_ROOT, check: bool) -> list[str]:
-    return generate_command_packages(
-        load_workspace_command_package_ir(repo_root=repo_root),
-        repo_root=repo_root,
-        source_path=SOURCE_PATH,
-        regenerate_command=REGENERATE_COMMAND,
-        check=check,
-        host_manifest=workspace_command_generation_host_manifest(repo_root=repo_root),
-    )
+    stale: list[str] = []
+    for output in render_workspace_command_package_outputs(repo_root=repo_root):
+        path = output.path if output.path.is_absolute() else repo_root / output.path
+        relative = path.relative_to(repo_root).as_posix()
+        if path.exists() and path.read_text(encoding="utf-8") == output.content:
+            continue
+        stale.append(relative)
+        if not check:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(output.content, encoding="utf-8", newline="\n")
+            print(f"[ok] wrote {relative}")
+    return stale

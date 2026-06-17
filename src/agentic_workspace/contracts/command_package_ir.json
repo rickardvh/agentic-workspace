@@ -4369,6 +4369,7 @@
                   "--modules",
                   "--module"
                 ],
+                "action": "append",
                 "help": "Comma-separated module selection."
               },
               {
@@ -4540,6 +4541,7 @@
                   "--modules",
                   "--module"
                 ],
+                "action": "append",
                 "help": "Comma-separated module selection."
               },
               {
@@ -5153,6 +5155,7 @@
                   "--modules",
                   "--module"
                 ],
+                "action": "append",
                 "help": "Comma-separated module selection."
               },
               {
@@ -5295,6 +5298,7 @@
                   "--modules",
                   "--module"
                 ],
+                "action": "append",
                 "help": "Comma-separated module selection."
               },
               {

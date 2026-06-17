@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 # ruff: noqa: F403,F405
+import re
+from datetime import date
+
 from tests.workspace_cli_support import *
 
 
@@ -24,12 +27,74 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
-def test_repeated_modules_uses_last_module_selection(tmp_path: Path, capsys) -> None:
+def test_repeated_module_flags_accumulate_module_selection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--modules", "memory", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["modules"] == ["planning"]
+    assert payload["modules"] == ["planning", "memory"]
+
+
+def test_repeated_singular_module_alias_accumulates_module_selection(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--module", "memory", "--module", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["modules"] == ["planning", "memory"]
+
+
+def test_lifecycle_guidance_uses_canonical_modules_option(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--modules", "planning,memory", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    command_text = json.dumps(payload["lifecycle_plan"])
+    assert "--modules planning,memory" in command_text
+    assert "--module planning --module memory" not in command_text
+
+
+def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    ownership_path = target / ".agentic-workspace" / "OWNERSHIP.toml"
+    ownership_path.write_text(
+        ownership_path.read_text(encoding="utf-8").rstrip() + '\n\n[[subsystems]]\nid = "api"\npaths = ["api/**"]\nowns = ["host api"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["upgrade", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    ownership_text = ownership_path.read_text(encoding="utf-8")
+    assert 'id = "api"' in ownership_text
+    assert 'paths = ["api/**"]' in ownership_text
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    ownership_action = next(action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/OWNERSHIP.toml")
+    assert "host-owned subsystem overlay" in ownership_action["detail"]
+
+
+def test_upgrade_refreshes_module_upgrade_source_recorded_at(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    source_path = target / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
+    source_path.write_text(
+        re.sub(r'recorded_at = "[^"]+"', 'recorded_at = "2025-01-01"', source_path.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert f'recorded_at = "{date.today().isoformat()}"' in source_path.read_text(encoding="utf-8")
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    action = next(action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/planning/UPGRADE-SOURCE.toml")
+    assert "recorded_at after successful upgrade" in action["detail"]
 
 
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:

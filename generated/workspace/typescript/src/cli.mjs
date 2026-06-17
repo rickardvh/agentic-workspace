@@ -2751,6 +2751,7 @@ const commandDefinitions = [
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -2869,6 +2870,7 @@ const commandDefinitions = [
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -3273,6 +3275,7 @@ const commandDefinitions = [
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -3361,6 +3364,7 @@ const commandDefinitions = [
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -3506,6 +3510,14 @@ function consumeOption(iface, option, tokens, index, seenOptions) {
   const optionName = option.name ?? optionFlags(option)[0];
   if (optionName) seenOptions.add(optionName);
   if (option.action === 'store_true') return index + 1;
+  if (option.action === 'append') {
+    if (index + 1 >= tokens.length || isHelpToken(tokens[index + 1])) {
+      failValidation(`${optionFlags(option)[0]} requires a value`);
+    }
+    const value = String(tokens[index + 1]);
+    validateChoice(option, value, optionFlags(option)[0]);
+    return index + 2;
+  }
   if (option.nargs === '*') {
     let cursor = index + 1;
     while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {
@@ -3569,6 +3581,7 @@ function validateInterface(iface, tokens, path) {
 function optionDefault(option) {
   if (Object.prototype.hasOwnProperty.call(option, 'default')) return option.default;
   if (option.action === 'store_true') return false;
+  if (option.action === 'append') return [];
   if (option.nargs === '*') return [];
   return undefined;
 }
@@ -3607,6 +3620,13 @@ function parseInvocation(definition, tokens, path) {
       if (option.action === 'store_true') {
         values[optionName] = true;
         index += 1;
+        continue;
+      }
+      if (option.action === 'append') {
+        if (index + 1 >= tokens.length || isHelpToken(tokens[index + 1])) failValidation(`${optionFlags(option)[0]} requires a value`);
+        if (!Array.isArray(values[optionName])) values[optionName] = [];
+        values[optionName].push(optionValue(option, tokens[index + 1]));
+        index += 2;
         continue;
       }
       if (option.nargs === '*') {
