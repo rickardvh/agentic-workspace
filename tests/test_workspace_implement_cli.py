@@ -1522,6 +1522,24 @@ blocking_claims = ["claim-work-complete"]
             assert selector in payload["drill_down"]["available_selectors"], field
 
 
+def test_implement_tiny_profile_defers_reuse_pressure_scan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_reuse_pressure(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not scan reuse pressure")
+
+    monkeypatch.setattr(cli, "_reuse_pressure_payload", fail_reuse_pressure)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["context"]["reuse_pressure"]["status"] == "deferred"
+    assert payload["context"]["reuse_pressure"]["detail_selector"] == "reuse_pressure"
+    assert "reuse_pressure" in payload["drill_down"]["available_selectors"]
+
+
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -1785,7 +1803,54 @@ def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsy
     assert detail_commands["task_scoped_state"].startswith("uv run agentic-workspace summary ")
     assert detail_commands["takeover_or_recovery"].startswith("uv run agentic-workspace preflight ")
     assert payload["proof"]["detail_command"].startswith("uv run agentic-workspace proof ")
-    assert payload["context"]["reuse_pressure"]["status"] == "checked"
+    assert payload["context"]["reuse_pressure"]["status"] == "deferred"
+    assert payload["context"]["reuse_pressure"]["detail_selector"] == "reuse_pressure"
+
+
+def test_implement_active_plan_proof_selection_does_not_build_full_planning_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json"
+    _write_json(
+        plan_path,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Active Plan",
+            "canonical_core": {"proof_expectations": ["uv run pytest tests/test_workspace_implement_cli.py -q"]},
+            "validation_commands": ["uv run pytest tests/test_workspace_implement_cli.py -q"],
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Active Plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(tmp_path / "README.md", "hello\n")
+
+    import repo_planning_bootstrap.installer as planning_installer
+
+    def fail_summary(**_: object) -> dict[str, object]:
+        raise AssertionError("implement proof selection should not build the broad planning summary")
+
+    monkeypatch.setattr(planning_installer, "planning_summary", fail_summary)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
 
 
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:

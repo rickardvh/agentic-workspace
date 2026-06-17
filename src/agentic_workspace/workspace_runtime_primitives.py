@@ -13507,6 +13507,58 @@ def _memory_consult_payload(
                 capture_helper=capture_helper,
             ),
         }
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if compact:
+        read_first = [".agentic-workspace/memory/repo/index.md"]
+        route_actions: list[dict[str, Any]] = []
+        route_inspection_state = "not_checked"
+        route_signal_count = 0
+        if normalized_paths:
+            route_inspection_state = "checked"
+            try:
+                route_result = route_memory(target=target_root, files=normalized_paths)
+                for action in route_result.actions:
+                    if action.role != "memory-route" or action.kind not in {"required", "optional"}:
+                        continue
+                    source = action.source or action.path.as_posix()
+                    if source not in read_first:
+                        read_first.append(source)
+                    route_actions.append(
+                        {"kind": action.kind, "path": source, "reason": action.detail, "match_source": action.match_source}
+                    )
+                    if action.match_source != "routing-baseline":
+                        route_signal_count += 1
+            except Exception:
+                route_actions = []
+                route_inspection_state = "unavailable"
+        consultation_state = "checked-with-matches" if read_first else "checked-none"
+        return {
+            "kind": "agentic-workspace/memory-consult/v1",
+            "status": "recommended" if read_first else "not-recommended",
+            "consultation_state": consultation_state,
+            "read_first": read_first[:3],
+            "max_notes": 3,
+            "do_not_bulk_read": True,
+            "changed_path_route_count": len(route_actions),
+            "route_inspection_state": route_inspection_state,
+            "route_signal_count": route_signal_count,
+            "route_matches": route_actions[:3],
+            "consultation_protocol": _compact_memory_consultation_protocol(
+                _memory_consultation_protocol_payload(
+                    consultation_state=consultation_state,
+                    read_first=read_first[:3],
+                    route_actions=route_actions,
+                    promotion_pressure={},
+                    capture_helper=_memory_command_with_invoke(
+                        command=(
+                            "agentic-workspace memory capture-note --slug <slug> --target ./repo "
+                            "--summary <text> --files <changed paths> --format json"
+                        ),
+                        workspace_cli_invoke=cli_invoke,
+                    ),
+                )
+            ),
+        }
     try:
         report = memory_report(target=target_root)
     except Exception as exc:
@@ -13538,7 +13590,6 @@ def _memory_consult_payload(
     always_load = _list_payload(bundle.get("always_load"))
     read_first = [str(path) for path in always_load]
     route_actions: list[dict[str, Any]] = []
-    normalized_paths = _normalize_changed_paths(changed_paths or [])
     route_inspection_state = "not_checked"
     route_signal_count = 0
     if normalized_paths:
@@ -26871,6 +26922,7 @@ def _implement_payload(
     include_assurance_requirements: bool = True,
     include_verification: bool = True,
     include_routine_work_context: bool = True,
+    include_reuse_pressure: bool = True,
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -27057,7 +27109,15 @@ def _implement_payload(
         "generated_surface_trust": generated_surface_trust,
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
-        ),
+        )
+        if include_reuse_pressure
+        else {
+            "kind": "agentic-workspace/reuse-pressure/v1",
+            "status": "deferred",
+            "state": "selector-required",
+            "summary": "Reuse pressure scan is selector-backed for tiny implement output.",
+            "detail_selector": "reuse_pressure",
+        },
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=normalized_paths, compact=True, cli_invoke=config.cli_invoke
         ),
@@ -27256,25 +27316,17 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
     execution_posture = payload.get("execution_posture", {})
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
-    reuse_pressure = (
-        _reuse_pressure_payload(
-            target_root=target_root,
-            changed_paths=payload.get("changed_paths", []),
-            compact=True,
-            cli_invoke=config.cli_invoke,
-        )
-        if payload.get("changed_paths")
-        else payload.get("reuse_pressure", {})
-    )
+    reuse_pressure = payload.get("reuse_pressure", {})
     if isinstance(reuse_pressure, dict):
         reuse_pressure = dict(reuse_pressure)
     workflow_sufficiency = _tiny_workflow_sufficiency(payload.get("workflow_sufficiency"))
     context_reuse_pressure = {
         "status": reuse_pressure.get("status") if isinstance(reuse_pressure, dict) else None,
-        "state": reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None,
-        "summary": reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None,
         "detail_selector": "reuse_pressure",
     }
+    if not (isinstance(reuse_pressure, dict) and reuse_pressure.get("status") == "deferred"):
+        context_reuse_pressure["state"] = reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None
+        context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
     detail_commands = {
         "full_context": _command_with_cli_invoke(
             command="agentic-workspace implement --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
@@ -34263,6 +34315,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
         include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
         include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
+        include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
     )
     payload = full_payload
     if profile == "tiny":
@@ -36831,13 +36884,7 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
         return {"status": "unavailable", "reason": "requires a target root"}
     if not _planning_state_has_active_items(target_root=target_root):
         return {"status": "unavailable", "reason": "no active planning record"}
-    try:
-        from repo_planning_bootstrap.installer import planning_summary
-
-        summary = planning_summary(target=target_root, profile="compact")
-    except Exception as exc:
-        return {"status": "unavailable", "reason": f"planning summary unavailable: {exc}"}
-    planning_record = summary.get("planning_record", {}) if isinstance(summary, dict) else {}
+    planning_record = _active_planning_record_for_proof(target_root=target_root)
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
         return {"status": "unavailable", "reason": "no active planning record"}
     adaptive_assurance = planning_record.get("adaptive_assurance", {})
@@ -36940,6 +36987,50 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
         "missing_required_refs": missing_required_refs,
         "closeout_status": closeout_status,
         "closeout_rule": "Strict closeout is blocked by missing required refs, pending blocking gates, or do-not-implement blockers.",
+    }
+
+
+def _active_planning_record_for_proof(*, target_root: Path) -> dict[str, Any]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    try:
+        state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {"status": "unavailable", "reason": "planning state unavailable"}
+    todo = state.get("todo", {})
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    active_item = next((item for item in active_items if isinstance(item, dict)), None)
+    if not isinstance(active_item, dict):
+        return {"status": "unavailable", "reason": "no active planning item"}
+    surface = str(active_item.get("surface") or "").strip()
+    record_path = target_root / surface if surface else None
+    raw_record: dict[str, Any] = {}
+    if record_path is not None and record_path.is_file() and record_path.suffix == ".json":
+        try:
+            loaded_record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded_record = {}
+        raw_record = loaded_record if isinstance(loaded_record, dict) else {}
+    canonical = raw_record.get("canonical_core", {}) if isinstance(raw_record.get("canonical_core"), dict) else {}
+    machine = raw_record.get("machine_readable_contract", {}) if isinstance(raw_record.get("machine_readable_contract"), dict) else {}
+    execution = machine.get("execution", {}) if isinstance(machine.get("execution"), dict) else {}
+    proof_expectations = _list_payload(canonical.get("proof_expectations")) or _list_payload(active_item.get("proof"))
+    validation_commands = _list_payload(raw_record.get("validation_commands")) or _list_payload(execution.get("proof"))
+    return {
+        "status": "present",
+        "task": {"id": active_item.get("id", ""), "title": active_item.get("title", ""), "surface": surface},
+        "validation_commands": validation_commands,
+        "proof_expectations": proof_expectations,
+        "adaptive_assurance": raw_record.get("adaptive_assurance", {}),
+        "traceability_refs": raw_record.get("traceability_refs", {}),
+        "control_gates": raw_record.get("control_gates", []),
+        "implementation_blockers": raw_record.get("implementation_blockers", []),
+        "risk_registry_refs": raw_record.get("risk_registry_refs", []),
+        "invariant_refs": raw_record.get("invariant_refs", []),
+        "test_data_policy": raw_record.get("test_data_policy", {}),
+        "layer_scaffold": raw_record.get("layer_scaffold", {}),
+        "architecture_decision_promotion": raw_record.get("architecture_decision_promotion", {}),
+        "threat_failure_aids": raw_record.get("threat_failure_aids", []),
+        "proof_report": raw_record.get("proof_report", {}),
     }
 
 
