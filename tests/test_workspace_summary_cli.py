@@ -110,6 +110,8 @@ candidates = []
     assert packet["force"] == "not_applicable"
     assert packet["capture"]["status"] == "none_found"
     assert "planning" in packet["capture"]["candidate_owner_surfaces"]
+    assert "repo_memory" in packet["capture"]["candidate_owner_surfaces"]
+    assert "local_memory" in packet["capture"]["candidate_owner_surfaces"]
     assert packet["capture"]["agent_decision_required"] is False
 
 
@@ -147,6 +149,14 @@ def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
         )
         for owner in ["planning", "docs", "tests", "contracts", "config", "review", "issue"]
     ]
+    local_memory = _memory_decision_packet_payload(
+        **base,
+        closeout_trust={
+            "trust": "lower-trust",
+            "lower_trust_closeout_count": 1,
+            "durable_residue_action": {"action": "route-durable-residue", "owner": "local_memory"},
+        },
+    )
     follow_up = _memory_decision_packet_payload(
         **base,
         closeout_trust={"trust": "lower-trust", "lower_trust_closeout_count": 1},
@@ -157,6 +167,7 @@ def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
     assert dismissed["capture"]["status"] == "dismissed"
     assert capture["capture"]["status"] == "capture_candidate"
     assert {packet["capture"]["status"] for packet in routed_packets} == {"routed_elsewhere"}
+    assert local_memory["capture"]["status"] == "follow_up_required"
     assert follow_up["force"] == "required_at_closeout"
     assert follow_up["capture"]["status"] == "follow_up_required"
 
@@ -240,6 +251,30 @@ candidates = [
     )
     assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
     assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
+
+
+def test_workspace_summary_planning_revision_selector_stays_tiny(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    exit_code = cli.main(["summary", "--target", str(tmp_path), "--select", "planning_revision", "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["values"]["planning_revision"]["kind"] == "planning-revision/v1"
+    assert payload["selection_cost"]["profile_loaded"] == "tiny-direct"
+    assert payload["selection_cost"]["fallback_profile_loaded"] is False
 
 
 def test_workspace_summary_completion_task_surfaces_closeout_trust(tmp_path: Path, capsys) -> None:

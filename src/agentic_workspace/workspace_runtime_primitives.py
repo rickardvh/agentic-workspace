@@ -3417,21 +3417,36 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
 def _memory_module_argv(args: argparse.Namespace) -> list[str]:
     command = str(args.memory_command)
     argv = [command]
-    if command == "capture-note" and getattr(args, "slug", None):
+    if command in {"capture-note", "create-note"} and getattr(args, "slug", None):
         argv.append(str(args.slug))
     for option, attr in (
         ("--target", "target"),
+        ("--title", "title"),
+        ("--folder", "folder"),
+        ("--note-type", "note_type"),
         ("--summary", "summary"),
         ("--task", "task"),
         ("--stage", "stage"),
         ("--existing-note", "existing_note"),
         ("--force-new-reason", "force_new_reason"),
         ("--mode", "mode"),
+        ("--memory-role", "memory_role"),
+        ("--promotion-target", "promotion_target"),
+        ("--promotion-trigger", "promotion_trigger"),
+        ("--retention-after-promotion", "retention_after_promotion"),
+        ("--local-reason", "local_reason"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
+    _append_repeated_option(argv, "--applies-to", getattr(args, "applies_to", None))
+    _append_repeated_option(argv, "--use-when", getattr(args, "use_when", None))
+    _append_repeated_option(argv, "--routes-from", getattr(args, "routes_from", None))
+    _append_repeated_option(argv, "--stale-when", getattr(args, "stale_when", None))
+    _append_repeated_option(argv, "--evidence", getattr(args, "evidence", None))
     _append_repeated_option(argv, "--files", getattr(args, "files", None))
     _append_repeated_option(argv, "--surface", getattr(args, "surfaces", None))
     _append_repeated_option(argv, "--notes", getattr(args, "notes", None))
+    _append_flag(argv, "--local", bool(getattr(args, "local", False)))
+    _append_flag(argv, "--dry-run", bool(getattr(args, "dry_run", False)))
     _append_flag(argv, "--verbose", bool(getattr(args, "verbose", False)))
     _append_option(argv, "--format", getattr(args, "format", None))
     return argv
@@ -13675,7 +13690,17 @@ def _memory_consult_payload(
     return payload
 
 
-_MEMORY_DECISION_OWNER_SURFACES = ["memory", "planning", "docs", "tests", "contracts", "config", "review", "issue"]
+_MEMORY_DECISION_OWNER_SURFACES = [
+    "repo_memory",
+    "local_memory",
+    "planning",
+    "docs",
+    "tests",
+    "contracts",
+    "config",
+    "review",
+    "issue",
+]
 _MEMORY_PULL_STATUSES = {"not_checked", "checked_none", "relevant_notes_found", "stale", "unavailable", "dismissed"}
 _MEMORY_CAPTURE_STATUSES = {
     "not_evaluated",
@@ -13816,7 +13841,8 @@ def _memory_decision_packet_payload(
         capture_status == "not_evaluated"
         and stage == "closeout"
         and residue_owner
-        and residue_owner.lower() not in {"memory", ".agentic-workspace/memory", ".agentic-workspace/memory/repo"}
+        and residue_owner.lower()
+        not in {"memory", "repo_memory", "local_memory", ".agentic-workspace/memory", ".agentic-workspace/memory/repo"}
     ):
         capture_status = "routed_elsewhere"
     elif capture_status == "not_evaluated" and stage == "closeout" and _as_int(closeout.get("promotion_candidate_count")) > 0:
@@ -21508,6 +21534,21 @@ def _hydrate_selected_start_advisory_payloads(
 def _select_summary_payload(
     *, target_root: Path, select: str, task_text: str | None, changed_paths: list[str], planning_summary: Any, cli_invoke: str
 ) -> dict[str, Any]:
+    requested_fields = [field.strip() for field in select.split(",") if field.strip()]
+    if requested_fields and set(requested_fields) <= {"planning_revision"}:
+        from repo_planning_bootstrap.installer import planning_revision
+
+        selected = _select_payload_fields(
+            {"planning_revision": planning_revision(target_root)},
+            select=select,
+            source_command="summary",
+        )
+        selected["selection_cost"] = {
+            "profile_loaded": "tiny-direct",
+            "fallback_profile_loaded": False,
+            "rule": "planning_revision is served from the cheap revision primitive without loading broad summary detail.",
+        }
+        return selected
     tiny_summary = planning_summary(target=target_root.as_posix(), profile="tiny", task_text=task_text, changed_paths=changed_paths)
     if isinstance(tiny_summary, dict):
         tiny_summary["memory_consult"] = (
@@ -22987,9 +23028,17 @@ _CANDIDATE_RELEVANCE_STOPWORDS = {
     "different",
     "epic",
     "future",
+    "github",
     "implement",
     "implementation",
     "issue",
+    "issues",
+    "after",
+    "refresh",
+    "failure",
+    "fix",
+    "file",
+    "findings",
     "jumpstart",
     "lane",
     "planning",
@@ -23001,7 +23050,7 @@ _CANDIDATE_RELEVANCE_STOPWORDS = {
 }
 
 
-def _candidate_relevance_evidence(candidate: dict[str, Any], *, issue_refs: list[str], task_text: str | None) -> list[str]:
+def _candidate_relevance_payload(candidate: dict[str, Any], *, issue_refs: list[str], task_text: str | None) -> dict[str, list[str]]:
     candidate_text = " ".join(
         str(candidate.get(field, ""))
         for field in (
@@ -23016,15 +23065,20 @@ def _candidate_relevance_evidence(candidate: dict[str, Any], *, issue_refs: list
             "suggested_first_slice",
         )
     ).lower()
-    evidence: list[str] = []
+    strong_evidence: list[str] = []
+    weak_hints: list[str] = []
     for issue_ref in issue_refs:
         if issue_ref.lower() in candidate_text:
-            evidence.append(f"issue_ref:{issue_ref}")
+            strong_evidence.append(f"issue_ref:{issue_ref}")
     normalized_task = str(task_text or "").lower()
     for field in ("id", "lane_id"):
         value = str(candidate.get(field, "")).strip().lower()
         if value and value in normalized_task:
-            evidence.append(f"task_mentions_{field}:{value}")
+            strong_evidence.append(f"task_mentions_{field}:{value}")
+    for field in ("title",):
+        value = " ".join(str(candidate.get(field, "")).strip().lower().split())
+        if value and len(value) >= 8 and value in " ".join(normalized_task.split()):
+            strong_evidence.append(f"task_mentions_{field}:{value}")
     task_tokens = {
         token for token in re.findall(r"[a-z0-9]+", normalized_task) if len(token) >= 4 and token not in _CANDIDATE_RELEVANCE_STOPWORDS
     }
@@ -23033,8 +23087,12 @@ def _candidate_relevance_evidence(candidate: dict[str, Any], *, issue_refs: list
     }
     shared = sorted(task_tokens & candidate_tokens)
     if shared:
-        evidence.append("shared_task_terms:" + ",".join(shared[:5]))
-    return evidence
+        weak_hints.append("shared_task_terms:" + ",".join(shared[:5]))
+    return {"strong_evidence": strong_evidence, "weak_hints": weak_hints}
+
+
+def _candidate_relevance_evidence(candidate: dict[str, Any], *, issue_refs: list[str], task_text: str | None) -> list[str]:
+    return _candidate_relevance_payload(candidate, issue_refs=issue_refs, task_text=task_text)["strong_evidence"]
 
 
 def _planning_candidate_pressure_payload(
@@ -23062,7 +23120,9 @@ def _planning_candidate_pressure_payload(
     for candidate in roadmap_candidates:
         candidate_id = str(candidate.get("id", "")).strip()
         refs = sorted(_candidate_refs(candidate), key=lambda value: int(value.lstrip("#")) if value.lstrip("#").isdigit() else 0)
-        evidence = _candidate_relevance_evidence(candidate, issue_refs=issue_refs, task_text=task_text)
+        relevance_payload = _candidate_relevance_payload(candidate, issue_refs=issue_refs, task_text=task_text)
+        evidence = relevance_payload["strong_evidence"]
+        weak_hints = relevance_payload["weak_hints"]
         ref_statuses = {ref: external_status_by_ref.get(ref, "unknown") for ref in refs if ref in external_status_by_ref}
         closed_refs = [ref for ref, status in ref_statuses.items() if status in {"closed", "done", "merged", "retired"}]
         stale_or_closed = bool(refs and closed_refs and not issue_ref_set.intersection(refs))
@@ -23078,11 +23138,12 @@ def _planning_candidate_pressure_payload(
                 "title": str(candidate.get("title", "")),
                 "refs": refs,
                 "evidence": evidence,
+                "weak_lexical_hints": weak_hints,
                 "external_statuses": ref_statuses,
                 "relevance": "matched" if evidence and not stale_or_closed else "stale-or-closed" if stale_or_closed else "unmatched",
             }
     decomposition_relevance = {
-        str(candidate.get("lane_id", "")).strip(): _candidate_relevance_evidence(
+        str(candidate.get("lane_id", "")).strip(): _candidate_relevance_payload(
             candidate,
             issue_refs=issue_refs,
             task_text=task_text,
@@ -23090,7 +23151,9 @@ def _planning_candidate_pressure_payload(
         for candidate in decomposition_candidates
     }
     matched_decomposition = [
-        candidate for candidate in decomposition_candidates if decomposition_relevance.get(str(candidate.get("lane_id", "")).strip())
+        candidate
+        for candidate in decomposition_candidates
+        if decomposition_relevance.get(str(candidate.get("lane_id", "")).strip(), {}).get("strong_evidence")
     ]
     broad_shape = work_shape in {"lane", "epic"}
     promotion_required = False
@@ -23136,7 +23199,8 @@ def _planning_candidate_pressure_payload(
                 "id": lane_id,
                 "title": candidate.get("title", ""),
                 "decomposition": candidate.get("decomposition", ""),
-                "relevance_evidence": decomposition_relevance.get(lane_id, []),
+                "relevance_evidence": decomposition_relevance.get(lane_id, {}).get("strong_evidence", []),
+                "weak_lexical_hints": decomposition_relevance.get(lane_id, {}).get("weak_hints", []),
                 "command": _candidate_promotion_command(candidate_id=lane_id, config=config, planning_revision=planning_revision),
             }
         )
@@ -23171,7 +23235,8 @@ def _planning_candidate_pressure_payload(
                 {
                     "id": str(candidate.get("lane_id", "")).strip(),
                     "title": str(candidate.get("title", "")),
-                    "evidence": decomposition_relevance.get(str(candidate.get("lane_id", "")).strip(), []),
+                    "evidence": decomposition_relevance.get(str(candidate.get("lane_id", "")).strip(), {}).get("strong_evidence", []),
+                    "weak_lexical_hints": decomposition_relevance.get(str(candidate.get("lane_id", "")).strip(), {}).get("weak_hints", []),
                 }
                 for candidate in decomposition_candidates[:5]
             ],

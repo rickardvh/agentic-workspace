@@ -32,7 +32,8 @@ It makes three decisions visible:
    - `dismissed`: the signal is one-off or too weak to keep
    - `follow_up_required`: the decision needs a later owner or proof
 3. Classify `durable_residue_decision`:
-   - `memory`
+   - `repo_memory`
+   - `local_memory`
    - `planning`
    - `docs`
    - `tests`
@@ -42,6 +43,7 @@ It makes three decisions visible:
    - `issue`
    - `dismissed`
    - `none_found`
+   - Treat legacy `memory` as an ambiguous compatibility label; prefer `repo_memory` or `local_memory` when recording a new decision.
 4. Classify `improvement_signal_status` when a repeated correction, missing guardrail, or workflow friction appears:
    - `passive`
    - `accumulating`
@@ -50,7 +52,8 @@ It makes three decisions visible:
    - `stale`
    - `resolved`
 5. Keep the proof separate from the write decision. Passing tests can prove behavior, but it does not prove Memory residue exists or that a memory write is appropriate.
-6. If the answer is `memory`, use `memory-capture` for the actual write. If the answer is `routed_elsewhere`, name the owning surface and do not create a memory note just to show activity.
+6. If the answer is `repo_memory` or `local_memory`, use `memory-capture` for the actual write. If the answer is `routed_elsewhere`, name the owning surface and do not create a memory note just to show activity.
+7. Use local-only Memory when the lesson is machine-local, user-local, runtime-specific, private, or low-confidence. Use repo-shared Memory only when the lesson should travel with the repository.
 
 ## Guardrails
 
@@ -62,6 +65,8 @@ It makes three decisions visible:
 - Do not call `dismissed` when the same issue has repeated or an explicit invariant/runbook/check would prevent rediscovery.
 - Do not overwrite Planning closeout. Planning owns active intent, sequencing, issue linkage, and completion claims.
 - Do not overwrite canonical docs, tests, contracts, or config when the durable fix belongs there.
+- Do not put local execution quirks into checked-in repo Memory just because they are useful to the current agent.
+- Do not use prompt keywords, filenames, or phrase markers as authority for a Memory write or storage decision.
 
 ## No-CLI fallback
 

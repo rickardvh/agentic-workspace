@@ -44,6 +44,16 @@
       "source": "cli-option"
     },
     {
+      "name": "local",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "local_reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "applies_to",
       "required": false,
       "source": "cli-option"
@@ -120,6 +130,12 @@
           },
           "folder": {
             "value": "folder"
+          },
+          "local": {
+            "value": "local"
+          },
+          "local_reason": {
+            "value": "local_reason"
           },
           "memory_role": {
             "value": "memory_role"
