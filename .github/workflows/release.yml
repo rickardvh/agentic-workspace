@@ -30,17 +30,25 @@ jobs:
         shell: python
         run: |
           import os
+          import json
           import tomllib
           from pathlib import Path
 
           tag = os.environ["GITHUB_REF_NAME"]
-          version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-          expected = f"v{version}"
-          if tag != expected:
-              raise SystemExit(f"Release tag {tag!r} must match pyproject.toml version {expected!r}")
+          version = tag.removeprefix("v")
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          for package in ownership["packages"]:
+              declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
+              if declared != version:
+                  raise SystemExit(
+                      f"Release tag {tag!r} must match every package version; "
+                      f"{package['pyproject']} declares {declared!r}"
+                  )
 
       - name: Build Agentic Workspace package artifacts
         run: |
+          rm -rf dist
+          mkdir -p dist
           uv build --wheel --sdist --out-dir dist
           uv build --wheel --sdist --out-dir dist packages/memory
           uv build --wheel --sdist --out-dir dist packages/planning
@@ -49,8 +57,121 @@ jobs:
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
 
+      - name: Generate checksums and release manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          import tomllib
+          from pathlib import Path
+
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          version = os.environ["RELEASE_TAG"].removeprefix("v")
+          root_pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          command_generation_dependency = ""
+          for dependency in root_pyproject.get("dependency-groups", {}).get("dev", []):
+              if str(dependency).startswith("command-generation @ "):
+                  command_generation_dependency = str(dependency)
+                  break
+          match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\\.whl", command_generation_dependency)
+          command_generation_version = match.group("version") if match else ""
+
+          def sha256(path: Path) -> str:
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          dist = Path("dist")
+          checksum_lines = []
+          package_entries = []
+          for package in ownership["packages"]:
+              declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
+              if declared != version:
+                  raise SystemExit(f"{package['pyproject']} has version {declared}, expected {version}")
+              wheel = next(dist.glob(f"{package['wheel_prefix']}-{version}-*.whl"), None)
+              sdist = next(dist.glob(f"{package['sdist_prefix']}-{version}.tar.gz"), None)
+              if wheel is None or sdist is None:
+                  raise SystemExit(f"Missing wheel or sdist for {package['name']} {version}")
+              for artifact in (wheel, sdist):
+                  checksum_lines.append(f"{sha256(artifact)}  {artifact.name}")
+              package_entries.append(
+                  {
+                      "name": package["name"],
+                      "version": version,
+                      "pyproject": package["pyproject"],
+                      "wheel": {"asset": wheel.name, "sha256": sha256(wheel)},
+                      "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
+                      "payload_schema": package["payload_schema"],
+                      "payload_provenance": package["payload_provenance"],
+                      "generated_command_contract": package["generated_command_contract"],
+                  }
+              )
+
+          manifest = {
+              "kind": "agentic-workspace/coordinated-release-manifest/v1",
+              "release_model": ownership["release_model"],
+              "version": version,
+              "tag": os.environ["RELEASE_TAG"],
+              "all_or_nothing": True,
+              "packages": package_entries,
+              "command_generation": {
+                  "dependency": command_generation_dependency,
+                  "version": command_generation_version,
+                  "runtime_required": False,
+              },
+              "release_ownership": {
+                  "path": ".github/release-ownership.json",
+                  "schema_version": ownership["schema_version"],
+              },
+          }
+          manifest_path = dist / "agentic-workspace-release-manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
+          (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Verify release artifacts
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          dist = Path("dist")
+          manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
+          if manifest["tag"] != os.environ["RELEASE_TAG"]:
+              raise SystemExit("Release manifest tag mismatch")
+          if len(manifest["packages"]) != 4:
+              raise SystemExit("Release manifest must list every shipped package")
+          checksums = {}
+          for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
+              digest, asset = line.split("  ", 1)
+              checksums[asset] = digest
+          required_assets = {"agentic-workspace-release-manifest.json"}
+          for package in manifest["packages"]:
+              required_assets.add(package["wheel"]["asset"])
+              required_assets.add(package["sdist"]["asset"])
+          missing = sorted(required_assets - set(checksums))
+          if missing:
+              raise SystemExit(f"Missing checksums for release assets: {missing}")
+          for asset in required_assets:
+              digest = hashlib.sha256((dist / asset).read_bytes()).hexdigest()
+              if checksums[asset] != digest:
+                  raise SystemExit(f"Checksum mismatch for {asset}")
+          PY
+
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v3.0.0
         with:
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/SHA256SUMS
+            dist/agentic-workspace-release-manifest.json
           generate_release_notes: true
+          fail_on_unmatched_files: true

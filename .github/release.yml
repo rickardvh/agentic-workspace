@@ -1,0 +1,20 @@
+changelog:
+  categories:
+    - title: Compatibility-significant changes
+      labels:
+        - schema
+        - generated-runtime
+        - conformance
+        - compatibility
+    - title: Major changes
+      labels:
+        - semver:major
+    - title: Minor changes
+      labels:
+        - semver:minor
+    - title: Patch changes
+      labels:
+        - semver:patch
+    - title: Other changes
+      labels:
+        - "*"

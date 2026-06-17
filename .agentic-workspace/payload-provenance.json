@@ -32,5 +32,11 @@
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
-  "rule": "Repo payload provenance records the executable/source identity that installed or last synced the AW payload."
+  "release_identity": {
+    "package": "agentic-workspace",
+    "release_model": "coordinated-workspace",
+    "tag": "v0.1.0",
+    "version": "0.1.0"
+  },
+  "rule": "Repo payload provenance records the coordinated AW release identity and executable/source identity that installed or last synced the AW payload."
 }

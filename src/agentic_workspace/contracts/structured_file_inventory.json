@@ -203,6 +203,18 @@
       "checked_in_justification": "Compact payload provenance is checked in so startup can distinguish observed-compatible payload state from missing-provenance upgrade noise."
     },
     {
+      "pattern": ".github/release-ownership.json",
+      "format": "json",
+      "owner": "release",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "release ownership checker: uv run pytest tests/test_release_workflows.py -q",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Machine-readable coordinated release ownership manifest used by semver-label and release workflows.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Release automation, docs, and tests use this manifest as the source of truth for package-affecting paths and shipped package metadata."
+    },
+    {
       "pattern": ".agentic-workspace/agent-aids/**/manifest.json",
       "format": "json",
       "owner": "agent-aids",
