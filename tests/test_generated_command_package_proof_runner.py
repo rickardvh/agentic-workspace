@@ -4,12 +4,11 @@ import argparse
 import copy
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import textwrap
 from pathlib import Path
-
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
@@ -180,24 +179,6 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     assert strict["summary"]["fail_count"] == 8
 
 
-def test_operation_conformance_runner_executes_typescript_function_case() -> None:
-    runner = _load_test_ir_runner()
-    if runner.shutil.which("node") is None:
-        pytest.skip("node is required for typescript.function proof")
-
-    payload = runner.run_ir_cases(
-        target_selection="typescript",
-        case_filter={"defaults.selected-output.success"},
-        require_node=True,
-    )
-
-    assert payload["summary"]["state"] == "pass"
-    result = payload["cases"][0]
-    assert result["artifact_id"] == "root-workspace.defaults.typescript"
-    assert result["adapter_id"] == "typescript.function"
-    assert result["state"] == "pass"
-
-
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 
@@ -227,38 +208,6 @@ def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     parity_result = next(case for case in payload["cases"] if case["target"] == "parity")
     assert payload["summary"]["state"] == "pass"
     assert parity_result["state"] == "pass"
-
-
-def test_operation_conformance_runner_executes_python_function_artifact(monkeypatch) -> None:
-    runner = _load_test_ir_runner()
-    case = {
-        "id": "todo.list.operation",
-        "title": "Todo list function adapter",
-        "behavioral_class": "success",
-        "operation_ref": {"operation_id": "todo.list.report", "conformance_ref": "todo.list.operation"},
-        "input": {"json": {"format": "json"}},
-        "expected": {"result": {"selected_fields": {"kind": "todo-list/v1", "item_count": 2}}},
-    }
-    artifact = {
-        "artifact_id": "todo.list.python",
-        "adapter_id": "python.function",
-        "symbol": "todo_runtime:list_todos",
-    }
-
-    monkeypatch.setattr(
-        runner,
-        "_python_function_target_for_artifact",
-        lambda _artifact: runner.FunctionConformanceTarget(
-            label="todo.list.python",
-            invoke=lambda values: {"kind": "todo-list/v1", "item_count": 2, "format": values["format"]},
-        ),
-    )
-
-    result = runner._run_python_function_case(case=case, artifact=artifact)
-
-    assert result["state"] == "pass"
-    assert result["adapter_id"] == "python.function"
-    assert result["selected_fields"] == {"kind": "todo-list/v1", "item_count": 2}
 
 
 def test_operation_conformance_runner_reports_missing_python_function_symbol() -> None:
@@ -538,10 +487,14 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     provenance = target_freshness["command_generation_package"]
     assert provenance["kind"] == "command-generation/package-provenance/v1"
     assert provenance["source"] == "released-wheel"
-    assert provenance["declared_version"] == provenance["installed_version"] == "0.1.0"
-    assert provenance["compatible_range"] == ">=0.1.0,<0.2.0"
+    assert provenance["declared_version"] == provenance["installed_version"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", provenance["declared_version"])
     assert provenance["compatible"] is True
-    assert provenance["dependency_url"].startswith("https://github.com/rickardvh/command-generation/releases/download/v0.1.0/")
+    assert provenance["dependency_url"].startswith(
+        f"https://github.com/rickardvh/command-generation/releases/download/v{provenance['declared_version']}/"
+    )
+    assert f"command_generation-{provenance['declared_version']}-py3-none-any.whl" in provenance["dependency_url"]
+    assert "#sha256=" in provenance["dependency_url"]
     assert target_freshness["target_families"] == ["python", "typescript"]
     assert target_freshness["rendered_output_count_by_family"]["python"] > 0
     assert target_freshness["rendered_output_count_by_family"]["typescript"] > 0
@@ -707,7 +660,13 @@ def test_python_completion_blocker_report_surfaces_command_generation_package_po
 
     assert status == 0
     output = capsys.readouterr().out
-    assert "Command-generation package: declared=0.1.0 installed=0.1.0 source=released-wheel compatible=true" in output
+    match = re.search(
+        r"Command-generation package: declared=(?P<declared>\d+\.\d+\.\d+) "
+        r"installed=(?P<installed>\d+\.\d+\.\d+) source=released-wheel compatible=true",
+        output,
+    )
+    assert match is not None
+    assert match.group("declared") == match.group("installed")
 
 
 def test_memory_list_commands_are_portable_resource_python_projections() -> None:

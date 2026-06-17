@@ -252,39 +252,7 @@ def render_workspace_command_package_outputs(
         regenerate_command=REGENERATE_COMMAND,
         host_manifest=workspace_command_generation_host_manifest(repo_root=repo_root),
     )
-    return [_with_workspace_typescript_append_support(output) for output in outputs]
-
-
-def _with_workspace_typescript_append_support(output: GeneratedOutput) -> GeneratedOutput:
-    if not output.path.as_posix().endswith("generated/workspace/typescript/src/cli.mjs"):
-        return output
-    content = output.content
-    content = content.replace(
-        "  if (option.action === 'store_true') return false;\n  if (option.nargs === '*') return [];\n",
-        "  if (option.action === 'store_true') return false;\n  if (option.action === 'append') return [];\n  if (option.nargs === '*') return [];\n",
-    )
-    content = content.replace(
-        "      if (option.action === 'store_true') {\n"
-        "        values[optionName] = true;\n"
-        "        index += 1;\n"
-        "        continue;\n"
-        "      }\n"
-        "      if (option.nargs === '*') {\n",
-        "      if (option.action === 'store_true') {\n"
-        "        values[optionName] = true;\n"
-        "        index += 1;\n"
-        "        continue;\n"
-        "      }\n"
-        "      if (option.action === 'append') {\n"
-        "        if (index + 1 >= tokens.length || isHelpToken(tokens[index + 1])) failValidation(`${optionFlags(option)[0]} requires a value`);\n"
-        "        if (!Array.isArray(values[optionName])) values[optionName] = [];\n"
-        "        values[optionName].push(optionValue(option, tokens[index + 1]));\n"
-        "        index += 2;\n"
-        "        continue;\n"
-        "      }\n"
-        "      if (option.nargs === '*') {\n",
-    )
-    return GeneratedOutput(path=output.path, content=content)
+    return outputs
 
 
 def generate_workspace_command_packages(*, repo_root: Path = REPO_ROOT, check: bool) -> list[str]:

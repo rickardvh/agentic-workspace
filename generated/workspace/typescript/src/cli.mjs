@@ -3510,6 +3510,14 @@ function consumeOption(iface, option, tokens, index, seenOptions) {
   const optionName = option.name ?? optionFlags(option)[0];
   if (optionName) seenOptions.add(optionName);
   if (option.action === 'store_true') return index + 1;
+  if (option.action === 'append') {
+    if (index + 1 >= tokens.length || isHelpToken(tokens[index + 1])) {
+      failValidation(`${optionFlags(option)[0]} requires a value`);
+    }
+    const value = String(tokens[index + 1]);
+    validateChoice(option, value, optionFlags(option)[0]);
+    return index + 2;
+  }
   if (option.nargs === '*') {
     let cursor = index + 1;
     while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {

@@ -63,7 +63,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "command-generation", url = "https://github.com/rickardvh/command-generation/releases/download/v0.1.0/command_generation-0.1.0-py3-none-any.whl" },
+    { name = "command-generation", url = "https://github.com/rickardvh/command-generation/releases/download/v0.2.0/command_generation-0.2.0-py3-none-any.whl" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -144,13 +144,13 @@ wheels = [
 
 [[package]]
 name = "command-generation"
-version = "0.1.0"
-source = { url = "https://github.com/rickardvh/command-generation/releases/download/v0.1.0/command_generation-0.1.0-py3-none-any.whl" }
+version = "0.2.0"
+source = { url = "https://github.com/rickardvh/command-generation/releases/download/v0.2.0/command_generation-0.2.0-py3-none-any.whl" }
 dependencies = [
     { name = "jsonschema" },
 ]
 wheels = [
-    { url = "https://github.com/rickardvh/command-generation/releases/download/v0.1.0/command_generation-0.1.0-py3-none-any.whl", hash = "sha256:3d02e8152b4d4bc6e51c633f82eb67d99e6a549073545ca20c953c1516342ccb" },
+    { url = "https://github.com/rickardvh/command-generation/releases/download/v0.2.0/command_generation-0.2.0-py3-none-any.whl", hash = "sha256:0c7e1ec9aa78cc95154cca6cef7cfacb2c72c5abca4fa2cfdcb404e8aba5b72e" },
 ]
 
 [package.metadata]
