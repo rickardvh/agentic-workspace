@@ -489,6 +489,12 @@
       "path": "operations/verification.report.report.json",
       "command": "report",
       "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "workspace.memory-create-note.apply",
+      "path": "operations/workspace.memory-create-note.apply.json",
+      "command": "memory",
+      "migration_status": "runtime-consumed"
     }
   ]
 }

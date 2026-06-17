@@ -832,6 +832,22 @@
           "name": "summary"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--local"
+          ],
+          "help": "Create an ignored local-only note under .agentic-workspace/local/memory without updating the repo manifest.",
+          "name": "local"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--local-reason"
+          ],
+          "help": "Reason this note is machine-local rather than repo-shared.",
+          "name": "local_reason"
+        },
+        {
           "default": [],
           "flags": [
             "--applies-to"

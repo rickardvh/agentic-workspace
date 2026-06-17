@@ -447,6 +447,8 @@ def create_memory_note(
     slug: str,
     title: str | None = None,
     target: str | Path | None = None,
+    local: bool = False,
+    local_reason: str = "",
     folder: str = "domains",
     note_type: str = "domain",
     summary: str = "",
@@ -464,19 +466,26 @@ def create_memory_note(
     target_root = resolve_target_root(target)
     safe_slug = _safe_note_slug(slug)
     safe_folder = _safe_note_slug(folder).replace(".", "-")
-    note_relative = Path(".agentic-workspace") / "memory" / "repo" / safe_folder / f"{safe_slug}.md"
+    note_relative = (
+        Path(".agentic-workspace") / "local" / "memory" / f"{safe_slug}.md"
+        if local
+        else Path(".agentic-workspace") / "memory" / "repo" / safe_folder / f"{safe_slug}.md"
+    )
     note_path = target_root / note_relative
     manifest_path = target_root / MANIFEST_PATH
-    result = _new_result(target_root, dry_run=dry_run, message=f"Create memory note '{safe_slug}'")
+    result = _new_result(target_root, dry_run=dry_run, message=f"Create {'local ' if local else ''}memory note '{safe_slug}'")
 
-    if not manifest_path.exists():
+    if local and not local_reason.strip():
+        result.add("manual review", note_path, "local memory creation requires --local-reason to record why this is not repo-shared")
+        return result
+    if not local and not manifest_path.exists():
         result.add("manual review", manifest_path, "memory manifest is missing; install or repair Memory before creating notes")
         return result
     if note_path.exists():
         result.add("manual review", note_path, "memory note already exists; choose a new slug or edit intentionally")
         return result
-    manifest = _load_memory_manifest(manifest_path)
-    if manifest is not None and any(note.path == note_relative for note in manifest.notes):
+    manifest = None if local else _load_memory_manifest(manifest_path)
+    if not local and manifest is not None and any(note.path == note_relative for note in manifest.notes):
         result.add("manual review", manifest_path, f"manifest already has a note entry for {note_relative.as_posix()}")
         return result
 
@@ -489,20 +498,34 @@ def create_memory_note(
     note_summary = summary.strip() or note_title
 
     if dry_run:
-        result.add("would create", note_path, "minimal Memory note markdown")
-        result.add("would update", manifest_path, "schema-valid manifest note entry")
+        result.add("would create", note_path, "minimal local-only Memory note markdown" if local else "minimal Memory note markdown")
+        if not local:
+            result.add("would update", manifest_path, "schema-valid manifest note entry")
         return result
 
     note_path.parent.mkdir(parents=True, exist_ok=True)
-    note_path.write_text(
-        _render_memory_note_template(
-            title=note_title,
-            summary=note_summary,
-            use_when=normalised_use_when,
-            evidence=normalised_evidence,
-        ),
-        encoding="utf-8",
+    rendered_note = _render_memory_note_template(
+        title=note_title,
+        summary=note_summary,
+        use_when=normalised_use_when,
+        evidence=normalised_evidence,
     )
+    if local:
+        local_metadata = (
+            "## Local-only authority\n\n"
+            "- Canonicality: local_only\n"
+            "- Authority: machine-local advisory context\n"
+            "- Repo authority: false\n"
+            f"- Local reason: {local_reason.strip()}\n\n"
+        )
+        if "## Purpose" in rendered_note:
+            rendered_note = rendered_note.replace("## Purpose\n\n", local_metadata + "## Purpose\n\n", 1)
+        else:
+            rendered_note = rendered_note + "\n\n" + local_metadata
+    note_path.write_text(rendered_note, encoding="utf-8")
+    if local:
+        result.add("created", note_path, "local-only Memory note markdown")
+        return result
     _append_manifest_note_entry(
         manifest_path=manifest_path,
         note_path=note_relative,
@@ -546,6 +569,13 @@ def _tokenize_capture_text(*values: str) -> set[str]:
         "that",
         "memory",
         "planning",
+        "repo",
+        "run",
+        "closeout",
+        "not",
+        "after",
+        "issue",
+        "github",
     }
     tokens: set[str] = set()
     for value in values:
@@ -620,6 +650,12 @@ def _capture_specificity_bonus(*, note: MemoryNoteRecord, files: tuple[str, ...]
 
 
 def _capture_candidate_view(note: MemoryNoteRecord, *, score: int, reasons: list[str]) -> dict[str, object]:
+    ownership_reasons = [
+        reason
+        for reason in reasons
+        if "--existing-note" in reason or "route here" in reason or "package-specific" in reason or "workspace-specific" in reason
+    ]
+    weak_reasons = [reason for reason in reasons if reason.startswith("summary/files share tokens:")]
     candidate: dict[str, object] = {
         "path": note.path.as_posix(),
         "score": score,
@@ -627,6 +663,9 @@ def _capture_candidate_view(note: MemoryNoteRecord, *, score: int, reasons: list
         "note_type": note.note_type,
         "memory_role": note.memory_role or "unclassified",
         "reasons": reasons[:4],
+        "evidence_class": "ownership-evidence" if ownership_reasons else "weak-similarity",
+        "ownership_evidence": ownership_reasons[:4],
+        "weak_similarity_hints": weak_reasons[:4],
     }
     if note.promotion_target:
         candidate["promotion_target"] = note.promotion_target
@@ -635,6 +674,27 @@ def _capture_candidate_view(note: MemoryNoteRecord, *, score: int, reasons: list
     if note.retention_after_promotion:
         candidate["retention_after_promotion"] = note.retention_after_promotion
     return candidate
+
+
+def _looks_like_local_memory_capture(*, summary: str, task: str | None, files: tuple[str, ...], surfaces: tuple[str, ...]) -> bool:
+    text = " ".join([summary, task or "", " ".join(files), " ".join(surfaces)]).lower()
+    local_markers = (
+        "machine-local",
+        "local-only",
+        "local execution",
+        "local shell",
+        "this windows",
+        "windows codex",
+        "codex desktop shell",
+        "bare python",
+        "python is unavailable",
+        "not on path",
+        "local runtime",
+        "environment-specific",
+        "user-local",
+        "private",
+    )
+    return any(marker in text for marker in local_markers)
 
 
 def suggest_memory_note_capture(
@@ -727,18 +787,36 @@ def suggest_memory_note_capture(
     candidates.sort(key=lambda item: (-int(item["score"]), str(item["path"])))
     best = candidates[0] if candidates else None
     force_reason = force_new_reason.strip()
-    if best and not force_reason:
+    best_score = best.get("score", 0) if best else 0
+    strong_best = best if isinstance(best_score, int) and best_score >= 20 else None
+    local_capture = _looks_like_local_memory_capture(
+        summary=summary,
+        task=task,
+        files=normalized_files,
+        surfaces=tuple(effective_surfaces),
+    )
+    create_command = (
+        f"agentic-memory create-note {safe_slug} --local --local-reason <why-local> --target ./repo --summary <text> --format json"
+        if local_capture
+        else f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
+    )
+
+    if strong_best and not force_reason:
         recommended_action = "update-existing-note"
-        next_command = f"open {best['path']} and update the existing note; keep manifest metadata aligned"
+        next_command = f"open {strong_best['path']} and update the existing note; keep manifest metadata aligned"
         reason = "an existing Memory note appears to own this durable learning"
-    elif best and force_reason:
+    elif strong_best and force_reason:
         recommended_action = "create-new-note-with-explicit-justification"
-        next_command = f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
+        next_command = create_command
         reason = "an existing candidate exists, but --force-new-reason records why a separate note is justified"
     else:
-        recommended_action = "create-new-note"
-        next_command = f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
-        reason = "no existing Memory note matched the capture request"
+        recommended_action = "create-local-note" if local_capture else "create-new-note"
+        next_command = create_command
+        reason = (
+            "the capture request appears local/runtime-specific, so local-only Memory is the safer default"
+            if local_capture
+            else "no existing Memory note matched the capture request"
+        )
 
     payload: dict[str, object] = {
         "kind": "agentic-memory/capture-recommendation/v1",
@@ -751,6 +829,13 @@ def suggest_memory_note_capture(
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
         "non_memory_owner_routes": ["planning", "docs", "tests", "contracts", "config", "review", "issue"],
+        "memory_owner_routes": ["repo_memory", "local_memory"],
+        "storage_decision": {
+            "recommended_owner": "local_memory" if local_capture else "repo_memory",
+            "local_memory_command": f"agentic-memory create-note {safe_slug} --local --local-reason <why-local> --target ./repo --summary <text> --format json",
+            "repo_memory_command": f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json",
+            "rule": "Use local Memory for machine-local, user-local, runtime-specific, private, or low-confidence lessons; use repo Memory only for repo-shared durable knowledge.",
+        },
         "route_elsewhere_rule": (
             "Choose a non-Memory owner when the learning is task state, canonical policy, enforceable config, proof evidence, "
             "or backlog work rather than compact anti-rediscovery knowledge."
@@ -768,7 +853,7 @@ def suggest_memory_note_capture(
         payload["promotion_metadata_guidance"] = promotion_guidance
         if promotion_guidance["metadata_required"]:
             payload["commands"] = [
-                *cast(list[str], payload["commands"]),
+                *payload["commands"],
                 "agentic-memory promotion-report --target ./repo --mode remediation --format json",
             ]
     return payload
@@ -1612,18 +1697,23 @@ def route_memory(
             "route_context": {
                 "files": [],
                 "surfaces": [],
+                "explicit_surfaces": [],
+                "stage_surface": "",
+                "inferred_surfaces": [],
                 "stage": "",
                 "task_supplied": bool(task and task.strip()),
                 "task_used_for_matching": False,
-                "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority.",
+                "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
             },
         }
         return result
 
-    selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
+    explicit_surfaces = sorted({_normalise_surface_name(surface) for surface in (surfaces or []) if _normalise_surface_name(surface)})
+    inferred_surfaces = sorted(_infer_surfaces_from_paths(files or []))
+    selected_surfaces = set(explicit_surfaces)
     if normalized_stage:
         selected_surfaces.add(normalized_stage)
-    selected_surfaces.update(_infer_surfaces_from_paths(files or []))
+    selected_surfaces.update(inferred_surfaces)
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     routing_baseline = _routing_baseline_paths(manifest)
     high_level_paths = set(_high_level_paths(manifest))
@@ -1708,10 +1798,13 @@ def route_memory(
     result.route_summary["route_context"] = {
         "files": list(files or []),
         "surfaces": sorted(selected_surfaces),
+        "explicit_surfaces": explicit_surfaces,
+        "stage_surface": normalized_stage,
+        "inferred_surfaces": inferred_surfaces,
         "stage": normalized_stage,
         "task_supplied": bool(task and task.strip()),
         "task_used_for_matching": False,
-        "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority.",
+        "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
     }
     result.route_summary["selected_note_trust"] = _selected_route_note_trust(
         manifest=manifest,

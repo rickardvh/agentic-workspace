@@ -146,6 +146,37 @@ surfaces = ["startup"]
     assert first.route_summary["route_context"]["task_used_for_matching"] is False
 
 
+def test_route_memory_preserves_explicit_surfaces_separately_from_stage(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    installer.create_memory_note(
+        target=target,
+        slug="local-tooling",
+        summary="Local tooling invocation reminders.",
+        applies_to=["scripts/run_agentic_workspace.py"],
+        routes_from=["codex"],
+    )
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_path.write_text(
+        manifest_text.replace('routes_from = ["codex"]', 'routes_from = ["codex"]\nsurfaces = ["codex"]'), encoding="utf-8"
+    )
+
+    result = installer.route_memory(
+        target=target,
+        surfaces=["python", "shell", "codex"],
+        stage="implement",
+        task="Run a Python helper script from PowerShell.",
+    )
+    context = result.route_summary["route_context"]
+
+    assert context["explicit_surfaces"] == ["codex", "python", "shell"]
+    assert context["stage_surface"] == "implement"
+    assert set(context["surfaces"]) >= {"codex", "python", "shell", "implement"}
+    assert any(action.match_source == "surface" and "codex" in action.detail for action in result.actions)
+
+
 def test_capture_note_exposes_non_memory_owner_routes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -180,6 +211,27 @@ routing_only = true
     assert "planning" in payload["non_memory_owner_routes"]
     assert "docs" in payload["non_memory_owner_routes"]
     assert payload["route_context"]["stage"] == "closeout"
+
+
+def test_route_memory_does_not_invent_test_remediation_for_plain_mistake_note(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    installer.create_memory_note(
+        target=target,
+        slug="local-python-invocation",
+        folder="mistakes",
+        note_type="mistake",
+        summary="Bare python is unavailable in this local shell.",
+        applies_to=["scripts/run_agentic_workspace.py"],
+        routes_from=["python", "shell"],
+        memory_role="durable_truth",
+    )
+
+    result = installer.route_memory(target=target, surfaces=["python", "shell"])
+    pressure_actions = [action for action in result.actions if action.role == "improvement-pressure"]
+
+    assert pressure_actions == []
 
 
 def test_route_memory_exposes_selected_note_freshness_trust(tmp_path: Path) -> None:

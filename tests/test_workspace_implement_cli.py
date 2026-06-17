@@ -94,7 +94,8 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["pull"]["status"] == "checked_none"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
-    assert "memory" in packet["capture"]["candidate_owner_surfaces"]
+    assert "repo_memory" in packet["capture"]["candidate_owner_surfaces"]
+    assert "local_memory" in packet["capture"]["candidate_owner_surfaces"]
     assert "planning" in packet["capture"]["candidate_owner_surfaces"]
     assert packet["authority_boundary"]["agent_owns"]
 
@@ -2621,6 +2622,96 @@ candidates = [
         "github-1522-packaging-tests",
         "github-1523-generated-proof-tests",
     ]
+
+
+def test_implement_keeps_generic_github_issue_filing_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1501-memory-routing", maturity = "candidate", status = "next", refs = "GitHub #1501", title = "Memory routing lane", outcome = "Improve routing." },
+  { id = "github-1502-delegation", maturity = "candidate", status = "next", refs = "GitHub #1502", title = "Delegation lane", outcome = "Improve delegation." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "--task",
+                "File dogfooding friction findings as GitHub issues",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
+    assert pressure["status"] == "observed"
+    assert pressure["candidate_ids"] == []
+    assert pressure["relevance"]["roadmap"][0]["evidence"] == []
+    assert "weak_lexical_hints" in pressure["relevance"]["roadmap"][0]
+
+
+def test_implement_keeps_generic_ci_refresh_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "generated-command-refresh", maturity = "candidate", status = "next", refs = "GitHub #1503", title = "Generated command cleanup after refresh", outcome = "Clean generated command tests." },
+  { id = "testing-inventory-refresh", maturity = "candidate", status = "next", refs = "GitHub #1504", title = "Testing inventory refresh", outcome = "Refresh testing inventory." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/memory/src/repo_memory_bootstrap/installer.py",
+                "--task",
+                "Fix CI memory typecheck failure after dependency refresh",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
+    assert pressure["status"] == "observed"
+    assert pressure["candidate_ids"] == []
+    assert pressure["matched_roadmap_candidate_count"] == 0
+    assert all(item["evidence"] == [] for item in pressure["relevance"]["roadmap"])
 
 
 def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:

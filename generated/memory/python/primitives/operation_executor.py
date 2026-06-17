@@ -55,6 +55,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'title': getattr(args, 'title', None),
                 'folder': getattr(args, 'folder', 'domains'),
                 'note_type': getattr(args, 'note_type', 'domain'),
+                'local': getattr(args, 'local', False),
+                'local_reason': getattr(args, 'local_reason', ''),
                 'applies_to': getattr(args, 'applies_to', []),
                 'use_when': getattr(args, 'use_when', []),
                 'routes_from': getattr(args, 'routes_from', []),
@@ -109,6 +111,8 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'title': values.get('title', None),
                 'folder': values.get('folder', 'domains'),
                 'note_type': values.get('note_type', 'domain'),
+                'local': values.get('local', False),
+                'local_reason': values.get('local_reason', ''),
                 'applies_to': values.get('applies_to', []),
                 'use_when': values.get('use_when', []),
                 'routes_from': values.get('routes_from', []),
@@ -317,7 +321,7 @@ def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[st
 def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.installer import create_memory_note
 
-    return create_memory_note(applies_to=values.get('applies_to'), dry_run=values.get('dry_run'), evidence=values.get('evidence'), folder=values.get('folder'), memory_role=values.get('memory_role'), note_type=values.get('note_type'), promotion_target=values.get('promotion_target'), promotion_trigger=values.get('promotion_trigger'), retention_after_promotion=values.get('retention_after_promotion'), routes_from=values.get('routes_from'), slug=values.get('slug'), stale_when=values.get('stale_when'), summary=values.get('summary'), target=values.get('target'), title=values.get('title'), use_when=values.get('use_when'))
+    return create_memory_note(applies_to=values.get('applies_to'), dry_run=values.get('dry_run'), evidence=values.get('evidence'), folder=values.get('folder'), local=values.get('local'), local_reason=values.get('local_reason'), memory_role=values.get('memory_role'), note_type=values.get('note_type'), promotion_target=values.get('promotion_target'), promotion_trigger=values.get('promotion_trigger'), retention_after_promotion=values.get('retention_after_promotion'), routes_from=values.get('routes_from'), slug=values.get('slug'), stale_when=values.get('stale_when'), summary=values.get('summary'), target=values.get('target'), title=values.get('title'), use_when=values.get('use_when'))
 
 
 def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

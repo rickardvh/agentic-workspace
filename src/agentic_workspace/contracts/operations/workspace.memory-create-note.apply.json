@@ -1,0 +1,103 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "workspace.memory-create-note.apply",
+  "command_surface": {
+    "program": "agentic-workspace",
+    "command": "memory",
+    "subcommand": "create-note",
+    "format_option": "format"
+  },
+  "summary": "Forward a workspace Memory create-note request to the Memory module command package.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "slug",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "local",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "local_reason",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "Memory module command metadata",
+      "required": true
+    },
+    {
+      "surface": "Memory manifest or local Memory directory",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "repo Memory note and manifest entry, or local Memory note when --local is provided",
+      "required": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve",
+      "description": "Resolve the target repository root."
+    },
+    {
+      "id": "forward_to_memory_module",
+      "uses": "memory.note.create",
+      "description": "Create the requested Memory note through the Memory module primitive."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the Memory module result through the workspace front door."
+    }
+  ],
+  "guards": [
+    "Do not create repo Memory for machine-local, user-local, runtime-specific, private, or low-confidence lessons.",
+    "Require --local-reason when --local is used.",
+    "Do not update the repo Memory manifest for local-only notes."
+  ],
+  "proof": [
+    "workspace memory create-note blackbox test exercises local dry-run routing",
+    "Memory create-note package tests cover local note creation without manifest mutation",
+    "generated command package checks remain fresh"
+  ],
+  "migration_status": "runtime-consumed"
+}

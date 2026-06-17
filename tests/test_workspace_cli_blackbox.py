@@ -100,3 +100,28 @@ def test_blackbox_memory_capture_note_accepts_stage_and_task_context() -> None:
     assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
     assert '"stage": "closeout"' in result.stdout
     assert '"task_supplied": true' in result.stdout
+
+
+def test_blackbox_memory_create_note_supports_local_dry_run() -> None:
+    result = _run_cli(
+        "memory",
+        "create-note",
+        "--target",
+        ".",
+        "--slug",
+        "blackbox-local-python-invocation-dry-run",
+        "--summary",
+        "Bare python is unavailable in this local shell.",
+        "--local",
+        "--local-reason",
+        "machine-local shell behavior",
+        "--dry-run",
+        "--format",
+        "json",
+        cwd=Path.cwd(),
+    )
+
+    assert result.returncode == 0
+    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
+    assert '"kind": "would create"' in result.stdout
+    assert ".agentic-workspace/local/memory/blackbox-local-python-invocation-dry-run.md" in result.stdout

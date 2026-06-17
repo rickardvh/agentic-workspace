@@ -2626,6 +2626,171 @@
                 ]
               },
               {
+                "name": "create-note",
+                "help": "Create a repo-shared or local-only Memory note.",
+                "options": [
+                  {
+                    "name": "slug",
+                    "flags": [
+                      "--slug"
+                    ],
+                    "default": "",
+                    "help": "Memory note slug to create."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "help": "Memory note title. Defaults to a title derived from the slug."
+                  },
+                  {
+                    "name": "folder",
+                    "flags": [
+                      "--folder"
+                    ],
+                    "default": "domains",
+                    "help": "Repo Memory folder under .agentic-workspace/memory/repo."
+                  },
+                  {
+                    "name": "note_type",
+                    "flags": [
+                      "--note-type"
+                    ],
+                    "default": "domain",
+                    "help": "Repo Memory note type recorded in the manifest."
+                  },
+                  {
+                    "name": "summary",
+                    "flags": [
+                      "--summary"
+                    ],
+                    "default": "",
+                    "help": "Short note summary."
+                  },
+                  {
+                    "name": "local",
+                    "flags": [
+                      "--local"
+                    ],
+                    "action": "store_true",
+                    "help": "Create an ignored local-only note under .agentic-workspace/local/memory without updating the repo manifest."
+                  },
+                  {
+                    "name": "local_reason",
+                    "flags": [
+                      "--local-reason"
+                    ],
+                    "default": "",
+                    "help": "Reason this note is machine-local rather than repo-shared."
+                  },
+                  {
+                    "name": "applies_to",
+                    "flags": [
+                      "--applies-to"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Repo paths or surfaces this note applies to."
+                  },
+                  {
+                    "name": "use_when",
+                    "flags": [
+                      "--use-when"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Routing hints for when to use this note."
+                  },
+                  {
+                    "name": "routes_from",
+                    "flags": [
+                      "--routes-from"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Surfaces or files that should route to this note."
+                  },
+                  {
+                    "name": "stale_when",
+                    "flags": [
+                      "--stale-when"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Conditions that make this note stale."
+                  },
+                  {
+                    "name": "evidence",
+                    "flags": [
+                      "--evidence"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Evidence references supporting this note."
+                  },
+                  {
+                    "name": "memory_role",
+                    "flags": [
+                      "--memory-role"
+                    ],
+                    "default": "",
+                    "help": "Memory role metadata."
+                  },
+                  {
+                    "name": "promotion_target",
+                    "flags": [
+                      "--promotion-target"
+                    ],
+                    "default": "",
+                    "help": "Optional durable promotion target."
+                  },
+                  {
+                    "name": "promotion_trigger",
+                    "flags": [
+                      "--promotion-trigger"
+                    ],
+                    "default": "",
+                    "help": "Optional promotion trigger."
+                  },
+                  {
+                    "name": "retention_after_promotion",
+                    "flags": [
+                      "--retention-after-promotion"
+                    ],
+                    "default": "",
+                    "help": "Retention policy after promotion."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without writing files."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
                 "name": "report",
                 "help": "Report compact memory module state.",
                 "options": [
@@ -9467,6 +9632,16 @@
               "default": "domain"
             },
             {
+              "name": "local",
+              "arg": "local",
+              "default": false
+            },
+            {
+              "name": "local_reason",
+              "arg": "local_reason",
+              "default": ""
+            },
+            {
               "name": "applies_to",
               "arg": "applies_to",
               "default": []
@@ -9928,6 +10103,12 @@
                 },
                 "summary": {
                   "value": "summary"
+                },
+                "local": {
+                  "value": "local"
+                },
+                "local_reason": {
+                  "value": "local_reason"
                 },
                 "applies_to": {
                   "value": "applies_to"
@@ -11380,6 +11561,22 @@
                 ],
                 "default": "",
                 "help": "Short note summary."
+              },
+              {
+                "name": "local",
+                "flags": [
+                  "--local"
+                ],
+                "action": "store_true",
+                "help": "Create an ignored local-only note under .agentic-workspace/local/memory without updating the repo manifest."
+              },
+              {
+                "name": "local_reason",
+                "flags": [
+                  "--local-reason"
+                ],
+                "default": "",
+                "help": "Reason this note is machine-local rather than repo-shared."
               },
               {
                 "name": "applies_to",

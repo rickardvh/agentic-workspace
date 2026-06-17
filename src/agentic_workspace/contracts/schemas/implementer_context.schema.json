@@ -60,6 +60,11 @@
       "$ref": "#/$defs/memory_decision_packet",
       "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
     },
+    "memory_consult": {
+      "type": "object",
+      "description": "Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory.",
+      "additionalProperties": true
+    },
     "planning_revision": {
       "type": "object",
       "description": "Optimistic Planning state revision observed by this implementer read surface.",

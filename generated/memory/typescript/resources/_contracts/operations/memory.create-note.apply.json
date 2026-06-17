@@ -35,6 +35,16 @@
       "required": false
     },
     {
+      "name": "local",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "local_reason",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "applies_to",
       "source": "cli-option",
       "required": false
@@ -169,6 +179,12 @@
           },
           "summary": {
             "value": "summary"
+          },
+          "local": {
+            "value": "local"
+          },
+          "local_reason": {
+            "value": "local_reason"
           },
           "applies_to": {
             "value": "applies_to"
