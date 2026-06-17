@@ -23,6 +23,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
       - name: Sync workspace dependencies
         run: make sync-all
 
@@ -44,6 +49,16 @@ jobs:
                       f"Release tag {tag!r} must match every package version; "
                       f"{package['pyproject']} declares {declared!r}"
                   )
+          for package in ownership["typescript_packages"]:
+              payload = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
+              declared = payload["version"]
+              if declared != version:
+                  raise SystemExit(
+                      f"Release tag {tag!r} must match every TypeScript package version; "
+                      f"{package['package_json']} declares {declared!r}"
+                  )
+              if payload.get("private") is not False:
+                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
 
       - name: Build Agentic Workspace package artifacts
         run: |
@@ -53,6 +68,9 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/memory
           uv build --wheel --sdist --out-dir dist packages/planning
           uv build --wheel --sdist --out-dir dist packages/verification
+          for package in generated/*/typescript; do
+            (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          done
 
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
@@ -99,12 +117,40 @@ jobs:
               package_entries.append(
                   {
                       "name": package["name"],
+                      "ecosystem": "python",
                       "version": version,
                       "pyproject": package["pyproject"],
                       "wheel": {"asset": wheel.name, "sha256": sha256(wheel)},
                       "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
                       "payload_schema": package["payload_schema"],
                       "payload_provenance": package["payload_provenance"],
+                      "generated_command_contract": package["generated_command_contract"],
+                  }
+              )
+          for package in ownership["typescript_packages"]:
+              package_json = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
+              declared = package_json["version"]
+              if declared != version:
+                  raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
+              if package_json.get("private") is not False:
+                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
+              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
+              if tarball is None:
+                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
+              checksum_lines.append(f"{sha256(tarball)}  {tarball.name}")
+              package_entries.append(
+                  {
+                      "name": package["name"],
+                      "ecosystem": "npm",
+                      "version": version,
+                      "package_json": package["package_json"],
+                      "package_root": package["package_root"],
+                      "tarball": {"asset": tarball.name, "sha256": sha256(tarball)},
+                      "entrypoints": package["entrypoints"],
+                      "python_package": package["python_package"],
+                      "runtime": package["runtime"],
+                      "runtime_requirement": package["runtime_requirement"],
+                      "release_policy": package["release_policy"],
                       "generated_command_contract": package["generated_command_contract"],
                   }
               )
@@ -146,7 +192,9 @@ jobs:
           manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
           if manifest["tag"] != os.environ["RELEASE_TAG"]:
               raise SystemExit("Release manifest tag mismatch")
-          if len(manifest["packages"]) != 4:
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          expected_package_count = len(ownership["packages"]) + len(ownership["typescript_packages"])
+          if len(manifest["packages"]) != expected_package_count:
               raise SystemExit("Release manifest must list every shipped package")
           checksums = {}
           for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
@@ -154,8 +202,11 @@ jobs:
               checksums[asset] = digest
           required_assets = {"agentic-workspace-release-manifest.json"}
           for package in manifest["packages"]:
-              required_assets.add(package["wheel"]["asset"])
-              required_assets.add(package["sdist"]["asset"])
+              if package.get("ecosystem") == "npm":
+                  required_assets.add(package["tarball"]["asset"])
+              else:
+                  required_assets.add(package["wheel"]["asset"])
+                  required_assets.add(package["sdist"]["asset"])
           missing = sorted(required_assets - set(checksums))
           if missing:
               raise SystemExit(f"Missing checksums for release assets: {missing}")
@@ -171,6 +222,7 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+            dist/*.tgz
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
           generate_release_notes: true

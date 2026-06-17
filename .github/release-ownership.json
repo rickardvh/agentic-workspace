@@ -12,6 +12,10 @@
     "packages/memory/pyproject.toml",
     "packages/planning/pyproject.toml",
     "packages/verification/pyproject.toml",
+    "generated/workspace/typescript/package.json",
+    "generated/memory/typescript/package.json",
+    "generated/planning/typescript/package.json",
+    "generated/verification/typescript/package.json",
     "uv.lock"
   ],
   "package_affecting_paths": [
@@ -64,6 +68,64 @@
       "sdist_prefix": "agentic_verification",
       "payload_schema": "agentic-workspace/verification-manifest/v1",
       "payload_provenance": ".agentic-workspace/verification/manifest.toml",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    }
+  ],
+  "typescript_packages": [
+    {
+      "name": "@agentic-workspace/workspace-cli",
+      "package_json": "generated/workspace/typescript/package.json",
+      "package_root": "generated/workspace/typescript",
+      "tarball_prefix": "agentic-workspace-workspace-cli",
+      "entrypoints": [
+        "agentic-workspace"
+      ],
+      "python_package": "agentic-workspace",
+      "runtime": "node",
+      "runtime_requirement": "node>=20",
+      "release_policy": "pack-and-publishable",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "@agentic-workspace/memory-cli",
+      "package_json": "generated/memory/typescript/package.json",
+      "package_root": "generated/memory/typescript",
+      "tarball_prefix": "agentic-workspace-memory-cli",
+      "entrypoints": [
+        "agentic-memory"
+      ],
+      "python_package": "agentic-memory",
+      "runtime": "node",
+      "runtime_requirement": "node>=20",
+      "release_policy": "pack-and-publishable",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "@agentic-workspace/planning-cli",
+      "package_json": "generated/planning/typescript/package.json",
+      "package_root": "generated/planning/typescript",
+      "tarball_prefix": "agentic-workspace-planning-cli",
+      "entrypoints": [
+        "agentic-planning"
+      ],
+      "python_package": "agentic-planning",
+      "runtime": "node",
+      "runtime_requirement": "node>=20",
+      "release_policy": "pack-and-publishable",
+      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+    },
+    {
+      "name": "@agentic-workspace/verification-cli",
+      "package_json": "generated/verification/typescript/package.json",
+      "package_root": "generated/verification/typescript",
+      "tarball_prefix": "agentic-workspace-verification-cli",
+      "entrypoints": [
+        "agentic-verification"
+      ],
+      "python_package": "agentic-verification",
+      "runtime": "node",
+      "runtime_requirement": "node>=20",
+      "release_policy": "pack-and-publishable",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],

@@ -2,18 +2,19 @@
 
 Agentic Workspace uses coordinated workspace releases. The root
 `agentic-workspace` package, `agentic-memory`, `agentic-planning`, and
-`agentic-verification` release together under one semver tag.
+`agentic-verification` release together under one semver tag, with both Python
+and TypeScript CLI distributions treated as first-class release artifacts.
 
 ## Release Goal
 
 The ordinary downstream path should be:
 
 1. CI proves the source tree.
-2. CI builds every workspace wheel and sdist.
+2. CI builds every workspace wheel, sdist, and TypeScript npm package tarball.
 3. CI proves installation from built artifacts outside the source tree.
 4. CI publishes a GitHub Release tagged `vMAJOR.MINOR.PATCH`.
-5. The release contains all wheels, all sdists, `SHA256SUMS`, and
-   `agentic-workspace-release-manifest.json`.
+5. The release contains all wheels, all sdists, all npm tarballs,
+   `SHA256SUMS`, and `agentic-workspace-release-manifest.json`.
 6. Host repositories can verify release identity, payload provenance, checksums,
    generated-command contract version, and command-generation dependency from the
    manifest plus checksums.
@@ -21,8 +22,9 @@ The ordinary downstream path should be:
 ## Coordinated Version
 
 `pyproject.toml` at the repo root is the canonical version source. During a
-coordinated release, every shipped package `pyproject.toml` must be normalized to
-that same version before artifacts are built.
+coordinated release, every shipped Python package `pyproject.toml` and generated
+TypeScript CLI `package.json` must be normalized to that same version before
+artifacts are built.
 
 The current divergent package versions are release debt. The first coordinated
 release must choose a workspace-wide version that does not downgrade any shipped
@@ -40,8 +42,10 @@ docs together.
 - package-affecting paths;
 - semver labels;
 - release commit allowed paths;
-- shipped package list;
+- shipped Python and TypeScript package lists;
 - per-package artifact prefixes;
+- TypeScript package roots, tarball prefixes, runtime requirements, and publish
+  policy;
 - payload schema or installed-state provenance surfaces;
 - generated-command contract version;
 - first coordinated release floor.
@@ -75,11 +79,12 @@ For merged package-affecting PRs, the release workflow:
 2. detects package-affecting paths;
 3. reads the merged PR semver label;
 4. computes the next coordinated version, respecting the first-release floor;
-5. rewrites all package `pyproject.toml` versions to the same value;
+5. rewrites all package `pyproject.toml` and TypeScript `package.json` versions
+   to the same value;
 6. updates `uv.lock`;
-7. runs tests, lint, typecheck, generated package proof, and package artifact
-   proof;
-8. builds every wheel and sdist;
+7. runs tests, lint, typecheck, generated package proof, TypeScript package
+   tests, and package artifact proof;
+8. builds every wheel, sdist, and TypeScript npm tarball;
 9. generates `SHA256SUMS`;
 10. generates `agentic-workspace-release-manifest.json`;
 11. verifies all release artifacts and metadata before publishing;
@@ -95,24 +100,35 @@ release artifact set. The release commit must not mix product behavior changes
 with version normalization.
 
 Package-affecting direct pushes to `master` are allowed only as an explicit
-version-release path: all shipped package versions must already be updated to the
-same valid version that does not downgrade below the coordinated floor. A
-package-affecting push with neither a merged-PR semver label context nor an
-explicit coordinated version bump exits cleanly without publishing a release.
+version-release path: all shipped Python and TypeScript package versions must
+already be updated to the same valid version that does not downgrade below the
+coordinated floor. A package-affecting push with neither a merged-PR semver label
+context nor an explicit coordinated version bump exits cleanly without
+publishing a release.
 
 ## Manual Tag Release
 
 A manually pushed `vMAJOR.MINOR.PATCH` tag is allowed only when every shipped
-package already declares that exact version. The tag workflow builds the same
-artifact set, generates checksums and the release manifest, verifies them, and
-publishes the GitHub Release.
+Python and TypeScript package already declares that exact version. The tag
+workflow builds the same artifact set, generates checksums and the release
+manifest, verifies them, and publishes the GitHub Release.
 
 ## All-Or-Nothing Invariant
 
-Coordinated releases are all-or-nothing. If any package version, lockfile entry,
-generated artifact, wheel, sdist, checksum, release manifest entry, or install
-proof is inconsistent, the workflow must fail before creating or publishing the
-tag or release.
+Coordinated releases are all-or-nothing. If any Python package version,
+TypeScript package version, lockfile entry, generated artifact, wheel, sdist, npm
+tarball, checksum, release manifest entry, or install proof is inconsistent, the
+workflow must fail before creating or publishing the tag or release.
+
+## TypeScript CLI Packages
+
+Generated TypeScript CLI packages under `generated/*/typescript` are release
+surfaces, not private fixtures. They must remain publishable package manifests
+with explicit Node runtime requirements and public scoped-package publish
+configuration. Release workflows run each package's `npm test`, pack each package
+with `npm pack`, include the resulting `.tgz` files in `SHA256SUMS`, and list
+them in `agentic-workspace-release-manifest.json` with the same coordinated
+release version as the Python packages.
 
 ## Payload Provenance
 
