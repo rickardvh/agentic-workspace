@@ -160,7 +160,7 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in ci_text
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
-    assert "actions/upload-artifact@v6.0.0" in ci_text
+    assert "actions/upload-artifact@v7.0.1" in ci_text
 
 
 def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
@@ -172,7 +172,7 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in release_text
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in release_text
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in release_text
-    assert "softprops/action-gh-release@v2.4.2" in release_text
+    assert "softprops/action-gh-release@v3.0.0" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
