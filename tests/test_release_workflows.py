@@ -53,6 +53,23 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["payload_provenance"]
         assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
+    typescript_package_names = [package["name"] for package in ownership["typescript_packages"]]
+    assert typescript_package_names == [
+        "@agentic-workspace/workspace-cli",
+        "@agentic-workspace/memory-cli",
+        "@agentic-workspace/planning-cli",
+        "@agentic-workspace/verification-cli",
+    ]
+    for package in ownership["typescript_packages"]:
+        package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
+        assert package_json["name"] == package["name"]
+        assert package_json["private"] is False
+        assert package_json["publishConfig"]["access"] == "public"
+        assert package_json["engines"]["node"] == ">=20"
+        assert package["runtime_requirement"] == "node>=20"
+        assert package["release_policy"] == "pack-and-publishable"
+        assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
+
 
 def test_package_affecting_scope_is_manifest_owned_and_covers_release_surfaces() -> None:
     paths = set(_ownership()["package_affecting_paths"])
@@ -106,11 +123,18 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
     assert "must have exactly one semver label before release" in workflow
     assert "for pyproject in package_pyprojects:" in workflow
     assert "uv lock" in workflow
+    assert "typescript_package_jsons" in workflow
+    assert "package_json_version_text" in workflow
+    assert "actions/setup-node@v6.4.0" in workflow
+    assert 'node-version: "24"' in workflow
     assert "make test-workspace" in workflow
     assert "make lint" in workflow
     assert "make typecheck" in workflow
     assert "make verify" in workflow
     assert "check_generated_command_packages.py" in workflow
+    assert "npm test" in workflow
+    assert "npm pack --pack-destination" in workflow
+    assert "generated/workspace/typescript/package.json" in workflow
     assert "check_no_absolute_paths.py" in workflow
     assert "agentic-workspace-release-manifest.json" in workflow
     assert "SHA256SUMS" in workflow
@@ -130,6 +154,10 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
+    assert "actions/setup-node@v6.4.0" in workflow
+    assert 'node-version: "24"' in workflow
+    assert "npm test && npm pack --pack-destination" in workflow
+    assert "typescript_packages" in workflow
     assert "agentic-workspace-release-manifest.json" in workflow
     assert "SHA256SUMS" in workflow
     assert "Missing checksums for release assets" in workflow
@@ -149,6 +177,7 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
             "dist/agentic_workspace-0.4.0.tar.gz",
             "dist/agentic_memory-0.4.0-py3-none-any.whl",
             "dist/agentic_memory-0.4.0.tar.gz",
+            "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
             "dist/agentic-workspace-release-manifest.json",
             "dist/SHA256SUMS",
             "dist/.gitignore",
@@ -160,6 +189,7 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
         "dist/agentic_workspace-0.4.0.tar.gz",
         "dist/agentic_memory-0.4.0-py3-none-any.whl",
         "dist/agentic_memory-0.4.0.tar.gz",
+        "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
         "dist/agentic-workspace-release-manifest.json",
         "dist/SHA256SUMS",
     ]
@@ -184,7 +214,14 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
     assert "Direct release push must set every package to the same version" in post_merge_workflow
     assert "would downgrade below floor" in post_merge_workflow
     assert "for pyproject in package_pyprojects:" in post_merge_workflow
+    assert "for package_json in typescript_package_jsons:" in post_merge_workflow
+    assert "version_files = [*package_pyprojects, *typescript_package_jsons]" in post_merge_workflow
+    assert 'payload["version"] = next_version' in post_merge_workflow
     assert sorted(ownership["release_commit_allowed_paths"]) == [
+        "generated/memory/typescript/package.json",
+        "generated/planning/typescript/package.json",
+        "generated/verification/typescript/package.json",
+        "generated/workspace/typescript/package.json",
         "packages/memory/pyproject.toml",
         "packages/planning/pyproject.toml",
         "packages/verification/pyproject.toml",

@@ -29,12 +29,18 @@
   "bin": {
     "agentic-verification": "./src/cli.mjs"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "src",
     "resources"
   ],
   "name": "@agentic-workspace/verification-cli",
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "node --test test/command-package.test.mjs"
   },

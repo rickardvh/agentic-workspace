@@ -19,6 +19,7 @@ SCHEMA_PATH = "command_generation:schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
 TYPESCRIPT_RUNTIME_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_runtime_support.mjs"
 OPERATION_PRIMITIVES_PATH = "src/agentic_workspace/contracts/operation_primitives.json"
+RELEASE_OWNERSHIP_PATH = ".github/release-ownership.json"
 
 
 def _operation_refs(command: dict[str, object], inherited: dict[str, object] | None = None) -> list[dict[str, object]]:
@@ -239,6 +240,37 @@ def load_workspace_command_package_ir(*, repo_root: Path = REPO_ROOT) -> dict[st
     return load_command_package_ir(repo_root / SOURCE_PATH, command_package_schema_path())
 
 
+def _typescript_release_package_metadata(*, repo_root: Path) -> dict[str, dict[str, object]]:
+    ownership_path = repo_root / RELEASE_OWNERSHIP_PATH
+    if not ownership_path.is_file():
+        return {}
+    ownership = json.loads(ownership_path.read_text(encoding="utf-8"))
+    packages = ownership.get("typescript_packages", [])
+    return {
+        str(package["package_json"]): package
+        for package in packages
+        if isinstance(package, dict) and isinstance(package.get("package_json"), str)
+    }
+
+
+def _normalize_releaseable_typescript_package_json(
+    output: GeneratedOutput,
+    *,
+    release_metadata: dict[str, dict[str, object]],
+    repo_root: Path,
+) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    metadata = release_metadata.get(relative)
+    if metadata is None:
+        return output
+    payload = json.loads(output.content)
+    payload["private"] = False
+    payload["engines"] = {"node": str(metadata.get("runtime_requirement", "node>=20")).removeprefix("node")}
+    payload["publishConfig"] = {"access": "public"}
+    return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
 def render_workspace_command_package_outputs(
     manifest: dict[str, object] | None = None,
     *,
@@ -252,7 +284,12 @@ def render_workspace_command_package_outputs(
         regenerate_command=REGENERATE_COMMAND,
         host_manifest=workspace_command_generation_host_manifest(repo_root=repo_root),
     )
-    return outputs
+    release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
+    return [
+        _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root)
+        for output in outputs
+    ]
+
 
 
 def generate_workspace_command_packages(*, repo_root: Path = REPO_ROOT, check: bool) -> list[str]:

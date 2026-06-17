@@ -36,6 +36,11 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
       - name: Resolve release bump
         id: release-bump
         env:
@@ -60,6 +65,7 @@ jobs:
           watched_paths = tuple(ownership["package_affecting_paths"])
           semver_labels = set(ownership["semver_labels"])
           package_pyprojects = [package["pyproject"] for package in ownership["packages"]]
+          typescript_package_jsons = [package["package_json"] for package in ownership["typescript_packages"]]
           floor_version = ownership["first_coordinated_release"]["floor_version"]
 
           def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -80,6 +86,9 @@ jobs:
 
           def version_text(path: str) -> str:
               return tomllib.loads(Path(path).read_text(encoding="utf-8"))["project"]["version"]
+
+          def package_json_version_text(path: str) -> str:
+              return json.loads(Path(path).read_text(encoding="utf-8"))["version"]
 
           def bump_version(version: str, label: str) -> str:
               major, minor, patch = parse_version(version)
@@ -172,7 +181,9 @@ jobs:
           if event_name == "push" and associated_pr_numbers(event["after"]):
               skip_release("Package-affecting push is associated with a merged PR; pull_request.closed handles the release decision.")
 
-          versions = [version_text(path) for path in package_pyprojects]
+          versions = [version_text(path) for path in package_pyprojects] + [
+              package_json_version_text(path) for path in typescript_package_jsons
+          ]
           for version in versions:
               parse_version(version)
           current_package_floor = max_version(versions)
@@ -180,11 +191,14 @@ jobs:
           needs_first_normalization = parse_version(current_package_floor) < parse_version(floor_version)
 
           if event_name == "push":
-              if not any(path in changed for path in package_pyprojects):
+              version_files = [*package_pyprojects, *typescript_package_jsons]
+              if not any(path in changed for path in version_files):
                   skip_release(
                       "Package-affecting push has no semver-label context and no coordinated explicit version bump."
                   )
-              explicit_versions = {version_text(path) for path in package_pyprojects}
+              explicit_versions = {version_text(path) for path in package_pyprojects} | {
+                  package_json_version_text(path) for path in typescript_package_jsons
+              }
               if len(explicit_versions) != 1:
                   skip_release(f"Direct release push must set every package to the same version, got {sorted(explicit_versions)}.")
               current_version = explicit_versions.pop()
@@ -214,6 +228,11 @@ jobs:
                   re.sub(r'^version = "[^"]+"$', f'version = "{next_version}"', text, count=1, flags=re.MULTILINE),
                   encoding="utf-8",
               )
+          for package_json in typescript_package_jsons:
+              path = Path(package_json)
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              payload["version"] = next_version
+              path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
           set_release_outputs(next_version)
           output("pr_number", pr_number)
           output("semver_label", selected[0])
@@ -235,6 +254,9 @@ jobs:
           make typecheck
           make verify
           uv run python scripts/check/check_generated_command_packages.py
+          for package in generated/*/typescript; do
+            (cd "$package" && npm test)
+          done
           uv run python scripts/check/check_no_absolute_paths.py
 
       - name: Build Agentic Workspace package artifacts
@@ -246,6 +268,9 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/memory
           uv build --wheel --sdist --out-dir dist packages/planning
           uv build --wheel --sdist --out-dir dist packages/verification
+          for package in generated/*/typescript; do
+            (cd "$package" && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          done
 
       - name: Prove built workspace stack installs outside source tree
         if: steps.release-bump.outputs.release_needed == 'true'
@@ -297,12 +322,40 @@ jobs:
               package_entries.append(
                   {
                       "name": package["name"],
+                      "ecosystem": "python",
                       "version": version,
                       "pyproject": package["pyproject"],
                       "wheel": {"asset": wheel.name, "sha256": sha256(wheel)},
                       "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
                       "payload_schema": package["payload_schema"],
                       "payload_provenance": package["payload_provenance"],
+                      "generated_command_contract": package["generated_command_contract"],
+                  }
+              )
+          for package in ownership["typescript_packages"]:
+              package_json = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
+              declared = package_json["version"]
+              if declared != version:
+                  raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
+              if package_json.get("private") is not False:
+                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
+              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
+              if tarball is None:
+                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
+              checksum_lines.append(f"{sha256(tarball)}  {tarball.name}")
+              package_entries.append(
+                  {
+                      "name": package["name"],
+                      "ecosystem": "npm",
+                      "version": version,
+                      "package_json": package["package_json"],
+                      "package_root": package["package_root"],
+                      "tarball": {"asset": tarball.name, "sha256": sha256(tarball)},
+                      "entrypoints": package["entrypoints"],
+                      "python_package": package["python_package"],
+                      "runtime": package["runtime"],
+                      "runtime_requirement": package["runtime_requirement"],
+                      "release_policy": package["release_policy"],
                       "generated_command_contract": package["generated_command_contract"],
                   }
               )
@@ -346,7 +399,9 @@ jobs:
           manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
           if manifest["version"] != os.environ["RELEASE_VERSION"] or manifest["tag"] != os.environ["RELEASE_TAG"]:
               raise SystemExit("Release manifest version/tag mismatch")
-          if len(manifest["packages"]) != 4:
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          expected_package_count = len(ownership["packages"]) + len(ownership["typescript_packages"])
+          if len(manifest["packages"]) != expected_package_count:
               raise SystemExit("Release manifest must list every shipped package")
           checksums = {}
           for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
@@ -354,8 +409,11 @@ jobs:
               checksums[asset] = digest
           required_assets = {"agentic-workspace-release-manifest.json"}
           for package in manifest["packages"]:
-              required_assets.add(package["wheel"]["asset"])
-              required_assets.add(package["sdist"]["asset"])
+              if package.get("ecosystem") == "npm":
+                  required_assets.add(package["tarball"]["asset"])
+              else:
+                  required_assets.add(package["wheel"]["asset"])
+                  required_assets.add(package["sdist"]["asset"])
           missing = sorted(required_assets - set(checksums))
           if missing:
               raise SystemExit(f"Missing checksums for release assets: {missing}")
@@ -370,7 +428,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml packages/memory/pyproject.toml packages/planning/pyproject.toml packages/verification/pyproject.toml uv.lock
+          git add pyproject.toml packages/memory/pyproject.toml packages/planning/pyproject.toml packages/verification/pyproject.toml generated/workspace/typescript/package.json generated/memory/typescript/package.json generated/planning/typescript/package.json generated/verification/typescript/package.json uv.lock
           RELEASE_DIFF="$(git diff --cached --name-only)"
           if [ -n "$RELEASE_DIFF" ]; then
             python - <<'PY'
@@ -403,6 +461,7 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+            dist/*.tgz
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
           generate_release_notes: true
