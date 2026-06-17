@@ -2704,6 +2704,7 @@
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -2820,6 +2821,7 @@
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -3216,6 +3218,7 @@
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"
@@ -3302,6 +3305,7 @@
           "name": "target"
         },
         {
+          "action": "append",
           "flags": [
             "--modules",
             "--module"

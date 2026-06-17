@@ -261,7 +261,7 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     assert doctor_payload["health"] == "attention-needed"
     repair = next(action for action in doctor_payload["repair_actions"] if action["id"] == "apply-safe-memory-lifecycle-repair")
     assert repair["safe_to_apply"] is True
-    assert "--module memory" in repair["command"]
+    assert "--modules memory" in repair["command"]
     assert "payload sync" in repair["current_fault_summary"]
     assert "not a Python package upgrade" in repair["current_fault_summary"]
     assert "source-checkout" in " ".join(repair["do_not"])
@@ -289,7 +289,7 @@ def test_setup_surfaces_assurance_verification_onboarding_without_optional_modul
     assert routes["assurance"]["report_command"] == (
         "agentic-workspace report --target ./repo --section assurance_requirements --format json"
     )
-    assert routes["verification"]["status"] == "configured"
+    assert routes["verification"]["status"] == "installed"
     assert routes["verification"]["command"] == "agentic-workspace defaults --section verification_onboarding --format json"
     assert routes["verification"]["report_command"] == "agentic-workspace report --target ./repo --section verification --format json"
     assert payload["current"]["installed_modules"]
@@ -299,6 +299,42 @@ def test_setup_surfaces_assurance_verification_onboarding_without_optional_modul
     ]
     assert "agentic-workspace defaults --section assurance_onboarding --format json" in payload["next_action"]["commands"]
     assert "agentic-workspace defaults --section verification_onboarding --format json" in payload["next_action"]["commands"]
+
+
+def test_setup_reports_verification_enabled_unconfigured_state(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    config_path = target / ".agentic-workspace" / "config.toml"
+    config_text = config_path.read_text(encoding="utf-8")
+    config_path.write_text(config_text.replace('enabled = ["planning", "memory"]', 'enabled = ["planning", "memory", "verification"]'))
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(target), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    verification = payload["onboarding_routes"]["verification"]
+    assert verification["status"] == "enabled-unconfigured"
+    assert verification["enablement"]["manifest_path"] == ".agentic-workspace/verification/manifest.toml"
+    assert verification["enablement"]["manifest_created"] is False
+    assert "verification" in verification["enablement"]["config_snippet"]
+
+
+def test_install_verification_reports_repo_owned_manifest_next_action(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["install", "--target", str(target), "--modules", "verification", "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["module_reports"] if report["module"] == "workspace")
+    manifest_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/verification/manifest.toml"
+    )
+    assert manifest_action["kind"] == "manual review"
+    assert "repo-owned manifest" in manifest_action["detail"]
 
 
 def test_doctor_module_filter_does_not_require_llms_adapter(tmp_path: Path, capsys) -> None:

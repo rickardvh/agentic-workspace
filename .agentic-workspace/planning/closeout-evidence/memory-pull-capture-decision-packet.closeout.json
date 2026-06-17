@@ -4,6 +4,7 @@
   "plan_id": "memory-pull-capture-decision-packet",
   "created_at": "2026-06-17T08:20:00+00:00",
   "source_plan": ".agentic-workspace/planning/execplans/archive/memory-pull-capture-decision-packet.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/memory-pull-capture-decision-packet.plan.json",
   "retention": {
     "state": "retained-closeout-evidence",
     "reason": "PR #1580 closure depends on explicit end-to-end Memory pull/capture dogfooding evidence, not only implementation tests.",
