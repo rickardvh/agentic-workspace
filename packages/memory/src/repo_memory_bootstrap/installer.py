@@ -787,7 +787,8 @@ def suggest_memory_note_capture(
     candidates.sort(key=lambda item: (-int(item["score"]), str(item["path"])))
     best = candidates[0] if candidates else None
     force_reason = force_new_reason.strip()
-    strong_best = best if best and int(best.get("score", 0)) >= 20 else None
+    best_score = best.get("score", 0) if best else 0
+    strong_best = best if isinstance(best_score, int) and best_score >= 20 else None
     local_capture = _looks_like_local_memory_capture(
         summary=summary,
         task=task,
@@ -852,7 +853,7 @@ def suggest_memory_note_capture(
         payload["promotion_metadata_guidance"] = promotion_guidance
         if promotion_guidance["metadata_required"]:
             payload["commands"] = [
-                *cast(list[str], payload["commands"]),
+                *payload["commands"],
                 "agentic-memory promotion-report --target ./repo --mode remediation --format json",
             ]
     return payload
