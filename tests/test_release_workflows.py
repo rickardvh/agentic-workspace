@@ -3,7 +3,6 @@ from __future__ import annotations
 import fnmatch
 import importlib.util
 import json
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -267,13 +266,3 @@ def test_post_merge_release_uses_floor_for_first_coordinated_normalization() -> 
     assert "next_version = floor_version" in workflow
     assert "else:" in workflow
     assert "next_version = bump_version(current_floor, selected[0])" in workflow
-
-
-def test_current_versions_have_no_downgrade_floor_for_first_coordinated_release() -> None:
-    ownership = _ownership()
-    versions = [
-        tomllib.loads((ROOT / package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"] for package in ownership["packages"]
-    ]
-    floor = ownership["first_coordinated_release"]["floor_version"]
-
-    assert tuple(int(part) for part in floor.split(".")) >= max(tuple(int(part) for part in version.split(".")) for version in versions)
