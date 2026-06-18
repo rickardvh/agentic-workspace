@@ -13,6 +13,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    Path("tools/model-cli-harness/sandbox/codex/Dockerfile"): frozenset(
+        {
+            "/" + "home/agent/workspace",
+            "/" + "tmp/agentic-workspace-fixture-venv",
+            "/" + "tmp/uv-cache",
+        }
+    ),
+    Path("tools/model-cli-harness/suites/copilot-workflow-smoke.json"): frozenset(
+        {
+            "/" + "tmp/agentic-workspace-fixture-venv",
+            "/" + "tmp/uv-cache",
+        }
+    ),
     Path("tests/test_workspace_doctor_status_cli.py"): frozenset(
         {
             "/" + "var/lib/apt/lists/*\\n",
@@ -24,7 +37,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
 _POSIX_ROOT_NAMES = ("Users", "home", "tmp", "var", "etc", "opt", "srv", "mnt", "media", "root", "workspace", "workspaces")
 _POSIX_PLACEHOLDER_ROOTS = (("absolute", "path"), ("path", "to"))
 
-_TOKEN_TRAILING_PUNCTUATION = ".,:;!?)]}>\"'"
+_TOKEN_TRAILING_PUNCTUATION = ".,:;!?)]}>\"'`"
 
 WINDOWS_ABSOLUTE_PATH = re.compile(r"(?<![A-Za-z0-9_./-])[A-Za-z]:[\\/]\S+")
 POSIX_ABSOLUTE_PATH = re.compile(

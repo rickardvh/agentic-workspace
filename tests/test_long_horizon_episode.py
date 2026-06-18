@@ -92,6 +92,16 @@ def _write_suite(tmp_path: Path, *, evaluator_code: str | None = None) -> Path:
                         "block_on_preflight_failure": False,
                         "command": [sys.executable, "-c", evaluator_code, "{repo}", "{phase_id}", "{share_path}", "{prompt}"],
                     },
+                    "fake-sbx": {
+                        "default_model": "fake-sbx-model",
+                        "block_on_preflight_failure": False,
+                        "sandbox": {
+                            "backend": "docker-sandbox",
+                            "agent": "codex",
+                            "template": "docker/sandbox-templates:codex",
+                        },
+                        "command": [sys.executable, "-c", writer_code, "{repo}", "{phase_id}", "{share_path}", "{prompt}"],
+                    },
                 },
                 "scenarios": [],
             }
@@ -290,6 +300,27 @@ def test_long_horizon_episode_supports_same_agent_phase_override(tmp_path: Path)
     assert [phase["adapter_id"] for phase in phases] == ["fake-a", "fake-a"]
     assert phases[1]["model"] == "same-agent-model"
     assert "Resume as the same agent" in phases[1]["prompt"]
+
+
+def test_long_horizon_episode_cli_adapter_override_marks_sandbox(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    suite = _write_suite(tmp_path)
+    episode = _write_episode(tmp_path)
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        adapter_override="fake-sbx",
+        evaluator_adapter_override="fake-sbx",
+    )
+
+    mode = payload["modes"][0]
+    assert {phase["adapter_id"] for phase in mode["phases"]} == {"fake-sbx"}
+    assert {phase["sandbox"]["evidence"] for phase in mode["phases"]} == {"sandbox-backed"}
+    assert mode["evaluation"]["adapter_id"] == "fake-sbx"
+    assert mode["evaluation"]["sandbox"]["identity"] == "docker-sandbox:codex:fake-sbx"
 
 
 def test_long_horizon_episode_comparison_reports_same_agent_vs_switch(tmp_path: Path) -> None:

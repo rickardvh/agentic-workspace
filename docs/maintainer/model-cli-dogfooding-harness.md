@@ -31,6 +31,21 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --scenario startup-orientation
 ```
 
+The Docker Sandbox-backed Codex adapter runs the copied fixture through Docker Sandboxes instead of the host shell:
+
+```powershell
+uv run python scripts/model_cli_harness/build_sbx_codex_template.py
+
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter codex-sbx `
+  --model gpt-5.3-codex-spark `
+  --scenario startup-orientation
+```
+
+Install the Docker Sandboxes CLI as `sbx` first. On Windows without `winget`, install the official `DockerSandboxes.msi` release asset and make sure `%LOCALAPPDATA%\DockerSandboxes\bin` is on `PATH`; the harness also checks that user-local path during preflight. Authenticate with `sbx login`, `sbx secret set -g openai --oauth`, or an `OPENAI_API_KEY` before an executed run.
+
+The `build_sbx_codex_template.py` helper builds the repo-owned template image `agentic-workspace/codex-sbx:local`, saves it from Docker, and loads it into Docker Sandboxes with `sbx template load`. The image is based on Docker's Codex sandbox template and sets Linux-safe uv defaults for mounted fixtures. It does not copy the source checkout into the runtime image; the copied fixture installs AW from the public GitHub release wheels as normal package dependencies through `uv sync`. Authentication and credentials stay host-side; the sandboxed Codex run preserves Docker Sandboxes' generated Codex config so OAuth subscription auth can route through the sandbox proxy provider.
+
 The runner defaults to dry-run. It copies the scenario fixture into the configured local scratch root under `.agentic-workspace/local/scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
 Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
@@ -71,6 +86,8 @@ Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 - `required_executables` and `required_shells`: optional preflight requirements. Entries may be strings or objects with `name`, `candidate_paths`, and `add_parent_to_path`.
 - `block_on_preflight_failure`: whether missing requirements should prevent model execution.
 - `provider_home_env` and `provider_home_path`: optional state-isolation hook used by `--isolate-provider-home`.
+- `sandbox`: optional sandbox adapter metadata. The result record includes `sandbox.kind`, `backend`, `agent`, `identity`, `repo_path`, `setup_status`, `setup_failures`, and `evidence: sandbox-backed`.
+- `artifact_capture`: optional host artifact capture from adapter-visible paths. The `codex-sbx` adapter writes the final message inside the mounted fixture and the harness copies it back to the standard run-local `share_path`.
 - `scenarios`: disposable fixture name, human prompt or `prompt_variants`, expected signals, scoring notes, and optional metadata scoring.
 - `fixtures`: copied repos under `tools/model-cli-harness/fixtures/`.
 
@@ -146,6 +163,17 @@ uv run python scripts/model_cli_harness/long_horizon_episode.py `
 
 Dry-run remains the default. Add `--execute` only when you intentionally want the runner to clone or copy the episode repo, run phase prompts, and optionally invoke an evaluator adapter.
 
+To collect sandbox-backed Codex evidence for a pinned episode, override the phase and evaluator adapters:
+
+```powershell
+uv run python scripts/model_cli_harness/long_horizon_episode.py `
+  --episode tools/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
+  --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json `
+  --adapter codex-sbx `
+  --evaluator-adapter codex-sbx `
+  --format json
+```
+
 The episode runner supports:
 
 - multiple modes, such as baseline and AW-assisted;
@@ -153,6 +181,7 @@ The episode runner supports:
 - multiple phases against the same copied or cloned repo;
 - hidden-transcript resume phases via `hide_transcript_for_resume`;
 - per-phase adapter/model selection for agent switching;
+- CLI adapter/model overrides for sandbox-backed or comparison runs without changing episode metadata;
 - mode-level phase overrides for same-agent continuation versus switched-agent comparison;
 - checkpoint capture for diffs, transcripts, final answers, and validation output;
 - a separate evaluator adapter with a controlled evidence bundle;
@@ -247,6 +276,7 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
 - The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.
 - The Codex adapter runs `codex exec --dangerously-bypass-approvals-and-sandbox` with a copied fixture as its working directory, writes the final message to the run-local share file, and captures JSONL events when available. The harness relies on copied disposable fixtures for isolation because the Codex sandbox can otherwise block the installed package CLI from running.
+- The `codex-sbx` adapter preflights `sbx`, then runs the host-side bridge `scripts/model_cli_harness/run_sbx_codex_adapter.py`. The bridge creates a named Docker Sandbox from the repo-owned `agentic-workspace/codex-sbx:local` template and executes `codex exec` inside it so Codex operates on the copied fixture from the sandbox. It intentionally preserves the sandbox-provided Codex config because Docker Sandboxes use that config to route OAuth subscription auth through their proxy provider. Authentication, account-scope, network, or sandbox startup failures remain adapter/runtime failures; the harness does not fall back to host `codex`.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - The runner classifies provider/runtime and adapter/tooling limits separately from product workflow failures. Examples include provider capacity errors, terminal noise, missing shell tools, permission-denied command execution, and adapters that cannot execute `agentic-workspace` commands through their tool layer.
 - Normal tests should validate command rendering and fixture isolation, not run external models.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -167,7 +168,12 @@ def _path_slug(value: str, max_length: int) -> str:
     return (rendered or "episode")[:max_length]
 
 
-def _bootstrap_aw_mode(repo_path: Path) -> None:
+def _bootstrap_aw_mode(
+    repo_path: Path,
+    *,
+    dependency_specs: list[str] | None = None,
+    source_checkout_path: str | None = None,
+) -> None:
     source_workspace = AW_MODE_FIXTURE / ".agentic-workspace"
     target_workspace = repo_path / ".agentic-workspace"
     if not target_workspace.exists():
@@ -180,7 +186,11 @@ def _bootstrap_aw_mode(repo_path: Path) -> None:
             target_agents.write_text(existing_agents.rstrip() + "\n\n" + source_agents + "\n", encoding="utf-8")
     else:
         target_agents.write_text(source_agents + "\n", encoding="utf-8")
-    harness._prepare_source_checkout_invocation(repo_path)
+    harness._prepare_source_checkout_invocation(
+        repo_path,
+        dependency_specs=dependency_specs,
+        source_checkout_path=source_checkout_path,
+    )
 
 
 def _phase_overrides(mode: dict[str, Any], *, field: str) -> dict[str, dict[str, Any]]:
@@ -199,7 +209,15 @@ def _phase_overrides(mode: dict[str, Any], *, field: str) -> dict[str, dict[str,
     return overrides
 
 
-def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness.HarnessPaths, execute: bool) -> dict[str, Any]:
+def _prepare_mode_repo(
+    *,
+    suite_path: Path,
+    mode: dict[str, Any],
+    paths: harness.HarnessPaths,
+    execute: bool,
+    dependency_specs: list[str] | None = None,
+    source_checkout_path: str | None = None,
+) -> dict[str, Any]:
     paths.run_root.mkdir(parents=True, exist_ok=False)
     setup_before: dict[str, dict[str, Any]] | None = None
     fixture = mode.get("fixture")
@@ -212,9 +230,17 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
         shutil.copytree(fixture_path, paths.repo_path)
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
-            _bootstrap_aw_mode(paths.repo_path)
+            _bootstrap_aw_mode(
+                paths.repo_path,
+                dependency_specs=dependency_specs,
+                source_checkout_path=source_checkout_path,
+            )
         else:
-            harness._prepare_source_checkout_invocation(paths.repo_path)
+            harness._prepare_source_checkout_invocation(
+                paths.repo_path,
+                dependency_specs=dependency_specs,
+                source_checkout_path=source_checkout_path,
+            )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     repo_url = mode.get("repo_url")
     base_commit = mode.get("base_commit")
@@ -225,7 +251,17 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
         (paths.repo_path / "PINNED-REPO.txt").write_text(f"{repo_url}\n{base_commit}\n", encoding="utf-8")
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
-            _bootstrap_aw_mode(paths.repo_path)
+            _bootstrap_aw_mode(
+                paths.repo_path,
+                dependency_specs=dependency_specs,
+                source_checkout_path=source_checkout_path,
+            )
+        else:
+            harness._prepare_source_checkout_invocation(
+                paths.repo_path,
+                dependency_specs=dependency_specs,
+                source_checkout_path=source_checkout_path,
+            )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     result = harness._run_command(["git", "clone", repo_url, str(paths.repo_path)], cwd=paths.run_root, timeout_seconds=900)
     if result["returncode"] != 0:
@@ -235,7 +271,17 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
         raise RuntimeError(f"git checkout failed for {base_commit}: {checkout['stderr']}")
     if mode.get("aw_enabled"):
         setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
-        _bootstrap_aw_mode(paths.repo_path)
+        _bootstrap_aw_mode(
+            paths.repo_path,
+            dependency_specs=dependency_specs,
+            source_checkout_path=source_checkout_path,
+        )
+    else:
+        harness._prepare_source_checkout_invocation(
+            paths.repo_path,
+            dependency_specs=dependency_specs,
+            source_checkout_path=source_checkout_path,
+        )
     return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
 
 
@@ -269,6 +315,21 @@ def _adapter_command(
         prompt_id=f"{replacements.get('mode_id', 'mode')}-{replacements.get('phase_id', 'phase')}",
     )
     return command, resolved_model, adapter, prompt_transport, command_replacements
+
+
+def _adapter_fixture_source_path(*, suite: dict[str, Any], adapter_id: str) -> str | None:
+    adapter = suite.get("adapters", {}).get(adapter_id)
+    if not isinstance(adapter, dict):
+        return None
+    source_path = adapter.get("fixture_source_path")
+    return source_path if isinstance(source_path, str) and source_path.strip() else None
+
+
+def _adapter_fixture_dependencies(*, suite: dict[str, Any], adapter_id: str) -> list[str]:
+    adapter = suite.get("adapters", {}).get(adapter_id)
+    if not isinstance(adapter, dict):
+        return ["agentic-workspace"]
+    return harness._adapter_fixture_dependencies(adapter)
 
 
 def _run_validation_commands(
@@ -489,6 +550,10 @@ def run_episode(
     mode_filter: str | None = None,
     evaluator: bool = True,
     timeout_seconds: int = 900,
+    adapter_override: str | None = None,
+    model_override: str | None = None,
+    evaluator_adapter_override: str | None = None,
+    evaluator_model_override: str | None = None,
 ) -> dict[str, Any]:
     episode = load_episode(episode_path)
     suite = harness._load_json(suite_path)
@@ -498,11 +563,26 @@ def run_episode(
     mode_results: list[dict[str, Any]] = []
     for mode in modes:
         paths = _episode_paths(episode=episode, mode_id=mode["id"], output_root=output_root)
-        setup_mutation_summary = _prepare_mode_repo(suite_path=suite_path, mode=mode, paths=paths, execute=execute)
+        setup_adapter_id = adapter_override or str(episode.get("default_adapter") or "copilot")
+        setup_mutation_summary = _prepare_mode_repo(
+            suite_path=suite_path,
+            mode=mode,
+            paths=paths,
+            execute=execute,
+            dependency_specs=_adapter_fixture_dependencies(suite=suite, adapter_id=setup_adapter_id),
+            source_checkout_path=_adapter_fixture_source_path(suite=suite, adapter_id=setup_adapter_id),
+        )
         replacements = {
             "repo": str(paths.repo_path),
             "run_root": str(paths.run_root),
+            "python": harness.sys.executable,
             "source_root": str(harness.REPO_ROOT),
+            "sandbox_name": harness._safe_sandbox_name(
+                adapter_id=adapter_override or str(episode.get("default_adapter") or "copilot"),
+                run_root=paths.run_root,
+            ),
+            "program_files": os.environ.get("ProgramFiles", ""),
+            "local_app_data": os.environ.get("LOCALAPPDATA", ""),
             "mode_id": str(mode["id"]),
             "episode_id": str(episode["id"]),
         }
@@ -528,24 +608,48 @@ def run_episode(
                 "transcript_path": str(phase_transcript),
                 "prompt": phase_prompt,
             }
+            phase_adapter_id = adapter_override or str(phase.get("adapter") or episode.get("default_adapter") or "copilot")
+            phase_model = model_override or (phase.get("model") if isinstance(phase.get("model"), str) else None)
             command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
-                adapter_id=str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
-                model=phase.get("model") if isinstance(phase.get("model"), str) else None,
+                adapter_id=phase_adapter_id,
+                model=phase_model,
                 replacements=phase_replacements,
             )
             env = harness._adapter_environment(adapter, replacements=command_replacements, isolate_provider_home=False)
             preflight = harness._adapter_preflight(adapter, command=command, replacements=command_replacements)
+            execution_command = harness._execution_command(command, preflight)
+            sandbox_report = harness._adapter_sandbox_report(
+                adapter,
+                adapter_id=phase_adapter_id,
+                model=resolved_model,
+                repo_path=paths.repo_path,
+                preflight=preflight,
+                command=command,
+            )
             env = harness._prepend_env_path(env, preflight["path_prepend"])
             result: dict[str, Any]
             if execute:
-                result = harness._run_command(command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                result = harness._run_command(execution_command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                artifact_capture = harness._capture_adapter_artifacts(
+                    adapter,
+                    replacements=command_replacements,
+                    share_path=phase_share,
+                )
                 result["status"] = harness._classify_result_status(result)
                 if phase_share.exists():
                     result["final_message"] = phase_share.read_text(encoding="utf-8")
                 harness._copy_transcript(str(result.get("stdout", "")), phase_transcript)
+                sandbox_report = harness._sandbox_runtime_report(sandbox_report, result)
             else:
                 result = {"status": "dry-run", "command": command}
+                artifact_capture = {
+                    "kind": "agentic-workspace/model-cli-adapter-artifact-capture/v1",
+                    "share_path": str(phase_share),
+                    "share_captured": False,
+                    "share_captured_from": "",
+                    "share_path_candidates": [],
+                }
             current_snapshot = harness._file_snapshot(paths.repo_path, include_ignored=True)
             mutation_summary = harness._snapshot_diff(previous_snapshot, current_snapshot)
             previous_snapshot = current_snapshot
@@ -567,14 +671,17 @@ def run_episode(
             phase_results.append(
                 {
                     "phase_id": phase["id"],
-                    "adapter_id": str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
+                    "adapter_id": phase_adapter_id,
                     "model": resolved_model,
                     "prompt": phase_prompt,
                     "prompt_transport": prompt_transport,
                     "prior_transcript_included": prior_included,
                     "hide_transcript_for_resume": bool(phase.get("hide_transcript_for_resume")),
                     "command": command,
+                    "execution_command": execution_command if execution_command != command else [],
                     "preflight": preflight,
+                    "sandbox": sandbox_report or {"enabled": False},
+                    "artifact_capture": artifact_capture,
                     "result": result,
                     "mutation_summary": mutation_summary,
                     "continuation_contribution": contribution["kind"],
@@ -606,22 +713,40 @@ def run_episode(
                 "share_path": str(evaluator_share),
                 "prompt": evaluator_prompt,
             }
+            evaluator_adapter_id = evaluator_adapter_override or str(
+                evaluator_config.get("adapter")
+                or episode.get("default_evaluator_adapter")
+                or episode.get("default_adapter")
+                or "copilot"
+            )
+            evaluator_model = evaluator_model_override or (
+                evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None
+            )
             command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
-                adapter_id=str(
-                    evaluator_config.get("adapter")
-                    or episode.get("default_evaluator_adapter")
-                    or episode.get("default_adapter")
-                    or "copilot"
-                ),
-                model=evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None,
+                adapter_id=evaluator_adapter_id,
+                model=evaluator_model,
                 replacements=evaluator_replacements,
             )
             env = harness._adapter_environment(adapter, replacements=command_replacements, isolate_provider_home=False)
             preflight = harness._adapter_preflight(adapter, command=command, replacements=command_replacements)
+            execution_command = harness._execution_command(command, preflight)
+            sandbox_report = harness._adapter_sandbox_report(
+                adapter,
+                adapter_id=evaluator_adapter_id,
+                model=resolved_model,
+                repo_path=paths.repo_path,
+                preflight=preflight,
+                command=command,
+            )
             env = harness._prepend_env_path(env, preflight["path_prepend"])
             if execute:
-                evaluator_result = harness._run_command(command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                evaluator_result = harness._run_command(execution_command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                artifact_capture = harness._capture_adapter_artifacts(
+                    adapter,
+                    replacements=command_replacements,
+                    share_path=evaluator_share,
+                )
                 if evaluator_share.exists():
                     evaluator_result["final_message"] = evaluator_share.read_text(encoding="utf-8")
                 text = str(evaluator_result.get("final_message") or evaluator_result.get("stdout") or "")
@@ -631,23 +756,29 @@ def run_episode(
                 except ValueError as exc:
                     evaluation_payload = {"error": str(exc)}
                     evaluation_status = "invalid"
+                sandbox_report = harness._sandbox_runtime_report(sandbox_report, evaluator_result)
             else:
                 evaluator_result = {"status": "dry-run", "command": command}
+                artifact_capture = {
+                    "kind": "agentic-workspace/model-cli-adapter-artifact-capture/v1",
+                    "share_path": str(evaluator_share),
+                    "share_captured": False,
+                    "share_captured_from": "",
+                    "share_path_candidates": [],
+                }
                 evaluation_payload = {"status": "not-run"}
                 evaluation_status = "not-run"
             mode_result["evaluation"] = {
                 "status": evaluation_status,
-                "adapter_id": str(
-                    evaluator_config.get("adapter")
-                    or episode.get("default_evaluator_adapter")
-                    or episode.get("default_adapter")
-                    or "copilot"
-                ),
+                "adapter_id": evaluator_adapter_id,
                 "model": resolved_model,
                 "prompt": evaluator_prompt,
                 "prompt_transport": prompt_transport,
                 "command": command,
+                "execution_command": execution_command if execution_command != command else [],
                 "preflight": preflight,
+                "sandbox": sandbox_report or {"enabled": False},
+                "artifact_capture": artifact_capture,
                 "result": evaluator_result,
                 "payload": evaluation_payload,
                 "hidden_oracle_excluded": episode.get("hidden_oracle") is not None,
@@ -674,6 +805,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--suite", type=Path, default=harness.DEFAULT_SUITE)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--mode", help="Run only one episode mode.")
+    parser.add_argument("--adapter", help="Override the adapter used for all episode phases.")
+    parser.add_argument("--model", help="Override the model used for all episode phases.")
+    parser.add_argument("--evaluator-adapter", help="Override the evaluator adapter.")
+    parser.add_argument("--evaluator-model", help="Override the evaluator model.")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--no-evaluator", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, default=900)
@@ -691,6 +826,10 @@ def main(argv: list[str] | None = None) -> int:
         mode_filter=args.mode,
         evaluator=not args.no_evaluator,
         timeout_seconds=args.timeout_seconds,
+        adapter_override=args.adapter,
+        model_override=args.model,
+        evaluator_adapter_override=args.evaluator_adapter,
+        evaluator_model_override=args.evaluator_model,
     )
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))

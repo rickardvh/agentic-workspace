@@ -55,6 +55,7 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "pyproject.toml",
     "scripts/run_agentic_workspace.py",
 )
+SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
 
 
 @dataclass(frozen=True)
@@ -344,7 +345,30 @@ def _scenario_paths(
     )
 
 
-def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: HarnessPaths) -> None:
+def _safe_sandbox_name(*, adapter_id: str, run_root: Path) -> str:
+    digest = hashlib.sha1(str(run_root).encode("utf-8")).hexdigest()[:10]
+    safe_adapter = re.sub(r"[^A-Za-z0-9.+-]+", "-", adapter_id).strip(".+-") or "adapter"
+    return f"aw-{safe_adapter}-{digest}"[:63]
+
+
+def _adapter_fixture_dependencies(adapter: dict[str, Any]) -> list[str]:
+    dependencies = adapter.get("fixture_dependencies")
+    if isinstance(dependencies, list) and all(isinstance(item, str) and item.strip() for item in dependencies):
+        return dependencies
+    dependency = adapter.get("fixture_dependency")
+    if isinstance(dependency, str) and dependency.strip():
+        return [dependency]
+    return ["agentic-workspace"]
+
+
+def _prepare_fixture(
+    *,
+    suite_path: Path,
+    scenario: dict[str, Any],
+    paths: HarnessPaths,
+    dependency_specs: list[str] | None = None,
+    source_checkout_path: str | None = None,
+) -> None:
     fixture = scenario.get("fixture")
     if not isinstance(fixture, str) or not fixture.strip():
         raise ValueError(f"scenario {scenario.get('id', '<unknown>')} must specify fixture")
@@ -355,7 +379,7 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
         raise FileNotFoundError(f"fixture not found: {fixture}")
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
-    _prepare_source_checkout_invocation(paths.repo_path)
+    _prepare_source_checkout_invocation(paths.repo_path, dependency_specs=dependency_specs, source_checkout_path=source_checkout_path)
     _prepare_fixture_git_repository(paths.repo_path)
 
 
@@ -409,7 +433,12 @@ def _git_has_commits(repo_path: Path) -> bool:
     return result.returncode == 0
 
 
-def _prepare_source_checkout_invocation(repo_path: Path) -> None:
+def _prepare_source_checkout_invocation(
+    repo_path: Path,
+    *,
+    dependency_specs: list[str] | None = None,
+    source_checkout_path: str | None = None,
+) -> None:
     if not (repo_path / ".agentic-workspace").exists():
         return
 
@@ -435,22 +464,26 @@ def _prepare_source_checkout_invocation(repo_path: Path) -> None:
 
     pyproject = repo_path / "pyproject.toml"
     if not pyproject.exists():
-        pyproject.write_text(
-            "\n".join(
+        dependencies = dependency_specs or ["agentic-workspace"]
+        lines = [
+            "[project]",
+            'name = "agentic-workspace-eval-fixture"',
+            'version = "0.0.0"',
+            'requires-python = ">=3.11"',
+            "dependencies = [",
+            *[f'  "{dependency}",' for dependency in dependencies],
+            "]",
+            "",
+        ]
+        if source_checkout_path:
+            lines.extend(
                 [
-                    "[project]",
-                    'name = "agentic-workspace-eval-fixture"',
-                    'version = "0.0.0"',
-                    'requires-python = ">=3.11"',
-                    'dependencies = ["agentic-workspace"]',
-                    "",
                     "[tool.uv.sources]",
-                    f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}',
+                    f'agentic-workspace = {{ path = "{source_checkout_path}", editable = true }}',
                     "",
                 ]
-            ),
-            encoding="utf-8",
-        )
+            )
+        pyproject.write_text("\n".join(lines), encoding="utf-8")
 
     local_config = repo_path / ".agentic-workspace" / "config.local.toml"
     if not local_config.exists():
@@ -727,7 +760,8 @@ def _preflight_requirement(
 def _adapter_preflight(adapter: dict[str, Any], *, command: list[str], replacements: dict[str, str]) -> dict[str, Any]:
     requirements: list[dict[str, Any]] = []
     if command:
-        requirements.append(_preflight_requirement(command[0], kind="adapter_executable", replacements=replacements))
+        adapter_executable = adapter.get("adapter_executable", command[0])
+        requirements.append(_preflight_requirement(adapter_executable, kind="adapter_executable", replacements=replacements))
     for requirement in adapter.get("required_executables", []):
         requirements.append(_preflight_requirement(requirement, kind="required_executable", replacements=replacements))
     for requirement in adapter.get("required_shells", []):
@@ -745,6 +779,134 @@ def _adapter_preflight(adapter: dict[str, Any], *, command: list[str], replaceme
         "path_prepend": [
             str(Path(item["resolved_path"]).parent) for item in requirements if item.get("add_parent_to_path") and item.get("resolved_path")
         ],
+    }
+
+
+def _execution_command(command: list[str], preflight: dict[str, Any]) -> list[str]:
+    if not command:
+        return command
+    requirements = preflight.get("requirements", [])
+    if not isinstance(requirements, list):
+        return command
+    adapter_requirement = next(
+        (item for item in requirements if isinstance(item, dict) and item.get("kind") == "adapter_executable"),
+        None,
+    )
+    if not isinstance(adapter_requirement, dict):
+        return command
+    resolved = adapter_requirement.get("resolved_path")
+    if not isinstance(resolved, str) or not resolved:
+        return command
+    requirement_name = str(adapter_requirement.get("name") or "")
+    command_name = Path(command[0]).name
+    if requirement_name and command_name.lower() != requirement_name.lower():
+        return command
+    return [resolved, *command[1:]]
+
+
+def _adapter_sandbox_report(
+    adapter: dict[str, Any],
+    *,
+    adapter_id: str,
+    model: str,
+    repo_path: Path,
+    preflight: dict[str, Any],
+    command: list[str],
+) -> dict[str, Any] | None:
+    config = adapter.get("sandbox")
+    if config is None:
+        return None
+    if not isinstance(config, dict):
+        raise ValueError("adapter.sandbox must be an object")
+    backend = config.get("backend")
+    agent = config.get("agent")
+    if not isinstance(backend, str) or not backend.strip():
+        raise ValueError("adapter.sandbox.backend must be a string")
+    if not isinstance(agent, str) or not agent.strip():
+        raise ValueError("adapter.sandbox.agent must be a string")
+    return {
+        "kind": SANDBOX_ADAPTER_KIND,
+        "enabled": True,
+        "backend": backend,
+        "agent": agent,
+        "adapter_id": adapter_id,
+        "model": model,
+        "identity": f"{backend}:{agent}:{adapter_id}",
+        "template": str(config.get("template") or ""),
+        "repo_path": str(repo_path),
+        "evidence": "sandbox-backed",
+        "setup_status": preflight.get("status", "unknown"),
+        "setup_failures": preflight.get("missing", []),
+        "command": command,
+        "fail_closed": True,
+    }
+
+
+def _sandbox_runtime_report(sandbox_report: dict[str, Any] | None, result: dict[str, Any]) -> dict[str, Any] | None:
+    if not sandbox_report:
+        return sandbox_report
+    updated = dict(sandbox_report)
+    updated["runtime_status"] = str(result.get("status") or "")
+    updated["runtime_returncode"] = result.get("returncode")
+    stderr = str(result.get("stderr") or "").strip()
+    returncode = result.get("returncode")
+    if stderr and (updated["runtime_status"] != "completed" or (isinstance(returncode, int) and returncode != 0)):
+        error_line = next((line for line in stderr.splitlines() if "error" in line.lower() or "unauthorized" in line.lower()), "")
+        updated["runtime_error"] = (error_line or stderr.splitlines()[0])[:500]
+    return updated
+
+
+def _sandbox_runtime_warnings(sandbox_report: dict[str, Any] | None, result: dict[str, Any]) -> list[dict[str, Any]]:
+    if not sandbox_report or not sandbox_report.get("enabled"):
+        return []
+    status = str(result.get("status") or "")
+    returncode = result.get("returncode")
+    if status not in {"completed", "dry-run"} or (isinstance(returncode, int) and returncode != 0):
+        return [
+            {
+                "warning_class": "model_cli_sandbox_runtime_failed",
+                "message": "The sandbox-backed adapter failed before producing usable model output.",
+                "sandbox": sandbox_report.get("identity", ""),
+                "returncode": returncode,
+            }
+        ]
+    return []
+
+
+def _capture_adapter_artifacts(
+    adapter: dict[str, Any],
+    *,
+    replacements: dict[str, str],
+    share_path: Path,
+) -> dict[str, Any]:
+    config = adapter.get("artifact_capture", {})
+    if config is None:
+        config = {}
+    if not isinstance(config, dict):
+        raise ValueError("adapter.artifact_capture must be an object")
+    candidates = _string_list_config(config.get("share_path_candidates"), field="adapter.artifact_capture.share_path_candidates")
+    cleanup = bool(config.get("cleanup_captured", False))
+    captured_from = ""
+    candidate_reports: list[dict[str, str]] = []
+    if not share_path.exists():
+        for candidate in candidates:
+            rendered = Path(_replace_placeholders(candidate, replacements=replacements))
+            status = "present" if rendered.exists() else "missing"
+            candidate_reports.append({"path": str(rendered), "status": status})
+            if not rendered.is_file():
+                continue
+            share_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(rendered, share_path)
+            captured_from = str(rendered)
+            if cleanup and rendered.resolve() != share_path.resolve():
+                rendered.unlink(missing_ok=True)
+            break
+    return {
+        "kind": "agentic-workspace/model-cli-adapter-artifact-capture/v1",
+        "share_path": str(share_path),
+        "share_captured": share_path.exists(),
+        "share_captured_from": captured_from,
+        "share_path_candidates": candidate_reports,
     }
 
 
@@ -2916,7 +3078,13 @@ def run_suite(
                 model=resolved_model,
                 prompt_variant_id=prompt_variant_id,
             )
-            _prepare_fixture(suite_path=suite_path, scenario=scenario, paths=paths)
+            _prepare_fixture(
+                suite_path=suite_path,
+                scenario=scenario,
+                paths=paths,
+                dependency_specs=_adapter_fixture_dependencies(adapter),
+                source_checkout_path=adapter.get("fixture_source_path") if isinstance(adapter.get("fixture_source_path"), str) else None,
+            )
             replacements = {
                 "repo": str(paths.repo_path),
                 "run_root": str(paths.run_root),
@@ -2924,7 +3092,9 @@ def run_suite(
                 "postmortem_cwd": str(paths.run_root / "postmortem-context"),
                 "transcript_path": str(paths.transcript_path),
                 "model": resolved_model,
+                "python": sys.executable,
                 "source_root": str(REPO_ROOT),
+                "sandbox_name": _safe_sandbox_name(adapter_id=adapter_id, run_root=paths.run_root),
                 "program_files": os.environ.get("ProgramFiles", ""),
                 "local_app_data": os.environ.get("LOCALAPPDATA", ""),
             }
@@ -2941,6 +3111,15 @@ def run_suite(
                 prompt_id=f"{scenario_id}-{prompt_variant_id}",
             )
             preflight = _adapter_preflight(adapter, command=command, replacements=command_replacements)
+            execution_command = _execution_command(command, preflight)
+            sandbox_report = _adapter_sandbox_report(
+                adapter,
+                adapter_id=adapter_id,
+                model=resolved_model,
+                repo_path=paths.repo_path,
+                preflight=preflight,
+                command=command,
+            )
             adapter_env = _adapter_environment(
                 adapter,
                 replacements=command_replacements,
@@ -2981,10 +3160,12 @@ def run_suite(
                 "prompt": prompt,
                 "prompt_transport": prompt_transport,
                 "command": command,
+                "execution_command": execution_command if execution_command != command else [],
                 "preflight": preflight,
                 "git_ceiling_directories": adapter_env.get("GIT_CEILING_DIRECTORIES", ""),
                 "isolate_provider_home": isolate_provider_home,
                 "setup_results": setup_results,
+                "sandbox": sandbox_report or {"enabled": False},
                 "expected_signals": scenario.get("expected_signals", []),
                 "score_notes": scenario.get("score_notes", []),
             }
@@ -3004,19 +3185,27 @@ def run_suite(
                 invocation["package_read_surface_summary"] = {"status": "not-run"}
                 invocation["proportionality_metrics"] = {"status": "not-run"}
             elif execute:
-                result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
+                result = _run_command(execution_command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
+                artifact_capture = _capture_adapter_artifacts(
+                    adapter,
+                    replacements=command_replacements,
+                    share_path=paths.share_path,
+                )
                 if paths.share_path.exists():
                     result["final_message"] = paths.share_path.read_text(encoding="utf-8")
                 result["status"] = _classify_result_status(result)
+                invocation["sandbox"] = _sandbox_runtime_report(sandbox_report, result) or {"enabled": False}
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
                 mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path, include_ignored=True))
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["package_read_surface_summary"] = _package_read_surface_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
+                invocation["artifact_capture"] = artifact_capture
                 invocation["mutation_summary"] = mutation_summary
                 invocation["transcript_path"] = str(paths.transcript_path)
                 invocation["share_path"] = str(paths.share_path)
                 invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
+                invocation["warnings"].extend(_sandbox_runtime_warnings(sandbox_report, result))
                 invocation["warnings"].extend(
                     _semantic_workflow_warnings(
                         scenario_id=scenario_id,
@@ -3078,7 +3267,7 @@ def run_suite(
                             command_key="postmortem_command",
                         )
                         postmortem_result = _run_command(
-                            postmortem_command,
+                            _execution_command(postmortem_command, preflight),
                             cwd=postmortem_cwd,
                             timeout_seconds=effective_timeout,
                             env=adapter_env,
@@ -3127,7 +3316,7 @@ def run_suite(
                         prompt_id=f"{scenario_id}-{prompt_variant_id}-turn-{index}",
                     )
                     followup_result = _run_command(
-                        followup_command,
+                        _execution_command(followup_command, preflight),
                         cwd=paths.repo_path,
                         timeout_seconds=effective_timeout,
                         env=adapter_env,
@@ -3194,6 +3383,13 @@ def run_suite(
                 invocation["result"] = {
                     "status": "dry-run",
                     "detail": "Use --execute to run the model CLI.",
+                }
+                invocation["artifact_capture"] = {
+                    "kind": "agentic-workspace/model-cli-adapter-artifact-capture/v1",
+                    "share_path": str(paths.share_path),
+                    "share_captured": False,
+                    "share_captured_from": "",
+                    "share_path_candidates": [],
                 }
                 invocation["mutation_summary"] = {"status": "not-run"}
                 invocation["usage_summary"] = {"status": "not-run"}
