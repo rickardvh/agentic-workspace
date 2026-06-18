@@ -1,0 +1,43 @@
+{
+  "kind": "agentic-workspace/external-agent-historical-fixtures/v1",
+  "lane": "#1600",
+  "source_refs": [
+    "tools/model-cli-harness/model-task-weakness-ledger.json",
+    ".agentic-workspace/planning/execplans/archive/weakness-ledger-optimisation-loop.plan.json"
+  ],
+  "fixtures": [
+    {
+      "id": "broad-work-product-scaffold",
+      "historical_source": "model-task-weakness-ledger::prep-only-broad-work-product-scaffold",
+      "scenario_ref": "broad-work-decomposition",
+      "expected_dimensions": ["work_shape", "planning_continuity", "ownership"],
+      "observed_miss": "Preparation-only broad work produced product scaffolding or freehand planning artifacts.",
+      "failure_ids": ["PLANNING_CONTINUITY_MISSING", "OWNERSHIP_BOUNDARY_LEAK"],
+      "result_record_ref": "sample-broad-work-regression",
+      "status": "regression-guard",
+      "reproduce_expected": false
+    },
+    {
+      "id": "memory-context-skipped",
+      "historical_source": "model-task-weakness-ledger::memory-context-skipped-or-bulk-read",
+      "scenario_ref": "memory-consult-before-edit",
+      "expected_dimensions": ["memory_pull", "memory_capture", "closeout"],
+      "observed_miss": "Context-sensitive edit skipped Memory or bulk-read Memory instead of following the index.",
+      "failure_ids": ["MEMORY_PULL_MISSING"],
+      "result_record_ref": "sample-memory-routing-regression",
+      "status": "regression-guard",
+      "reproduce_expected": false
+    },
+    {
+      "id": "proof-claim-safety-gap",
+      "historical_source": "issue-lane-review::#1603/#1605 proof and closeout acceptance",
+      "scenario_ref": "intent-satisfaction-review",
+      "expected_dimensions": ["proof", "closeout", "recovery"],
+      "observed_miss": "Agent treated local task success or passing tests as full intent satisfaction without adequate proof or residue routing.",
+      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING"],
+      "result_record_ref": "sample-unsafe-claim-regression",
+      "status": "sample-preserved",
+      "reproduce_expected": true
+    }
+  ]
+}

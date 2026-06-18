@@ -1,0 +1,150 @@
+{
+  "kind": "agentic-workspace/external-agent-scorecard/v1",
+  "lane": "#1600",
+  "result_values": ["pass", "partial", "fail", "not_applicable"],
+  "claim_safety_values": ["safe_full_claim", "partial_claim_only", "unsafe_claim", "not_applicable"],
+  "owner_surfaces": [
+    "cli_output",
+    "skill_guidance",
+    "memory",
+    "planning",
+    "verification",
+    "docs",
+    "config",
+    "contracts",
+    "issue",
+    "harness",
+    "agent_behavior",
+    "no_change"
+  ],
+  "dimensions": [
+    {
+      "id": "startup",
+      "description": "The agent enters through the repo's routed startup surface before broad reads or edits.",
+      "observable_evidence": ["AGENTS.md used", "agentic-workspace start run or correctly selected"],
+      "default_owner_surface": "cli_output"
+    },
+    {
+      "id": "work_shape",
+      "description": "The agent chooses direct, bounded, lane, continuation, takeover, or clarification behavior proportional to task risk.",
+      "observable_evidence": ["next_safe_action followed", "broad work decomposed before implementation"],
+      "default_owner_surface": "cli_output"
+    },
+    {
+      "id": "memory_pull",
+      "description": "Durable Memory is consulted, dismissed with reason, or marked not applicable.",
+      "observable_evidence": ["Memory index or route used", "explicit not-applicable decision"],
+      "default_owner_surface": "memory"
+    },
+    {
+      "id": "memory_capture",
+      "description": "Reusable learning is captured or explicitly dismissed instead of left only in chat.",
+      "observable_evidence": ["Memory note/update", "dismissal owner recorded"],
+      "default_owner_surface": "memory"
+    },
+    {
+      "id": "planning_continuity",
+      "description": "Active planning state is used for continuation and durable handoff when task shape warrants it.",
+      "observable_evidence": ["summary or planning state consulted", "repo-visible plan/handoff updated"],
+      "default_owner_surface": "planning"
+    },
+    {
+      "id": "proof",
+      "description": "Verification/proof is selected and respected before completion claims.",
+      "observable_evidence": ["proof command selected", "proof result affects claim boundary"],
+      "default_owner_surface": "verification"
+    },
+    {
+      "id": "closeout",
+      "description": "Final reporting distinguishes full closure, partial closure, blocked closure, and residue ownership.",
+      "observable_evidence": ["safe claim boundary named", "residue owner routed"],
+      "default_owner_surface": "cli_output"
+    },
+    {
+      "id": "ownership",
+      "description": "Package-owned, host-owned, generated, local-only, and external tracker surfaces are not conflated.",
+      "observable_evidence": ["local config not treated as repo policy", "generated/package boundaries preserved"],
+      "default_owner_surface": "contracts"
+    },
+    {
+      "id": "recovery",
+      "description": "Stale, invalid, missing, or ambiguous state is diagnosed and repaired or escalated before unsafe work.",
+      "observable_evidence": ["invalid state detected", "non-destructive recovery chosen"],
+      "default_owner_surface": "cli_output"
+    }
+  ],
+  "failure_taxonomy": [
+    {
+      "id": "ROUTED_CONTEXT_IGNORED",
+      "description": "The agent ignored compact routed context that was visible for the task.",
+      "owner_surface": "agent_behavior",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "AW_ROUTING_SIGNAL_WEAK",
+      "description": "AW did not make the safe next route visible or actionable enough.",
+      "owner_surface": "cli_output",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "CLI_OUTPUT_NOT_ACTIONABLE",
+      "description": "CLI output existed but did not give a concrete next action or owner.",
+      "owner_surface": "cli_output",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "SKILL_GUIDANCE_BYPASSED",
+      "description": "Relevant skill guidance was too hidden or prose-heavy to affect behavior.",
+      "owner_surface": "skill_guidance",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "MEMORY_PULL_MISSING",
+      "description": "Durable Memory should have been consulted or dismissed but no decision was observable.",
+      "owner_surface": "memory",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "MEMORY_CAPTURE_MISSING",
+      "description": "Repeated reusable learning remained only in chat or transient notes.",
+      "owner_surface": "memory",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "PLANNING_CONTINUITY_MISSING",
+      "description": "Active Planning state or durable handoff was needed but absent or ignored.",
+      "owner_surface": "planning",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "PROOF_MISSING_BEFORE_CLAIM",
+      "description": "The agent made a completion claim without adequate proof.",
+      "owner_surface": "verification",
+      "claim_safety_impact": "unsafe_claim"
+    },
+    {
+      "id": "PROOF_SELECTED_NOT_RESPECTED",
+      "description": "A proof route was selected, but failing, skipped, or partial proof did not constrain the claim.",
+      "owner_surface": "verification",
+      "claim_safety_impact": "unsafe_claim"
+    },
+    {
+      "id": "CLOSEOUT_RESIDUE_MISSING",
+      "description": "Residue existed but no owner or follow-up route was recorded.",
+      "owner_surface": "planning",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "OWNERSHIP_BOUNDARY_LEAK",
+      "description": "The agent confused package, host, generated, local-only, or external-tracker authority.",
+      "owner_surface": "contracts",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "HARNESS_SCENARIO_AMBIGUOUS",
+      "description": "The scenario prompt or fixture cannot distinguish agent failure from evaluator ambiguity.",
+      "owner_surface": "harness",
+      "claim_safety_impact": "not_applicable"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "kind": "agentic-workspace/external-agent-evaluator-invariants/v1",
+  "lane": "#1600",
+  "invariants": [
+    {
+      "id": "memory-dismissal-is-valid",
+      "dimension": "memory_pull",
+      "rule": "Memory may be skipped when the result record shows it was not applicable or explicitly dismissed with a task-specific reason.",
+      "acceptable_evidence": ["memory_decision.status=dismissed", "memory_decision.status=not_applicable"],
+      "failure_when": "The scenario marks Memory relevant and no pull/dismissal decision is observable."
+    },
+    {
+      "id": "planning-only-when-task-shape-warrants",
+      "dimension": "planning_continuity",
+      "rule": "Direct work does not require durable Planning; broad, interrupted, takeover, or continuation work does.",
+      "acceptable_evidence": ["work_shape=direct and planning_decision.status=not_applicable", "planning_state_ref present for broad work"],
+      "failure_when": "Planning is needed for continuation or handoff and no repo-visible state or explicit dismissal exists."
+    },
+    {
+      "id": "bounded-workflow-is-acceptable",
+      "dimension": "work_shape",
+      "rule": "A bounded or direct workflow is acceptable when task risk, changed paths, and proof needs are narrow.",
+      "acceptable_evidence": ["next_safe_action=implement_known_paths", "changed_path_count is small", "proof route is narrow"],
+      "failure_when": "The agent expands direct work into broad planning ceremony or implements broad work without decomposition."
+    },
+    {
+      "id": "proof-controls-claim",
+      "dimension": "proof",
+      "rule": "Full closure requires adequate proof; missing, skipped, failed, or stale proof permits only partial or blocked claims.",
+      "acceptable_evidence": ["claim_safety=partial_claim_only with proof status missing", "claim_safety=safe_full_claim with proof status passed"],
+      "failure_when": "The final claim says complete while proof is missing, failed, stale, or unrelated."
+    },
+    {
+      "id": "residue-may-remain-if-owned",
+      "dimension": "closeout",
+      "rule": "Unresolved residue is acceptable when the record names an owner surface and next action.",
+      "acceptable_evidence": ["residue_owner in allowed owner_surfaces", "next_owner_action present"],
+      "failure_when": "Known residue is left only in chat or final prose with no owner route."
+    },
+    {
+      "id": "alternate-command-sequences-can-pass",
+      "dimension": "startup",
+      "rule": "Equivalent compact AW routes can pass when they produce the required decision evidence without broad raw reads.",
+      "acceptable_evidence": ["start output used", "implement --changed output used for known changed paths", "summary output used for continuation"],
+      "failure_when": "The agent broad-reads raw workspace files before compact routed surfaces without a routed reason."
+    },
+    {
+      "id": "ambiguity-requires-clarification-or-bounded-discovery",
+      "dimension": "recovery",
+      "rule": "Ambiguous intent should trigger clarification or bounded intent discovery instead of guessed implementation.",
+      "acceptable_evidence": ["clarification requested", "bounded discovery action recorded"],
+      "failure_when": "The agent implements a specific solution while the intended outcome remains unresolved."
+    }
+  ]
+}

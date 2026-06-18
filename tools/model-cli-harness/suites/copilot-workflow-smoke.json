@@ -130,6 +130,7 @@
       "command": [
         "codex",
         "exec",
+        "--ignore-user-config",
         "--model",
         "{model}",
         "--cd",
@@ -144,6 +145,7 @@
       "postmortem_command": [
         "codex",
         "exec",
+        "--ignore-user-config",
         "--model",
         "{model}",
         "--cd",

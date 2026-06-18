@@ -1,0 +1,36 @@
+{
+  "kind": "agentic-workspace/external-agent-surface-decisions/v1",
+  "lane": "#1600",
+  "decisions": [
+    {
+      "id": "startup-routing-visible",
+      "surface": "agentic-workspace start",
+      "owner": "cli_output",
+      "evidence_refs": ["sample-startup-codex-spark"],
+      "current_role": "authority",
+      "decision": "keep_visible",
+      "expected_cost_change": "lower claim risk",
+      "rollback_condition": "agents skip startup routing in clean-host scenarios"
+    },
+    {
+      "id": "raw-workflow-doc-behind-route",
+      "surface": ".agentic-workspace/WORKFLOW.md",
+      "owner": "docs",
+      "evidence_refs": ["clean-host-startup"],
+      "current_role": "fallback",
+      "decision": "route",
+      "expected_cost_change": "fewer rereads",
+      "rollback_condition": "installed host startup loses fallback when CLI is unavailable"
+    },
+    {
+      "id": "generated-cli-mirror",
+      "surface": "generated command reference",
+      "owner": "contracts",
+      "evidence_refs": ["artifact-backed-host-startup"],
+      "current_role": "generated mirror",
+      "decision": "generate",
+      "expected_cost_change": "less drift",
+      "rollback_condition": "generated output hides package/host authority"
+    }
+  ]
+}

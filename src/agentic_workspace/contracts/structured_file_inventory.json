@@ -720,6 +720,18 @@
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
+      "pattern": "tools/model-cli-harness/external-agent-evaluation/*.json",
+      "format": "json",
+      "owner": "model-cli-harness",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "scripts/model_cli_harness/external_agent_evaluation_lane.py validate",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "External-agent lane scorecards, live evidence, promotion decisions, and compact records are maintainer-run evaluation artifacts.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority."
+    },
+    {
       "pattern": "tools/model-cli-harness/feedback/*.json",
       "format": "json",
       "owner": "model-cli-harness",
