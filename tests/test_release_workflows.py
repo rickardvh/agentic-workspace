@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fnmatch
+import importlib.util
 import json
 import tomllib
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
+GENERATOR_PATH = ROOT / "scripts" / "generate" / "workspace_command_generation.py"
 
 
 def _ownership() -> dict[str, object]:
@@ -27,6 +29,15 @@ def _release_asset_patterns(workflow: str) -> list[str]:
 
 def _matching_release_assets(patterns: list[str], assets: list[str]) -> list[str]:
     return [asset for asset in assets if any(fnmatch.fnmatchcase(asset, pattern) for pattern in patterns)]
+
+
+def _load_workspace_command_generation():
+    spec = importlib.util.spec_from_file_location("workspace_command_generation_under_test", GENERATOR_PATH)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_release_ownership_manifest_declares_coordinated_workspace_packages() -> None:
@@ -103,19 +114,20 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
 
     assert "branches:" in workflow
     assert "master" in workflow
-    assert "pull_request:" in workflow
-    assert "closed" in workflow
-    assert "github.event.pull_request.merged == true" in workflow
+    assert "pull_request:" not in workflow
+    assert "github.event.pull_request" not in workflow
     assert "contents: write" in workflow
+    assert "issues: read" in workflow
     assert "pull-requests: read" in workflow
     assert ".github/release-ownership.json" in workflow
     assert 'ownership["packages"]' in workflow
     assert 'ownership["first_coordinated_release"]["floor_version"]' in workflow
-    assert 'pull_request.get("labels", [])' in workflow
+    assert "def pr_label_names(pr_number: str) -> set[str]:" in workflow
+    assert "/issues/{pr_number}/labels" in workflow
     assert ".[].filename" in workflow
     assert "associated_pr_numbers" in workflow
     assert "commits/{commit_sha}/pulls" in workflow
-    assert "pull_request.closed handles the release decision" in workflow
+    assert "Package-affecting push is associated with a merged PR" not in workflow
     assert "def skip_release(reason: str) -> None:" in workflow
     assert 'output("release_needed", "false")' in workflow
     assert "Merge pull request #" not in workflow
@@ -142,6 +154,23 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
     assert 'git commit -m "Release ${{ steps.release-bump.outputs.tag }}"' in workflow
     assert 'git push origin "${{ steps.release-bump.outputs.tag }}"' in workflow
     assert "softprops/action-gh-release@v3.0.0" in workflow
+
+
+def test_releaseable_typescript_package_generation_preserves_release_owned_versions() -> None:
+    generator = _load_workspace_command_generation()
+    rendered_by_path = {
+        output.path.relative_to(ROOT).as_posix(): json.loads(output.content)
+        for output in generator.render_workspace_command_package_outputs(repo_root=ROOT)
+        if output.path.name == "package.json" and "typescript" in output.path.as_posix()
+    }
+
+    for package in _ownership()["typescript_packages"]:
+        package_json_path = package["package_json"]
+        current = json.loads((ROOT / package_json_path).read_text(encoding="utf-8"))
+        rendered = rendered_by_path[package_json_path]
+        assert rendered["version"] == current["version"]
+        assert rendered["private"] is False
+        assert rendered["publishConfig"]["access"] == "public"
 
 
 def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> None:

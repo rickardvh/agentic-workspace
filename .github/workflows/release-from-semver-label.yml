@@ -4,27 +4,21 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    types:
-      - closed
-    branches:
-      - master
 
 permissions:
   contents: write
+  issues: read
   pull-requests: read
 
 jobs:
   release-from-label:
     name: Bump coordinated workspace version and tag merged package changes
-    if: github.event_name == 'push' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
@@ -47,7 +41,6 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           GITHUB_ACTOR: ${{ github.actor }}
           HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -133,24 +126,16 @@ jobs:
                   return []
               return result.stdout.splitlines()
 
-          event_name = os.environ["GITHUB_EVENT_NAME"]
-          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
-          message = os.environ.get("HEAD_COMMIT_MESSAGE", "")
-          if (
-              event_name == "push"
-              and os.environ["GITHUB_ACTOR"] == "github-actions[bot]"
-              and re.match(r"^Release v\d+\.\d+\.\d+$", message.strip())
-          ):
-              skip_release("Release bump commit detected; no additional release bump needed.")
+          def pr_label_names(pr_number: str) -> set[str]:
+              result = run(
+                  "gh",
+                  "api",
+                  f"repos/{os.environ['REPOSITORY']}/issues/{pr_number}/labels",
+              )
+              return {label["name"] for label in json.loads(result.stdout)}
 
-          pr_number = ""
-          selected: list[str] = []
-          if event_name == "pull_request":
-              pull_request = event.get("pull_request", {})
-              if not pull_request.get("merged"):
-                  skip_release("Pull request was closed without merge; no release bump needed.")
-              pr_number = str(pull_request["number"])
-              changed = run(
+          def pr_changed_files(pr_number: str) -> list[str]:
+              return run(
                   "gh",
                   "api",
                   f"repos/{os.environ['REPOSITORY']}/pulls/{pr_number}/files",
@@ -158,17 +143,30 @@ jobs:
                   "--jq",
                   ".[].filename",
               ).stdout.splitlines()
-              labels = {label["name"] for label in pull_request.get("labels", [])}
+
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          message = os.environ.get("HEAD_COMMIT_MESSAGE", "")
+          if (
+              os.environ["GITHUB_ACTOR"] == "github-actions[bot]"
+              and re.match(r"^Release v\d+\.\d+\.\d+$", message.strip())
+          ):
+              skip_release("Release bump commit detected; no additional release bump needed.")
+
+          pr_number = ""
+          selected: list[str] = []
+          associated_prs = associated_pr_numbers(event["after"])
+          if associated_prs:
+              pr_number = associated_prs[0]
+              changed = pr_changed_files(pr_number)
+              labels = pr_label_names(pr_number)
               selected = sorted(labels & semver_labels)
-          elif event_name == "push":
+          else:
               before = os.environ["BEFORE_SHA"]
               if not before or set(before) == {"0"}:
                   before = run("git", "rev-list", "--max-parents=0", "HEAD").stdout.splitlines()[0]
               elif run("git", "cat-file", "-e", f"{before}^{{commit}}", check=False).returncode != 0:
                   before = run("git", "rev-parse", "HEAD^").stdout.strip()
               changed = run("git", "diff", "--name-only", f"{before}...HEAD").stdout.splitlines()
-          else:
-              raise SystemExit(f"Unsupported release event: {event_name}")
 
           package_changed = any(
               path == watched or path.startswith(watched)
@@ -177,9 +175,6 @@ jobs:
           )
           if not package_changed:
               skip_release("No package-affecting changes detected; no release bump needed.")
-
-          if event_name == "push" and associated_pr_numbers(event["after"]):
-              skip_release("Package-affecting push is associated with a merged PR; pull_request.closed handles the release decision.")
 
           versions = [version_text(path) for path in package_pyprojects] + [
               package_json_version_text(path) for path in typescript_package_jsons
@@ -190,7 +185,7 @@ jobs:
           current_floor = max_version([current_package_floor, floor_version])
           needs_first_normalization = parse_version(current_package_floor) < parse_version(floor_version)
 
-          if event_name == "push":
+          if not pr_number:
               version_files = [*package_pyprojects, *typescript_package_jsons]
               if not any(path in changed for path in version_files):
                   skip_release(

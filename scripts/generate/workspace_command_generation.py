@@ -265,6 +265,14 @@ def _normalize_releaseable_typescript_package_json(
     if metadata is None:
         return output
     payload = json.loads(output.content)
+    existing_version = None
+    if path.is_file():
+        existing_payload = json.loads(path.read_text(encoding="utf-8"))
+        existing_version = existing_payload.get("version")
+    if isinstance(existing_version, str) and existing_version:
+        # The coordinated release workflow owns package versions; generation owns
+        # the publishable package shape around that checked-in release value.
+        payload["version"] = existing_version
     payload["private"] = False
     payload["engines"] = {"node": str(metadata.get("runtime_requirement", "node>=20")).removeprefix("node")}
     payload["publishConfig"] = {"access": "public"}
