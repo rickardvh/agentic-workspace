@@ -171,6 +171,13 @@ def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None
     assert ci_text.index("run: make typecheck") < ci_text.index("run: make verify-workspace")
 
 
+def test_normal_ci_is_pr_only() -> None:
+    ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "  pull_request:" in ci_text
+    assert "  push:" not in ci_text
+
+
 def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
