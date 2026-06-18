@@ -11,6 +11,7 @@
       "owner_surface": "verification",
       "fallback_owner_surface": "cli_output",
       "followup_ref": "#1605",
+      "remediation_kind": "actionable-issue",
       "closure_effect": "routed"
     },
     {
@@ -22,6 +23,7 @@
       "owner_surface": "memory",
       "fallback_owner_surface": "cli_output",
       "followup_ref": "#1606",
+      "remediation_kind": "actionable-issue",
       "closure_effect": "routed"
     },
     {
@@ -44,7 +46,8 @@
       "decision": "promote",
       "owner_surface": "harness",
       "fallback_owner_surface": "cli_output",
-      "followup_ref": "#1601",
+      "followup_ref": "#1616",
+      "remediation_kind": "actionable-issue",
       "closure_effect": "routed"
     }
   ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import shutil
@@ -112,6 +113,28 @@ def test_external_agent_lane_historical_fixtures_map_to_result_records() -> None
         assert fixture["failure_ids"]
 
 
+def test_external_agent_lane_rejects_fixture_failures_absent_from_result_record() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    pack["historical"]["fixtures"][0]["failure_ids"].append("MEMORY_PULL_MISSING")
+
+    errors = module.validate_pack(pack)
+
+    assert any("failure MEMORY_PULL_MISSING is not represented by sample-broad-work-regression" in error for error in errors)
+
+
+def test_external_agent_lane_rejects_promotions_without_actionable_remediation() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    live_promotion = next(item for item in pack["promotions"]["decisions"] if item["id"] == "promote-live-local-path-leak")
+    live_promotion["followup_ref"] = "#1601"
+    live_promotion.pop("remediation_kind", None)
+
+    errors = module.validate_pack(pack)
+
+    assert any("promote-live-local-path-leak must route to an actionable remediation owner" in error for error in errors)
+
+
 def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None:
     module = _load_module()
     report = module.build_closure_report(module.load_pack(repo_root=REPO_ROOT))
@@ -126,6 +149,8 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
+    assert report["live_evaluation"]["promoted_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
+    assert report["live_evaluation"]["actionable_remediation_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["promotion_count"] >= 1
 
 

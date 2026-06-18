@@ -23,7 +23,7 @@
       "scenario_ref": "memory-consult-before-edit",
       "expected_dimensions": ["memory_pull", "memory_capture", "closeout"],
       "observed_miss": "Context-sensitive edit skipped Memory or bulk-read Memory instead of following the index.",
-      "failure_ids": ["MEMORY_PULL_MISSING", "MEMORY_CAPTURE_MISSING"],
+      "failure_ids": ["MEMORY_PULL_MISSING"],
       "result_record_ref": "sample-memory-routing-regression",
       "status": "regression-guard",
       "reproduce_expected": false

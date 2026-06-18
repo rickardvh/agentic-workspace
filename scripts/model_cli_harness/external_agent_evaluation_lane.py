@@ -37,6 +37,21 @@ def _require(condition: bool, message: str, errors: list[str]) -> None:
         errors.append(message)
 
 
+def _record_failure_ids(record: dict[str, Any] | None) -> set[str]:
+    if not isinstance(record, dict):
+        return set()
+    return {failure_id for failure_id in record.get("failure_ids", []) if isinstance(failure_id, str)}
+
+
+def _actionable_remediation(decision: dict[str, Any]) -> bool:
+    return (
+        decision.get("decision") == "promote"
+        and decision.get("closure_effect") == "routed"
+        and bool(str(decision.get("followup_ref") or "").strip())
+        and decision.get("remediation_kind") == "actionable-issue"
+    )
+
+
 def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     errors: list[str] = []
     scorecard = pack["scorecard"]
@@ -63,9 +78,12 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     _require(any(probe.get("artifact_backed") for probe in pack["scenarios"].get("probes", [])), "artifact-backed probe is missing", errors)
 
     record_ids: set[str] = set()
+    records_by_id: dict[str, dict[str, Any]] = {}
     failure_ids_seen: set[str] = set()
     for record in pack["results"].get("records", []):
-        record_ids.add(str(record.get("id")))
+        record_id = str(record.get("id"))
+        record_ids.add(record_id)
+        records_by_id[record_id] = record
         _require(record.get("scenario_id") in scenario_ids, f"record {record.get('id')} references unknown scenario", errors)
         _require(record.get("loop_outcome") in result_values, f"record {record.get('id')} has invalid loop_outcome", errors)
         _require(record.get("claim_safety") in claim_safety_values, f"record {record.get('id')} has invalid claim_safety", errors)
@@ -79,29 +97,59 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         for owner in record.get("repair_surface_hints", []):
             _require(owner in owner_surfaces, f"record {record.get('id')} references unknown owner surface {owner}", errors)
     for record in pack.get("live_results", {}).get("runs", []):
-        record_ids.add(str(record.get("id")))
+        record_id = str(record.get("id"))
+        record_ids.add(record_id)
+        records_by_id[record_id] = record
         _require(record.get("scenario_id") in scenario_ids, f"live run {record.get('id')} references unknown scenario", errors)
         for failure_id in record.get("failure_ids", []):
             _require(failure_id in failure_ids, f"live run {record.get('id')} references unknown failure id {failure_id}", errors)
 
     for fixture in pack["historical"].get("fixtures", []):
-        _require(fixture.get("result_record_ref") in record_ids, f"historical fixture {fixture.get('id')} has unknown record ref", errors)
+        result_record_ref = str(fixture.get("result_record_ref") or "")
+        referenced_record = records_by_id.get(result_record_ref)
+        _require(result_record_ref in record_ids, f"historical fixture {fixture.get('id')} has unknown record ref", errors)
         for failure_id in fixture.get("failure_ids", []):
             _require(failure_id in failure_ids, f"historical fixture {fixture.get('id')} references unknown failure id", errors)
+            _require(
+                failure_id in _record_failure_ids(referenced_record),
+                f"historical fixture {fixture.get('id')} failure {failure_id} is not represented by {result_record_ref}",
+                errors,
+            )
     _require(len(pack["historical"].get("fixtures", [])) >= 3, "at least three historical fixtures are required", errors)
 
     for decision in pack["promotions"].get("decisions", []):
         for failure_id in decision.get("failure_ids", []):
             _require(failure_id in failure_ids, f"promotion {decision.get('id')} references unknown failure id", errors)
+            if decision.get("evidence_record_ids"):
+                referenced_failures = set().union(
+                    *(_record_failure_ids(records_by_id.get(str(record_id))) for record_id in decision.get("evidence_record_ids", []))
+                )
+                _require(
+                    failure_id in referenced_failures,
+                    f"promotion {decision.get('id')} failure {failure_id} is not represented by its evidence records",
+                    errors,
+                )
         for record_id in decision.get("evidence_record_ids", []):
             _require(record_id in record_ids, f"promotion {decision.get('id')} references unknown record id", errors)
         _require(decision.get("owner_surface") in owner_surfaces, f"promotion {decision.get('id')} has unknown owner surface", errors)
         _require(decision.get("decision") in {"promote", "dismiss"}, f"promotion {decision.get('id')} has invalid decision", errors)
+        if decision.get("decision") == "promote":
+            _require(
+                _actionable_remediation(decision),
+                f"promotion {decision.get('id')} must route to an actionable remediation owner",
+                errors,
+            )
 
     surface_decisions = {"keep_visible", "route", "merge", "generate", "remove", "keep_reasoning_complement"}
     for decision in pack["surfaces"].get("decisions", []):
         _require(decision.get("decision") in surface_decisions, f"surface decision {decision.get('id')} is invalid", errors)
         _require(decision.get("owner") in owner_surfaces, f"surface decision {decision.get('id')} has unknown owner", errors)
+        for evidence_ref in decision.get("evidence_refs", []):
+            _require(
+                evidence_ref in record_ids or evidence_ref in scenario_ids,
+                f"surface decision {decision.get('id')} references unknown evidence {evidence_ref}",
+                errors,
+            )
 
     _require("PROOF_MISSING_BEFORE_CLAIM" in failure_ids_seen, "sample records must include proof claim-safety failure evidence", errors)
     _require("MEMORY_PULL_MISSING" in failure_ids_seen, "sample records must include Memory routing failure evidence", errors)
@@ -124,6 +172,21 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
     live_failure_counts = Counter(failure_id for run in live_runs for failure_id in run.get("failure_ids", []))
     live_warning_counts = Counter(warning for run in live_runs for warning in run.get("warning_classes", []))
     live_clean_count = sum(1 for run in live_runs if run.get("live_outcome") == "pass")
+    live_record_ids = {str(run.get("id")) for run in live_runs}
+    promotions = pack["promotions"]["decisions"]
+    live_promoted_failures = Counter(
+        failure_id
+        for decision in promotions
+        if decision.get("decision") == "promote" and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
+        for failure_id in decision.get("failure_ids", [])
+    )
+    live_actionable_failures = Counter(
+        failure_id
+        for decision in promotions
+        if _actionable_remediation(decision)
+        and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
+        for failure_id in decision.get("failure_ids", [])
+    )
 
     acceptance = {
         "scorecard_exists": bool(pack["scorecard"].get("dimensions") and pack["scorecard"].get("failure_taxonomy")),
@@ -161,6 +224,8 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "clean_run_count": live_clean_count,
             "failure_counts": dict(sorted(live_failure_counts.items())),
             "warning_counts": dict(sorted(live_warning_counts.items())),
+            "promoted_failure_counts": dict(sorted(live_promoted_failures.items())),
+            "actionable_remediation_failure_counts": dict(sorted(live_actionable_failures.items())),
         },
         "dimension_counts": dimension_counts,
         "failure_counts": dict(sorted(failure_counts.items())),
