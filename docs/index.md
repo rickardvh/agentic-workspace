@@ -9,7 +9,7 @@ Use this map when updating docs so each page stays complete at its level without
 | Question | Canonical owner | Link instead of repeating when |
 | --- | --- | --- |
 | What is Agentic Workspace and when does it pay back? | [Package overview](package/overview.md) | another page only needs the product thesis or adoption boundary |
-| Which core modules should a repo enable? | [Modules](package/modules.md) | repeating the memory/planning threshold would duplicate module guidance |
+| Which core modules should a repo enable? | [Modules](package/modules.md) | repeating module thresholds would duplicate module guidance |
 | What does the root CLI do? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) | a page only needs to name a command or compact router |
 | What is the ordinary agent operating loop and how are visible surfaces classified? | [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md) | later simplification work needs the target workflow, surface classes, overlap findings, or follow-on sequence |
 | Which substeps inside the ordinary loop should be simplified next? | [Operating loop substep inventory](package/operating-loop-substeps.md) | later #1389 slices need per-step decisions, module-slot seams, knowledge-gate fields, or concrete follow-on issues |
@@ -19,7 +19,7 @@ Use this map when updating docs so each page stays complete at its level without
 | When should governing knowledge block or constrain work? | [Pre-work knowledge gates](package/knowledge-gates.md) | a page only needs to name gate force, blocked actions, closeout evidence, or fallback behavior |
 | Which generated-command tests belong at the CLI wrapper boundary? | [CLI boundary tests](package/cli-boundary-tests.md) | a page only needs to distinguish operation conformance from argv/help/error/exit/stdout wrapper proof |
 | What final accounting proves generated behavior migration is complete? | [Generated behavior closure inventory](package/generated-behavior-closure-inventory.md) | a page only needs the #1476 parent closure evidence, unresolved-state rule, or bypass guardrails |
-| What do Planning and Memory own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state from durable repo knowledge |
+| What do Planning, Memory, and Verification own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state, durable repo knowledge, and verification evidence |
 | What are the exact fields and generated references? | [Contracts and references](package/contracts.md) and [Reference material](reference/index.md) | hand-written docs would otherwise copy generated schema detail |
 | What is source-checkout maintainer workflow? | [Maintainer index](maintainer/index.md) | ordinary host-repo docs mention internal validation, dogfooding, or generation only as a boundary |
 | What is current maturity or freshness? | [Documentation status](documentation-status.md) and [Maturity model](maturity-model.md) | status wording starts becoming a second product overview |
@@ -32,7 +32,7 @@ Use this map when updating docs so each page stays complete at its level without
 - [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md): reviewed target model for ordinary agent operation and follow-on simplification lanes.
 - [Operating loop substep inventory](package/operating-loop-substeps.md): reviewed per-step #1391 inventory for simplifying startup, active work, durable knowledge, proof, and closeout.
 - [Installed surfaces](package/installed-surfaces.md): what files the package writes into a host repository and who owns them.
-- [Modules](package/modules.md): how the root package composes Planning and Memory.
+- [Modules](package/modules.md): how the root package composes Planning, Memory, and Verification.
 - [Knowledge routing and source authority](package/knowledge-routing.md): how startup, posture, closeout, Memory, Planning, issues, docs, and external sources route governing knowledge without broad mirroring.
 - [Pre-work knowledge gates](package/knowledge-gates.md): when routed knowledge should block design, edits, claims, or closeout until resolved.
 - [CLI boundary tests](package/cli-boundary-tests.md): how shell-facing wrapper tests stay separate from operation conformance cases.

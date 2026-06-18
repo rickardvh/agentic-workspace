@@ -59,7 +59,7 @@ Choose the smallest module set that solves the repo problem. Start with `memory`
 agentic-workspace init --target ./repo --modules memory
 ```
 
-Use an installed `agentic-workspace` CLI from the target repo's environment when available. If it is unavailable, install the package into that repo or its tool environment first, then rerun the same command. Use `--modules planning` when active work continuity is the main problem, and `--modules planning,memory` when both durable knowledge and active planning are justified. `uvx` or `pipx run` are temporary/debug fallbacks, not the default install path.
+Use an installed `agentic-workspace` CLI from the target repo's environment when available. If it is unavailable, install the package into that repo or its tool environment first, then rerun the same command. Use `--modules planning` when active work continuity is the main problem, `--modules verification` when reusable evidence protocols are the main problem, and `--modules planning,memory` when both durable knowledge and active planning are justified. `uvx` or `pipx run` are temporary/debug fallbacks, not the default install path.
 
 ## Core Modules
 
@@ -67,13 +67,14 @@ Use an installed `agentic-workspace` CLI from the target repo's environment when
 | --- | --- |
 | `memory` | The repo needs durable knowledge and anti-rediscovery context, without checked-in active plans. |
 | `planning` | The repo needs active work continuity, proof expectations, or handoff state, without shared Memory. |
+| `verification` | The repo needs reusable verification protocols, proof-route hints, and bounded evidence records. |
 | `planning,memory` | The repo needs both durable knowledge and checked-in active planning. |
 
 For the full package map and lower-footprint routing-only setup, see [`docs/index.md`](docs/index.md).
 
 ## What Gets Installed
 
-The selected modules write a small `.agentic-workspace/` operating layer plus thin adapter files that point agents at structured state. The root `agentic-workspace` command owns lifecycle, startup routing, combined reporting, and updates. Memory and Planning are selectable core modules installed through that root entrypoint and persisted in `[modules].enabled`.
+The selected modules write a small `.agentic-workspace/` operating layer plus thin adapter files that point agents at structured state. The root `agentic-workspace` command owns lifecycle, startup routing, combined reporting, and updates. Planning, Memory, and Verification are selectable core modules installed through that root entrypoint and persisted in `[modules].enabled`.
 
 Selecting `planning,memory` does not activate source-checkout maintainer tooling, package extraction, codegen development, or self-improvement surfaces.
 

@@ -20,13 +20,17 @@ Required steps:
 
 Preferred install or adopt intent:
 
-- agentic-workspace defaults --section install_profiles --format json
-- agentic-workspace install --target ./repo --preset memory
-- agentic-workspace install --target ./repo --preset planning
-- agentic-workspace install --target ./repo --preset full
-- agentic-workspace install --target ./repo --preset memory --local-only
+- agentic-workspace defaults --section module_selection --format json
+- agentic-workspace install --target ./repo --modules memory
+- agentic-workspace install --target ./repo --modules planning
+- agentic-workspace install --target ./repo --modules verification
+- agentic-workspace install --target ./repo --modules planning,memory
+- agentic-workspace install --target ./repo --modules memory --local-only
 
-Choose the smallest preset that matches the target repo. Use `memory` for durable repo knowledge, `planning` for active work continuity, and `full` only when both are explicitly desired. Treat `full` as an example for combined Memory plus Planning, not as the default for every external handoff.
+Choose the smallest module selection that matches the target repo. Use `memory`
+for durable repo knowledge, `planning` for active work continuity,
+`verification` for reusable evidence protocols, and `planning,memory` only when
+both active state and durable knowledge are explicitly desired.
 
 Preferred host-repo update path:
 

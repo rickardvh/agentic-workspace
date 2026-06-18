@@ -39,7 +39,7 @@ Adoption shape:
 
 - Works through the Workspace layer in repos that need checked-in execution steering without a separate memory layer.
 - Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
-- Selective adoption remains valid: a repo can install the `planning` preset without Memory, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
+- Selective adoption remains valid: a repo can install with `--modules planning` without Memory, while Workspace still owns startup routing, lifecycle coordination, shared config, and combined reports.
 
 Participation shape:
 
@@ -89,7 +89,7 @@ Bundled skills:
 ## Quick Start
 
 Default path: use `agentic-workspace init --modules planning`.
-Treat the preset as the user intent: "set up this repo for Agentic Planning" and let the workspace CLI choose the safe install vs adopt path from repo state.
+Treat the module selection as the user intent: "set up this repo for Agentic Planning" and let the workspace CLI choose the safe install vs adopt path from repo state.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
 Advanced module-only no-install path:

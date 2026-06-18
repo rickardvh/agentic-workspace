@@ -1,12 +1,21 @@
 # AW Contract Test Replacement Inventory
 
-This inventory is the #1374 AW-side implementation record for replacing generated-command behavior assertions with contract-owned conformance cases.
+This retained inventory is the AW-side implementation record for replacing
+generated-command behavior assertions with contract-owned conformance cases.
 
 ## Closure Decision
 
-#1374 is complete for the AW repository when this inventory is current: stable generated-command success behavior has a contract-owned conformance owner, duplicate ordinary success-path regressions have been merged or deleted, and the remaining ordinary tests are explicitly retained because they cover runner internals, adapter error classification, proof/checker orchestration, schema/generator mechanics, high-risk workflow semantics, or command-generation-owned primitive behavior.
+The AW-side migration is complete for this record when it stays current: stable
+generated-command success behavior has a contract-owned conformance owner,
+duplicate ordinary success-path regressions have been merged or deleted, and the
+remaining ordinary tests are explicitly retained because they cover runner
+internals, adapter error classification, proof/checker orchestration,
+schema/generator mechanics, high-risk workflow semantics, or
+command-generation-owned primitive behavior.
 
-This inventory now consumes the `rickardvh/command-generation#9` replacement surface from `rickardvh/command-generation#13`: package-owned reusable conformance case resources exposed by `contract_conformance_cases_manifest()` and `load_contract_conformance_case(...)`.
+This inventory now consumes the package-owned reusable conformance case resource
+surface exposed by `contract_conformance_cases_manifest()` and
+`load_contract_conformance_case(...)`.
 
 The June 2026 audit found additional stable text-output tests that could not be migrated without weakening coverage until the shared `command-generation` conformance runner supported stdout substring checks. The current reusable case-resource surface from `rickardvh/command-generation#13` provides that capability, so the migrated text cases run through the same generated Python and TypeScript conformance proof as JSON cases.
 

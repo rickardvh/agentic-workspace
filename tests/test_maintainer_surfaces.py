@@ -523,20 +523,20 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "#1535 Verification dogfood slice" in strategy
     assert "Contract-Owned Cases" in strategy
     assert "Prune only when stronger or equivalent coverage remains" in strategy
-    assert "#1373 owns the plan" in strategy
+    assert "retained records, not open ownership claims" in strategy
     assert "contract-test-replacement-plan.md" in strategy
-    assert "#1374 owns replacing AW generated-command behavior tests" in strategy
-    assert "rickardvh/command-generation#9" in strategy
+    assert "move stable generated behavior to" in strategy
+    assert "Python and TypeScript generated targets" in strategy
     assert "aw-contract-test-replacement-inventory.md" in strategy
+    assert "closed historical owners" in replacement_plan
     assert "Do not preserve the current test layout" in replacement_plan
     assert "Delete Or Merge Only With Equivalent Coverage" in replacement_plan
     assert "85 existing process-level conformance cases" in replacement_plan
     assert "old test name" in replacement_plan
     assert "replacement contract id and case id" in replacement_plan
-    assert "rickardvh/command-generation#9" in replacement_plan
-    assert "#1374 is complete for the AW repository" in aw_inventory
-    assert "consumes the `rickardvh/command-generation#9` replacement surface" in aw_inventory
-    assert "rickardvh/command-generation#13" in aw_inventory
+    assert "Future conversions should include an inventory table" in replacement_plan
+    assert "The AW-side migration is complete for this record" in aw_inventory
+    assert "package-owned reusable conformance case resource" in aw_inventory
     assert "contract_conformance_cases_manifest()" in aw_inventory
     assert "test_blackbox_root_generated_command_executes_through_console_script" in aw_inventory
     assert "test_blackbox_root_generated_command_executes_primitive_ir_through_console_script" in aw_inventory
@@ -551,7 +551,7 @@ def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     assert "config.selected-text.process" in aw_inventory
     assert "delegation-outcome.append-text.process" in aw_inventory
     assert "stdout.contains" in aw_inventory
-    assert "rickardvh/command-generation#13" in replacement_plan
+    assert "package-owned reusable conformance case resource surface" in replacement_plan
     assert "Deleted Ordinary Regressions" in aw_inventory
     assert "tests/test_generated_command_package_proof_runner.py" in aw_inventory
     assert "test_generated_operation_cli_input_proof_scenarios" in aw_inventory

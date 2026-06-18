@@ -64,7 +64,8 @@ The workspace layer must not assume:
 
 ## Why The Boundary Stays Closed For Now
 
-The first-party module contract is real and useful, but still optimized around two closely related shipped modules that are dogfooded in this monorepo.
+The first-party module contract is real and useful, but still optimized around
+the shipped modules dogfooded in this monorepo.
 
 Opening that boundary too early would risk:
 
@@ -76,7 +77,10 @@ Opening that boundary too early would risk:
 
 - Gate 1 is now materially stronger: first-party modules are descriptor-owned and no longer depend on separate orchestrator globals for ordering, presets, startup guidance, capabilities, or result-contract reporting.
 - Gate 2 is only partially met: the module-capability and lifecycle contract is explicit, but it is still documented as a first-party internal contract rather than a supported third-party public contract.
-- Gate 3 is only proven for the current first-party pair. Fresh clean-room proof now shows selective adoption is strong for Memory and Planning through the shared workspace lifecycle, but it is still not exercised with a realistic non-core module.
+- Gate 3 is proven for the current first-party modules, including selective
+  Memory, Planning, Verification, and combined installs through the shared
+  workspace lifecycle. It is still not exercised with a realistic non-core
+  module.
 - Gate 4 remains unmet for external extension: compatibility, upgrade, uninstall, and doctor expectations are explicit for first-party modules, not for hypothetical non-core modules.
 - Gate 5 remains unmet: there is still no concrete external-use-case pressure that is clearly better solved by opening the boundary than by keeping the capability package-local or internal.
 
@@ -88,7 +92,8 @@ Do not treat external extension as supported until all of the following are true
 
 1. The first-party module contract is stable enough that new first-party modules could be added from descriptor-owned metadata without bespoke orchestrator globals or hardcoded root-guidance branches.
 2. The registry and lifecycle model are documented in public-contract terms rather than only internal descriptor terms.
-3. Selective adoption still works cleanly when the workspace layer coordinates more than the current first-party pair.
+3. Selective adoption still works cleanly when the workspace layer coordinates
+   first-party modules plus a realistic non-core module.
 4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules.
 5. At least one realistic external-use case exists that is better solved by extension than by keeping the capability inside an existing module.
 
@@ -96,9 +101,9 @@ Do not treat external extension as supported until all of the following are true
 
 | Gate | Current status | Current read | Reopen when |
 | --- | --- | --- | --- |
-| 1. First-party module contract is stable enough for another first-party module without bespoke orchestrator globals. | `conditional` | The descriptor-owned first-party contract is much stronger than before, but it is still only proven on the current shipped pair plus workspace composition. | Another first-party module lands or a new module-contract change still requires orchestrator special-casing. |
+| 1. First-party module contract is stable enough for another first-party module without bespoke orchestrator globals. | `conditional` | The descriptor-owned first-party contract is much stronger than before, but it is still proven only inside the shipped first-party set plus workspace composition. | Another first-party module lands or a new module-contract change still requires orchestrator special-casing. |
 | 2. Registry and lifecycle model are documented in public-contract terms. | `not yet` | The registry and module contract are documented honestly as first-party-only internal structure, not as a public external contract. | Maintainer pressure or external demand requires describing the contract in public, non-internal terms. |
-| 3. Selective adoption still works cleanly beyond the current first-party pair. | `not yet` | Selective adoption is now freshly proven for Memory and Planning through clean-room `memory`, `planning`, and `full` installs, but not yet demonstrated across a broader module set. | A third first-party module or equivalent composition pressure appears. |
+| 3. Selective adoption still works cleanly beyond the current first-party set. | `not yet` | Selective adoption is proven for shipped first-party modules and combined installs, but not yet demonstrated with a realistic non-core module. | A realistic non-core module candidate appears. |
 | 4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules. | `not yet` | Current lifecycle and doctor expectations are explicit for the existing first-party modules only. | A realistic non-core module candidate exists and its lifecycle behavior needs to be described end to end. |
 | 5. A realistic external-use case is better solved by extension than by keeping capability inside an existing module. | `not yet` | Current dogfooding still points toward sharpening first-party seams instead of opening extension. | Repeated real requests or internal pressure show that keeping the capability package-local is the worse design. |
 
@@ -108,7 +113,9 @@ The boundary remains closed because the current evidence is still strongest for 
 
 - Treat extension-boundary work as design work until those readiness gates are met.
 - Prefer sharpening first-party module seams, docs, tests, and lifecycle reporting over inventing a plugin API.
-- If a new capability is only useful as a helper to memory or planning, keep it package-local or capability-local instead of making it look like an external module surface.
+- If a new capability is only useful as a helper to a shipped first-party module,
+  keep it package-local or capability-local instead of making it look like an
+  external module surface.
 - Re-run a bounded readiness review when first-party module contracts change materially or when real downstream extension pressure appears.
 
 ## Re-Review Triggers
@@ -124,7 +131,7 @@ If that review reveals bounded follow-on work, record it in `roadmap` in `.agent
 
 ## Relationship To Other Docs
 
-- Use [`docs/integration-contract.md`](integration-contract.md) for how memory, planning, managed surfaces, and generated docs interact today.
+- Use [`docs/integration-contract.md`](integration-contract.md) for how Planning, Memory, Verification, managed surfaces, and generated docs interact today.
 - Use [`docs/module-capability-contract.md`](module-capability-contract.md) for the current first-party capability/dependency/result contract that prepares the registry for later extension without opening it yet.
 - Use [`.agentic-workspace/docs/extraction-and-discovery-contract.md`](../.agentic-workspace/docs/extraction-and-discovery-contract.md) for extraction criteria and ownership rules.
 - Use [`docs/ecosystem-roadmap.md`](ecosystem-roadmap.md) for long-horizon stance without treating it as a promise of immediate extension support.

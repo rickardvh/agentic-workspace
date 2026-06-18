@@ -30,10 +30,11 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
-- **Preset Selector**: `agentic-workspace defaults --section install_profiles --format json`.
-- **Memory Command**: `agentic-workspace install --target ./repo --preset memory`.
-- **Planning Command**: `agentic-workspace install --target ./repo --preset planning`.
-- **Combined Command**: `agentic-workspace install --target ./repo --preset full` only when both Memory and Planning are explicitly desired.
+- **Module Selector**: `agentic-workspace defaults --section module_selection --format json`.
+- **Memory Command**: `agentic-workspace install --target ./repo --modules memory`.
+- **Planning Command**: `agentic-workspace install --target ./repo --modules planning`.
+- **Verification Command**: `agentic-workspace install --target ./repo --modules verification`.
+- **Combined Command**: `agentic-workspace install --target ./repo --modules planning,memory` only when both Memory and Planning are explicitly desired.
 - **Optional Local Sandbox Command**: add `--local-only` to the selected preset command when the install should stay local.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
 - **Orientation**: Return to the configured startup file (default `AGENTS.md`) after bootstrap is complete.
