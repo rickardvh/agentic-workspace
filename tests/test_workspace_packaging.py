@@ -163,6 +163,14 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "actions/upload-artifact@v7.0.1" in ci_text
 
 
+def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None:
+    ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "run: make typecheck" in ci_text
+    assert ci_text.index("run: make lint-workspace") < ci_text.index("run: make typecheck")
+    assert ci_text.index("run: make typecheck") < ci_text.index("run: make verify-workspace")
+
+
 def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 

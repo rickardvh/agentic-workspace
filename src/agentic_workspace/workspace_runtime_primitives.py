@@ -741,7 +741,8 @@ def _installed_state_compatibility_payload(
     failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
     stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
     payload_warnings = list((summary or {}).get("warnings", []))
-    provenance_status = _read_payload_provenance(target_root=config.target_root)
+    target_root = config.target_root or Path.cwd()
+    provenance_status = _read_payload_provenance(target_root=target_root)
     provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
     release_identity = provenance_payload.get("release_identity", {}) if isinstance(provenance_payload, dict) else {}
     installed_by = provenance_payload.get("installed_by", {}) if isinstance(provenance_payload, dict) else {}
@@ -752,8 +753,8 @@ def _installed_state_compatibility_payload(
         if isinstance(installed_by, dict)
         else ""
     )
-    current_identity = _payload_installer_identity(target_root=config.target_root)
-    initialized_payload_present = (config.target_root / WORKSPACE_CONFIG_PATH).is_file() or bool(installed_modules)
+    current_identity = _payload_installer_identity(target_root=target_root)
+    initialized_payload_present = (target_root / WORKSPACE_CONFIG_PATH).is_file() or bool(installed_modules)
     payload_provenance_drift = "none"
     if provenance_status.get("status") in {"invalid"}:
         payload_provenance_drift = "invalid-provenance"
@@ -774,14 +775,14 @@ def _installed_state_compatibility_payload(
     elif stale_generated_surfaces:
         status = "payload-upgrade-required"
         next_action = _command_with_cli_invoke(
-            command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+            command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
             cli_invoke=config.cli_invoke,
         )
         reason = "module-managed or generated payload surfaces are stale"
     elif payload_provenance_drift in {"missing-provenance", "invalid-provenance", "payload-installed-by-older-aw"}:
         status = "payload-upgrade-required"
         next_action = _command_with_cli_invoke(
-            command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+            command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
             cli_invoke=config.cli_invoke,
         )
         reason = "repo payload provenance must be synced before strong installed-state compatibility claims"
@@ -830,7 +831,7 @@ def _installed_state_compatibility_payload(
             "provenance": provenance_status,
             "provenance_drift": payload_provenance_drift,
             "sync_command": _command_with_cli_invoke(
-                command=f"agentic-workspace upgrade --target {config.target_root.as_posix()} --dry-run --format json",
+                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
                 cli_invoke=config.cli_invoke,
             ),
             "rule": "Repo payload state is authoritative; stale payloads should be synced deliberately before trusting newer executables.",
@@ -891,7 +892,7 @@ def _sibling_repo_aw_freshness_payload(*, target_root: Path, task_text: str | No
         return {"kind": "agentic-workspace/sibling-repo-aw-freshness/v1", "status": "not-referenced", "siblings": []}
     siblings: list[dict[str, Any]] = []
     for sibling_root in references:
-        relative = _display_path(sibling_root, target_root)
+        relative = _display_path(sibling_root.as_posix(), target_root)
         configured = (sibling_root / ".agentic-workspace" / "config.toml").is_file() or (
             sibling_root / ".agentic-workspace" / "config.local.toml"
         ).is_file()
@@ -13940,6 +13941,11 @@ def _memory_decision_packet_payload(
     }
 
 
+def _memory_consult_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    memory_consult = payload.get("memory_consult", {})
+    return memory_consult if isinstance(memory_consult, dict) else {}
+
+
 def _maintenance_pressure_payload(
     *, report_payload: dict[str, Any], module_reports: list[dict[str, Any]], findings: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -15590,11 +15596,13 @@ def _closeout_protocol_payload(
         if isinstance(option, dict) and option.get("allowed") is False and option.get("blocking_fields")
     ]
     blocking_fields = _dedupe(
-        str(field)
-        for option in options_by_id.values()
-        if isinstance(option, dict)
-        for field in _list_payload(option.get("blocking_fields"))
-        if str(field).strip()
+        [
+            str(field)
+            for option in options_by_id.values()
+            if isinstance(option, dict)
+            for field in _list_payload(option.get("blocking_fields"))
+            if str(field).strip()
+        ]
     )
     readiness_status = (
         "ready" if trust == "normal" and not bool(strict_gate.get("blocking")) and not blocking_option_ids else "action-required"
@@ -20371,8 +20379,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _attach_start_router_fields(payload: dict[str, Any]) -> None:
     if "next_safe_action" not in payload:
+        immediate = payload.get("immediate_next_allowed_action")
+        if not isinstance(immediate, dict):
+            immediate = {}
         payload["next_safe_action"] = _next_safe_action_packet(
-            immediate=payload.get("immediate_next_allowed_action"),
+            immediate=immediate,
             workflow_sufficiency=payload.get("workflow_sufficiency"),
             skill_routing=payload.get("skill_routing"),
             memory_consult=payload.get("memory_consult"),
@@ -21049,7 +21060,7 @@ def _start_payload(
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="startup",
         cli_invoke=config.cli_invoke,
-        memory_consult=payload.get("memory_consult", {}),
+        memory_consult=_memory_consult_from_payload(payload),
         changed_paths=changed_paths,
         task_text=task_text,
     )
@@ -22347,7 +22358,7 @@ def _start_tiny_payload_fast(
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="startup",
         cli_invoke=config.cli_invoke,
-        memory_consult=payload.get("memory_consult", {}),
+        memory_consult=_memory_consult_from_payload(payload),
         changed_paths=changed_paths,
         task_text=task_text,
     )
@@ -27272,13 +27283,14 @@ def _implement_payload(
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    memory_consult = _memory_consult_from_payload(payload)
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="implement",
         cli_invoke=config.cli_invoke,
-        memory_consult=payload.get("memory_consult", {}),
+        memory_consult=memory_consult,
         changed_paths=normalized_paths,
         task_text=task_text,
-        force="required_before_claim" if normalized_paths and payload.get("memory_consult", {}).get("status") == "recommended" else None,
+        force="required_before_claim" if normalized_paths and memory_consult.get("status") == "recommended" else None,
     )
     if include_task_contract:
         payload["task_contract"] = _task_contract_payload(
