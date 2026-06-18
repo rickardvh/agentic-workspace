@@ -68,10 +68,11 @@ release workflow behavior.
 
 ## Post-Merge Release
 
-After a package-affecting PR merges to `master`, the release workflow runs from
-the `pull_request.closed` event and uses the event payload plus GitHub PR file
-metadata as the release decision source. It must not infer release intent by
-parsing merge commit messages.
+After a package-affecting PR merges to `master`, the release workflow runs only
+from the `master` push event. It uses GitHub commit-to-PR metadata plus PR file
+and label APIs as the release decision source. It must not infer release intent
+by parsing merge commit messages, and it must not publish from a PR event
+context.
 
 For merged package-affecting PRs, the release workflow:
 
@@ -83,17 +84,13 @@ For merged package-affecting PRs, the release workflow:
    to the same value;
 6. updates `uv.lock`;
 7. runs tests, lint, typecheck, generated package proof, TypeScript package
-   tests, and package artifact proof;
+   tests, and package artifact proof against the release-normalized tree;
 8. builds every wheel, sdist, and TypeScript npm tarball;
 9. generates `SHA256SUMS`;
 10. generates `agentic-workspace-release-manifest.json`;
 11. verifies all release artifacts and metadata before publishing;
 12. commits only version normalization and lockfile changes as `Release vX.Y.Z`;
 13. pushes the tag and publishes the GitHub Release.
-
-The companion `push` event created by a PR merge is ignored when GitHub commit
-metadata links it back to the merged PR; this avoids duplicate release handling
-without relying on merge commit message parsing.
 
 The generated release manifest is intentionally not committed. It belongs to the
 release artifact set. The release commit must not mix product behavior changes
