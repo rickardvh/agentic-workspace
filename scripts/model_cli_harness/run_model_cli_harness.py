@@ -53,6 +53,7 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "GEMINI.md",
     ".cursorrules",
     "pyproject.toml",
+    "scripts/run_agentic_workspace.py",
 )
 
 
@@ -272,6 +273,11 @@ def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
     compact_startup = " ".join(line.strip() for line in startup_text.splitlines() if line.strip())
     return (
         f"{prompt}\n\n"
+        "Harness isolation rule: evaluate this copied repository only. "
+        "Use the repository startup instruction below as the startup authority for this fixture. "
+        "Do not use caller/source-checkout commands such as `uv run python scripts/run_agentic_workspace.py ...` "
+        "unless that exact command appears in the copied repository startup instruction below. "
+        "When reporting files, use repo-relative paths only, never local absolute scratch paths.\n\n"
         f"Repository startup instruction from {startup_file or DEFAULT_AGENT_INSTRUCTIONS_FILE} to apply before non-trivial requests: "
         f"{compact_startup}\n"
     )
@@ -350,19 +356,82 @@ def _prepare_fixture(*, suite_path: Path, scenario: dict[str, Any], paths: Harne
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
     _prepare_source_checkout_invocation(paths.repo_path)
-    if (paths.repo_path / ".git").exists():
-        subprocess.run(  # noqa: S603
-            ["git", "config", "core.longpaths", "true"],
-            cwd=paths.repo_path,
+    _prepare_fixture_git_repository(paths.repo_path)
+
+
+def _prepare_fixture_git_repository(repo_path: Path) -> None:
+    if not (repo_path / ".git").exists():
+        init = subprocess.run(  # noqa: S603
+            ["git", "init"],
+            cwd=repo_path,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
         )
+        if init.returncode != 0:
+            return
+    subprocess.run(  # noqa: S603
+        ["git", "config", "core.longpaths", "true"],
+        cwd=repo_path,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if _git_has_commits(repo_path):
+        return
+    subprocess.run(["git", "add", "."], cwd=repo_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [
+            "git",
+            "-c",
+            "user.name=Model CLI Harness",
+            "-c",
+            "user.email=model-cli-harness@example.invalid",
+            "commit",
+            "-m",
+            "Initialize harness fixture",
+        ],
+        cwd=repo_path,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+def _git_has_commits(repo_path: Path) -> bool:
+    result = subprocess.run(  # noqa: S603
+        ["git", "rev-parse", "--verify", "HEAD"],
+        cwd=repo_path,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def _prepare_source_checkout_invocation(repo_path: Path) -> None:
     if not (repo_path / ".agentic-workspace").exists():
         return
+
+    scripts_dir = repo_path / "scripts"
+    scripts_dir.mkdir(exist_ok=True)
+    script_shim = scripts_dir / "run_agentic_workspace.py"
+    if not script_shim.exists():
+        script_shim.write_text(
+            "\n".join(
+                [
+                    '"""Compatibility entrypoint for source-checkout-backed harness fixtures."""',
+                    "",
+                    "from agentic_workspace.cli import main",
+                    "",
+                    "",
+                    'if __name__ == "__main__":',
+                    "    raise SystemExit(main())",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
     pyproject = repo_path / "pyproject.toml"
     if not pyproject.exists():
@@ -385,7 +454,7 @@ def _prepare_source_checkout_invocation(repo_path: Path) -> None:
 
     local_config = repo_path / ".agentic-workspace" / "config.local.toml"
     if not local_config.exists():
-        local_config.write_text('[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
+        local_config.write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
 
 
 def _terminate_process_tree(pid: int) -> None:
@@ -1273,7 +1342,16 @@ def _normalized_command_text(text: str) -> str:
 
 def _command_requirement_satisfied(*, required: str, executed_command_text: str) -> bool:
     normalized_required = _normalized_command_text(required)
-    return normalized_required in executed_command_text
+    return any(candidate in executed_command_text for candidate in _equivalent_command_requirements(normalized_required))
+
+
+def _equivalent_command_requirements(normalized_required: str) -> list[str]:
+    equivalents = [normalized_required]
+    package_prefix = "uv run agentic-workspace "
+    if normalized_required.startswith(package_prefix):
+        suffix = normalized_required[len(package_prefix) :]
+        equivalents.append(f"uv run python scripts/run_agentic_workspace.py {suffix}")
+    return equivalents
 
 
 def _provider_did_not_run(result: dict[str, Any]) -> bool:

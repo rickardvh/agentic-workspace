@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
 SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
+HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
 
 
 def _load_module():
@@ -14,6 +20,17 @@ def _load_module():
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_harness_module():
+    spec = importlib.util.spec_from_file_location("run_model_cli_harness", HARNESS_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -104,10 +121,11 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["fixture_closure_state"] == "ready_for_fixture_closure"
     assert report["closure_state"] == "partial_closure"
     assert report["live_evaluation"]["status"] == "unresolved-failures"
+    assert report["live_evaluation"]["clean_run_count"] == 3
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
-    assert report["live_evaluation"]["failure_counts"]["MEMORY_PULL_MISSING"] >= 1
+    assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["promotion_count"] >= 1
 
 
@@ -126,3 +144,48 @@ def test_model_cli_harness_doc_links_external_agent_lane_pack() -> None:
     assert "tools/model-cli-harness/external-agent-evaluation/" in text
     assert "scripts/model_cli_harness/external_agent_evaluation_lane.py validate" in text
     assert "scripts/model_cli_harness/external_agent_evaluation_lane.py report --format json" in text
+
+
+def test_model_cli_harness_scores_source_checkout_aw_invocation_as_package_cli() -> None:
+    module = _load_harness_module()
+    executed = module._normalized_command_text("uv run python scripts/run_agentic_workspace.py start --target . --format json")
+
+    assert module._command_requirement_satisfied(required="uv run agentic-workspace start", executed_command_text=executed)
+
+
+def test_model_cli_harness_prepares_fixture_git_repo_for_diff_commands(tmp_path: Path) -> None:
+    if shutil.which("git") is None:
+        pytest.skip("git is required for fixture git preparation")
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    readme = repo / "README.md"
+    readme.write_text("before\n", encoding="utf-8")
+
+    module._prepare_fixture_git_repository(repo)
+    readme.write_text("after\n", encoding="utf-8")
+    result = subprocess.run(
+        ["git", "diff", "--", "README.md"],
+        cwd=repo,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "-before" in result.stdout
+    assert "+after" in result.stdout
+
+
+def test_model_cli_harness_source_checkout_config_uses_local_schema(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    workspace = repo / ".agentic-workspace"
+    workspace.mkdir(parents=True)
+
+    module._prepare_source_checkout_invocation(repo)
+    local_config = (workspace / "config.local.toml").read_text(encoding="utf-8")
+
+    assert "schema_version = 1" in local_config
+    assert 'cli_invoke = "uv run agentic-workspace"' in local_config

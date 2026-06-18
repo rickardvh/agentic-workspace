@@ -37,23 +37,9 @@
       "closure_effect": "accepted"
     },
     {
-      "id": "promote-live-source-checkout-command-leak",
-      "failure_ids": ["ROUTED_CONTEXT_IGNORED"],
-      "evidence_record_ids": [
-        "live-startup-orientation-20260618T090955Z",
-        "live-local-delegation-20260618T091357Z"
-      ],
-      "threshold": "repeated live Codex Spark runs attempted source-checkout-only startup command in disposable host fixtures",
-      "decision": "promote",
-      "owner_surface": "cli_output",
-      "fallback_owner_surface": "harness",
-      "followup_ref": "#1604",
-      "closure_effect": "routed"
-    },
-    {
       "id": "promote-live-local-path-leak",
       "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK"],
-      "evidence_record_ids": ["live-intent-proof-20260618T091048Z"],
+      "evidence_record_ids": ["live-memory-consult-20260618T093207Z"],
       "threshold": "live Codex Spark run leaked local absolute scratch paths in final answer",
       "decision": "promote",
       "owner_surface": "harness",
