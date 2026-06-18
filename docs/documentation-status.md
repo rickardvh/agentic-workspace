@@ -1,38 +1,31 @@
 # Documentation Status
 
-This page is a compact role and freshness index for the documentation set. It is not the package overview. For current shipped behavior, start with [docs/index.md](index.md) and the `docs/package/` hierarchy; use this page only to understand each document's role and freshness.
+This page is a compact role and freshness index. It is not the package
+overview, module map, or backlog. For shipped behavior, start with
+[docs/index.md](index.md) and the `docs/package/` hierarchy.
 
-Last reviewed: 2026-05-01.
-Refresh route: update this index when a public doc changes role, starts owning current capability claims, or is reviewed for freshness.
+Last reviewed: 2026-06-18.
+Refresh route: update this page only when a public doc changes role, becomes a
+current capability owner, or is freshly reviewed for currentness.
 
-| Doc | Audience | Authority class | Currentness status | Owns current capability or vision | Refresh route |
-| --- | --- | --- | --- | --- | --- |
-| [`README.md`](../README.md) | external adopters and evaluators | public entrypoint | current | stable product positioning and install starting point | Review on public positioning or preset policy changes; keep detailed status in secondary docs. |
-| [`docs/index.md`](index.md) | external adopters, evaluators, and agents | documentation and owner map | current | primary navigation hierarchy and canonical owner map for repeated shipped-package concepts | Review when the documentation hierarchy changes or a repeated concept changes owner. |
-| [`docs/package/overview.md`](package/overview.md) | adopters and evaluators | shipped package explanation | current | root package, presets, runtime model, and first-party parts | Review when package footprint, presets, or first-contact behavior changes. |
-| [`docs/package/lifecycle.md`](package/lifecycle.md) | adopters and agent operators | shipped package explanation | current | lifecycle and context command model | Review when root CLI command roles or audiences change. |
-| [`docs/package/commands.md`](package/commands.md) | adopters and agent operators | shipped package explanation | current | human map of the shipped root CLI surface | Review when root CLI command roles or audiences change. |
-| [`docs/package/installed-surfaces.md`](package/installed-surfaces.md) | adopters and repository owners | shipped package explanation | current | installed host-repo file surfaces and ownership model | Review when installed payload or ownership boundaries change. |
-| [`docs/package/modules.md`](package/modules.md) | adopters and technical reviewers | shipped package explanation | current | first-party module profiles and responsibilities | Review when module registry profiles or module roles change. |
-| [`docs/package/knowledge-routing.md`](package/knowledge-routing.md) | adopters, agents, and planning reviewers | shipped package explanation | current | knowledge routing and source authority model for startup, task posture, closeout, Memory, Planning, issues, docs, and external sources | Review when route triggers, source authority classes, posture fields, freshness policy, or capture obligations change. |
-| [`docs/package/knowledge-gates.md`](package/knowledge-gates.md) | adopters, agents, and planning reviewers | shipped package explanation | current | pre-work knowledge gate model for startup, work shaping, posture, report, closeout, fallback, and compact audit behavior | Review when gate triggers, force levels, command integration, blocked actions, closeout evidence, or fallback policy changes. |
-| [`docs/package/contracts.md`](package/contracts.md) | technical reviewers | shipped package explanation | current | relationship between contract data, schemata, generated docs, and runtime outputs | Review when contract tooling or reference generation changes. |
-| [`docs/package/modules.md`](package/modules.md) | adopters choosing core modules | public module selection explanation | current | current Planning and Memory positioning | Keep aligned with `agentic-workspace defaults --section module_selection --format json`. |
-| [`docs/architecture.md`](architecture.md) | technical reviewers | architecture explanation | current | current architecture summary | Review when module boundaries, lifecycle routing, or registry behavior changes. |
-| [`docs/design-principles.md`](design-principles.md) | maintainers and reviewers | doctrine | current | design rationale and product constraints | Review when doctrine changes; do not use as the first current-capability matrix. |
-| [`docs/maturity-model.md`](maturity-model.md) | maintainers and evaluators | maturity signal | current | package maturity and adoption expectations | Review when package maturity or public support promises change. |
-| [`docs/module-capability-contract.md`](module-capability-contract.md) | maintainers and integration reviewers | internal contract | current | first-party module capability contract | Review when descriptor fields or module registry guarantees change. |
-| [`docs/extension-boundary.md`](extension-boundary.md) | integration reviewers | boundary doctrine | current | plugin/extension non-support boundary and gates | Review when external module or plugin support moves closer to public API. |
-| [`docs/ecosystem-roadmap.md`](ecosystem-roadmap.md) | maintainers and roadmap readers | roadmap doctrine | current | long-horizon ecosystem stance | Review when extraction stance or external package sequencing changes. |
-| [`docs/agent-os-capabilities.md`](agent-os-capabilities.md) | architecture reviewers | long-horizon capability map | current but vision-oriented | vision and capability taxonomy, not first-contact shipped status | Review when a capability category, home, or extraction stance changes. |
-| [`docs/maintainer/`](maintainer/) | maintainers | source-checkout maintenance section | current | maintainer-only workflow, validation, dogfooding, and review bars | Review when maintainer docs move or new maintainer-only docs are added. |
-| [`docs/maintainer/contributor-playbook.md`](maintainer/contributor-playbook.md) | maintainers | maintainer workflow reference | current | source-checkout contribution workflow | Review when maintainer commands, closeout expectations, or package-boundary workflow changes. |
-| [`docs/maintainer/maintainer-commands.md`](maintainer/maintainer-commands.md) | maintainers | source-checkout operational reference | current | maintainer command map | Review when proof, generation, or maintenance commands change. |
-| [`docs/reference/`](reference/) | technical reviewers and implementers | generated contract reference | current | field-level schema documentation generated from source schemata | Regenerate from schemata; do not hand-edit generated pages. |
-| [`docs/reviews/`](reviews/) | maintainers and auditors | historical evidence | historical/current as dated | evidence, not first-line product promise | Add new reviews instead of rewriting old evidence except for clear hygiene fixes. |
+| Doc set | Role | Currentness | Owner note |
+| --- | --- | --- | --- |
+| [`README.md`](../README.md) | public entrypoint | current | stable install and positioning start point |
+| [`docs/index.md`](index.md) | documentation owner map | current | canonical navigation for repeated concepts |
+| [`docs/package/`](package/) | shipped package docs | current | root CLI, module selection, installed surfaces, knowledge routing, proof, and contracts |
+| [`docs/maturity-model.md`](maturity-model.md) | maturity signal | current | support/adoption expectations, not a product map |
+| [`docs/maintainer/`](maintainer/) | source-checkout maintainer workflow | current | validation, dogfooding, release, and test strategy |
+| [`docs/reference/`](reference/) | generated contract reference | generated/current | regenerate from source schemata; do not hand-edit |
+| [`docs/reviews/`](reviews/) | dated evidence | historical/current as dated | audit evidence, not first-contact product docs |
+| `.agentic-workspace/planning/*/archive`, `.agentic-workspace/planning/closeout-evidence`, `.agentic-workspace/planning/reviews` | checked-in planning evidence | historical/current as dated | sampled 2026-06-18; retained because files carry dated review/proof or closeout context rather than live placeholders |
 
-Status buckets used in this repo:
+Status buckets:
 
-- `current`: reviewed against the current public package shape.
-- `current but vision-oriented`: still relevant, but not a shipped-capability selector.
-- `historical/current as dated`: useful evidence whose date and purpose limit its authority.
+- `current`: reviewed against the current package shape.
+- `generated/current`: current when regenerated from the source contract.
+- `historical/current as dated`: useful evidence whose date and purpose limit
+  its authority.
+
+Deletion rule: remove or compress stale status prose instead of expanding this
+page. If a doc set needs detailed ownership, put that detail in its canonical
+owner.

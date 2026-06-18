@@ -23,7 +23,8 @@ Choose the smallest module set that fits:
 
 - `memory`: durable repo knowledge and anti-rediscovery context.
 - `planning`: active work continuity, proof expectations, and handoff state.
-- `planning,memory`: both Memory and Planning, only when both are explicitly desired.
+- `verification`: reusable evidence protocols, proof-route hints, and known gaps.
+- `planning,memory`: both Planning and Memory, only when both are explicitly desired.
 
 ## If The CLI Is Missing
 

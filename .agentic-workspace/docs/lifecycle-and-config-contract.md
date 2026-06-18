@@ -5,10 +5,10 @@ This contract defines how the workspace is initialized, configured, and recovere
 ## 1. Initialization Lifecycle
 
 ### Default Behavior
-- `agentic-workspace init`: Bootstraps the repo with selected modules (`memory`, `planning`, or `full`).
+- `agentic-workspace init`: Bootstraps the repo with selected modules such as `memory`, `planning`, `verification`, or `planning,memory`.
 - [`.agentic-workspace/docs/installer-behavior.md`](installer-behavior.md) for payload resolution and development mirroring rules.
 - [`.agentic-workspace/docs/capability-aware-execution.md`](capability-aware-execution.md) for how the installer configures model-specific execution.
-- **User Intent**: The selected preset (`--preset`) determines the initial module set and configuration.
+- **User Intent**: The selected module set (`--modules`) determines the initial module set and configuration.
 - **Mode Selection**: The CLI automatically chooses a lifecycle mode (Clean install, Conservative adopt, or High-ambiguity adopt) based on existing repo state.
 
 ### High-Ambiguity Signals
@@ -27,7 +27,7 @@ Reconciliation is required when:
 - **`.agentic-workspace/`**: Product-managed module state. This directory should not be edited directly; use the owning package or CLI.
 
 ### Configuration Fields
-- `default_preset`: The default module set for `init`.
+- `default_preset`: Legacy config field for the default module set used by `init`; prefer explicit `--modules` in current commands.
 - `agent_instructions_file`: The filename for the canonical startup entrypoint (default `AGENTS.md`).
 - `optimization_bias`: The effective output posture (e.g. `agent-efficiency`, `token-saving`).
 

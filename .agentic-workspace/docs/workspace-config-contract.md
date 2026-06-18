@@ -8,7 +8,7 @@ Use it when the question is:
 
 - what classes of structured agent configuration exist here?
 - which surface is authoritative for each class?
-- how do planning and memory attach to the substrate?
+- how do Planning, Memory, and Verification attach to the substrate?
 - which startup or handoff prose surfaces are adapters rather than primary authority?
 - which compact query should answer a configuration question first?
 
@@ -23,10 +23,10 @@ Treat Agentic Workspace as a repo-owned agent configuration system with four con
 | Local invocation and integration aids | Optional machine-local CLI invocation and vendor/runtime helpers that make local compliance cheaper without becoming shared truth. | `.agentic-workspace/config.local.toml` plus `.agentic-workspace/local/integrations/` | `agentic-workspace config --target ./repo --format json` |
 | Local-only memory | Optional machine-local continuity notes that stay advisory and outside shared repo authority. | `.agentic-workspace/local/memory.toml` | `agentic-workspace report --target ./repo --format json` |
 | Module attachment | Which behavior modules exist, what they own, and how they compose without merging ownership. | module descriptors plus `.agentic-workspace/OWNERSHIP.toml` | `agentic-workspace ownership --target ./repo --format json`; `agentic-workspace modules --format json` |
-| Module state | Active planning state and durable memory state that consume the substrate but stay module-owned. | planning and memory surfaces | `agentic-workspace report --target ./repo --format json` |
+| Module state | Active planning state, durable memory state, and verification evidence state that consume the substrate but stay module-owned. | planning, memory, and verification surfaces | `agentic-workspace report --target ./repo --format json` |
 
 The workspace layer owns the substrate and composition logic.
-Planning and Memory remain behavior modules inside that substrate rather than ambient prose branches.
+Planning, Memory, and Verification remain behavior modules inside that substrate rather than ambient prose branches.
 
 For field-level shape, defaults, examples, and schema annotations, use the generated reference at `../../docs/reference/workspace-config.md`.
 This contract explains authority and usage; the generated reference is derived from `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`.
@@ -43,6 +43,7 @@ This contract explains authority and usage; the generated reference is derived f
 - **Module descriptors** define installed module capabilities, workflow surfaces, generated artifacts, dependencies, and conflicts.
 - **Planning** owns active execution state and near-term continuation.
 - **Memory** owns durable anti-rediscovery understanding.
+- **Verification** owns reusable verification protocols, bounded evidence, proof route hints, and known gaps.
 - **Repo-owned prose startup surfaces** remain useful, but they are adapters over the structured substrate once the workspace is installed.
 
 Do not treat prose surfaces as the primary authority once the structured substrate can answer the same question directly.

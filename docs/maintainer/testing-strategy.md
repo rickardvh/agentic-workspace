@@ -123,10 +123,16 @@ Treat these areas as high-risk until a stronger replacement exists:
 
 High-risk does not mean "add another one-off test by default." It means the replacement must be explicit, equivalent or stronger, and easy to review.
 
-## Future Work
+## Current Follow-Through
 
-#1373 owns the plan for replacing existing regressions with contract-owned conformance cases after the migration shape is stable. Use [Contract-owned test replacement plan](contract-test-replacement-plan.md) for the current sequencing, inventory, and handoff rules.
+The #1373/#1374 migration lanes established the contract-owned conformance
+direction and the AW-side generated-command inventory. Treat
+[Contract-owned test replacement plan](contract-test-replacement-plan.md) and
+[AW contract test replacement inventory](aw-contract-test-replacement-inventory.md)
+as retained records, not open ownership claims.
 
-#1374 owns replacing AW generated-command behavior tests with contract-owned conformance cases. Use [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md) for the current AW-side conversion and ordinary-test retention record.
-
-rickardvh/command-generation#9 owns the matching replacement work in the command-generation repository.
+New reductions should use the current owner map: keep high-risk root workflow
+proof where it is the narrowest evidence, move stable generated behavior to
+contract-owned conformance when both Python and TypeScript generated targets can
+consume it, and use Verification proof decisions or dispositions when changing
+ordinary tests would otherwise leave the reasoning in chat or PR prose.

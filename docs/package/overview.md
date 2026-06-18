@@ -13,13 +13,13 @@ The root package ships:
 - the `agentic-workspace` CLI;
 - lifecycle commands for installing, adopting, upgrading, checking, and removing managed surfaces;
 - compact context commands such as `start`, `summary`, `preflight`, `report`, `proof`, `ownership`, and `config`;
-- first-party module composition for Planning and Memory;
+- first-party module composition for Planning, Memory, and Verification;
 - package-managed workspace skills for first-contact startup, routing, proof, closeout, and module-boundary orientation;
 - machine-readable contracts under `src/agentic_workspace/contracts/`;
 - JSON schemata and generated reference docs for those contracts;
 - a thin startup adapter such as `AGENTS.md` when installed into a host repository.
 
-The root package currently depends on the first-party Planning and Memory packages so one command can orchestrate ordinary lifecycle work. Presets control the checked-in repository footprint, not the Python dependency graph.
+The root package currently depends on the first-party Planning, Memory, and Verification packages so one command can orchestrate ordinary lifecycle work. Module selection controls the checked-in repository footprint, not the Python dependency graph.
 
 Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md). The reviewed ordinary operating model and surface classification live in [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md). Knowledge routing, source authority, and pre-work gates are defined in [Knowledge routing and source authority](knowledge-routing.md) and [Pre-work knowledge gates](knowledge-gates.md).
 
@@ -51,16 +51,17 @@ agentic-workspace preflight --target ./repo --format json
 
 For exact startup and report payload shapes, see [Startup context](../reference/startup-context.md) and [Workspace report](../reference/workspace-report.md).
 
-## Presets
+## Module Selection
 
-| Preset | Selected modules | Use when |
+| Selection | Selected modules | Use when |
 | --- | --- | --- |
 | routing-only | none | the repo only needs compact entrypoint, config, workspace skills, module-map, and report routing surfaces |
 | memory | Memory | durable repo knowledge should prevent repeated rediscovery |
 | planning | Planning | active execution state, proof expectations, handoff, or lane closeout must be recoverable |
-| full | Planning and Memory | both active execution state and durable repo knowledge are worth the shared footprint |
+| verification | Verification | soft verification protocols, proof-route hints, and bounded evidence records should be repo-visible |
+| planning,memory | Planning and Memory | both active execution state and durable repo knowledge are worth the shared footprint |
 
-`memory` is the usual smallest starting point when the problem is repeated rediscovery. `planning` is the right starting point when active work continuity is the fragile part. `full` is justified when both durable knowledge and active execution continuity are recurring bottlenecks.
+`memory` is the usual smallest starting point when the problem is repeated rediscovery. `planning` is the right starting point when active work continuity is the fragile part. `verification` fits repos that need reusable evidence protocols without a Planning or Memory install. Combine modules only when each owner solves a real problem in the host repo.
 
 The threshold is not team size. A solo maintainer and one agent can still benefit when the handoff is to a future session, future branch, or future agent and the missing context would be expensive to reconstruct.
 

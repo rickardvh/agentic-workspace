@@ -1,6 +1,9 @@
 # Contract-Owned Test Replacement Plan
 
-This plan sequences the post-migration replacement of ordinary regression tests with contract-owned conformance cases. It is the implementation plan for #1373 and the coordination surface for AW #1374 and `rickardvh/command-generation#9`.
+This retained plan records the post-migration replacement strategy for ordinary
+regression tests and contract-owned conformance cases. #1373, AW #1374, and the
+matching command-generation migration issues are closed historical owners; use
+this page as design record and inventory context, not as an active issue queue.
 
 ## Target Shape
 
@@ -86,10 +89,14 @@ Before deleting an ordinary regression, record:
 
 If that mapping cannot be written, do not delete the test.
 
-## Issue Handoff
+## Historical Handoff
 
-#1374 owns AW-side implementation using this plan.
+AW #1374 used this plan for AW-side implementation and is now represented by
+[AW contract test replacement inventory](aw-contract-test-replacement-inventory.md).
 
-`rickardvh/command-generation#9` owns command-generation implementation using this plan. `rickardvh/command-generation#13` implements the current package-owned reusable conformance case resource surface consumed by AW's #1446 simplification slice.
+The command-generation replacement work used the same strategy and produced the
+package-owned reusable conformance case resource surface consumed by AW.
 
-When either issue closes, its PR body should include an inventory table with `keep`, `convert`, `merge`, and `delete` rows plus proof that generated Python and TypeScript conformance remain green.
+Future conversions should include an inventory table with `keep`, `convert`,
+`merge`, and `delete` rows plus proof that generated Python and TypeScript
+conformance remain green.

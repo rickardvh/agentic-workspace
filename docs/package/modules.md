@@ -169,11 +169,17 @@ Module implementation: [Verification README](../../packages/verification/README.
 
 Command: `agentic-verification`.
 
-## Command Generation
+## Command Generation Dependency
 
-`packages/command-generation/` is an internal implementation workspace for generic command package generation. It is not a host-repo module and is not part of the ordinary installed runtime.
+Command generation is a released, hash-pinned maintainer dependency consumed by
+this repository for generated CLI package rendering and proof. It is not an
+in-repo package, host-repo module, or ordinary installed runtime surface.
 
-Implementation reference: [Command generation README](../../packages/command-generation/README.md).
+AW-owned command facts live in `src/agentic_workspace/contracts/`, generation
+and proof adapters live in `scripts/generate/workspace_command_generation.py`
+and `scripts/check/check_generated_command_packages.py`, and user-visible
+runtime behavior remains in the hand-written workspace and module primitives
+unless a generated target explicitly owns the projection.
 
 ## Module Contracts
 

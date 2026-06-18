@@ -67,7 +67,8 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Root workspace: shared lifecycle orchestration, root planning surfaces, memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
 - `packages/memory/`: reusable `agentic-memory` source, packaged payload, package skills, and memory-specific tests.
 - `packages/planning/`: reusable `agentic-planning` source, packaged payload, planning helpers, and planning-specific tests.
-- `packages/command-generation/`: generic command-package IR loading and rendering machinery. Agentic Workspace consumes it through `scripts/generate/workspace_command_generation.py`; workspace command facts remain in `src/agentic_workspace/contracts/`, and runtime behavior remains in hand-written workspace/package code.
+- `packages/verification/`: reusable `agentic-verification` source, packaged payload, manifest/report primitives, and verification-specific tests.
+- `command-generation`: released, hash-pinned maintainer dependency for generated CLI package rendering and proof. Agentic Workspace consumes it through `scripts/generate/workspace_command_generation.py` and `scripts/check/check_generated_command_packages.py`; workspace command facts remain in `src/agentic_workspace/contracts/`, and runtime behavior remains in hand-written workspace/package code unless a generated target explicitly owns the projection.
 
 ## Pick The Right Surface
 
@@ -147,7 +148,7 @@ The default suite-oriented `make test`, `make test-workspace`, `make test-memory
 
 Final repo sync after package work:
 
-- After memory or planning package changes, refresh the root repo install to the latest checked-in version of both packages as a final compatibility test: `uv run agentic-planning upgrade --target .` and `uv run agentic-memory upgrade --target .`
+- After module package changes, refresh the affected root repo install as a final compatibility test. Use `uv run agentic-planning upgrade --target .` for Planning, `uv run agentic-memory upgrade --target .` for Memory, and the Verification report/proof lane for Verification until it has a separate payload-upgrade command.
 
 ## Common Routes
 

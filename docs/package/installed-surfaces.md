@@ -11,7 +11,7 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 | `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
 | `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
 | `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |
-| `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, and generated references |
+| `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, Verification, and generated references |
 | `.agentic-workspace/skills/` | product-managed workspace skills | first-contact workflow skills for startup, routing, proof, closeout, and module boundaries |
 | `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
 
@@ -55,7 +55,7 @@ The installed and source-checkout surfaces fall into different classes. Keeping 
 | Class | Examples | How readers should use it |
 | --- | --- | --- |
 | core entrypoint | `AGENTS.md`, `agentic-workspace start`, `agentic-workspace summary` | start here or let compact commands route deeper |
-| secondary/deep surface | `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `.agentic-workspace/memory/` | open only when a compact command or package doc points there |
+| secondary/deep surface | `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `.agentic-workspace/memory/`, `.agentic-workspace/verification/` | open only when a compact command or package doc points there |
 | machine contract | `.agentic-workspace/OWNERSHIP.toml`, contract JSON, schema JSON, manifest files | inspect through commands or generated references before hand-reading |
 | generated adapter | generated agent aids, `docs/reference/*.md` | treat as derived output; edit the source contract or renderer instead |
 | local-only surface | `.agentic-workspace/local/` | machine-local cache or override, not shared authority |
@@ -97,16 +97,31 @@ Memory adds durable anti-rediscovery knowledge:
 
 Memory should reduce rediscovery cost. It is not a task tracker, execution log, or broad product documentation replacement.
 
+## Verification Surfaces
+
+Verification adds repo-native evidence protocol state:
+
+| Surface | Purpose |
+| --- | --- |
+| `.agentic-workspace/verification/manifest.toml` | protocols, scenarios, proof routes, bounded evidence bundles, and known gaps |
+| `.agentic-workspace/verification/proof-decision.json` | optional agent-authored proof decision record for changed evidence |
+| `.agentic-workspace/verification/test-strategy-dispositions.json` | optional compact disposition record when ordinary tests are added, merged, moved, or removed |
+
+Verification should make evidence expectations reviewable. It is not a CI
+runner, universal testing policy, or claim authority.
+
 ## Payload And Source Boundaries
 
-The root workspace package, Planning package, Memory package, and command-generation package have different delivery roles:
+The root workspace package, first-party modules, and command-generation
+dependency have different delivery roles:
 
 | Area | Shipped or installed role | Hidden/source-checkout role |
 | --- | --- | --- |
 | root workspace package | root CLI, shared lifecycle orchestration, contracts, generated adapters, workspace skills, config/report/proof routing | contract tooling, generated-package development, maintainer checks |
 | Planning | active planning state, execplan templates, selected installed contract docs, planning schemas | package tests, payload verification, optional richer planning surfaces |
 | Memory | durable memory note skeleton, manifest, workflow, package-managed skills, note templates | memory package tests, payload verification, package-local bootstrap source |
-| command generation | none in ordinary host-repo operation | internal renderer and schema boundary for generated CLI packages |
+| Verification | verification manifest, proof-route hints, evidence bundles, known gaps, and optional proof-decision records | verification package tests, runtime primitives, manifest/report contract checks |
+| command generation | none in ordinary host-repo operation; released maintainer dependency for generated CLI package rendering and proof | pinned wheel provenance, generation adapters, checker adapters, and generated-target conformance |
 
 For exact contract fields behind this overview, see [Workspace config](../reference/workspace-config.md), [Workspace surfaces manifest](../reference/workspace-surfaces-manifest.md), [Module registry](../reference/module-registry.md), and [Command package IR](../reference/command-package-ir.md).
 
@@ -116,6 +131,7 @@ The stable rule is one owner per concern:
 
 - active execution state belongs in Planning;
 - durable repo knowledge belongs in Memory or canonical docs;
+- evidence protocols, bounded evidence records, and known gaps belong in Verification;
 - package-managed installed contracts live under `.agentic-workspace/`;
 - repo-owned startup and documentation stay outside managed areas unless they use explicit managed fences;
 - local-only runtime residue stays under `.agentic-workspace/local/`.
