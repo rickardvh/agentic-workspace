@@ -29,6 +29,9 @@ jobs:
       - name: Run workspace lint
         run: make lint-workspace
 
+      - name: Run typecheck
+        run: make typecheck
+
       - name: Verify root generated CLI
         run: make verify-workspace
 
