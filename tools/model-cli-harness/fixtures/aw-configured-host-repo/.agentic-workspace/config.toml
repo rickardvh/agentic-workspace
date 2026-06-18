@@ -6,11 +6,13 @@
 schema_version = 1
 
 [workspace]
-default_preset = "full"
 agent_instructions_file = "AGENTS.md"
 workflow_artifact_profile = "repo-owned"
 improvement_latitude = "reporting"
 optimization_bias = "agent-efficiency"
+
+[modules]
+enabled = ["planning", "memory", "verification"]
 
 [workflow_obligations.config_closeout]
 summary = "Before claiming completion, report which repo or local config settings affected the work."

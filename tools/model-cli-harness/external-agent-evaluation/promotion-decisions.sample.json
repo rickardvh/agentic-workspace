@@ -1,0 +1,65 @@
+{
+  "kind": "agentic-workspace/external-agent-promotion-decisions/v1",
+  "lane": "#1600",
+  "decisions": [
+    {
+      "id": "promote-proof-claim-boundary",
+      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING"],
+      "evidence_record_ids": ["sample-unsafe-claim-regression"],
+      "threshold": "high-consequence single sample plus repeated closeout concern",
+      "decision": "promote",
+      "owner_surface": "verification",
+      "fallback_owner_surface": "cli_output",
+      "followup_ref": "#1605",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-memory-routing",
+      "failure_ids": ["MEMORY_PULL_MISSING"],
+      "evidence_record_ids": ["sample-memory-routing-regression"],
+      "threshold": "historical repeated miss preserved as regression fixture",
+      "decision": "promote",
+      "owner_surface": "memory",
+      "fallback_owner_surface": "cli_output",
+      "followup_ref": "#1606",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "dismiss-harness-specific-phrasing",
+      "failure_ids": ["HARNESS_SCENARIO_AMBIGUOUS"],
+      "evidence_record_ids": [],
+      "threshold": "no repeated product signal",
+      "decision": "dismiss",
+      "dismissal_reason": "scenario_ambiguous",
+      "owner_surface": "harness",
+      "fallback_owner_surface": "no_change",
+      "followup_ref": "",
+      "closure_effect": "accepted"
+    },
+    {
+      "id": "promote-live-source-checkout-command-leak",
+      "failure_ids": ["ROUTED_CONTEXT_IGNORED"],
+      "evidence_record_ids": [
+        "live-startup-orientation-20260618T090955Z",
+        "live-local-delegation-20260618T091357Z"
+      ],
+      "threshold": "repeated live Codex Spark runs attempted source-checkout-only startup command in disposable host fixtures",
+      "decision": "promote",
+      "owner_surface": "cli_output",
+      "fallback_owner_surface": "harness",
+      "followup_ref": "#1604",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-live-local-path-leak",
+      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK"],
+      "evidence_record_ids": ["live-intent-proof-20260618T091048Z"],
+      "threshold": "live Codex Spark run leaked local absolute scratch paths in final answer",
+      "decision": "promote",
+      "owner_surface": "harness",
+      "fallback_owner_surface": "cli_output",
+      "followup_ref": "#1601",
+      "closure_effect": "routed"
+    }
+  ]
+}

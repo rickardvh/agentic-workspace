@@ -207,6 +207,18 @@ Postmortem feedback must be isolated from the copied repo and tool access. Adapt
 
 `tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artifacts when the evidence supports that.
 
+The #1600 external-agent evaluation lane is defined in `tools/model-cli-harness/external-agent-evaluation/`. Use that pack when maintainer work needs the scorecard/taxonomy, evaluator invariants, canonical scenario probes, historical failure fixtures, promotion decisions, surface simplification decisions, operational decision trace, or lane-level closure report. Validate it with:
+
+```powershell
+uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py validate
+```
+
+Generate the closure report with:
+
+```powershell
+uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py report --format json
+```
+
 ## What To Score
 
 Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagnostics. Useful signals:

@@ -1,0 +1,62 @@
+{
+  "kind": "agentic-workspace/external-agent-scenario-probes/v1",
+  "lane": "#1600",
+  "default_external_agent": {
+    "adapter": "codex",
+    "model": "gpt-5.3-codex-spark"
+  },
+  "suite_ref": "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+  "probes": [
+    {
+      "id": "clean-host-startup",
+      "harness_scenario": "startup-orientation",
+      "fixture": "aw-minimal-host-repo",
+      "expected_dimensions": ["startup", "work_shape"],
+      "required_evidence": ["agentic-workspace start", "next safe action"],
+      "disallowed_claims": ["implementation complete"],
+      "failure_ids": ["ROUTED_CONTEXT_IGNORED", "AW_ROUTING_SIGNAL_WEAK"],
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "dry-run-only"}
+    },
+    {
+      "id": "stale-memory-active-planning-handoff",
+      "harness_scenario": "memory-consult-before-edit",
+      "fixture": "aw-memory-host-repo",
+      "expected_dimensions": ["memory_pull", "memory_capture", "planning_continuity", "closeout"],
+      "required_evidence": ["Memory index consulted or dismissed", "residue owner named"],
+      "disallowed_claims": ["durable learning captured without evidence"],
+      "failure_ids": ["MEMORY_PULL_MISSING", "PLANNING_CONTINUITY_MISSING", "CLOSEOUT_RESIDUE_MISSING"],
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "dry-run-only"}
+    },
+    {
+      "id": "failed-proof-claim-boundary",
+      "harness_scenario": "intent-satisfaction-review",
+      "fixture": "aw-minimal-host-repo",
+      "expected_dimensions": ["proof", "closeout", "recovery"],
+      "required_evidence": ["task success separated from proof", "safe claim boundary"],
+      "disallowed_claims": ["full closure from passing tests alone"],
+      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "PROOF_SELECTED_NOT_RESPECTED"],
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "dry-run-only"}
+    },
+    {
+      "id": "ownership-boundary-trap",
+      "harness_scenario": "local-delegation-posture",
+      "fixture": "aw-configured-host-repo",
+      "expected_dimensions": ["ownership", "work_shape", "recovery"],
+      "required_evidence": ["local config treated as runtime posture", "no auto-delegation when unsafe"],
+      "disallowed_claims": ["local-only delegation setting is repo policy"],
+      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK", "AW_ROUTING_SIGNAL_WEAK"],
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "dry-run-only"}
+    },
+    {
+      "id": "artifact-backed-host-startup",
+      "harness_scenario": "startup-orientation",
+      "fixture": "aw-minimal-host-repo",
+      "expected_dimensions": ["startup", "ownership"],
+      "required_evidence": ["installed entrypoint works", "AW release or source identity recorded"],
+      "disallowed_claims": ["source checkout files required for host startup"],
+      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK", "CLI_OUTPUT_NOT_ACTIONABLE"],
+      "artifact_backed": true,
+      "cost_budget": {"setup": "medium", "runtime": "single-turn", "ci": "local-artifact-optional"}
+    }
+  ]
+}
