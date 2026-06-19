@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
 SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
 HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
+SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
 
 
 def _load_module():
@@ -28,6 +29,16 @@ def _load_module():
 
 def _load_harness_module():
     spec = importlib.util.spec_from_file_location("run_model_cli_harness", HARNESS_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_sbx_adapter_module():
+    spec = importlib.util.spec_from_file_location("run_sbx_codex_adapter", SBX_ADAPTER_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -295,6 +306,38 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     assert "agentic_workspace-0.4.3-py3-none-any.whl" in pyproject_text
     assert "agentic_memory-0.4.3-py3-none-any.whl" not in pyproject_text
     assert "[tool.uv.sources]" not in pyproject_text
+
+
+def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_sbx_adapter_module()
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        returncode = 17 if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"] else 0
+        return subprocess.CompletedProcess(command, returncode, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+
+    result = module.main(
+        [
+            "--sbx",
+            "sbx",
+            "--sandbox-name",
+            "aw-test",
+            "--repo",
+            "work/repo",
+            "--model",
+            "gpt-test",
+            "--share-path",
+            "work/share/final.md",
+            "--prompt",
+            "do work",
+        ]
+    )
+
+    assert result == 17
+    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
 
 
 def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
