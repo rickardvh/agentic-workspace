@@ -430,6 +430,17 @@
       "notes": "Authoritative #1476 layer model defines primitive, operation IR, generated implementation, target-extension, wrapper/adapter, conformance-case, and retained ordinary-test boundaries, including the required owner/proof/keep/retirement fields for retained hand-owned code and tests."
     },
     {
+      "area": "generated_command_check_inventory",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/generated_command_check_inventory.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "scripts/check/check_generated_command_packages.py",
+        "docs/maintainer/generated-command-check-inventory.md"
+      ],
+      "notes": "AW-side generated-command check inventory classifies checks against the command-generation target matrix so generic target baselines are delegated while AW host behavior remains covered in AW."
+    },
+    {
       "area": "target_support",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/target_support.json",

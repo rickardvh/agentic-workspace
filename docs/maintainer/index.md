@@ -10,6 +10,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Testing strategy](testing-strategy.md): inventory, consolidation, pruning, and contract-owned conformance guidance.
 - [Contract-owned test replacement plan](contract-test-replacement-plan.md): sequencing and inventory for replacing regression tests with contract-owned conformance cases.
 - [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md): retained keep/convert/merge/delete record for AW-side generated-command behavior tests.
+- [Generated command check inventory](generated-command-check-inventory.md): checked split between AW-owned generated-command proof and command-generation-owned generic target baselines.
 - [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
 

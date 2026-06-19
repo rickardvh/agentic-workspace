@@ -1,0 +1,249 @@
+{
+  "schema_version": "agentic-workspace/generated-command-check-inventory/v1",
+  "summary": "Classifies AW generated-command checks against the command-generation target matrix so AW keeps host/product proof and delegates generic target baselines.",
+  "generic_baseline": {
+    "owner": "command-generation",
+    "source_refs": [
+      "src/agentic_workspace/contracts/target_support.json",
+      "command_generation target-extension contracts",
+      "command_generation primitive_conformance"
+    ],
+    "rule": "Generic target syntax, wrapper projection, primitive executor baseline, target matrix inclusion, and target-extension conformance belong to command-generation; AW may invoke those proofs but must not duplicate them as AW-owned product checks."
+  },
+  "classification_rule": "Keep checks in AW only when they prove AW operation contracts, host runtime boundaries, release dependency posture, generated artifact freshness, or transitional AW host semantics. Delegate or demote checks that only repeat command-generation's generic Python/TypeScript target baseline.",
+  "checks": [
+    {
+      "id": "generated-output-freshness",
+      "title": "Generated package output freshness",
+      "classification": "generated-freshness",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "scripts/generate/workspace_command_generation.py",
+        "scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/command_package_ir.json"
+      ],
+      "proof_refs": [
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py"
+      ],
+      "rationale": "AW owns the source command-package IR and checked-in generated outputs, so stale generated artifacts remain an AW proof obligation."
+    },
+    {
+      "id": "operation-contract-and-cli-inputs",
+      "title": "Operation contracts and generated CLI input projection",
+      "classification": "aw-host-behavior",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "src/agentic_workspace/contracts/operations",
+        "packages/planning/src/repo_planning_bootstrap/contracts/operations",
+        "packages/memory/src/repo_memory_bootstrap/contracts/operations",
+        "packages/verification/src/repo_verification_bootstrap/contracts/operations",
+        "scripts/check/check_generated_command_packages.py"
+      ],
+      "proof_refs": [
+        "_validate_generated_operation_cli_inputs",
+        "_validate_generated_command_projection_boundary"
+      ],
+      "rationale": "AW owns which operation inputs are command-visible, runtime-only, mutation-capable, or guarded by host workflow policy."
+    },
+    {
+      "id": "host-runtime-boundaries",
+      "title": "Accepted AW host runtime primitive and facade boundaries",
+      "classification": "aw-host-behavior",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "scripts/check/check_generated_command_packages.py"
+      ],
+      "proof_refs": [
+        "_validate_python_runtime_projection_inventory",
+        "_validate_python_operation_execution_inventory",
+        "_validate_python_runtime_handler_boundary"
+      ],
+      "rationale": "Generated targets may call host runtime primitives, but AW owns the exact accepted host symbols, owners, minimization posture, and generic-debt rejection."
+    },
+    {
+      "id": "transitional-host-primitive-usage",
+      "title": "AW-owned transitional host primitive inventory",
+      "classification": "transitional-host-boundary",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "src/agentic_workspace/contracts/operation_primitives.json",
+        "scripts/check/check_generated_command_packages.py",
+        "command_generation BUILTIN_PORTABLE_PRIMITIVES"
+      ],
+      "proof_refs": [
+        "_validate_transitional_primitive_usage_inventory",
+        "transitional_primitive_usage in --python-completion-blockers report"
+      ],
+      "rationale": "Command-generation marks these helpers as transitional host-owned compatibility; AW owns the Memory payload/current-view and workspace-root semantics until AW-owned primitive IDs replace them."
+    },
+    {
+      "id": "release-and-generator-provenance",
+      "title": "Command-generation dependency, artifact metadata, and release provenance",
+      "classification": "release-pinning",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "pyproject.toml",
+        "uv.lock",
+        "generated/*",
+        "scripts/check/check_generated_command_packages.py"
+      ],
+      "proof_refs": [
+        "_validate_command_generation_release_provenance",
+        "_validate_generated_artifact_generation_metadata"
+      ],
+      "rationale": "AW owns which command-generation wheel/version it consumes and whether checked-in generated artifacts were rendered by the compatible generator and target layout."
+    },
+    {
+      "id": "operation-conformance-parity",
+      "title": "AW operation conformance across generated Python and TypeScript targets",
+      "classification": "aw-host-behavior",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
+        "src/agentic_workspace/contracts/operation_artifact_registry.json",
+        "scripts/check/run_operation_conformance_tests.py"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/run_operation_conformance_tests.py --target all"
+      ],
+      "rationale": "Command-generation owns target execution mechanics; AW owns the product operation cases, fixtures, selected fields, and Python/TypeScript parity expectations for AW commands."
+    },
+    {
+      "id": "target-extension-contract-consumption",
+      "title": "Consumption of command-generation target-extension contracts",
+      "classification": "generic-target-baseline",
+      "owner": "command-generation",
+      "disposition": "delegate-to-command-generation",
+      "source_refs": [
+        "src/agentic_workspace/contracts/target_support.json",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "proof_refs": [
+        "_validate_target_support",
+        "validate_target_extension_contract"
+      ],
+      "rationale": "AW verifies that it consumes the target matrix and rejects product semantics in targets, but the generic target model and matrix semantics are owned by command-generation."
+    },
+    {
+      "id": "primitive-executor-baseline",
+      "title": "Generic portable primitive executor baseline",
+      "classification": "generic-target-baseline",
+      "owner": "command-generation",
+      "disposition": "demote-to-invokable-proof",
+      "source_refs": [
+        "command_generation primitive_conformance",
+        "scripts/check/check_generated_command_packages.py"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --primitive-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker"
+      ],
+      "rationale": "AW may expose primitive conformance as an explicit proof lane, but the generic primitive cases belong to command-generation and should not be duplicated as AW-owned static assertions."
+    },
+    {
+      "id": "typescript-native-target-baseline",
+      "title": "Generic TypeScript target runtime baseline",
+      "classification": "generic-target-baseline",
+      "owner": "command-generation",
+      "disposition": "demote-to-invokable-proof",
+      "source_refs": [
+        "src/agentic_workspace/contracts/target_support.json",
+        "generated/*/typescript"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+      ],
+      "rationale": "AW keeps invokable target proof for its generated artifacts, but generic Node/TypeScript target behavior follows the command-generation target matrix."
+    },
+    {
+      "id": "obsolete-aw-generic-target-duplicates",
+      "title": "Retired AW-owned generic target duplicate checks",
+      "classification": "obsolete-duplicate",
+      "owner": "command-generation",
+      "disposition": "remove-from-aw",
+      "source_refs": [
+        "docs/maintainer/aw-contract-test-replacement-inventory.md",
+        "docs/maintainer/test-knowledge-inventory.md"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "tests/test_command_generation_integration.py keeps only AW dependency wiring",
+        "tests/test_generated_command_package_proof_runner.py keeps AW checker behavior"
+      ],
+      "removed_aw_owned_checks": [
+        {
+          "id": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
+          "path": "tests/test_workspace_cli_blackbox.py",
+          "symbol": "test_blackbox_root_generated_command_executes_through_console_script",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json modules.report.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script",
+          "path": "tests/test_workspace_cli_blackbox.py",
+          "symbol": "test_blackbox_root_generated_command_executes_primitive_ir_through_console_script",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.root-cli-authority.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output",
+          "path": "tests/test_workspace_defaults_cli.py",
+          "symbol": "test_defaults_tiny_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.tiny-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_defaults_cli.py::test_defaults_selected_section_text_uses_generated_output",
+          "path": "tests/test_workspace_defaults_cli.py",
+          "symbol": "test_defaults_selected_section_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.selected-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_config_cli.py::test_config_selected_text_uses_generated_output",
+          "path": "tests/test_workspace_config_cli.py",
+          "symbol": "test_config_selected_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json config.selected-text.process/agent-efficiency-config",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_config_cli.py::test_note_delegation_outcome_text_uses_generated_output",
+          "path": "tests/test_workspace_config_cli.py",
+          "symbol": "test_note_delegation_outcome_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json delegation-outcome.append-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        }
+      ],
+      "rationale": "Generic primitive and target behavior should not reappear as AW-owned ordinary regressions; stable generated behavior belongs in contract-owned conformance or command-generation."
+    }
+  ]
+}

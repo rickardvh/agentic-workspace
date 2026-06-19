@@ -312,6 +312,13 @@ def generated_behavior_stratification_manifest() -> dict[str, Any]:
     return load_validated_contract_json("generated_behavior_stratification.json", "generated_behavior_stratification.schema.json")
 
 
+def generated_command_check_inventory_manifest() -> dict[str, Any]:
+    return load_validated_contract_json(
+        "generated_command_check_inventory.json",
+        "generated_command_check_inventory.schema.json",
+    )
+
+
 def target_support_manifest() -> dict[str, Any]:
     return load_validated_contract_json("target_support.json", "target_support.schema.json")
 

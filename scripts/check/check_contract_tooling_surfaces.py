@@ -23,6 +23,7 @@ from agentic_workspace.contract_tooling import (
     contract_inventory_manifest,
     contract_schema,
     generated_behavior_stratification_manifest,
+    generated_command_check_inventory_manifest,
     improvement_latitude_policy_manifest,
     improvement_signal_contract_manifest,
     lifecycle_generation_readiness_manifest,
@@ -1463,6 +1464,100 @@ def _validate_target_support(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _validate_generated_command_check_inventory(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/generated-command-check-inventory/v1":
+        return ["generated_command_check_inventory.json has unexpected schema_version"]
+    baseline = payload.get("generic_baseline", {})
+    if not isinstance(baseline, dict) or baseline.get("owner") != "command-generation":
+        errors.append("generated_command_check_inventory.json generic_baseline must be owned by command-generation")
+    checks = payload.get("checks", [])
+    if not isinstance(checks, list) or not checks:
+        return errors + ["generated_command_check_inventory.json checks must be a non-empty list"]
+    required_classes = {
+        "generic-target-baseline",
+        "aw-host-behavior",
+        "release-pinning",
+        "generated-freshness",
+        "transitional-host-boundary",
+        "obsolete-duplicate",
+    }
+    seen_ids: set[str] = set()
+    seen_classes: set[str] = set()
+    for index, check in enumerate(checks):
+        if not isinstance(check, dict):
+            errors.append(f"generated_command_check_inventory.json check {index} must be an object")
+            continue
+        check_id = str(check.get("id", "")).strip()
+        if not check_id:
+            errors.append(f"generated_command_check_inventory.json check {index} missing id")
+            continue
+        if check_id in seen_ids:
+            errors.append(f"generated_command_check_inventory.json duplicate check id {check_id}")
+        seen_ids.add(check_id)
+        classification = str(check.get("classification", ""))
+        owner = str(check.get("owner", ""))
+        disposition = str(check.get("disposition", ""))
+        seen_classes.add(classification)
+        if classification == "generic-target-baseline":
+            if owner != "command-generation":
+                errors.append(f"generic target baseline check {check_id} must be owned by command-generation")
+            if disposition == "keep-in-aw":
+                errors.append(f"generic target baseline check {check_id} must not be kept as an AW-owned check")
+        if classification in {"aw-host-behavior", "release-pinning", "generated-freshness", "transitional-host-boundary"}:
+            if owner != "agentic-workspace":
+                errors.append(f"AW-specific check {check_id} must be owned by agentic-workspace")
+            if disposition != "keep-in-aw":
+                errors.append(f"AW-specific check {check_id} must be kept in AW")
+        if classification == "obsolete-duplicate" and disposition != "remove-from-aw":
+            errors.append(f"obsolete duplicate check {check_id} must be marked remove-from-aw")
+        if disposition == "remove-from-aw":
+            removed_checks = check.get("removed_aw_owned_checks")
+            if not isinstance(removed_checks, list) or not removed_checks:
+                errors.append(f"remove-from-aw check {check_id} must list removed_aw_owned_checks")
+            else:
+                seen_removed_ids: set[str] = set()
+                for removed_index, removed in enumerate(removed_checks):
+                    if not isinstance(removed, dict):
+                        errors.append(f"remove-from-aw check {check_id} removed entry {removed_index} must be an object")
+                        continue
+                    removed_id = str(removed.get("id", "")).strip()
+                    path = str(removed.get("path", "")).strip()
+                    symbol = str(removed.get("symbol", "")).strip()
+                    replacement_refs = removed.get("replacement_refs")
+                    if not removed_id or not path or not symbol:
+                        errors.append(f"remove-from-aw check {check_id} removed entry {removed_index} missing id/path/symbol")
+                    if removed_id in seen_removed_ids:
+                        errors.append(f"remove-from-aw check {check_id} duplicate retired check id {removed_id}")
+                    seen_removed_ids.add(removed_id)
+                    if "::" not in removed_id:
+                        errors.append(f"remove-from-aw check {check_id} retired check id {removed_id} must include a test symbol")
+                    if not path.endswith(".py"):
+                        errors.append(f"remove-from-aw check {check_id} retired path {path} must be a Python check path")
+                    if not isinstance(replacement_refs, list) or not replacement_refs:
+                        errors.append(f"remove-from-aw check {check_id} retired check {removed_id} must name replacement_refs")
+            proof_refs = check.get("proof_refs", [])
+            if not any(isinstance(ref, str) and ("--python-conformance" in ref or "--conformance" in ref) for ref in proof_refs):
+                errors.append(f"remove-from-aw check {check_id} must name delegated conformance proof refs")
+    missing_classes = sorted(required_classes - seen_classes)
+    if missing_classes:
+        errors.append("generated_command_check_inventory.json missing classification(s): " + ", ".join(missing_classes))
+    required_checks = {
+        "generated-output-freshness",
+        "operation-contract-and-cli-inputs",
+        "host-runtime-boundaries",
+        "transitional-host-primitive-usage",
+        "release-and-generator-provenance",
+        "operation-conformance-parity",
+        "target-extension-contract-consumption",
+        "primitive-executor-baseline",
+    }
+    missing_checks = sorted(required_checks - seen_ids)
+    if missing_checks:
+        errors.append("generated_command_check_inventory.json missing required check(s): " + ", ".join(missing_checks))
+    return errors
+
+
 def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
     statuses: list[dict[str, object]] = []
     errors: list[str] = []
@@ -2310,6 +2405,11 @@ def main(argv: list[str] | None = None) -> int:
             "generated behavior stratification",
             _validate(generated_behavior_stratification_manifest(), "generated_behavior_stratification.schema.json")
             + _validate_generated_behavior_stratification(generated_behavior_stratification_manifest()),
+        ),
+        (
+            "generated command check inventory",
+            _validate(generated_command_check_inventory_manifest(), "generated_command_check_inventory.schema.json")
+            + _validate_generated_command_check_inventory(generated_command_check_inventory_manifest()),
         ),
         (
             "target support",
