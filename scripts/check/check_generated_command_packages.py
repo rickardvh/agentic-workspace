@@ -58,6 +58,7 @@ from workspace_command_generation import (  # noqa: E402
 
 from agentic_workspace.contract_tooling import (  # noqa: E402
     command_package_ir_manifest,
+    generated_command_check_inventory_manifest,
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
@@ -2388,6 +2389,37 @@ def _transitional_primitive_usage_inventory() -> dict[str, object]:
     }
 
 
+def _generated_command_check_inventory_report() -> dict[str, object]:
+    inventory = generated_command_check_inventory_manifest()
+    checks = [check for check in inventory.get("checks", []) if isinstance(check, dict)]
+    by_class: dict[str, int] = {}
+    by_disposition: dict[str, int] = {}
+    aw_kept: list[str] = []
+    delegated: list[str] = []
+    for check in checks:
+        classification = str(check.get("classification", ""))
+        disposition = str(check.get("disposition", ""))
+        by_class[classification] = by_class.get(classification, 0) + 1
+        by_disposition[disposition] = by_disposition.get(disposition, 0) + 1
+        check_id = str(check.get("id", ""))
+        if disposition == "keep-in-aw":
+            aw_kept.append(check_id)
+        if disposition in {"delegate-to-command-generation", "demote-to-invokable-proof", "remove-from-aw"}:
+            delegated.append(check_id)
+    return {
+        "kind": "agentic-workspace/generated-command-check-inventory-report/v1",
+        "status": "available",
+        "source": "src/agentic_workspace/contracts/generated_command_check_inventory.json",
+        "generic_baseline_owner": inventory.get("generic_baseline", {}).get("owner"),
+        "check_count": len(checks),
+        "check_count_by_class": dict(sorted(by_class.items())),
+        "check_count_by_disposition": dict(sorted(by_disposition.items())),
+        "aw_kept_checks": sorted(aw_kept),
+        "delegated_or_removed_checks": sorted(delegated),
+        "rule": inventory.get("classification_rule", ""),
+    }
+
+
 def _validate_transitional_primitive_usage_inventory() -> list[str]:
     errors: list[str] = []
     try:
@@ -4680,6 +4712,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     runtime_source_edit_policy = _runtime_source_edit_policy_payload()
     lifecycle_dry_run_metrics = _lifecycle_dry_run_metrics()
     transitional_primitive_usage = _transitional_primitive_usage_inventory()
+    generated_command_check_inventory = _generated_command_check_inventory_report()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
     generated_command_migration_completion = _generated_command_migration_completion_report(
         blockers=blockers,
@@ -4703,6 +4736,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "runtime_source_edit_policy": runtime_source_edit_policy,
         "lifecycle_dry_run_metrics": lifecycle_dry_run_metrics,
         "transitional_primitive_usage": transitional_primitive_usage,
+        "generated_command_check_inventory": generated_command_check_inventory,
         "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
@@ -4901,6 +4935,10 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     if isinstance(transitional_usage, dict) and transitional_usage.get("status"):
         print(f"Transitional primitive usage: {transitional_usage.get('usage_count')} source step(s)")
         print(f"Transitional primitive operations: {transitional_usage.get('operation_count')}")
+    check_inventory = report.get("generated_command_check_inventory", {})
+    if isinstance(check_inventory, dict) and check_inventory.get("status") == "available":
+        print(f"Generated-command check inventory: {check_inventory.get('check_count')} checks")
+        print(f"AW-kept generated-command checks: {len(check_inventory.get('aw_kept_checks', []))}")
     blockers = report.get("blockers", [])
     if not isinstance(blockers, list) or not blockers:
         print("Blockers: none")

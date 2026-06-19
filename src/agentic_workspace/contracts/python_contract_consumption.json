@@ -165,6 +165,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "generated_command_check_inventory.json",
+      "schema": "generated_command_check_inventory.schema.json",
+      "loader": "generated_command_check_inventory_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
       "contract": "target_support.json",
       "schema": "target_support.schema.json",
       "loader": "target_support_manifest",

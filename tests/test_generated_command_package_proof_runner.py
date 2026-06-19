@@ -702,6 +702,10 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
     assert payload["lifecycle_dry_run_metrics"]["transitional_host_default_dry_run_operation_count"] >= 3
     assert payload["transitional_primitive_usage"]["usage_count"] >= 14
+    check_inventory = payload["generated_command_check_inventory"]
+    assert check_inventory["generic_baseline_owner"] == "command-generation"
+    assert "generated-output-freshness" in check_inventory["aw_kept_checks"]
+    assert "primitive-executor-baseline" in check_inventory["delegated_or_removed_checks"]
 
 
 def test_python_completion_blocker_report_surfaces_command_generation_package_posture(capsys) -> None:

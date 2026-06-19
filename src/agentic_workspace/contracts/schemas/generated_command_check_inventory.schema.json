@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/generated-command-check-inventory.schema.json",
+  "title": "Generated Command Check Inventory",
+  "description": "AW-side inventory that classifies generated-command checks against the command-generation target matrix baseline.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "generic_baseline",
+    "classification_rule",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/generated-command-check-inventory/v1",
+      "description": "Contract version for the generated-command check inventory."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short summary of the inventory purpose."
+    },
+    "generic_baseline": {
+      "type": "object",
+      "required": [
+        "owner",
+        "source_refs",
+        "rule"
+      ],
+      "properties": {
+        "owner": {
+          "const": "command-generation",
+          "description": "Package that owns generic generated target behavior."
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Sources that define the generic target baseline."
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary rule for generic target baseline ownership."
+        }
+      },
+      "additionalProperties": false,
+      "description": "The command-generation-owned target baseline that AW consumes."
+    },
+    "classification_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rule used to classify AW-side generated-command checks."
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "classification",
+          "owner",
+          "disposition",
+          "source_refs",
+          "proof_refs",
+          "rationale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "enum": [
+              "generic-target-baseline",
+              "aw-host-behavior",
+              "release-pinning",
+              "generated-freshness",
+              "transitional-host-boundary",
+              "obsolete-duplicate"
+            ]
+          },
+          "owner": {
+            "enum": [
+              "command-generation",
+              "agentic-workspace"
+            ]
+          },
+          "disposition": {
+            "enum": [
+              "keep-in-aw",
+              "delegate-to-command-generation",
+              "demote-to-invokable-proof",
+              "remove-from-aw",
+              "monitor"
+            ]
+          },
+          "source_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "proof_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Ordered generated-command check inventory entries."
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}
