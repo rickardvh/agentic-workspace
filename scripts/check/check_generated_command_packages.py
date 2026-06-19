@@ -33,6 +33,7 @@ for SOURCE_ROOT in (
 
 import command_generation  # noqa: E402
 from command_generation import (  # noqa: E402
+    BUILTIN_PORTABLE_PRIMITIVES,
     CliConformanceTarget,
     CommandGenerationHostManifest,
     PrimitiveRegistry,
@@ -194,11 +195,19 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "filesystem.glob",
     "json.parse",
     "payload.assemble",
-    "payload.status",
-    "payload.verify",
     "output.emit",
-    "output.emit.install-result",
 }
+
+
+def _command_generation_transitional_primitives() -> set[str]:
+    return {
+        primitive_id
+        for primitive_id in BUILTIN_PORTABLE_PRIMITIVES.ids()
+        if getattr(BUILTIN_PORTABLE_PRIMITIVES.definition(primitive_id), "kind", "") == "transitional"
+    }
+
+
+COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = _command_generation_transitional_primitives()
 PYTHON_EXECUTABLE_DISPATCH_NAMES = {
     "run_generated_command": "generated runtime dispatch",
     "supports_generated_command": "generated runtime dispatch",
@@ -2238,7 +2247,7 @@ def _operation_lifecycle_dry_run_profile(*, operation_path: Path) -> dict[str, o
     steps = operation.get("ir_plan", {}).get("steps", [])
     if not isinstance(steps, list):
         steps = []
-    codegen_dry_run_steps: list[str] = []
+    transitional_host_dry_run_steps: list[str] = []
     package_runtime_dry_run_steps: list[str] = []
     for step in steps:
         if not isinstance(step, dict):
@@ -2246,18 +2255,22 @@ def _operation_lifecycle_dry_run_profile(*, operation_path: Path) -> dict[str, o
         primitive = str(step.get("uses", ""))
         condition = step.get("when")
         if primitive == "payload.lifecycle-plan" and _condition_requires_value(condition, value_name="dry_run", expected=True):
-            codegen_dry_run_steps.append(str(step.get("id", primitive)))
+            transitional_host_dry_run_steps.append(str(step.get("id", primitive)))
         if primitive == "python.function.call":
             if condition is None or not _condition_requires_value(condition, value_name="dry_run", expected=False):
                 package_runtime_dry_run_steps.append(str(step.get("id", primitive)))
     default_dry_run_owner = (
-        "codegen" if codegen_dry_run_steps else "package-runtime" if package_runtime_dry_run_steps else "operation-runtime"
+        "transitional-host"
+        if transitional_host_dry_run_steps
+        else "package-runtime"
+        if package_runtime_dry_run_steps
+        else "operation-runtime"
     )
     return {
         "operation_id": operation_id,
         "operation_path": operation_path.relative_to(REPO_ROOT).as_posix(),
         "default_dry_run_owner": default_dry_run_owner,
-        "codegen_dry_run_steps": codegen_dry_run_steps,
+        "transitional_host_dry_run_steps": transitional_host_dry_run_steps,
         "package_runtime_dry_run_steps": package_runtime_dry_run_steps,
     }
 
@@ -2275,19 +2288,147 @@ def _lifecycle_dry_run_metrics() -> dict[str, object]:
             profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
             if profile is not None:
                 profiles.append(profile)
-    codegen_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "codegen"]
+    transitional_host_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "transitional-host"]
     package_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "package-runtime"]
     operation_runtime_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "operation-runtime"]
     return {
         "status": "available",
         "lifecycle_dry_run_operation_count": len(profiles),
-        "codegen_default_dry_run_operation_count": len(codegen_owned),
+        "transitional_host_default_dry_run_operation_count": len(transitional_host_owned),
         "package_runtime_default_dry_run_operation_count": len(package_owned),
         "operation_runtime_default_dry_run_operation_count": len(operation_runtime_owned),
-        "codegen_default_dry_run_operations": codegen_owned,
+        "transitional_host_default_dry_run_operations": transitional_host_owned,
         "package_runtime_default_dry_run_operations": package_owned,
         "operation_runtime_default_dry_run_operations": operation_runtime_owned,
     }
+
+
+def _source_operation_contract_paths() -> list[Path]:
+    roots = [
+        REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "operations",
+        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
+        REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts" / "operations",
+    ]
+    paths: list[Path] = []
+    for root in roots:
+        if root.is_dir():
+            paths.extend(sorted(root.glob("*.json")))
+    return paths
+
+
+def _operation_primitive_steps(operation: dict[str, object]) -> list[dict[str, object]]:
+    steps: list[dict[str, object]] = []
+    ir_plan = operation.get("ir_plan")
+    if not isinstance(ir_plan, dict):
+        return steps
+    raw_steps = ir_plan.get("steps", [])
+    if isinstance(raw_steps, list):
+        steps.extend(step for step in raw_steps if isinstance(step, dict) and isinstance(step.get("uses"), str))
+    raw_fragments = ir_plan.get("fragments", [])
+    if isinstance(raw_fragments, list):
+        for fragment in raw_fragments:
+            if not isinstance(fragment, dict):
+                continue
+            fragment_steps = fragment.get("steps", [])
+            if isinstance(fragment_steps, list):
+                steps.extend(step for step in fragment_steps if isinstance(step, dict) and isinstance(step.get("uses"), str))
+    return steps
+
+
+def _transitional_primitive_usage_metadata(primitive: str) -> dict[str, str]:
+    if primitive == "workspace.root.resolve":
+        return {
+            "owner": "workspace package AW host behavior",
+            "reason": "command-generation exposes this helper as transitional host-owned compatibility; AW owns workspace root discovery semantics.",
+            "migration_follow_up": "replace with an AW-owned workspace root primitive or split host-neutral path resolution into portable primitives after workspace discovery semantics stabilize",
+        }
+    return {
+        "owner": "memory package AW host behavior",
+        "reason": "command-generation exposes this helper as transitional host-owned compatibility; AW owns the Memory installed-payload/current-memory semantics.",
+        "migration_follow_up": "replace with AW-owned Memory host primitive IDs or split host-neutral deterministic pieces into portable primitives after the contract stabilizes",
+    }
+
+
+def _transitional_primitive_usage_inventory() -> dict[str, object]:
+    usage: list[dict[str, object]] = []
+    for operation_path in _source_operation_contract_paths():
+        try:
+            operation = json.loads(operation_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        operation_id = str(operation.get("id", operation_path.stem))
+        for step in _operation_primitive_steps(operation):
+            primitive = str(step.get("uses", ""))
+            if primitive not in COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES:
+                continue
+            metadata = _transitional_primitive_usage_metadata(primitive)
+            usage.append(
+                {
+                    "operation_id": operation_id,
+                    "operation_path": operation_path.relative_to(REPO_ROOT).as_posix(),
+                    "step_id": str(step.get("id", primitive)),
+                    "primitive": primitive,
+                    **metadata,
+                }
+            )
+    primitive_counts: dict[str, int] = {}
+    operation_ids: set[str] = set()
+    for item in usage:
+        primitive = str(item["primitive"])
+        primitive_counts[primitive] = primitive_counts.get(primitive, 0) + 1
+        operation_ids.add(str(item["operation_id"]))
+    return {
+        "status": "inventory-backed" if usage else "none",
+        "usage_count": len(usage),
+        "operation_count": len(operation_ids),
+        "primitive_counts": dict(sorted(primitive_counts.items())),
+        "usages": usage,
+        "portable_completion_boundary": "transitional helpers are not counted as REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE",
+    }
+
+
+def _validate_transitional_primitive_usage_inventory() -> list[str]:
+    errors: list[str] = []
+    try:
+        operation_primitives = _load_json("operation_primitives.json")
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"operation_primitives.json is missing or invalid for transitional primitive audit: {exc}"]
+    primitive_by_id = {
+        str(primitive.get("id")): primitive
+        for primitive in operation_primitives.get("primitives", [])
+        if isinstance(primitive, dict)
+    }
+    usage_inventory = _transitional_primitive_usage_inventory()
+    for primitive_id in sorted(usage_inventory.get("primitive_counts", {})):
+        primitive = primitive_by_id.get(primitive_id)
+        if not isinstance(primitive, dict):
+            errors.append(f"transitional primitive {primitive_id} is used but missing from operation_primitives.json")
+            continue
+        if primitive.get("taxonomy_tier") != "tier-2-package-domain":
+            errors.append(f"transitional primitive {primitive_id} must be classified tier-2-package-domain")
+        if primitive.get("portability") == "target-executor":
+            errors.append(f"transitional primitive {primitive_id} must not be declared target-executor portable")
+        for field in ("tier_owner", "tier_reason", "conformance_ref", "migration_path", "generic_behavior_audit"):
+            if not str(primitive.get(field, "")).strip():
+                errors.append(f"transitional primitive {primitive_id} missing {field}")
+    support_matrix = operation_primitives.get("primitive_extension_boundary", {}).get("target_support_matrix", [])
+    if isinstance(support_matrix, list):
+        for entry in support_matrix:
+            if not isinstance(entry, dict):
+                continue
+            shared = entry.get("implemented_shared_primitives", [])
+            if not isinstance(shared, list):
+                continue
+            transitional_shared = sorted(
+                primitive for primitive in shared if isinstance(primitive, str) and primitive in COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
+            )
+            if transitional_shared:
+                errors.append(
+                    f"operation_primitives.json target {entry.get('target')} counts transitional primitive(s) as shared support: "
+                    + ", ".join(transitional_shared)
+                )
+    return errors
 
 
 def _validate_declarative_view_specs() -> list[str]:
@@ -2347,10 +2488,10 @@ def _validate_lifecycle_dry_run_generation() -> list[str]:
             errors.append(f"{location} lifecycle dry-run proof operation_path does not exist: {operation_path}")
             continue
         profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
-        if not profile or profile["default_dry_run_owner"] != "codegen":
+        if not profile or profile["default_dry_run_owner"] != "transitional-host":
             errors.append(
                 f"{location} claims generated default dry-run planning but {operation_path.relative_to(REPO_ROOT).as_posix()} "
-                "does not route the default dry-run branch through payload.lifecycle-plan"
+                "does not route the default dry-run branch through transitional payload.lifecycle-plan"
             )
     return errors
 
@@ -2836,8 +2977,6 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     portable_primitive_operations = {
         "memory.list-files.report",
         "memory.list-skills.report",
-        "memory.status.report",
-        "memory.verify-payload.report",
         "planning.list-files.report",
     }
     expected_primitive_executors: dict[str, str] = {}
@@ -4120,6 +4259,7 @@ def _validate_static_surfaces() -> list[str]:
                 )
             )
         errors.extend(_validate_python_operation_execution_inventory(ir))
+        errors.extend(_validate_transitional_primitive_usage_inventory())
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
             errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")
@@ -4539,6 +4679,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     generated_target_freshness = _generated_target_freshness_report(ir)
     runtime_source_edit_policy = _runtime_source_edit_policy_payload()
     lifecycle_dry_run_metrics = _lifecycle_dry_run_metrics()
+    transitional_primitive_usage = _transitional_primitive_usage_inventory()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
     generated_command_migration_completion = _generated_command_migration_completion_report(
         blockers=blockers,
@@ -4561,6 +4702,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "generated_target_freshness": generated_target_freshness,
         "runtime_source_edit_policy": runtime_source_edit_policy,
         "lifecycle_dry_run_metrics": lifecycle_dry_run_metrics,
+        "transitional_primitive_usage": transitional_primitive_usage,
         "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
@@ -4749,9 +4891,16 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
     if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
         print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")
-        print(f"Codegen-owned default dry-run operations: {lifecycle_metrics.get('codegen_default_dry_run_operation_count')}")
+        print(
+            "Transitional-host default dry-run operations: "
+            f"{lifecycle_metrics.get('transitional_host_default_dry_run_operation_count')}"
+        )
         print(f"Package-runtime default dry-run operations: {lifecycle_metrics.get('package_runtime_default_dry_run_operation_count')}")
         print(f"Operation-runtime default dry-run operations: {lifecycle_metrics.get('operation_runtime_default_dry_run_operation_count')}")
+    transitional_usage = report.get("transitional_primitive_usage", {})
+    if isinstance(transitional_usage, dict) and transitional_usage.get("status"):
+        print(f"Transitional primitive usage: {transitional_usage.get('usage_count')} source step(s)")
+        print(f"Transitional primitive operations: {transitional_usage.get('operation_count')}")
     blockers = report.get("blockers", [])
     if not isinstance(blockers, list) or not blockers:
         print("Blockers: none")

@@ -78,7 +78,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through a schema-backed payload.status primitive.",
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned transitional payload.status primitive.",
     "steps": [
       {
         "id": "resolve_target_root",

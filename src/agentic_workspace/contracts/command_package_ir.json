@@ -1,5 +1,5 @@
 {
-  "schema_version": "agentic-workspace/command-package-ir/v1",
+  "schema_version": "command-generation/command-package-ir/v1",
   "summary": "Implementation-independent command-package view for generated Python and TypeScript CLI package targets.",
   "schema": "schemas/command_package_ir.schema.json",
   "source_contracts": [

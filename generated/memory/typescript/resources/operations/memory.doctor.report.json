@@ -184,7 +184,7 @@
         "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through a schema-backed payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
+    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned transitional payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",

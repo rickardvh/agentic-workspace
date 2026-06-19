@@ -52,6 +52,7 @@ from agentic_workspace.contract_tooling import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 from command_generation import (  # noqa: E402
+    BUILTIN_PORTABLE_PRIMITIVES,
     TargetExtensionContractError,
     command_package_schema_path,
     target_support_matrix_entries,
@@ -91,7 +92,12 @@ def _validate_command_generation_schema_boundary() -> list[str]:
     errors: list[str] = []
     if not package_schema.is_file():
         return ["command-generation packaged command_package_ir.schema.json is missing"]
-    if workspace_schema.read_text(encoding="utf-8") != package_schema.read_text(encoding="utf-8"):
+    workspace_payload = json.loads(workspace_schema.read_text(encoding="utf-8"))
+    package_payload = json.loads(package_schema.read_text(encoding="utf-8"))
+    for payload in (workspace_payload, package_payload):
+        payload.pop("x-agentic-workspace-doc-role", None)
+        payload.pop("x-command-generation-doc-role", None)
+    if workspace_payload != package_payload:
         errors.append("command-generation packaged command_package_ir.schema.json drifted from workspace validation schema")
     return errors
 
@@ -315,6 +321,11 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
 
 def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
+    command_generation_transitional_primitives = {
+        primitive_id
+        for primitive_id in BUILTIN_PORTABLE_PRIMITIVES.ids()
+        if getattr(BUILTIN_PORTABLE_PRIMITIVES.definition(primitive_id), "kind", "") == "transitional"
+    }
     if payload.get("schema_version") != "agentic-workspace/operation-primitives/v1":
         errors.append("operation_primitives.json has unexpected schema_version")
     ir_model = payload.get("ir_model")
@@ -386,6 +397,16 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 implemented = entry.get("implemented_shared_primitives", [])
                 if status == "implemented" and (not isinstance(implemented, list) or not implemented):
                     errors.append(f"operation_primitives.json target {target} must list implemented_shared_primitives")
+                transitional_support = sorted(
+                    primitive_id
+                    for primitive_id in implemented
+                    if isinstance(primitive_id, str) and primitive_id in command_generation_transitional_primitives
+                )
+                if transitional_support:
+                    errors.append(
+                        f"operation_primitives.json target {target} counts transitional host primitive(s) as shared support: "
+                        + ", ".join(transitional_support)
+                    )
                 if status in {"unsupported-reported", "deferred"} and not unsupported_behavior:
                     errors.append(f"operation_primitives.json target {target} must describe unsupported_behavior")
             for required_target in ("python", "typescript", "bash", "powershell"):
@@ -456,6 +477,8 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             errors.append(f"target-executor primitive {primitive_id} must be classified tier-1-portable-codegen")
         if primitive.get("portability") in {"domain-runtime", "external-adapter"} and taxonomy_tier == "tier-1-portable-codegen":
             errors.append(f"non-portable primitive {primitive_id} must not be classified tier-1-portable-codegen")
+        if primitive_id in command_generation_transitional_primitives and taxonomy_tier == "tier-1-portable-codegen":
+            errors.append(f"transitional host primitive {primitive_id} must not be classified tier-1-portable-codegen")
         if taxonomy_tier == "tier-2-package-domain":
             missing_audit = sorted(field for field in tier_2_required_fields if not str(primitive.get(field, "")).strip())
             if missing_audit:
@@ -487,6 +510,7 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 for primitive in primitives
                 if isinstance(primitive, dict)
                 and primitive.get("portability") == "target-executor"
+                and primitive.get("taxonomy_tier") == "tier-1-portable-codegen"
                 and isinstance(primitive.get("input_schema_ref"), str)
                 and isinstance(primitive.get("output_schema_ref"), str)
             }
@@ -513,6 +537,14 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     missing_classification = sorted(primitive for primitive in operation_step_primitives if primitive not in seen_ids)
     if missing_classification:
         errors.append("operation steps reference primitives missing from operation_primitives.json: " + ", ".join(missing_classification))
+    used_transitional_primitives = sorted(operation_step_primitives & command_generation_transitional_primitives)
+    primitive_by_id = {str(primitive.get("id")): primitive for primitive in primitives if isinstance(primitive, dict)}
+    for primitive_id in used_transitional_primitives:
+        primitive = primitive_by_id.get(primitive_id, {})
+        if primitive.get("taxonomy_tier") != "tier-2-package-domain":
+            errors.append(f"used transitional host primitive {primitive_id} must be inventoried as tier-2-package-domain")
+        if "transitional" not in str(primitive.get("generic_behavior_audit", "")).lower():
+            errors.append(f"used transitional host primitive {primitive_id} must name transitional usage in generic_behavior_audit")
     tiered_primitives = {
         str(primitive["id"]): str(primitive.get("taxonomy_tier"))
         for primitive in primitives
@@ -891,7 +923,7 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
 
 def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
-    if payload.get("schema_version") != "agentic-workspace/command-package-ir/v1":
+    if payload.get("schema_version") != "command-generation/command-package-ir/v1":
         return ["command_package_ir.json has unexpected schema_version"]
     adapters = {adapter["id"]: adapter for adapter in command_adapter_generation_manifest()["adapters"]}
     operations = {operation["id"]: operation for operation in operation_contracts_manifest()["operations"]}

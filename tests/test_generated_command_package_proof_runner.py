@@ -532,10 +532,14 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert "IR-defined schema-coupled generated command tests" in migration["remaining_parent_scope"][0]
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
-    assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
+    assert lifecycle_metrics["transitional_host_default_dry_run_operation_count"] >= 3
     assert "memory.install.lifecycle" in {
-        operation["operation_id"] for operation in lifecycle_metrics["codegen_default_dry_run_operations"]
+        operation["operation_id"] for operation in lifecycle_metrics["transitional_host_default_dry_run_operations"]
     }
+    transitional_usage = report["transitional_primitive_usage"]
+    assert transitional_usage["status"] == "inventory-backed"
+    assert transitional_usage["operation_count"] >= 7
+    assert transitional_usage["primitive_counts"]["payload.lifecycle-plan"] == 3
 
 
 def test_generated_artifact_metadata_rejects_unexpected_generator_version() -> None:
@@ -589,7 +593,7 @@ def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
         """
     )
 
-    assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
+    assert any("does not route the default dry-run branch through transitional payload.lifecycle-plan" in error for error in errors)
 
 
 def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:
@@ -696,7 +700,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["runtime_source_edit_policy"]["status"] == "available"
     assert "new-primitive-implementation" in payload["runtime_source_edit_policy"]["accepted_direct_edit_reasons"]
     assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
-    assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
+    assert payload["lifecycle_dry_run_metrics"]["transitional_host_default_dry_run_operation_count"] >= 3
+    assert payload["transitional_primitive_usage"]["usage_count"] >= 14
 
 
 def test_python_completion_blocker_report_surfaces_command_generation_package_posture(capsys) -> None:

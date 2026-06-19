@@ -1,5 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
-# Agentic Workspace Command Package IR
+# Command Generation Command Package IR
 
 Intermediate representation for generating command package metadata and language/runtime adapters.
 
@@ -11,7 +11,7 @@ Intermediate representation for generating command package metadata and language
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Intermediate representation for generating command package metadata and language/runtime adapters. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `schema_version` | const `"agentic-workspace/command-package-ir/v1"` | yes |  | Command package IR contract version. |  |  |
+| `schema_version` | const `"command-generation/command-package-ir/v1"` | yes |  | Command package IR contract version. |  |  |
 | `summary` | string | yes |  | Short summary of the generated command package boundary. |  |  |
 | `schema` | const `"schemas/command_package_ir.schema.json"` | yes |  | Schema reference carried by the IR document. |  |  |
 | `source_contracts` | array of string | yes |  | Contract files that feed or constrain command package generation. |  |  |
