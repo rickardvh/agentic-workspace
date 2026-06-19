@@ -181,7 +181,13 @@ PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "not accepted as generic output",
 )
 COMMAND_GENERATION_RELEASE_BASE_URL = "https://github.com/rickardvh/command-generation/releases/download"
-COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.2.0,<0.3.0"
+COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.2.4,<0.3.0"
+COMMAND_GENERATION_METADATA_SCHEMA_VERSION = "command-generation/generated-artifact-metadata/v1"
+COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION = "command-generation/command-package-ir/v1"
+COMMAND_GENERATION_TARGET_LAYOUT_VERSION = {
+    "python": "command-generation/python-target-layout/v1",
+    "typescript": "command-generation/typescript-target-layout/v1",
+}
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",
@@ -2122,6 +2128,7 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
 def _generated_target_freshness_report(ir: dict[str, object]) -> dict[str, object]:
     outputs = list(render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT))
     package_target_counts: dict[str, int] = {}
+    metadata_errors = _validate_generated_artifact_generation_metadata(ir)
 
     def target_family_for_path(path: Path) -> str | None:
         relative_path = path.relative_to(REPO_ROOT).as_posix()
@@ -2151,6 +2158,18 @@ def _generated_target_freshness_report(ir: dict[str, object]) -> dict[str, objec
         "stale_output_count_by_family": generic_report["stale_output_count_by_family"],
         "stale_outputs_by_family": generic_report["stale_outputs_by_family"],
         "missing_target_families": generic_report["missing_target_families"],
+        "generation_metadata": {
+            "kind": "command-generation/generated-artifact-metadata-proof/v1",
+            "status": "fresh" if not metadata_errors else "mismatch",
+            "expected_generator": {
+                "package": "command-generation",
+                "version": _command_generation_package_provenance()["declared_version"],
+            },
+            "expected_source_ir_schema_version": COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION,
+            "expected_target_layout_versions": dict(COMMAND_GENERATION_TARGET_LAYOUT_VERSION),
+            "error_count": len(metadata_errors),
+            "errors": metadata_errors,
+        },
         "freshness_check_command": "uv run python scripts/generate/generate_command_packages.py --check",
         "refresh_command": "uv run python scripts/generate/generate_command_packages.py",
         "validation_command": "uv run python scripts/check/check_generated_command_packages.py",
@@ -3205,11 +3224,18 @@ def _validate_generated_python_target_layout() -> list[str]:
     return errors
 
 
+def _command_package_resource(package: dict[str, object], target: dict[str, object]) -> dict[str, object]:
+    resource = dict(package)
+    resource["generation_metadata"] = _expected_generation_metadata(package, target)
+    return resource
+
+
 def _target_scoped_command_package_resource(package: dict[str, object], target: dict[str, object]) -> dict[str, object]:
     scoped = dict(package)
     scoped["targets"] = [dict(target)]
     if target.get("kind") != "python":
         scoped.pop("python_runtime_binding", None)
+    scoped["generation_metadata"] = _expected_generation_metadata(package, target)
     scoped["target_resource_scope"] = {
         "kind": "command-generation/target-scoped-package-resource/v1",
         "target_kind": str(target.get("kind", "")),
@@ -3282,6 +3308,115 @@ def _validate_command_generation_release_provenance() -> list[str]:
             errors.append(f"{relative_path} command-generation install URL must match pyproject.toml released package URL")
         if "command-generation.git@" in text or "git+https://github.com/rickardvh/command-generation.git" in text:
             errors.append(f"{relative_path} must not install command-generation from a Git source ref")
+    return errors
+
+
+def _expected_generation_metadata(package: dict[str, object], target: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema_version": COMMAND_GENERATION_METADATA_SCHEMA_VERSION,
+        "generator": {
+            "package": "command-generation",
+            "version": _command_generation_package_provenance()["declared_version"],
+        },
+        "source_ir": {
+            "schema_version": COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION,
+        },
+        "target": {
+            "kind": str(target.get("kind", "")),
+            "package_name": str(target.get("package_name", "")),
+            "layout_version": COMMAND_GENERATION_TARGET_LAYOUT_VERSION.get(str(target.get("kind", "")), ""),
+        },
+    }
+
+
+def _validate_generation_metadata_payload(
+    *,
+    relative_path: str,
+    metadata: object,
+    expected: dict[str, object],
+) -> list[str]:
+    if not isinstance(metadata, dict):
+        return [f"{relative_path} is missing generation metadata"]
+    errors: list[str] = []
+    actual_generator = metadata.get("generator")
+    expected_generator = expected.get("generator")
+    if actual_generator != expected_generator:
+        errors.append(f"{relative_path} generation metadata has unexpected generator: {actual_generator!r}, expected {expected_generator!r}")
+    actual_source_ir = metadata.get("source_ir")
+    expected_source_ir = expected.get("source_ir")
+    if actual_source_ir != expected_source_ir:
+        errors.append(f"{relative_path} generation metadata has unexpected source_ir: {actual_source_ir!r}, expected {expected_source_ir!r}")
+    actual_target = metadata.get("target")
+    expected_target = expected.get("target")
+    if actual_target != expected_target:
+        errors.append(f"{relative_path} generation metadata has unexpected target layout: {actual_target!r}, expected {expected_target!r}")
+    if metadata.get("schema_version") != expected.get("schema_version"):
+        errors.append(
+            f"{relative_path} generation metadata has unexpected schema_version: "
+            f"{metadata.get('schema_version')!r}, expected {expected.get('schema_version')!r}"
+        )
+    return errors
+
+
+def _validate_generated_artifact_generation_metadata(ir: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if ir.get("schema_version") != COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION:
+        errors.append(
+            "canonical command package IR schema mismatch: "
+            f"{ir.get('schema_version')!r}, expected {COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION!r}"
+        )
+    if not _command_generation_package_provenance().get("compatible"):
+        errors.append("generated artifact metadata cannot be trusted until command-generation package provenance is compatible")
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        for target in package.get("targets", []):
+            if not isinstance(target, dict):
+                continue
+            target_kind = str(target.get("kind", ""))
+            if str(target.get("generation_status", "")) == "deferred":
+                continue
+            if target_kind not in COMMAND_GENERATION_TARGET_LAYOUT_VERSION:
+                errors.append(f"{package.get('id')} has unsupported generated target kind {target_kind!r}")
+                continue
+            generated_root = REPO_ROOT / str(target.get("generated_root", ""))
+            expected = _expected_generation_metadata(package, target)
+            if target_kind == "python":
+                resource_path = generated_root / "command_package.json"
+                relative_path = resource_path.relative_to(REPO_ROOT).as_posix()
+                if not resource_path.is_file():
+                    errors.append(f"{relative_path} is missing")
+                    continue
+                payload = json.loads(resource_path.read_text(encoding="utf-8"))
+                errors.extend(
+                    _validate_generation_metadata_payload(
+                        relative_path=relative_path,
+                        metadata=payload.get("generation_metadata"),
+                        expected=expected,
+                    )
+                )
+            elif target_kind == "typescript":
+                resource_path = generated_root / "resources" / "command_package.json"
+                package_json_path = generated_root / "package.json"
+                for path, pointer in (
+                    (resource_path, ("generation_metadata",)),
+                    (package_json_path, ("agenticWorkspace", "generationMetadata")),
+                ):
+                    relative_path = path.relative_to(REPO_ROOT).as_posix()
+                    if not path.is_file():
+                        errors.append(f"{relative_path} is missing")
+                        continue
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    metadata: object = payload
+                    for key in pointer:
+                        metadata = metadata.get(key) if isinstance(metadata, dict) else None
+                    errors.extend(
+                        _validate_generation_metadata_payload(
+                            relative_path=relative_path,
+                            metadata=metadata,
+                            expected=expected,
+                        )
+                    )
     return errors
 
 
@@ -4104,7 +4239,7 @@ def _validate_static_surfaces() -> list[str]:
                 except json.JSONDecodeError as exc:
                     errors.append(f"{generated_root}/{resource_name} is invalid JSON: {exc}")
                     continue
-                if resource_name == "command_package.json" and payload != package:
+                if resource_name == "command_package.json" and payload != _command_package_resource(package, python_target):
                     errors.append(f"{generated_root}/command_package.json drifted from command_package_ir.json package {package_id!r}")
                 if resource_name == "adapter_commands.json":
                     expected_adapter_commands = []
@@ -4156,6 +4291,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_no_shared_python_function_call_operation_ir())
+        errors.extend(_validate_generated_artifact_generation_metadata(ir))
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [
             "src/agentic_workspace/generated_cli_package.py",
