@@ -77,9 +77,27 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance / success signal
-      description: How would we know this direction has been meaningfully advanced?
-      placeholder: Define what better looks like.
+      label: Acceptance criteria
+      description: What observable final-state requirements must be true?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_solutions
+    attributes:
+      label: Non-solutions
+      description: What does not close this issue unless explicitly listed in the acceptance criteria?
+      value: |
+        The following do not close this issue unless explicitly listed in the acceptance criteria:
+
+        - documenting the problem without changing the affected behavior;
+        - adding an inventory without completing the requested change;
+        - reclassifying or renaming the current behavior while preserving the old dependency/path;
+        - adding a follow-up issue instead of completing the stated outcome;
+        - changing tests to accept the current behavior rather than making the intended behavior true.
     validations:
       required: true
 
@@ -98,6 +116,15 @@ body:
       label: Evidence required for final completion
       description: What proof, review, or acceptance evidence is required before this issue can honestly close?
       placeholder: Name the evidence that proves the final intended state, not only local progress.
+    validations:
+      required: true
+
+  - type: textarea
+    id: completion_rule
+    attributes:
+      label: Completion rule
+      description: What condition permits a PR to close this issue?
+      value: A PR may close this issue only if the intended outcome is true in the ordinary path, not merely documented, inventoried, reclassified, or deferred.
     validations:
       required: true
 
