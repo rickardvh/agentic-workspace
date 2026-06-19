@@ -119,7 +119,7 @@
     {
       "description": "Resolve the target repository root.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Use the explicit --repo value or ask gh for the current repository.",

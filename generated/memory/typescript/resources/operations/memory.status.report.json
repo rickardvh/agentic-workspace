@@ -62,7 +62,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "payload.status"
+        "uses": "memory.payload.status"
       },
       {
         "arguments": {},
@@ -72,10 +72,10 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit.install-result"
+        "uses": "memory.output.emit.install-result"
       }
     ],
-    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned transitional payload.status primitive."
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned memory.payload.status primitive."
   },
   "locality": {
     "network": "forbidden",
@@ -110,12 +110,12 @@
     {
       "description": "Assemble Memory status from declarative payload status policy.",
       "id": "assemble_status",
-      "uses": "payload.status"
+      "uses": "memory.payload.status"
     },
     {
       "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
       "id": "emit_output",
-      "uses": "output.emit.install-result"
+      "uses": "memory.output.emit.install-result"
     }
   ],
   "summary": "Report whether memory bootstrap files are present for a target repository.",

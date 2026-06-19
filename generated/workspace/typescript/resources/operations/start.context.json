@@ -124,7 +124,7 @@
     {
       "description": "Resolve the target root.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Collect startup guidance, config, active state, and optional task-specific skill recommendations.",

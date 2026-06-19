@@ -79,7 +79,7 @@
   "steps": [
     {
       "id": "resolve_root",
-      "uses": "workspace.root.resolve",
+      "uses": "workspace.target-root.resolve",
       "description": "Resolve the target root."
     },
     {

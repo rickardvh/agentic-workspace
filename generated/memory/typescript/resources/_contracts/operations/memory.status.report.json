@@ -59,12 +59,12 @@
     },
     {
       "id": "assemble_status",
-      "uses": "payload.status",
+      "uses": "memory.payload.status",
       "description": "Assemble Memory status from declarative payload status policy."
     },
     {
       "id": "emit_output",
-      "uses": "output.emit.install-result",
+      "uses": "memory.output.emit.install-result",
       "description": "Emit Memory status as JSON or install-result text without package-runtime formatting."
     }
   ],
@@ -78,7 +78,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned transitional payload.status primitive.",
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned memory.payload.status primitive.",
     "steps": [
       {
         "id": "resolve_target_root",
@@ -95,7 +95,7 @@
       },
       {
         "id": "assemble_status",
-        "uses": "payload.status",
+        "uses": "memory.payload.status",
         "description": "Assemble Memory status from declarative payload status policy.",
         "arguments": {
           "policy_root": "memory.contracts",
@@ -110,7 +110,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit.install-result",
+        "uses": "memory.output.emit.install-result",
         "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
         "arguments": {},
         "outputs": [

@@ -94,19 +94,19 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
-    if primitive == "payload.status":
+    if primitive == "memory.payload.status":
         return _payload_status(values=values, arguments=arguments, context=context)
-    if primitive == "payload.lifecycle-plan":
+    if primitive == "memory.payload.lifecycle-plan":
         return _payload_lifecycle_plan(values=values, arguments=arguments, context=context)
-    if primitive == "payload.current-memory":
+    if primitive == "memory.payload.current-memory":
         return _payload_current_memory(values=values, arguments=arguments, context=context)
-    if primitive == "payload.verify":
+    if primitive == "memory.payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
         return _emit_output(values=values, arguments=arguments)
-    if primitive == "output.emit.install-result":
+    if primitive == "memory.output.emit.install-result":
         return _emit_output(values=values, arguments={"text_style": "install-result"})
-    if primitive == "output.emit.current-memory":
+    if primitive == "memory.output.emit.current-memory":
         return _emit_output(values=values, arguments={"text_style": "current-memory"})
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)

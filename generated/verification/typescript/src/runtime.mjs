@@ -696,7 +696,7 @@ function reportMemory(values) {
 
 function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);
-  if (primitive === 'path.target_root.resolve' || primitive === 'workspace.root.resolve') {
+  if (primitive === 'path.target_root.resolve' || primitive === 'workspace.target-root.resolve') {
     const targetRoot = resolve(String(values.target ?? '.'));
     if (args.must_exist && !existsSync(targetRoot)) throw new RuntimeError(`target root does not exist: ${targetRoot}`);
     if (args.must_be_dir && (!existsSync(targetRoot) || !statSync(targetRoot).isDirectory())) throw new RuntimeError(`target root is not a directory: ${targetRoot}`);
@@ -728,13 +728,13 @@ function executePrimitive(primitive, values, args, operationId) {
     return { table_counts: counts, table_present: true, table_status: counts.status };
   }
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
-  if (primitive === 'payload.status') return payloadStatus(values, args);
-  if (primitive === 'payload.lifecycle-plan') return payloadLifecyclePlan(values, args);
-  if (primitive === 'payload.current-memory') return payloadCurrentMemory(values, args);
-  if (primitive === 'payload.verify') return verifyPayload(values, args);
+  if (primitive === 'memory.payload.status') return payloadStatus(values, args);
+  if (primitive === 'memory.payload.lifecycle-plan') return payloadLifecyclePlan(values, args);
+  if (primitive === 'memory.payload.current-memory') return payloadCurrentMemory(values, args);
+  if (primitive === 'memory.payload.verify') return verifyPayload(values, args);
   if (primitive === 'output.emit') return emitOutput(values, args);
-  if (primitive === 'output.emit.install-result') return emitOutput(values, { text_style: 'install-result' });
-  if (primitive === 'output.emit.current-memory') return emitOutput(values, { text_style: 'current-memory' });
+  if (primitive === 'memory.output.emit.install-result') return emitOutput(values, { text_style: 'install-result' });
+  if (primitive === 'memory.output.emit.current-memory') return emitOutput(values, { text_style: 'current-memory' });
   if (primitive === 'workspace.defaults.load') return loadJsonResource('_contracts/payload.json');
   if (primitive === 'workspace.defaults.select') return workspaceDefaultsSelect(values.defaults_payload, values);
   if (primitive === 'workspace.config.load') return workspaceConfig(values);

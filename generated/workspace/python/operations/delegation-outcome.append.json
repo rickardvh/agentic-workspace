@@ -69,7 +69,7 @@
         "outputs": [
           "target_root"
         ],
-        "uses": "workspace.root.resolve"
+        "uses": "workspace.target-root.resolve"
       },
       {
         "arguments": {},
@@ -119,7 +119,7 @@
     {
       "description": "Resolve the target root.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Append the local-only delegation outcome record.",

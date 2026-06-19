@@ -15,7 +15,7 @@
   "guards": [
     "Verification must remain read-only.",
     "Generated code owns parser/help/dispatch shape.",
-    "Text and JSON output must execute payload verification through the AW/Memory-owned transitional payload.verify primitive and package-owned policy JSON."
+    "Text and JSON output must execute payload verification through the AW/Memory-owned memory.payload.verify primitive and package-owned policy JSON."
   ],
   "id": "memory.verify-payload.report",
   "inputs": [
@@ -59,7 +59,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "payload.verify"
+        "uses": "memory.payload.verify"
       },
       {
         "arguments": {},
@@ -69,7 +69,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit.install-result"
+        "uses": "memory.output.emit.install-result"
       }
     ],
     "summary": "Memory verify-payload text and JSON execute generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy."
@@ -107,12 +107,12 @@
     {
       "description": "Verify bundled memory payload files through package-owned payload verification policy.",
       "id": "verify_payload_policy",
-      "uses": "payload.verify"
+      "uses": "memory.payload.verify"
     },
     {
       "description": "Emit memory payload verification result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit.install-result"
+      "uses": "memory.output.emit.install-result"
     }
   ],
   "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",

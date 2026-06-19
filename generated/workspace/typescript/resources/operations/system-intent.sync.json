@@ -45,7 +45,7 @@
         "outputs": [
           "target_root"
         ],
-        "uses": "workspace.root.resolve"
+        "uses": "workspace.target-root.resolve"
       },
       {
         "arguments": {},
@@ -142,7 +142,7 @@
     {
       "description": "Resolve the effective target root.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Resolve configured or conservatively autodetected source hints.",

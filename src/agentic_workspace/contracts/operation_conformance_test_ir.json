@@ -778,7 +778,7 @@
       "composition": {
         "case_focus": "Stable generated modules router output fields.",
         "assumes_primitives": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.modules.inspect",
           "output.emit"
         ],
@@ -888,7 +888,7 @@
       "composition": {
         "case_focus": "Generated text result and local-only delegation outcome write boundary.",
         "assumes_primitives": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "delegation.outcome.append",
           "output.emit"
         ],
@@ -1007,7 +1007,7 @@
       "composition": {
         "case_focus": "Local-only delegation outcome append write boundary for the generated Python wrapper.",
         "assumes_primitives": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "delegation.outcome.append",
           "output.emit"
         ],

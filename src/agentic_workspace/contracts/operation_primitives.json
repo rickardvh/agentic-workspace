@@ -576,7 +576,7 @@
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
-      "id": "output.emit.install-result",
+      "id": "memory.output.emit.install-result",
       "summary": "Render AW installed-payload lifecycle/status result text or JSON for the Memory package compatibility surface.",
       "kind": "output",
       "portability": "domain-runtime",
@@ -585,13 +585,13 @@
       "output_schema_ref": "schemas/primitives/output_emit_install_result.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package installed-payload lifecycle boundary",
-      "tier_reason": "The text projection is AW/Memory installed-payload compatibility behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory generated command conformance plus command-generation transitional primitive compatibility",
+      "tier_reason": "The text projection is AW/Memory installed-payload compatibility behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory output primitive or split stable formatting into output.emit once installed-payload result records have a host-neutral contract.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
-      "id": "output.emit.current-memory",
+      "id": "memory.output.emit.current-memory",
       "summary": "Render AW current-memory view text or JSON for the Memory package compatibility surface.",
       "kind": "output",
       "portability": "domain-runtime",
@@ -600,10 +600,10 @@
       "output_schema_ref": "schemas/primitives/output_emit_current_memory.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package current-memory view boundary",
-      "tier_reason": "Current-memory text projection is AW/Memory product behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory.current-show.process plus command-generation transitional primitive compatibility",
+      "tier_reason": "Current-memory text projection is AW/Memory product behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory.current-show.process plus generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory current-view output primitive or split stable generic rendering into output.emit after the view contract is host-neutral.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
       "id": "output.fields.select",
@@ -656,7 +656,7 @@
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
-      "id": "payload.lifecycle-plan",
+      "id": "memory.payload.lifecycle-plan",
       "summary": "Plan AW Memory installed-payload lifecycle actions from Memory-owned payload policy.",
       "kind": "memory-runtime",
       "portability": "domain-runtime",
@@ -665,13 +665,13 @@
       "output_schema_ref": "schemas/primitives/payload_lifecycle_plan.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package installed-payload lifecycle boundary",
-      "tier_reason": "Installed-payload lifecycle planning is AW/Memory host behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory lifecycle generated command conformance plus command-generation transitional primitive compatibility",
+      "tier_reason": "Installed-payload lifecycle planning is AW/Memory host behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory lifecycle generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory lifecycle primitive or split stable file/status planning into smaller portable primitives after lifecycle policy is host-neutral.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
-      "id": "payload.current-memory",
+      "id": "memory.payload.current-memory",
       "summary": "Assemble AW Memory current-view data from Memory-owned payload policy.",
       "kind": "memory-runtime",
       "portability": "domain-runtime",
@@ -680,13 +680,13 @@
       "output_schema_ref": "schemas/primitives/payload_current_memory.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package current-memory view boundary",
-      "tier_reason": "Current-memory view assembly is AW/Memory product behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory.current-show.process plus command-generation transitional primitive compatibility",
+      "tier_reason": "Current-memory view assembly is AW/Memory product behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory.current-show.process plus generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory current-view primitive or split stable note-file projection into host-neutral primitives after the current-memory contract is independent.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
-      "id": "payload.status",
+      "id": "memory.payload.status",
       "summary": "Assemble AW Memory installed-payload status from Memory-owned payload policy.",
       "kind": "memory-runtime",
       "portability": "domain-runtime",
@@ -695,13 +695,13 @@
       "output_schema_ref": "schemas/primitives/payload_status.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package installed-payload status boundary",
-      "tier_reason": "Installed-payload status is AW/Memory host behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory status/doctor generated command conformance plus command-generation transitional primitive compatibility",
+      "tier_reason": "Installed-payload status is AW/Memory host behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory status/doctor generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory status primitive or split stable file/status checks into smaller portable primitives after payload status policy is host-neutral.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
-      "id": "payload.verify",
+      "id": "memory.payload.verify",
       "summary": "Verify AW Memory installed-payload files against Memory-owned verification policy.",
       "kind": "memory-runtime",
       "portability": "domain-runtime",
@@ -710,10 +710,10 @@
       "output_schema_ref": "schemas/primitives/payload_verify.output.schema.json",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "memory package installed-payload verification boundary",
-      "tier_reason": "Installed-payload verification is AW/Memory host behavior that command-generation exposes only as a host-owned transitional helper.",
-      "conformance_ref": "memory verify-payload generated command conformance plus command-generation transitional primitive compatibility",
+      "tier_reason": "Installed-payload verification is AW/Memory host behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
+      "conformance_ref": "memory verify-payload generated command conformance and compatibility-isolation checks",
       "migration_path": "Replace with an AW-owned Memory verification primitive or split stable file/schema checks into smaller portable primitives after payload verification policy is host-neutral.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
       "id": "planning.adopt.apply",
@@ -1379,16 +1379,16 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
-      "id": "workspace.root.resolve",
+      "id": "workspace.target-root.resolve",
       "summary": "Resolve the effective workspace root from a target path or current working directory.",
       "kind": "workspace-runtime",
       "portability": "domain-runtime",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace package runtime boundary",
-      "tier_reason": "Workspace root resolution is AW host behavior that command-generation exposes only as a host-owned transitional helper.",
+      "tier_reason": "Workspace root resolution is AW host behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
       "conformance_ref": "workspace tests plus generated command package checks",
       "migration_path": "Replace with an AW-owned workspace root primitive or split host-neutral path resolution into Tier 1 only after workspace discovery semantics are separated from AW configuration policy.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the remaining usage is inventoried transitional AW host behavior, not a generic shared primitive."
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
     },
     {
       "id": "workspace.selection.resolve",

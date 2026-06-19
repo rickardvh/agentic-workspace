@@ -120,7 +120,7 @@
     },
     {
       "id": "assemble_doctor",
-      "uses": "payload.status",
+      "uses": "memory.payload.status",
       "description": "Assemble Memory doctor status from declarative payload status policy."
     },
     {
@@ -130,7 +130,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit.install-result",
+      "uses": "memory.output.emit.install-result",
       "description": "Emit Memory doctor as JSON or install-result text without package-runtime formatting."
     }
   ],
@@ -144,7 +144,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned transitional payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime.",
+    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned memory.payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime.",
     "steps": [
       {
         "id": "resolve_target_root",
@@ -173,7 +173,7 @@
       },
       {
         "id": "assemble_doctor",
-        "uses": "payload.status",
+        "uses": "memory.payload.status",
         "description": "Assemble Memory doctor status from declarative payload status policy for non-strict, non-verbose output.",
         "when": {
           "all": [
@@ -224,7 +224,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit.install-result",
+        "uses": "memory.output.emit.install-result",
         "description": "Emit the memory doctor payload in the requested format.",
         "arguments": {},
         "outputs": [

@@ -82,7 +82,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "payload.current-memory",
+        "uses": "memory.payload.current-memory",
         "when": {
           "equals": "show",
           "value": "current_command"
@@ -112,7 +112,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit.current-memory",
+        "uses": "memory.output.emit.current-memory",
         "when": {
           "equals": "show",
           "value": "current_command"
@@ -155,7 +155,7 @@
     {
       "description": "Assemble current show JSON from declared target-local current-memory note files.",
       "id": "assemble_current_view",
-      "uses": "payload.current-memory"
+      "uses": "memory.payload.current-memory"
     },
     {
       "description": "Emit legacy current-memory output in the requested format.",
@@ -165,7 +165,7 @@
     {
       "description": "Emit current show output from the generated current-memory payload.",
       "id": "emit_current_show",
-      "uses": "output.emit.current-memory"
+      "uses": "memory.output.emit.current-memory"
     }
   ],
   "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show output is assembled from declared target-local files while current check behavior remains package-domain.",

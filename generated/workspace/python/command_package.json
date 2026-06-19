@@ -78,7 +78,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.modules.inspect",
           "output.emit"
         ]
@@ -191,7 +191,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "planning.summary.load",
           "output.fields.select",
           "output.emit"
@@ -2292,7 +2292,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "preflight.context.assemble",
           "startup.context.assemble",
           "output.emit"
@@ -2416,7 +2416,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "implementer.context.assemble",
           "output.profile.select",
           "output.fields.select",
@@ -2682,7 +2682,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "proof.routes.resolve",
           "proof.routes.resolve",
           "output.profile.select",
@@ -2782,7 +2782,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
           "output.emit"
@@ -2879,7 +2879,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "ownership.answer.resolve",
           "output.emit"
         ]
@@ -2977,7 +2977,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "output.fields.select",
           "workspace.config.emit"
@@ -3069,7 +3069,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "system_intent.config.resolve",
           "system_intent.source_metadata.refresh",
           "system_intent.mirror.read_or_create",
@@ -3215,7 +3215,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "delegation.outcome.append",
           "output.emit"
         ]
@@ -3311,7 +3311,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "skills.registry.inspect",
           "output.fields.select",
           "output.emit"
@@ -3441,7 +3441,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "workspace.selection.resolve",
           "workspace.report.assemble",
@@ -3543,7 +3543,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "planning.reconcile.load",
           "planning.reconcile.load",
           "output.emit"
@@ -3689,7 +3689,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "external_intent.github.repo.resolve",
           "external_intent.github.issues.list",
           "external_intent.evidence.normalize",
@@ -3797,7 +3797,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.defaults.load",
           "workspace.config.load",
           "planning.summary.load",
@@ -3970,7 +3970,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "workspace.selection.resolve",
           "workspace.lifecycle.plan",
@@ -4142,7 +4142,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "workspace.selection.resolve",
           "workspace.lifecycle.plan",
@@ -4470,7 +4470,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
           "output.fields.select",
@@ -4585,7 +4585,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.selection.resolve",
           "workspace.report.assemble",
           "output.fields.select",
@@ -4727,7 +4727,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "workspace.selection.resolve",
           "workspace.lifecycle.plan",
@@ -4870,7 +4870,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "workspace.root.resolve",
+          "workspace.target-root.resolve",
           "workspace.config.load",
           "workspace.selection.resolve",
           "workspace.lifecycle.plan",
@@ -4962,7 +4962,7 @@
           "function": "_resolve_workspace_operation_target_root",
           "handler": "runtime_handler",
           "import_module": "agentic_workspace.workspace_runtime_primitives",
-          "primitive": "workspace.root.resolve"
+          "primitive": "workspace.target-root.resolve"
         },
         {
           "function": "_load_workspace_operation_config",
