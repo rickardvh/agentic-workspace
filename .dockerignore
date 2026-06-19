@@ -2,5 +2,8 @@
 **/*.py[cod]
 **/.pytest_cache/
 **/.ruff_cache/
+.agentic-workspace/local/
+.uv-cache*/
 .git/
 .venv/
+scratch/

@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
 SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
 HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
+SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
 
 
 def _load_module():
@@ -28,6 +29,16 @@ def _load_module():
 
 def _load_harness_module():
     spec = importlib.util.spec_from_file_location("run_model_cli_harness", HARNESS_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_sbx_adapter_module():
+    spec = importlib.util.spec_from_file_location("run_sbx_codex_adapter", SBX_ADAPTER_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -214,3 +225,144 @@ def test_model_cli_harness_source_checkout_config_uses_local_schema(tmp_path: Pa
 
     assert "schema_version = 1" in local_config
     assert 'cli_invoke = "uv run agentic-workspace"' in local_config
+
+
+def test_model_cli_harness_preflight_resolves_adapter_executable_candidates(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    tool_dir = tmp_path / "tools"
+    tool_dir.mkdir()
+    sbx = tool_dir / "sbx.exe"
+    sbx.write_text("", encoding="utf-8")
+
+    preflight = module._adapter_preflight(
+        {
+            "adapter_executable": {
+                "name": "sbx",
+                "candidate_paths": ["{tool_dir}/sbx.exe"],
+                "add_parent_to_path": True,
+            }
+        },
+        command=["sbx", "run", "codex"],
+        replacements={"tool_dir": str(tool_dir)},
+    )
+
+    assert preflight["status"] == "ready"
+    assert preflight["requirements"][0]["resolved_path"] == str(sbx)
+    assert preflight["path_prepend"] == [str(tool_dir)]
+
+
+def test_model_cli_harness_captures_repo_local_sandbox_share_file(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    sandbox_share = repo / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness" / "session.md"
+    sandbox_share.parent.mkdir(parents=True)
+    sandbox_share.write_text("sandbox final\n", encoding="utf-8")
+    share_path = tmp_path / "run" / "session.md"
+
+    capture = module._capture_adapter_artifacts(
+        {
+            "artifact_capture": {
+                "share_path_candidates": ["{repo}/.agentic-workspace/local/scratch/model-cli-harness/session.md"],
+                "cleanup_captured": True,
+            }
+        },
+        replacements={"repo": str(repo)},
+        share_path=share_path,
+    )
+
+    assert capture["share_captured"] is True
+    assert share_path.read_text(encoding="utf-8") == "sandbox final\n"
+    assert not sandbox_share.exists()
+
+
+def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> None:
+    module = _load_harness_module()
+
+    payload = module.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex-sbx",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path,
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    assert result["adapter_id"] == "codex-sbx"
+    assert result["command"][0].endswith(("python", "python.exe"))
+    assert result["command"][1].replace("\\", "/").endswith("scripts/model_cli_harness/run_sbx_codex_adapter.py")
+    assert "--sandbox-name" in result["command"]
+    assert "--template" in result["command"]
+    assert "agentic-workspace/codex-sbx:local" in result["command"]
+    assert "--prompt-file" in result["command"]
+    assert result["prompt_transport"]["mode"] == "prompt-file"
+    assert result["sandbox"]["kind"] == "agentic-workspace/model-cli-sandbox-adapter/v1"
+    assert result["sandbox"]["evidence"] == "sandbox-backed"
+    assert result["sandbox"]["backend"] == "docker-sandbox"
+    assert result["sandbox"]["template"] == "agentic-workspace/codex-sbx:local"
+    pyproject = Path(result["repo_path"]) / "pyproject.toml"
+    pyproject_text = pyproject.read_text(encoding="utf-8")
+    assert "agentic_workspace-0.4.3-py3-none-any.whl" in pyproject_text
+    assert "agentic_memory-0.4.3-py3-none-any.whl" not in pyproject_text
+    assert "[tool.uv.sources]" not in pyproject_text
+
+
+def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_sbx_adapter_module()
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        returncode = 17 if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"] else 0
+        return subprocess.CompletedProcess(command, returncode, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+
+    result = module.main(
+        [
+            "--sbx",
+            "sbx",
+            "--sandbox-name",
+            "aw-test",
+            "--repo",
+            "work/repo",
+            "--model",
+            "gpt-test",
+            "--share-path",
+            "work/share/final.md",
+            "--prompt",
+            "do work",
+        ]
+    )
+
+    assert result == 17
+    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
+
+
+def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_harness_module()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+
+    monkeypatch.setattr(module, "_build_local_aw_wheelhouse", lambda output_root: wheelhouse)
+    monkeypatch.setattr(
+        module,
+        "_fixture_local_wheel_dependency",
+        lambda *, repo_path, source_wheelhouse, adapter: "agentic-workspace @ file:///fixture-wheelhouse/agentic_workspace.whl",
+    )
+
+    payload = module.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex-sbx",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "runs",
+        timeout_seconds=None,
+        aw_dependency_mode="local-wheelhouse",
+    )
+
+    pyproject_text = (Path(payload["results"][0]["repo_path"]) / "pyproject.toml").read_text(encoding="utf-8")
+    assert "fixture-wheelhouse/agentic_workspace.whl" in pyproject_text
+    assert "releases/download/v0.4.3" not in pyproject_text

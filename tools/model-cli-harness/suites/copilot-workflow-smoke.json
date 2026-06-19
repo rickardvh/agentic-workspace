@@ -157,6 +157,66 @@
         "--json",
         "{prompt}"
       ]
+    },
+    "codex-sbx": {
+      "default_model": "gpt-5.3-codex-spark",
+      "timeout_seconds": 900,
+      "block_on_preflight_failure": true,
+      "inject_repo_startup_instructions": true,
+      "postmortem_feedback_supported": false,
+      "sandbox": {
+        "backend": "docker-sandbox",
+        "agent": "codex",
+        "template": "agentic-workspace/codex-sbx:local"
+      },
+      "fixture_dependencies": [
+        "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.3/agentic_workspace-0.4.3-py3-none-any.whl#sha256=97eae58742561ef76af17ad90d3285746d93b99cfe41c807a72027969056a28e"
+      ],
+      "adapter_executable": {
+        "name": "sbx",
+        "candidate_paths": [
+          "{local_app_data}/DockerSandboxes/bin/sbx.exe"
+        ],
+        "add_parent_to_path": true
+      },
+      "artifact_capture": {
+        "share_path_candidates": [
+          "{repo}/.agentic-workspace/local/scratch/model-cli-harness/session.md"
+        ],
+        "cleanup_captured": true
+      },
+      "prompt_transport": {
+        "threshold_chars": 0,
+        "mode": "prompt-file",
+        "file_args": [
+          "--prompt-file",
+          "{prompt_file}"
+        ],
+        "file_prompt": "{prompt_file}"
+      },
+      "command": [
+        "{python}",
+        "{source_root}/scripts/model_cli_harness/run_sbx_codex_adapter.py",
+        "--sbx",
+        "sbx",
+        "--sandbox-name",
+        "{sandbox_name}",
+        "--template",
+        "agentic-workspace/codex-sbx:local",
+        "--repo",
+        "{repo}",
+        "--model",
+        "{model}",
+        "--share-path",
+        "{repo}/.agentic-workspace/local/scratch/model-cli-harness/session.md",
+        "--exec-env",
+        "UV_PROJECT_ENVIRONMENT=/tmp/agentic-workspace-fixture-venv",
+        "--exec-env",
+        "UV_LINK_MODE=copy",
+        "--exec-env",
+        "UV_CACHE_DIR=/tmp/uv-cache",
+        "{prompt_transport_args}"
+      ]
     }
   },
   "scenarios": [
