@@ -15,7 +15,7 @@ This inventory complements the `command-generation` target matrix. It does not r
 
 - Generic target-baseline checks must not be marked `keep-in-aw`.
 - AW-specific checks must remain `keep-in-aw`.
-- Obsolete generic duplicate checks must stay `remove-from-aw`.
+- Obsolete generic duplicate checks must stay `remove-from-aw`, must list the exact retired ordinary check symbols, and must be rejected by static proof if those symbols reappear under AW-owned ordinary `tests/` or `scripts/check/` paths.
 - Primitive conformance remains invokable from AW proof commands, but the cases are owned by `command-generation`.
 - Stable AW generated behavior belongs in operation conformance or an AW host/runtime inventory, not in one-off ordinary regressions.
 
@@ -27,4 +27,4 @@ Use:
 uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json
 ```
 
-The payload includes `generated_command_check_inventory`, with counts by class and disposition plus the AW-kept and delegated check ids.
+The payload includes `generated_command_check_inventory`, with counts by class and disposition, AW-kept and delegated check ids, and the retired ordinary check ids that must remain absent. For `remove-from-aw`, the disposition means removed from AW-owned ordinary checks, not merely inventoried as removable. Delegated conformance commands remain valid proof lanes.

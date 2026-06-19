@@ -1511,6 +1511,34 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
                 errors.append(f"AW-specific check {check_id} must be kept in AW")
         if classification == "obsolete-duplicate" and disposition != "remove-from-aw":
             errors.append(f"obsolete duplicate check {check_id} must be marked remove-from-aw")
+        if disposition == "remove-from-aw":
+            removed_checks = check.get("removed_aw_owned_checks")
+            if not isinstance(removed_checks, list) or not removed_checks:
+                errors.append(f"remove-from-aw check {check_id} must list removed_aw_owned_checks")
+            else:
+                seen_removed_ids: set[str] = set()
+                for removed_index, removed in enumerate(removed_checks):
+                    if not isinstance(removed, dict):
+                        errors.append(f"remove-from-aw check {check_id} removed entry {removed_index} must be an object")
+                        continue
+                    removed_id = str(removed.get("id", "")).strip()
+                    path = str(removed.get("path", "")).strip()
+                    symbol = str(removed.get("symbol", "")).strip()
+                    replacement_refs = removed.get("replacement_refs")
+                    if not removed_id or not path or not symbol:
+                        errors.append(f"remove-from-aw check {check_id} removed entry {removed_index} missing id/path/symbol")
+                    if removed_id in seen_removed_ids:
+                        errors.append(f"remove-from-aw check {check_id} duplicate retired check id {removed_id}")
+                    seen_removed_ids.add(removed_id)
+                    if "::" not in removed_id:
+                        errors.append(f"remove-from-aw check {check_id} retired check id {removed_id} must include a test symbol")
+                    if not path.endswith(".py"):
+                        errors.append(f"remove-from-aw check {check_id} retired path {path} must be a Python check path")
+                    if not isinstance(replacement_refs, list) or not replacement_refs:
+                        errors.append(f"remove-from-aw check {check_id} retired check {removed_id} must name replacement_refs")
+            proof_refs = check.get("proof_refs", [])
+            if not any(isinstance(ref, str) and ("--python-conformance" in ref or "--conformance" in ref) for ref in proof_refs):
+                errors.append(f"remove-from-aw check {check_id} must name delegated conformance proof refs")
     missing_classes = sorted(required_classes - seen_classes)
     if missing_classes:
         errors.append("generated_command_check_inventory.json missing classification(s): " + ", ".join(missing_classes))

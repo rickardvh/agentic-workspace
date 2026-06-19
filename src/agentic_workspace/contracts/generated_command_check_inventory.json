@@ -176,8 +176,72 @@
         "docs/maintainer/test-knowledge-inventory.md"
       ],
       "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "tests/test_command_generation_integration.py keeps only AW dependency wiring",
         "tests/test_generated_command_package_proof_runner.py keeps AW checker behavior"
+      ],
+      "removed_aw_owned_checks": [
+        {
+          "id": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
+          "path": "tests/test_workspace_cli_blackbox.py",
+          "symbol": "test_blackbox_root_generated_command_executes_through_console_script",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json modules.report.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script",
+          "path": "tests/test_workspace_cli_blackbox.py",
+          "symbol": "test_blackbox_root_generated_command_executes_primitive_ir_through_console_script",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.root-cli-authority.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output",
+          "path": "tests/test_workspace_defaults_cli.py",
+          "symbol": "test_defaults_tiny_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.tiny-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_defaults_cli.py::test_defaults_selected_section_text_uses_generated_output",
+          "path": "tests/test_workspace_defaults_cli.py",
+          "symbol": "test_defaults_selected_section_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json defaults.selected-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_config_cli.py::test_config_selected_text_uses_generated_output",
+          "path": "tests/test_workspace_config_cli.py",
+          "symbol": "test_config_selected_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json config.selected-text.process/agent-efficiency-config",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        },
+        {
+          "id": "tests/test_workspace_config_cli.py::test_note_delegation_outcome_text_uses_generated_output",
+          "path": "tests/test_workspace_config_cli.py",
+          "symbol": "test_note_delegation_outcome_text_uses_generated_output",
+          "replacement_refs": [
+            "operation_conformance_test_ir.json delegation-outcome.append-text.process/minimal-repo",
+            "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+            "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+          ]
+        }
       ],
       "rationale": "Generic primitive and target behavior should not reappear as AW-owned ordinary regressions; stable generated behavior belongs in contract-owned conformance or command-generation."
     }

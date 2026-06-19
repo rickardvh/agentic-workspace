@@ -121,6 +121,43 @@
               "minLength": 1
             }
           },
+          "removed_aw_owned_checks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "path",
+                "symbol",
+                "replacement_refs"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                },
+                "replacement_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Exact AW-owned ordinary check symbols that must remain absent when disposition is remove-from-aw."
+          },
           "rationale": {
             "type": "string",
             "minLength": 1

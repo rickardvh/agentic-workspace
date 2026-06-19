@@ -198,6 +198,10 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "payload.assemble",
     "output.emit",
 }
+AW_OWNED_ORDINARY_CHECK_ROOTS = (
+    "tests",
+    "scripts/check",
+)
 
 
 def _command_generation_transitional_primitives() -> set[str]:
@@ -2396,6 +2400,7 @@ def _generated_command_check_inventory_report() -> dict[str, object]:
     by_disposition: dict[str, int] = {}
     aw_kept: list[str] = []
     delegated: list[str] = []
+    removed_aw_owned_checks: list[str] = []
     for check in checks:
         classification = str(check.get("classification", ""))
         disposition = str(check.get("disposition", ""))
@@ -2406,6 +2411,10 @@ def _generated_command_check_inventory_report() -> dict[str, object]:
             aw_kept.append(check_id)
         if disposition in {"delegate-to-command-generation", "demote-to-invokable-proof", "remove-from-aw"}:
             delegated.append(check_id)
+        if disposition == "remove-from-aw":
+            for removed in check.get("removed_aw_owned_checks", []):
+                if isinstance(removed, dict) and str(removed.get("id", "")).strip():
+                    removed_aw_owned_checks.append(str(removed["id"]))
     return {
         "kind": "agentic-workspace/generated-command-check-inventory-report/v1",
         "status": "available",
@@ -2416,8 +2425,67 @@ def _generated_command_check_inventory_report() -> dict[str, object]:
         "check_count_by_disposition": dict(sorted(by_disposition.items())),
         "aw_kept_checks": sorted(aw_kept),
         "delegated_or_removed_checks": sorted(delegated),
+        "removed_aw_owned_checks": sorted(removed_aw_owned_checks),
+        "remove_from_aw_rule": "remove-from-aw entries must name exact retired ordinary check symbols, and those symbols must be absent from AW-owned ordinary test/check paths.",
         "rule": inventory.get("classification_rule", ""),
     }
+
+
+def _aw_owned_ordinary_python_check_paths() -> list[Path]:
+    paths: list[Path] = []
+    for root in AW_OWNED_ORDINARY_CHECK_ROOTS:
+        root_path = REPO_ROOT / root
+        if not root_path.is_dir():
+            continue
+        paths.extend(path for path in root_path.rglob("*.py") if path.is_file())
+    return sorted(paths)
+
+
+def _python_function_symbols(path: Path) -> set[str]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=_repo_relative(path))
+    except (OSError, SyntaxError):
+        return set()
+    return {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+
+def _validate_generated_command_check_inventory_removals() -> list[str]:
+    inventory = generated_command_check_inventory_manifest()
+    checks = [check for check in inventory.get("checks", []) if isinstance(check, dict)]
+    removed_entries: list[dict[str, object]] = []
+    errors: list[str] = []
+    for check in checks:
+        if check.get("disposition") != "remove-from-aw":
+            continue
+        removed = check.get("removed_aw_owned_checks")
+        if not isinstance(removed, list) or not removed:
+            errors.append(f"remove-from-aw check {check.get('id')} must list removed_aw_owned_checks")
+            continue
+        removed_entries.extend(item for item in removed if isinstance(item, dict))
+        proof_refs = [str(ref) for ref in check.get("proof_refs", []) if isinstance(ref, str)]
+        if not any("--python-conformance" in ref or "--conformance" in ref for ref in proof_refs):
+            errors.append(f"remove-from-aw check {check.get('id')} must name the delegated conformance proof lane")
+    if not removed_entries:
+        return errors
+
+    symbols_by_path = {path: _python_function_symbols(path) for path in _aw_owned_ordinary_python_check_paths()}
+    for entry in removed_entries:
+        check_id = str(entry.get("id", "")).strip()
+        expected_path = str(entry.get("path", "")).strip()
+        symbol = str(entry.get("symbol", "")).strip()
+        replacements = entry.get("replacement_refs")
+        if not check_id or not expected_path or not symbol:
+            errors.append(f"remove-from-aw retired check entry is missing id/path/symbol: {entry!r}")
+            continue
+        if not isinstance(replacements, list) or not replacements:
+            errors.append(f"remove-from-aw retired check {check_id} must name replacement_refs")
+        active_paths = sorted(_repo_relative(path) for path, symbols in symbols_by_path.items() if symbol in symbols)
+        if active_paths:
+            errors.append(
+                "remove-from-aw retired check remains active in AW-owned ordinary path(s): "
+                f"{check_id} symbol {symbol} found in {active_paths!r}; replacement refs: {replacements!r}"
+            )
+    return errors
 
 
 def _validate_transitional_primitive_usage_inventory() -> list[str]:
@@ -4292,6 +4360,7 @@ def _validate_static_surfaces() -> list[str]:
             )
         errors.extend(_validate_python_operation_execution_inventory(ir))
         errors.extend(_validate_transitional_primitive_usage_inventory())
+        errors.extend(_validate_generated_command_check_inventory_removals())
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
             errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")

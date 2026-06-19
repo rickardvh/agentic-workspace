@@ -706,6 +706,10 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert check_inventory["generic_baseline_owner"] == "command-generation"
     assert "generated-output-freshness" in check_inventory["aw_kept_checks"]
     assert "primitive-executor-baseline" in check_inventory["delegated_or_removed_checks"]
+    assert (
+        "tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output" in check_inventory["removed_aw_owned_checks"]
+    )
+    assert "remove-from-aw entries must name exact retired ordinary check symbols" in check_inventory["remove_from_aw_rule"]
 
 
 def test_python_completion_blocker_report_surfaces_command_generation_package_posture(capsys) -> None:
@@ -1142,6 +1146,22 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
             _emit({"errors": checker._validate_static_surfaces()})
             """,
             "primitive conformance is missing required primitive case: missing.primitive",
+        ),
+        (
+            "remove-from-aw-ordinary-check-reappeared",
+            """
+            original_paths = checker._aw_owned_ordinary_python_check_paths
+            original_symbols = checker._python_function_symbols
+            retired_path = checker.REPO_ROOT / "tests" / "test_workspace_defaults_cli.py"
+
+            checker._aw_owned_ordinary_python_check_paths = lambda: [retired_path]
+            checker._python_function_symbols = lambda path: {"test_defaults_tiny_text_uses_generated_output"}
+            _emit({"errors": checker._validate_static_surfaces()})
+
+            checker._aw_owned_ordinary_python_check_paths = original_paths
+            checker._python_function_symbols = original_symbols
+            """,
+            "remove-from-aw retired check remains active",
         ),
     ]
     for label, source, expected_fragment in scenarios:
