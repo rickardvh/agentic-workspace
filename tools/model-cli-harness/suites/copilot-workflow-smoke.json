@@ -170,10 +170,7 @@
         "template": "agentic-workspace/codex-sbx:local"
       },
       "fixture_dependencies": [
-        "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.2/agentic_workspace-0.4.2-py3-none-any.whl#sha256=4cf9860f40ef6253bb2617373923515488e15083f60fa08b3e5737deb19d234b",
-        "agentic-memory @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.2/agentic_memory-0.4.2-py3-none-any.whl#sha256=e304e35f1d8b3ae90db3bde03af0b07bd33792080e904462958aee52a64339da",
-        "agentic-planning @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.2/agentic_planning-0.4.2-py3-none-any.whl#sha256=0ca67e9692c1884648b35cd83ab684fc827cae4b4a5eb864fcbf3884831c2877",
-        "agentic-verification @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.2/agentic_verification-0.4.2-py3-none-any.whl#sha256=d7b9c3956d461f723ff21bdb41f444a091e8a46dfbe7d3f74f3d76839fab9953"
+        "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v0.4.3/agentic_workspace-0.4.3-py3-none-any.whl#sha256=97eae58742561ef76af17ad90d3285746d93b99cfe41c807a72027969056a28e"
       ],
       "adapter_executable": {
         "name": "sbx",

@@ -292,6 +292,6 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     assert result["sandbox"]["template"] == "agentic-workspace/codex-sbx:local"
     pyproject = Path(result["repo_path"]) / "pyproject.toml"
     pyproject_text = pyproject.read_text(encoding="utf-8")
-    assert "agentic_workspace-0.4.2-py3-none-any.whl" in pyproject_text
-    assert "agentic_memory-0.4.2-py3-none-any.whl" in pyproject_text
+    assert "agentic_workspace-0.4.3-py3-none-any.whl" in pyproject_text
+    assert "agentic_memory-0.4.3-py3-none-any.whl" not in pyproject_text
     assert "[tool.uv.sources]" not in pyproject_text
