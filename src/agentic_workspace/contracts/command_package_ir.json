@@ -42,6 +42,16 @@
           "owner": "#1204 command-generation primitive registry",
           "reason": "The package-owned registry declares legacy primitive identifiers so host manifests can prove support and unsupported states during extraction.",
           "migration_path": "Keep primitive identifiers schema-backed and deprecate host-specific names only through explicit registry migrations."
+        },
+        {
+          "id": "legacy-ir-schema-canonicalization",
+          "kind": "accepted-schema-compatibility-boundary",
+          "paths": [
+            "command_generation/ir.py"
+          ],
+          "owner": "#1626 generated artifact provenance",
+          "reason": "The package-owned IR loader accepts the historical Agentic Workspace schema identity and canonicalizes it to command-generation/command-package-ir/v1 before validation and rendering.",
+          "migration_path": "Keep host-side proof asserting the canonical command-generation schema after loading; remove this coupling once checked-in AW command-package IR no longer uses the legacy schema identity."
         }
       ]
     },

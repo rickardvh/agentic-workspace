@@ -3077,6 +3077,21 @@
       "status": "generated"
     }
   ],
+  "generation_metadata": {
+    "generator": {
+      "package": "command-generation",
+      "version": "0.2.4"
+    },
+    "schema_version": "command-generation/generated-artifact-metadata/v1",
+    "source_ir": {
+      "schema_version": "command-generation/command-package-ir/v1"
+    },
+    "target": {
+      "kind": "python",
+      "layout_version": "command-generation/python-target-layout/v1",
+      "package_name": "agentic-planning"
+    }
+  },
   "id": "planning-bootstrap",
   "operation_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts",
   "package_role": "planning-module-cli",

@@ -6,6 +6,21 @@
     "effectiveRuntimeCommand": null,
     "fixtureOnly": false,
     "generated": true,
+    "generationMetadata": {
+      "generator": {
+        "package": "command-generation",
+        "version": "0.2.4"
+      },
+      "schema_version": "command-generation/generated-artifact-metadata/v1",
+      "source_ir": {
+        "schema_version": "command-generation/command-package-ir/v1"
+      },
+      "target": {
+        "kind": "typescript",
+        "layout_version": "command-generation/typescript-target-layout/v1",
+        "package_name": "@agentic-workspace/verification-cli"
+      }
+    },
     "generationStatus": "runtime-backed-read-only-adapter",
     "maturity": {
       "id": "runtime-backed-read-only-adapter",

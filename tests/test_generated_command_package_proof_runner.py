@@ -495,6 +495,14 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     )
     assert f"command_generation-{provenance['declared_version']}-py3-none-any.whl" in provenance["dependency_url"]
     assert "#sha256=" in provenance["dependency_url"]
+    metadata = target_freshness["generation_metadata"]
+    assert metadata["kind"] == "command-generation/generated-artifact-metadata-proof/v1"
+    assert metadata["status"] == "fresh"
+    assert metadata["expected_generator"] == {"package": "command-generation", "version": provenance["declared_version"]}
+    assert metadata["expected_source_ir_schema_version"] == "command-generation/command-package-ir/v1"
+    assert metadata["expected_target_layout_versions"]["python"] == "command-generation/python-target-layout/v1"
+    assert metadata["expected_target_layout_versions"]["typescript"] == "command-generation/typescript-target-layout/v1"
+    assert metadata["errors"] == []
     assert target_freshness["target_families"] == ["python", "typescript"]
     assert target_freshness["rendered_output_count_by_family"]["python"] > 0
     assert target_freshness["rendered_output_count_by_family"]["typescript"] > 0
@@ -528,6 +536,44 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert "memory.install.lifecycle" in {
         operation["operation_id"] for operation in lifecycle_metrics["codegen_default_dry_run_operations"]
     }
+
+
+def test_generated_artifact_metadata_rejects_unexpected_generator_version() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        original = checker.json.loads
+        def fake_loads(text):
+            payload = original(text)
+            if isinstance(payload, dict) and isinstance(payload.get("generation_metadata"), dict):
+                payload = copy.deepcopy(payload)
+                payload["generation_metadata"]["generator"]["version"] = "0.0.0"
+            return payload
+        checker.json.loads = fake_loads
+        _emit({"errors": checker._validate_generated_artifact_generation_metadata(ir)})
+        """
+    )
+
+    assert any("generation metadata has unexpected generator" in error for error in errors)
+
+
+def test_generated_artifact_metadata_rejects_unsupported_target_layout() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        original = checker.json.loads
+        def fake_loads(text):
+            payload = original(text)
+            if isinstance(payload, dict) and isinstance(payload.get("generation_metadata"), dict):
+                payload = copy.deepcopy(payload)
+                payload["generation_metadata"]["target"]["layout_version"] = "command-generation/python-target-layout/v0"
+            return payload
+        checker.json.loads = fake_loads
+        _emit({"errors": checker._validate_generated_artifact_generation_metadata(ir)})
+        """
+    )
+
+    assert any("generation metadata has unexpected target layout" in error for error in errors)
 
 
 def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:

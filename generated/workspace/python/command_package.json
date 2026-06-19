@@ -4885,6 +4885,21 @@
       "status": "generated"
     }
   ],
+  "generation_metadata": {
+    "generator": {
+      "package": "command-generation",
+      "version": "0.2.4"
+    },
+    "schema_version": "command-generation/generated-artifact-metadata/v1",
+    "source_ir": {
+      "schema_version": "command-generation/command-package-ir/v1"
+    },
+    "target": {
+      "kind": "python",
+      "layout_version": "command-generation/python-target-layout/v1",
+      "package_name": "agentic-workspace"
+    }
+  },
   "id": "root-workspace",
   "operation_contract_root": "src/agentic_workspace/contracts",
   "package_role": "root-workspace-cli",
