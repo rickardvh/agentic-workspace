@@ -463,4 +463,5 @@ def test_workspace_agents_template_renders_resolved_cli_invocation() -> None:
     assert "- canonical_source: `.agentic-workspace/config.toml` and `uv run agentic-workspace start --target . --format json`" in rendered
     assert 'Use `uv run agentic-workspace start --task "<task>" --format json` before non-trivial answers' in rendered
     assert 'Use `uv run agentic-workspace implement --changed <paths> --task "<task>" --format json`' in rendered
+    assert "When implementing an issue, satisfy the intended end state in the ordinary path" in rendered
     assert "use the effective CLI invocation from `agentic-workspace start" not in rendered

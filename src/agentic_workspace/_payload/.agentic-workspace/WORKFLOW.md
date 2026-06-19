@@ -41,6 +41,8 @@ Active work is Work Shaping plus Planning Autopilot:
 
 The agent still owns semantic judgment about intent clarity, direct/bounded/lane/epic shape, proof proportionality, and completion claim level. Do not treat the command list as the workflow, and do not hand-edit Planning state when a command-owned mutation is available.
 
+When implementing an issue, satisfy the intended end state in the ordinary path. Do not treat a smaller change as complete merely because checks pass if that smaller change preserves the old ordinary-path behavior. If the full intended outcome appears larger than the issue safely permits, ask for clarification instead of closing the issue with a partial path.
+
 ## Structured Priority
 
 - Use `start` or `implement --changed` before prose when the CLI is available; use `summary`, `planning`, `skills`, and `proof --changed` when routed by the packet or task shape; reserve `preflight`, `defaults`, `config`, `modules`, `ownership`, `--verbose`, and `report` for recovery or deeper detail.

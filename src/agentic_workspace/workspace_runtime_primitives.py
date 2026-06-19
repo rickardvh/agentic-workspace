@@ -8717,16 +8717,22 @@ def _completion_boundary_payload(
         "required_residual_intent": required_residual_intent,
         "evidence_required_for_final_completion": evidence_required,
         "issue_authoring_fields": [
+            "intended_outcome",
+            "acceptance",
+            "non_solutions",
             "final_satisfaction",
             "bounded_slice_success",
             "partial_pr_may_close",
             "required_follow_up_owner",
             "required_residual_intent",
             "evidence_required_for_final_completion",
+            "completion_rule",
         ],
         "closure_rule": (
             "Treat useful progress and final intended outcome satisfaction as separate claims. "
-            "A bounded slice may land only if remaining intent and owner are preserved; it closes the issue only when partial_pr_may_close is yes or final satisfaction evidence is present."
+            "When implementing an issue, satisfy the intended end state in the ordinary path; do not preserve old ordinary-path behavior unless the issue explicitly allows it. "
+            "A bounded slice may land only if remaining intent and owner are preserved; it closes the issue only when partial_pr_may_close is yes or final satisfaction evidence is present. "
+            "Ask for clarification when the full intended outcome appears larger than the issue safely permits."
         ),
         "default_rule": "Direction/proposal issues default partial_pr_may_close to no unless the issue author says otherwise.",
         "sources": [
