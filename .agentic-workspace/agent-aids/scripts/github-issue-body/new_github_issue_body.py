@@ -27,7 +27,22 @@ TEMPLATE_BY_KIND = {
 COMPLETION_BOUNDARY_FIELDS = {
     "final_satisfaction",
     "evidence_required_for_final_completion",
+    "non_solutions",
+    "completion_rule",
 }
+
+DEFAULT_NON_SOLUTIONS = """The following do not close this issue unless explicitly listed in the acceptance criteria:
+
+- documenting the problem without changing the affected behavior;
+- adding an inventory without completing the requested change;
+- reclassifying or renaming the current behavior while preserving the old dependency/path;
+- adding a follow-up issue instead of completing the stated outcome;
+- changing tests to accept the current behavior rather than making the intended behavior true."""
+
+DEFAULT_COMPLETION_RULE = (
+    "A PR may close this issue only if the intended outcome is true in the ordinary path, "
+    "not merely documented, inventoried, reclassified, or deferred."
+)
 
 ISSUE_BODY_REQUEST_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -187,6 +202,10 @@ def _field_label(item: dict[str, Any]) -> str:
 def _default_value(item: dict[str, Any]) -> str:
     item_type = str(item.get("type", ""))
     attributes = item.get("attributes")
+    if isinstance(attributes, dict):
+        value = str(attributes.get("value", "")).strip()
+        if value:
+            return value
     options = attributes.get("options") if isinstance(attributes, dict) else None
     if item_type == "dropdown" and isinstance(options, list) and options:
         first = options[0]
@@ -244,6 +263,10 @@ def _completion_boundary_default(*, field_id: str, fields: dict[str, str]) -> st
         if evidence_hint:
             return f"Final completion evidence must prove the final intended state, including: {evidence_hint}"
         return "Proof or review evidence must show the final intended outcome, not only a useful local change."
+    if field_id == "non_solutions":
+        return DEFAULT_NON_SOLUTIONS
+    if field_id == "completion_rule":
+        return DEFAULT_COMPLETION_RULE
     return ""
 
 

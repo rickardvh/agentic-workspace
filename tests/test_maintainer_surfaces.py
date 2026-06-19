@@ -130,6 +130,7 @@ def test_workspace_workflow_is_projection_not_primary_authority() -> None:
         assert "`summary` owns active continuation" in text
         assert "`implement --changed` owns known changed-path work context" in text
         assert "`planning` owns routed state mutation" in text
+        assert "When implementing an issue, satisfy the intended end state in the ordinary path" in text
         assert "## Fallback Work Shape" in text
         assert "## Work Routing Gate" not in text
         assert (

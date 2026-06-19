@@ -180,6 +180,7 @@ def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
         f'1. Use `{effective_cli} start --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.\n'
         f'2. Use `{effective_cli} implement --changed <paths> --task "<task>" --format json` when changed paths are already known.\n'
         "3. Follow `next_safe_action`, `action_signals`, and `skills` before opening raw `.agentic-workspace` files or running drill-down commands.\n"
+        "4. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.\n"
         "\n"
         "Boundaries:\n"
         "- The effective invocation comes from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; `.agentic-workspace/config.local.toml` may override it.\n"

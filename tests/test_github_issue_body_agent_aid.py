@@ -23,8 +23,12 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def test_issue_templates_include_completion_boundary_fields() -> None:
     required_fields = {
+        "intended_outcome",
+        "acceptance",
+        "non_solutions",
         "final_satisfaction",
         "evidence_required_for_final_completion",
+        "completion_rule",
     }
 
     for template_path in sorted((_REPO_ROOT / ".github" / "ISSUE_TEMPLATE").glob("*.yml")):
@@ -53,9 +57,13 @@ def test_direction_issue_body_uses_repo_template_fields() -> None:
     assert rendered["title"] == "[Workspace]: Example"
     assert rendered["labels"] == ["planning"]
     assert "## Problem / intent\nMake the right issue shape cheap." in rendered["body"]
-    assert "## Acceptance / success signal\nGenerated body has template headings." in rendered["body"]
+    assert "## Acceptance criteria\nGenerated body has template headings." in rendered["body"]
     assert "## Final satisfaction\nFinal completion requires satisfying: Agents use the repo template fields." in rendered["body"]
     assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
+    assert (
+        "## Non-solutions\nThe following do not close this issue unless explicitly listed in the acceptance criteria:" in rendered["body"]
+    )
+    assert "## Completion rule\nA PR may close this issue only if the intended outcome is true in the ordinary path" in rendered["body"]
 
 
 def test_direction_issue_body_preserves_final_completion_fields() -> None:
@@ -88,7 +96,7 @@ def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
             "observed_problem": "Issue creation bypassed templates.",
             "evidence": "#822 #823 #824",
             "desired_signal": "A cheap body scaffold.",
-            "outcome": "Agents preserve form fields.",
+            "intended_outcome": "Agents preserve form fields.",
         },
     )
 
@@ -97,6 +105,7 @@ def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
     assert "## Issue kind\nReview / trust gap" in rendered["body"]
     assert "## Should the product absorb this first?\nYes" in rendered["body"]
     assert "## Final satisfaction\nFinal completion requires satisfying: Agents preserve form fields." in rendered["body"]
+    assert "## Acceptance criteria\nTODO:" in rendered["body"]
 
 
 def test_bug_issue_body_defaults_final_completion_fields() -> None:
@@ -106,6 +115,7 @@ def test_bug_issue_body_defaults_final_completion_fields() -> None:
         fields={
             "current_behavior": "The command claims final closure after a partial fix.",
             "expected_behavior": "The command preserves the remaining bug-fix intent.",
+            "intended_outcome": "The command preserves the remaining bug-fix intent.",
             "reproduction": "1. Run the closeout command.",
             "product_reasoning": "The package owns this guidance.",
         },
@@ -118,6 +128,15 @@ def test_bug_issue_body_defaults_final_completion_fields() -> None:
         in rendered["body"]
     )
     assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
+
+
+def test_pull_request_template_prompts_completion_audit() -> None:
+    template = (_REPO_ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+
+    assert "## Completion audit" in template
+    assert "This PR makes the issue's intended outcome true in the ordinary path." in template
+    assert "Any remaining old behavior is explicitly allowed by the issue acceptance criteria." in template
+    assert "documentation, inventory, reclassification, or a follow-up plan" in template
 
 
 def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
@@ -214,7 +233,7 @@ def test_issue_body_renders_from_archived_lane_record(tmp_path: Path) -> None:
         },
     ]
     assert "## Problem / intent\nAvoid shell property extraction from lane objects." in rendered["body"]
-    assert "## Acceptance / success signal\nIssue-body tests prove source loading." in rendered["body"]
+    assert "## Acceptance criteria\nIssue-body tests prove source loading." in rendered["body"]
 
 
 def test_issue_body_renders_from_decomposition_candidate_lane(tmp_path: Path) -> None:
