@@ -295,3 +295,31 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     assert "agentic_workspace-0.4.3-py3-none-any.whl" in pyproject_text
     assert "agentic_memory-0.4.3-py3-none-any.whl" not in pyproject_text
     assert "[tool.uv.sources]" not in pyproject_text
+
+
+def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_harness_module()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+
+    monkeypatch.setattr(module, "_build_local_aw_wheelhouse", lambda output_root: wheelhouse)
+    monkeypatch.setattr(
+        module,
+        "_fixture_local_wheel_dependency",
+        lambda *, repo_path, source_wheelhouse, adapter: "agentic-workspace @ file:///fixture-wheelhouse/agentic_workspace.whl",
+    )
+
+    payload = module.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex-sbx",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "runs",
+        timeout_seconds=None,
+        aw_dependency_mode="local-wheelhouse",
+    )
+
+    pyproject_text = (Path(payload["results"][0]["repo_path"]) / "pyproject.toml").read_text(encoding="utf-8")
+    assert "fixture-wheelhouse/agentic_workspace.whl" in pyproject_text
+    assert "releases/download/v0.4.3" not in pyproject_text

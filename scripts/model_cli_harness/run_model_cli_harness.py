@@ -361,12 +361,88 @@ def _adapter_fixture_dependencies(adapter: dict[str, Any]) -> list[str]:
     return ["agentic-workspace"]
 
 
+def _local_aw_version() -> str:
+    return str(tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])
+
+
+def _build_local_aw_wheelhouse(output_root: Path) -> Path:
+    wheelhouse = output_root / "_local-aw-wheelhouse"
+    if wheelhouse.exists():
+        shutil.rmtree(wheelhouse)
+    wheelhouse.mkdir(parents=True)
+    for package_root in (REPO_ROOT, REPO_ROOT / "packages" / "memory", REPO_ROOT / "packages" / "planning", REPO_ROOT / "packages" / "verification"):
+        subprocess.run(
+            ["uv", "build", "--wheel", "--out-dir", str(wheelhouse), str(package_root)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    return wheelhouse
+
+
+def _sandbox_file_url(path: Path) -> str:
+    resolved = path.resolve()
+    if os.name == "nt":
+        rendered = resolved.as_posix()
+        drive_match = re.match(r"^([A-Za-z]):/(.*)$", rendered)
+        if drive_match:
+            rendered = f"/{drive_match.group(1).lower()}/{drive_match.group(2)}"
+        return "file://" + rendered
+    return resolved.as_uri()
+
+
+def _fixture_file_url(path: Path, *, adapter: dict[str, Any]) -> str:
+    sandbox = adapter.get("sandbox")
+    if isinstance(sandbox, dict) and sandbox.get("backend") == "docker-sandbox":
+        return _sandbox_file_url(path)
+    return path.resolve().as_uri()
+
+
+def _find_wheel(wheelhouse: Path, prefix: str, version: str) -> Path:
+    matches = sorted(wheelhouse.glob(f"{prefix}-{version}-*.whl"))
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one {prefix} {version} wheel in {wheelhouse}, found {len(matches)}")
+    return matches[0]
+
+
+def _fixture_local_wheel_dependency(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> str:
+    version = _local_aw_version()
+    target_wheelhouse = repo_path / ".agentic-workspace" / "local" / "model-cli-harness" / "wheelhouse"
+    if target_wheelhouse.exists():
+        shutil.rmtree(target_wheelhouse)
+    shutil.copytree(source_wheelhouse, target_wheelhouse)
+    release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
+    subprocess.run(
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/release/patch_workspace_release_wheel.py",
+            "--dist-dir",
+            str(target_wheelhouse),
+            "--version",
+            version,
+            "--release-asset-base-url",
+            release_asset_base_url,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    root_wheel = _find_wheel(target_wheelhouse, "agentic_workspace", version)
+    return f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"
+
+
 def _prepare_fixture(
     *,
     suite_path: Path,
     scenario: dict[str, Any],
     paths: HarnessPaths,
+    adapter: dict[str, Any],
     dependency_specs: list[str] | None = None,
+    local_aw_wheelhouse: Path | None = None,
     source_checkout_path: str | None = None,
 ) -> None:
     fixture = scenario.get("fixture")
@@ -379,6 +455,8 @@ def _prepare_fixture(
         raise FileNotFoundError(f"fixture not found: {fixture}")
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
+    if local_aw_wheelhouse is not None:
+        dependency_specs = [_fixture_local_wheel_dependency(repo_path=paths.repo_path, source_wheelhouse=local_aw_wheelhouse, adapter=adapter)]
     _prepare_source_checkout_invocation(paths.repo_path, dependency_specs=dependency_specs, source_checkout_path=source_checkout_path)
     _prepare_fixture_git_repository(paths.repo_path)
 
@@ -3039,6 +3117,7 @@ def run_suite(
     isolate_provider_home: bool = False,
     allow_environment_blocked: bool = False,
     prompt_variant: str | None = None,
+    aw_dependency_mode: str = "suite",
     postmortem_feedback: bool = False,
     completion_followthrough: str | None = None,
     follow_up_prompts: list[str] | None = None,
@@ -3058,6 +3137,7 @@ def run_suite(
     scenarios = suite.get("scenarios", [])
     if not isinstance(scenarios, list):
         raise ValueError("suite.scenarios must be a list")
+    local_aw_wheelhouse = _build_local_aw_wheelhouse(output_root) if aw_dependency_mode == "local-wheelhouse" else None
 
     selected = [item for item in scenarios if not scenario_filter or item.get("id") == scenario_filter]
     if scenario_filter and not selected:
@@ -3082,7 +3162,9 @@ def run_suite(
                 suite_path=suite_path,
                 scenario=scenario,
                 paths=paths,
+                adapter=adapter,
                 dependency_specs=_adapter_fixture_dependencies(adapter),
+                local_aw_wheelhouse=local_aw_wheelhouse,
                 source_checkout_path=adapter.get("fixture_source_path") if isinstance(adapter.get("fixture_source_path"), str) else None,
             )
             replacements = {
@@ -3457,6 +3539,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--timeout-seconds", type=int)
     parser.add_argument(
+        "--aw-dependency-mode",
+        choices=["suite", "local-wheelhouse"],
+        default="suite",
+        help="Use suite-defined AW dependencies, or build current-checkout wheels and install the fixture from that local wheelhouse.",
+    )
+    parser.add_argument(
         "--isolate-provider-home",
         action="store_true",
         help="Set the adapter provider-home environment variable to a run-local directory when configured.",
@@ -3516,6 +3604,7 @@ def main(argv: list[str] | None = None) -> int:
                 isolate_provider_home=args.isolate_provider_home,
                 allow_environment_blocked=args.allow_environment_blocked,
                 prompt_variant=args.prompt_variant,
+                aw_dependency_mode=args.aw_dependency_mode,
                 postmortem_feedback=args.postmortem_feedback,
                 completion_followthrough=args.completion_followthrough,
                 follow_up_prompts=args.follow_up_prompt,

@@ -216,8 +216,21 @@ def _prepare_mode_repo(
     paths: harness.HarnessPaths,
     execute: bool,
     dependency_specs: list[str] | None = None,
+    adapter: dict[str, Any] | None = None,
+    local_aw_wheelhouse: Path | None = None,
     source_checkout_path: str | None = None,
 ) -> dict[str, Any]:
+    def effective_dependency_specs(repo_path: Path) -> list[str] | None:
+        if local_aw_wheelhouse is None or adapter is None:
+            return dependency_specs
+        return [
+            harness._fixture_local_wheel_dependency(
+                repo_path=repo_path,
+                source_wheelhouse=local_aw_wheelhouse,
+                adapter=adapter,
+            )
+        ]
+
     paths.run_root.mkdir(parents=True, exist_ok=False)
     setup_before: dict[str, dict[str, Any]] | None = None
     fixture = mode.get("fixture")
@@ -228,17 +241,18 @@ def _prepare_mode_repo(
         if not fixture_path.exists():
             raise FileNotFoundError(f"fixture not found: {fixture}")
         shutil.copytree(fixture_path, paths.repo_path)
+        prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(
                 paths.repo_path,
-                dependency_specs=dependency_specs,
+                dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
             )
         else:
             harness._prepare_source_checkout_invocation(
                 paths.repo_path,
-                dependency_specs=dependency_specs,
+                dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
             )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
@@ -249,17 +263,18 @@ def _prepare_mode_repo(
     if not execute:
         paths.repo_path.mkdir(parents=True)
         (paths.repo_path / "PINNED-REPO.txt").write_text(f"{repo_url}\n{base_commit}\n", encoding="utf-8")
+        prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(
                 paths.repo_path,
-                dependency_specs=dependency_specs,
+                dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
             )
         else:
             harness._prepare_source_checkout_invocation(
                 paths.repo_path,
-                dependency_specs=dependency_specs,
+                dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
             )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
@@ -269,17 +284,18 @@ def _prepare_mode_repo(
     checkout = harness._run_command(["git", "checkout", base_commit], cwd=paths.repo_path, timeout_seconds=120)
     if checkout["returncode"] != 0:
         raise RuntimeError(f"git checkout failed for {base_commit}: {checkout['stderr']}")
+    prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
     if mode.get("aw_enabled"):
         setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
         _bootstrap_aw_mode(
             paths.repo_path,
-            dependency_specs=dependency_specs,
+            dependency_specs=prepared_dependency_specs,
             source_checkout_path=source_checkout_path,
         )
     else:
         harness._prepare_source_checkout_invocation(
             paths.repo_path,
-            dependency_specs=dependency_specs,
+            dependency_specs=prepared_dependency_specs,
             source_checkout_path=source_checkout_path,
         )
     return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
@@ -554,22 +570,29 @@ def run_episode(
     model_override: str | None = None,
     evaluator_adapter_override: str | None = None,
     evaluator_model_override: str | None = None,
+    aw_dependency_mode: str = "suite",
 ) -> dict[str, Any]:
     episode = load_episode(episode_path)
     suite = harness._load_json(suite_path)
     modes = [mode for mode in episode["modes"] if mode_filter is None or mode["id"] == mode_filter]
     if not modes:
         raise ValueError(f"mode '{mode_filter}' is not defined")
+    local_aw_wheelhouse = harness._build_local_aw_wheelhouse(output_root) if aw_dependency_mode == "local-wheelhouse" else None
     mode_results: list[dict[str, Any]] = []
     for mode in modes:
         paths = _episode_paths(episode=episode, mode_id=mode["id"], output_root=output_root)
         setup_adapter_id = adapter_override or str(episode.get("default_adapter") or "copilot")
+        setup_adapter = suite.get("adapters", {}).get(setup_adapter_id)
+        if aw_dependency_mode == "local-wheelhouse" and not isinstance(setup_adapter, dict):
+            raise ValueError(f"adapter '{setup_adapter_id}' is not defined")
         setup_mutation_summary = _prepare_mode_repo(
             suite_path=suite_path,
             mode=mode,
             paths=paths,
             execute=execute,
             dependency_specs=_adapter_fixture_dependencies(suite=suite, adapter_id=setup_adapter_id),
+            adapter=setup_adapter if isinstance(setup_adapter, dict) else None,
+            local_aw_wheelhouse=local_aw_wheelhouse,
             source_checkout_path=_adapter_fixture_source_path(suite=suite, adapter_id=setup_adapter_id),
         )
         replacements = {
@@ -812,6 +835,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--no-evaluator", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, default=900)
+    parser.add_argument(
+        "--aw-dependency-mode",
+        choices=["suite", "local-wheelhouse"],
+        default="suite",
+        help="Use suite-defined AW dependencies, or build current-checkout wheels and install fixtures from that local wheelhouse.",
+    )
     parser.add_argument("--format", choices=("json", "text"), default="text")
     return parser
 
@@ -830,6 +859,7 @@ def main(argv: list[str] | None = None) -> int:
         model_override=args.model,
         evaluator_adapter_override=args.evaluator_adapter,
         evaluator_model_override=args.evaluator_model,
+        aw_dependency_mode=args.aw_dependency_mode,
     )
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))

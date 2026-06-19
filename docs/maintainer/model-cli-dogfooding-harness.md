@@ -46,6 +46,17 @@ Install the Docker Sandboxes CLI as `sbx` first. On Windows without `winget`, in
 
 The `build_sbx_codex_template.py` helper builds the repo-owned template image `agentic-workspace/codex-sbx:local`, saves it from Docker, and loads it into Docker Sandboxes with `sbx template load`. The image is based on Docker's Codex sandbox template and sets Linux-safe uv defaults for mounted fixtures. It does not copy the source checkout into the runtime image; the copied fixture installs AW from the public root GitHub release wheel as a normal package dependency through `uv sync`. Authentication and credentials stay host-side; the sandboxed Codex run preserves Docker Sandboxes' generated Codex config so OAuth subscription auth can route through the sandbox proxy provider.
 
+Release-mode dependencies are the default for long-horizon evaluations and cross-agent comparisons. Use source-candidate dogfooding only when evaluating unreleased AW changes:
+
+```powershell
+uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+  --adapter codex-sbx `
+  --scenario startup-orientation `
+  --aw-dependency-mode local-wheelhouse
+```
+
+`--aw-dependency-mode local-wheelhouse` builds wheels from the current checkout, copies them into the disposable fixture, patches the copied root wheel to point at sibling fixture-local wheels, and makes the fixture depend on that single root wheel. It still exercises packaged artifacts through `uv sync`; it does not use editable installs or copy raw source into the sandbox image.
+
 The runner defaults to dry-run. It copies the scenario fixture into the configured local scratch root under `.agentic-workspace/local/scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
 Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
