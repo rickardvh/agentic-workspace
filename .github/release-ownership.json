@@ -29,6 +29,7 @@
     "generated/",
     "packages/",
     "pyproject.toml",
+    "scripts/release/",
     "src/",
     "tests/test_release_workflows.py",
     "uv.lock"

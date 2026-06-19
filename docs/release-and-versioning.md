@@ -11,7 +11,8 @@ The ordinary downstream path should be:
 
 1. CI proves the source tree.
 2. CI builds every workspace wheel, sdist, and TypeScript npm package tarball.
-3. CI proves installation from built artifacts outside the source tree.
+3. CI proves installation from built artifacts outside the source tree,
+   including the single-root-wheel public install path.
 4. CI publishes a GitHub Release tagged `vMAJOR.MINOR.PATCH`.
 5. The release contains all wheels, all sdists, all npm tarballs,
    `SHA256SUMS`, and `agentic-workspace-release-manifest.json`.
@@ -86,11 +87,15 @@ For merged package-affecting PRs, the release workflow:
 7. runs tests, lint, typecheck, generated package proof, TypeScript package
    tests, and package artifact proof against the release-normalized tree;
 8. builds every wheel, sdist, and TypeScript npm tarball;
-9. generates `SHA256SUMS`;
-10. generates `agentic-workspace-release-manifest.json`;
-11. verifies all release artifacts and metadata before publishing;
-12. commits only version normalization and lockfile changes as `Release vX.Y.Z`;
-13. pushes the tag and publishes the GitHub Release.
+9. patches the root Python wheel so its sibling AW dependencies resolve from
+   same-release GitHub wheel assets;
+10. proves the patched root wheel can install the complete workspace stack as a
+    single dependency;
+11. generates `SHA256SUMS`;
+12. generates `agentic-workspace-release-manifest.json`;
+13. verifies all release artifacts and metadata before publishing;
+14. commits only version normalization and lockfile changes as `Release vX.Y.Z`;
+15. pushes the tag and publishes the GitHub Release.
 
 The generated release manifest is intentionally not committed. It belongs to the
 release artifact set. The release commit must not mix product behavior changes
@@ -109,6 +114,15 @@ A manually pushed `vMAJOR.MINOR.PATCH` tag is allowed only when every shipped
 Python and TypeScript package already declares that exact version. The tag
 workflow builds the same artifact set, generates checksums and the release
 manifest, verifies them, and publishes the GitHub Release.
+
+## Python Install Shape
+
+Python packages are released as GitHub Release assets, not through a package
+index. The root `agentic-workspace` wheel is therefore patched during release so
+its `Requires-Dist` entries for `agentic-memory`, `agentic-planning`, and
+`agentic-verification` point to the same GitHub Release wheel assets with
+hashes. Host repositories should be able to depend on the public root wheel as a
+single normal dependency and let `uv sync` resolve the coordinated stack.
 
 ## All-Or-Nothing Invariant
 
