@@ -61,7 +61,7 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/verification
 
       - name: Run built package smoke tests
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
+        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
       - name: Upload Agentic Workspace package artifacts
         uses: actions/upload-artifact@v7.0.1
