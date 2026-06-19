@@ -75,7 +75,7 @@
         "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through a schema-backed payload.status primitive."
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through an AW/Memory-owned transitional payload.status primitive."
   },
   "locality": {
     "network": "forbidden",

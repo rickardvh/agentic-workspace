@@ -301,7 +301,7 @@
         "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Default dry-run Memory install executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime."
+    "summary": "Default dry-run Memory install executes generated operation IR through AW/Memory-owned transitional payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime."
   },
   "locality": {
     "network": "forbidden",

@@ -131,7 +131,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Default dry-run Memory install executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
+    "summary": "Default dry-run Memory install executes generated operation IR through AW/Memory-owned transitional payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
     "steps": [
       {
         "id": "resolve_target_root",
