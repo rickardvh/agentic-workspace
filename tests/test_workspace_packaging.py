@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import json
 import os
 import re
@@ -24,6 +25,7 @@ MODULE_PACKAGE_DIRS = (
     WORKSPACE_ROOT / "packages" / "planning",
     WORKSPACE_ROOT / "packages" / "verification",
 )
+RELEASE_WHEEL_PATCHER = WORKSPACE_ROOT / "scripts" / "release" / "patch_workspace_release_wheel.py"
 
 
 @contextlib.contextmanager
@@ -160,6 +162,7 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in ci_text
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
+    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in ci_text
     assert "actions/upload-artifact@v7.0.1" in ci_text
 
 
@@ -181,6 +184,8 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in release_text
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in release_text
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in release_text
+    assert "scripts/release/patch_workspace_release_wheel.py" in release_text
+    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in release_text
     assert "agentic-workspace-release-manifest.json" in release_text
     assert "SHA256SUMS" in release_text
     assert "softprops/action-gh-release@v3.0.0" in release_text
@@ -272,6 +277,31 @@ def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
 def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheelhouse: list[Path], tmp_path: Path) -> None:
     workspace_exe = _install_workspace_stack_venv(wheelhouse=workspace_wheelhouse, tmpdir_path=tmp_path)
     assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []
+    _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
+
+
+def test_release_root_wheel_installs_workspace_stack_from_same_release_assets(workspace_wheelhouse: list[Path], tmp_path: Path) -> None:
+    version = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    release_dist = tmp_path / "release-dist"
+    release_dist.mkdir()
+    release_wheels = [release_dist / wheel.name for wheel in workspace_wheelhouse]
+    for source, target in zip(workspace_wheelhouse, release_wheels, strict=True):
+        target.write_bytes(source.read_bytes())
+
+    patcher = _load_release_wheel_patcher()
+    patched_root = patcher.patch_workspace_wheel(
+        dist_dir=release_dist,
+        version=version,
+        release_asset_base_url=release_dist.resolve().as_uri(),
+    )
+    workspace_exe = _install_workspace_root_release_venv(root_wheel=patched_root, tmpdir_path=tmp_path)
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_memory")
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_planning")
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_verification")
+    _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
+
+
+def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path, tmp_path: Path) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
@@ -391,6 +421,42 @@ def _install_workspace_stack_venv(*, wheelhouse: list[Path], tmpdir_path: Path) 
         check=True,
     )
     return _venv_script(venv_path, "agentic-workspace")
+
+
+def _install_workspace_root_release_venv(*, root_wheel: Path, tmpdir_path: Path) -> Path:
+    venv_path = tmpdir_path / ".venv-release"
+    subprocess.run(
+        ["uv", "venv", str(venv_path)],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    python_path = _venv_python(venv_path)
+    subprocess.run(
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(python_path),
+            str(root_wheel),
+        ],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return _venv_script(venv_path, "agentic-workspace")
+
+
+def _load_release_wheel_patcher():
+    spec = importlib.util.spec_from_file_location("release_wheel_patcher_under_test", RELEASE_WHEEL_PATCHER)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def _run_workspace_console_json(workspace_exe: Path, cwd: Path, *args: str) -> dict[str, object]:

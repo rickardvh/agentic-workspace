@@ -91,6 +91,7 @@ def test_package_affecting_scope_is_manifest_owned_and_covers_release_surfaces()
     assert "docs/release-and-versioning.md" in paths
     assert "generated/" in paths
     assert "packages/" in paths
+    assert "scripts/release/" in paths
     assert "src/" in paths
     assert "tests/test_release_workflows.py" in paths
     assert "uv.lock" in paths
@@ -145,6 +146,8 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
     assert "check_generated_command_packages.py" in workflow
     assert "npm test" in workflow
     assert "npm pack --pack-destination" in workflow
+    assert "scripts/release/patch_workspace_release_wheel.py" in workflow
+    assert "release-asset-base-url" in workflow
     assert "generated/workspace/typescript/package.json" in workflow
     assert "check_no_absolute_paths.py" in workflow
     assert "agentic-workspace-release-manifest.json" in workflow
@@ -182,6 +185,8 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/planning" in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
+    assert "scripts/release/patch_workspace_release_wheel.py" in workflow
+    assert "release-asset-base-url" in workflow
     assert "actions/setup-node@v6.4.0" in workflow
     assert 'node-version: "24"' in workflow
     assert "npm test && npm pack --pack-destination" in workflow

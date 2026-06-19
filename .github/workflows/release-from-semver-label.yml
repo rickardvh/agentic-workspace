@@ -263,13 +263,17 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/memory
           uv build --wheel --sdist --out-dir dist packages/planning
           uv build --wheel --sdist --out-dir dist packages/verification
+          python scripts/release/patch_workspace_release_wheel.py \
+            --dist-dir dist \
+            --version "${{ steps.release-bump.outputs.version }}" \
+            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.release-bump.outputs.tag }}"
           for package in generated/*/typescript; do
             (cd "$package" && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           done
 
       - name: Prove built workspace stack installs outside source tree
         if: steps.release-bump.outputs.release_needed == 'true'
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
+        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
       - name: Generate checksums and release manifest
         if: steps.release-bump.outputs.release_needed == 'true'

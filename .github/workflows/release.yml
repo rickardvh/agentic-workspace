@@ -68,12 +68,16 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/memory
           uv build --wheel --sdist --out-dir dist packages/planning
           uv build --wheel --sdist --out-dir dist packages/verification
+          python scripts/release/patch_workspace_release_wheel.py \
+            --dist-dir dist \
+            --version "${GITHUB_REF_NAME#v}" \
+            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
           for package in generated/*/typescript; do
             (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           done
 
       - name: Run built package smoke tests
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
+        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
       - name: Generate checksums and release manifest
         env:
