@@ -58,18 +58,6 @@ def planning_handoff(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def planning_report(*args: Any, **kwargs: Any) -> Any:
-    from repo_planning_bootstrap.installer import planning_report as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def planning_report_tiny(*args: Any, **kwargs: Any) -> Any:
-    from repo_planning_bootstrap.installer import planning_report_tiny as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def uninstall_bootstrap(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.installer import uninstall_bootstrap as source_function
 
@@ -96,8 +84,6 @@ __all__ = [
     'doctor_bootstrap',
     'install_bootstrap',
     'planning_handoff',
-    'planning_report',
-    'planning_report_tiny',
     'uninstall_bootstrap',
     'upgrade_bootstrap',
     'verify_payload',

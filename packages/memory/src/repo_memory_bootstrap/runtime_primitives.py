@@ -292,9 +292,12 @@ def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _con
 
 
 def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
-    result = promotion_report(mode=values.get("mode"), notes=values.get("notes"), target=values.get("target"))
+    mode = str(values.get("mode") or "all")
+    raw_notes = values.get("notes")
+    notes = raw_notes if isinstance(raw_notes, list) else None
+    result = promotion_report(mode=mode, notes=notes, target=values.get("target"))
     if str(values.get("format") or "text") == "json" and not values.get("verbose"):
-        return _compact_promotion_report(result, requested_mode=values.get("mode"))
+        return _compact_promotion_report(result, requested_mode=mode)
     return result
 
 

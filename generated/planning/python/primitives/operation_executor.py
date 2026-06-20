@@ -292,14 +292,10 @@ def _handle_context_root_planning_package_skills() -> Path:
     return find_resource_root(__file__, [('_skills', 'REGISTRY.json')])
 
 
-def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    if values.get('verbose'):
-        from .planning_installer import planning_report
+def _handle_planning_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import load_planning_report_operation
 
-        return planning_report(target=values.get('target'))
-    from .planning_installer import planning_report_tiny
-
-    return planning_report_tiny(target=values.get('target'))
+    return load_planning_report_operation(values, arguments, context)
 
 
 def _handle_planning_summary_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

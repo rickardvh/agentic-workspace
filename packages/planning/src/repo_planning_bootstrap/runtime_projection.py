@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import shutil
 
@@ -22,11 +24,24 @@ from repo_planning_bootstrap.installer import (
     list_optional_payload_files,
     list_payload_files,
     planning_reconcile,
+    planning_report,
+    planning_report_tiny,
     planning_summary,
     promote_decomposition_lane_to_lane_record,
     promote_todo_item_to_execplan,
     record_delegation_decision,
 )
+
+
+def load_planning_report_operation(values: dict, _arguments: dict, _context) -> dict | str:
+    if values.get("verbose"):
+        report = planning_report(target=values.get("target"))
+        if str(values.get("format") or "text") != "json":
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                _print_report(report)
+            return output.getvalue().rstrip()
+        return report
+    return planning_report_tiny(target=values.get("target"))
 
 
 def load_planning_summary_operation(values: dict, _arguments: dict, _context) -> dict:

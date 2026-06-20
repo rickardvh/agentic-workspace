@@ -6013,26 +6013,9 @@
           "handlers": [
             {
               "primitive": "planning.report.load",
-              "handler": "conditional_function_call",
-              "condition_value": "verbose",
-              "if_true": {
-                "import_module": "repo_planning_bootstrap.installer",
-                "function": "planning_report",
-                "kwargs": {
-                  "target": {
-                    "value": "target"
-                  }
-                }
-              },
-              "if_false": {
-                "import_module": "repo_planning_bootstrap.installer",
-                "function": "planning_report_tiny",
-                "kwargs": {
-                  "target": {
-                    "value": "target"
-                  }
-                }
-              }
+              "handler": "runtime_handler",
+              "function": "load_planning_report_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
               "primitive": "planning.summary.load",
