@@ -1299,6 +1299,16 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
+      "id": "workspace.output.emit",
+      "summary": "Emit AW-shaped command result payloads whose text rendering remains workspace-owned.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package output boundary",
+      "tier_reason": "Workspace-specific compact-answer, defaults-router, delegation-outcome, and compatibility text rendering is package-owned until it has a host-neutral output contract.",
+      "conformance_ref": "workspace output conformance cases",
+      "migration_path": "Move deterministic host-neutral output rendering to output.emit only after the renderer contract is shared across command-generation targets.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned output behavior and must not be treated as command-generation generic output coverage."
+    },
+    {
       "id": "workspace.config.load",
       "summary": "Load resolved workspace config layered over product defaults and local override state.",
       "taxonomy_tier": "tier-2-package-domain",

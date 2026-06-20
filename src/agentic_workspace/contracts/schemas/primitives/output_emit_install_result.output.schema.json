@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/output_emit_install_result.output.schema.json",
-  "title": "output.emit.install-result output",
+  "title": "memory.output.emit.install-result output",
   "type": "object",
   "required": [
     "emitted"

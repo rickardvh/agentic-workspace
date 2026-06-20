@@ -1811,14 +1811,12 @@
         "source_module": "agentic_workspace.workspace_runtime_primitives",
         "source_symbol": "_emit_workspace_operation_output",
         "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "config.report",
-          "defaults.report",
-          "delegation-outcome.append",
-          "prompt.init",
-          "prompt.uninstall",
-          "prompt.upgrade",
-          "system-intent.sync"
+      "operation_ids": [
+        "config.report",
+        "prompt.init",
+        "prompt.uninstall",
+        "prompt.upgrade",
+        "system-intent.sync"
         ],
         "primitive_refs": [
           "output.emit",
@@ -1827,7 +1825,7 @@
         ],
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, defaults-router, delegation-outcome, memory route/report text, and codegen-owned planning-module tiny text are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for prompt payload text, workspace-system-intent text, and config/defaults compatibility surfaces whose wording depends on workspace package policy.",
-        "conformance_ref": "config.report.process, defaults.report.process, delegation-outcome.append.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
+      "conformance_ref": "config.report.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
         "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, defaults-router text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: prompt payload text, workspace-system-intent text, and config/defaults compatibility emitters remain in workspace runtime because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named package-specific fallback cases.",
         "minimization_category": "package-specific-judgment",

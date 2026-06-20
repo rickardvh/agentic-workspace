@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_lifecycle_plan.output.schema.json",
-  "title": "payload.lifecycle-plan output",
+  "title": "memory.payload.lifecycle-plan output",
   "type": "object",
   "required": [
     "payload"

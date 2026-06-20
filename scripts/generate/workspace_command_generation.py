@@ -17,7 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
 SCHEMA_PATH = "command_generation:schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
-TYPESCRIPT_RUNTIME_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_runtime_support.mjs"
+PYTHON_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/python_primitive_support.py"
+TYPESCRIPT_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_primitive_support.mjs"
 OPERATION_PRIMITIVES_PATH = "src/agentic_workspace/contracts/operation_primitives.json"
 RELEASE_OWNERSHIP_PATH = ".github/release-ownership.json"
 
@@ -231,7 +232,8 @@ def workspace_command_generation_host_manifest(*, repo_root: Path = REPO_ROOT) -
             if isinstance(package, dict) and package.get("id") and package.get("operation_contract_root")
         },
         primitive_registry=PrimitiveRegistry.from_definitions(_host_primitive_definitions(manifest, repo_root=repo_root)),
-        typescript_runtime_support_path=repo_root / TYPESCRIPT_RUNTIME_SUPPORT_PATH,
+        python_primitive_support_path=repo_root / PYTHON_PRIMITIVE_SUPPORT_PATH,
+        typescript_primitive_support_path=repo_root / TYPESCRIPT_PRIMITIVE_SUPPORT_PATH,
         operation_schema_version="agentic-workspace/operation/v1",
     )
 
@@ -279,43 +281,6 @@ def _normalize_releaseable_typescript_package_json(
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
-def _normalize_aw_owned_runtime_primitives(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
-    path = output.path if output.path.is_absolute() else repo_root / output.path
-    try:
-        relative = path.relative_to(repo_root).as_posix()
-    except ValueError:
-        relative = output.path.as_posix()
-    content = output.content
-    if relative.endswith("/primitives/primitive_executor.py"):
-        replacements = {
-            'if primitive == "payload.status":': 'if primitive == "memory.payload.status":',
-            'if primitive == "payload.lifecycle-plan":': 'if primitive == "memory.payload.lifecycle-plan":',
-            'if primitive == "payload.current-memory":': 'if primitive == "memory.payload.current-memory":',
-            'if primitive == "payload.verify":': 'if primitive == "memory.payload.verify":',
-            'if primitive == "output.emit.install-result":': 'if primitive == "memory.output.emit.install-result":',
-            'if primitive == "output.emit.current-memory":': 'if primitive == "memory.output.emit.current-memory":',
-        }
-        for old, new in replacements.items():
-            content = content.replace(old, new)
-    if relative.endswith("/src/runtime.mjs"):
-        replacements = {
-            "primitive === 'path.target_root.resolve' || primitive === 'workspace.root.resolve'": (
-                "primitive === 'path.target_root.resolve' || primitive === 'workspace.target-root.resolve'"
-            ),
-            "primitive === 'payload.status'": "primitive === 'memory.payload.status'",
-            "primitive === 'payload.lifecycle-plan'": "primitive === 'memory.payload.lifecycle-plan'",
-            "primitive === 'payload.current-memory'": "primitive === 'memory.payload.current-memory'",
-            "primitive === 'payload.verify'": "primitive === 'memory.payload.verify'",
-            "primitive === 'output.emit.install-result'": "primitive === 'memory.output.emit.install-result'",
-            "primitive === 'output.emit.current-memory'": "primitive === 'memory.output.emit.current-memory'",
-        }
-        for old, new in replacements.items():
-            content = content.replace(old, new)
-    if content == output.content:
-        return output
-    return GeneratedOutput(output.path, content)
-
-
 def render_workspace_command_package_outputs(
     manifest: dict[str, object] | None = None,
     *,
@@ -331,10 +296,7 @@ def render_workspace_command_package_outputs(
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     return [
-        _normalize_aw_owned_runtime_primitives(
-            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
-            repo_root=repo_root,
-        )
+        _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root)
         for output in outputs
     ]
 

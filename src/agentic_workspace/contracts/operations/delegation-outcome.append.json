@@ -90,7 +90,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit",
+      "uses": "workspace.output.emit",
       "description": "Emit append result."
     }
   ],
@@ -130,7 +130,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit",
+        "uses": "workspace.output.emit",
         "description": "Emit the append result in the requested format.",
         "arguments": {},
         "outputs": [

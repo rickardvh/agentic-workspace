@@ -1138,7 +1138,13 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
     return selected, errors
 
 
-def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str, runtime_text: str) -> list[str]:
+def _validate_typescript_runtime_handoff_thinness(
+    *,
+    package: str,
+    cli_text: str,
+    runtime_text: str,
+    host_support_text: str,
+) -> list[str]:
     errors: list[str] = []
     expected_imports = {"import { writeSync } from 'node:fs';", "import { runGeneratedOperation } from './runtime.mjs';"}
     import_lines = {line.strip() for line in cli_text.splitlines() if line.startswith("import ")}
@@ -1179,13 +1185,20 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
         "export function runGeneratedOperation({ operationId, operationPath, values })",
         "function runSteps(operation, values)",
         "function executePrimitive(primitive, values, args, operationId)",
-        "function executeTypescriptDomainOperation(operationId, values)",
         "typescript.domain.execute",
         "unsupported native TypeScript primitive",
     ]
     for fragment in runtime_required_fragments:
         if fragment not in runtime_text:
             errors.append(f"{package}/src/runtime.mjs is missing native operation executor fragment: {fragment}")
+    host_support_required_fragments = [
+        "export function executeHostPrimitive(primitive, values, args, operationId)",
+        "function executeTypescriptDomainOperation(operationId, values)",
+        "globalThis.hostDomainOperation = executeTypescriptDomainOperation",
+    ]
+    for fragment in host_support_required_fragments:
+        if fragment not in host_support_text:
+            errors.append(f"{package}/src/hostPrimitiveSupport.mjs is missing native operation support fragment: {fragment}")
     return errors
 
 
@@ -1211,6 +1224,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "workspace.config.load",
     "output.fields.select",
     "workspace.config.emit",
+    "workspace.output.emit",
     "python.function.call",
     "planning.adopt.apply",
     "planning.bootstrap.doctor.load",
@@ -4704,11 +4718,18 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{package_label}/src/runtime.mjs is missing for runnable TypeScript target")
                 else:
                     runtime_text = runtime_path.read_text(encoding="utf-8")
+                    host_support_path = package_root / "src" / "hostPrimitiveSupport.mjs"
+                    if not host_support_path.is_file():
+                        errors.append(f"{package_label}/src/hostPrimitiveSupport.mjs is missing for runnable TypeScript target")
+                        host_support_text = ""
+                    else:
+                        host_support_text = host_support_path.read_text(encoding="utf-8")
                     errors.extend(
                         _validate_typescript_runtime_handoff_thinness(
                             package=package_label,
                             cli_text=cli_text,
                             runtime_text=runtime_text,
+                            host_support_text=host_support_text,
                         )
                     )
                     if command_package_resource is not None:

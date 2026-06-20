@@ -230,7 +230,7 @@
         "primitive_refs": [
           "workspace.defaults.load",
           "workspace.defaults.select",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -316,7 +316,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "delegation.outcome.append",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {

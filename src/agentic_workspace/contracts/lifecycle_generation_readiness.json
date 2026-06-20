@@ -408,7 +408,7 @@
     }
   ],
   "primitive_review": [
-    "workspace.root.resolve and workspace.selection.resolve are adapter-adjacent but runtime-owned because they inspect local context.",
+    "workspace.target-root.resolve and workspace.selection.resolve are adapter-adjacent but runtime-owned because they inspect local context.",
     "workspace.lifecycle.plan must be the shared dry-run and apply planner.",
     "workspace.lifecycle.apply must own repo mutations and deletion safeguards.",
     "A future workspace.lifecycle.verify primitive should be explicit before mutating lifecycle adapters are generated.",

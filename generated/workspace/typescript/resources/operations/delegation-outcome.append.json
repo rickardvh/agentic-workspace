@@ -89,7 +89,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "workspace.output.emit"
       }
     ],
     "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation and generated output owns the text result."
@@ -129,7 +129,7 @@
     {
       "description": "Emit append result.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "workspace.output.emit"
     }
   ],
   "summary": "Append one local-only delegation outcome record for target-profile tuning.",

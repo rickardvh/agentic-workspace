@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_current_memory.output.schema.json",
-  "title": "payload.current-memory output",
+  "title": "memory.payload.current-memory output",
   "type": "object",
   "required": [
     "payload"

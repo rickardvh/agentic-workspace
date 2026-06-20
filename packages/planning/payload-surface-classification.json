@@ -680,6 +680,13 @@
       "rationale": "The planning wheel force-includes the target-local primitive executor as private runtime import data so shipped packages do not depend on the internal command-generation distribution."
     },
     {
+      "source_path": "generated/planning/python/primitives/host_primitive_support.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/host_primitive_support.py",
+      "classification": "maintainer/development only",
+      "owner": "generated AW host primitive support projection",
+      "rationale": "The planning wheel force-includes target-local AW host primitive support beside the command-generation executor; the canonical behavior source is src/agentic_workspace/contracts/python_primitive_support.py."
+    },
+    {
       "source_path": "generated/planning/python/primitives/operation_composition.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_composition.py",
       "classification": "maintainer/development only",

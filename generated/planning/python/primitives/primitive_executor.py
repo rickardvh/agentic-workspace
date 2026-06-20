@@ -1,11 +1,13 @@
 """Generated target-local primitive executor implementation.
 
 Source: src/agentic_workspace/contracts/command_package_ir.json
+Host primitive support: src/agentic_workspace/contracts/python_primitive_support.py
 Regenerate with: uv run python scripts/generate/generate_command_packages.py
 """
 
 # DO NOT EDIT DIRECTLY.
-# Primitive behavior changes belong in command_generation.primitive_executor.
+# Portable primitive dispatch and executor structure belong to command-generation.
+# Host primitive behavior belongs in the configured support module.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 from __future__ import annotations
@@ -39,6 +41,16 @@ class PrimitiveContext:
             return self.roots[name].resolve()
         except KeyError as exc:
             raise PrimitiveExecutionError(f"unknown primitive root: {name!r}") from exc
+
+
+def execute_host_primitive(
+    primitive: str,
+    *,
+    values: dict[str, Any],
+    arguments: dict[str, Any],
+    context: PrimitiveContext,
+) -> Any:
+    raise PrimitiveExecutionError(f"unsupported host primitive: {primitive!r}")
 
 
 def run_operation_steps(
@@ -94,23 +106,23 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
-    if primitive == "memory.payload.status":
+    if primitive == "payload.status":
         return _payload_status(values=values, arguments=arguments, context=context)
-    if primitive == "memory.payload.lifecycle-plan":
+    if primitive == "payload.lifecycle-plan":
         return _payload_lifecycle_plan(values=values, arguments=arguments, context=context)
-    if primitive == "memory.payload.current-memory":
+    if primitive == "payload.current-memory":
         return _payload_current_memory(values=values, arguments=arguments, context=context)
-    if primitive == "memory.payload.verify":
+    if primitive == "payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
         return _emit_output(values=values, arguments=arguments)
-    if primitive == "memory.output.emit.install-result":
+    if primitive == "output.emit.install-result":
         return _emit_output(values=values, arguments={"text_style": "install-result"})
-    if primitive == "memory.output.emit.current-memory":
+    if primitive == "output.emit.current-memory":
         return _emit_output(values=values, arguments={"text_style": "current-memory"})
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
-    raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
+    return execute_host_primitive(primitive, values=values, arguments=arguments, context=context)
 
 
 def _store_step_result(*, values: dict[str, Any], outputs: Any, result: Any) -> None:
@@ -1093,3 +1105,8 @@ def _list_of_objects(value: Any, *, source: str) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
         raise PrimitiveExecutionError(f"{source} must be a list of objects")
     return value
+
+
+from .host_primitive_support import execute_host_primitive as _execute_configured_host_primitive
+
+execute_host_primitive = _execute_configured_host_primitive

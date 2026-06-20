@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_verify.output.schema.json",
-  "title": "payload.verify output",
+  "title": "memory.payload.verify output",
   "type": "object",
   "required": [
     "target_root",

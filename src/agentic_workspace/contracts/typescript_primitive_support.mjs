@@ -1,7 +1,6 @@
-// Generated native TypeScript operation runtime.
-// Source: src/agentic_workspace/contracts/command_package_ir.json
-// Regenerate with: uv run python scripts/generate/generate_command_packages.py
-// DO NOT EDIT DIRECTLY.
+// AW-owned TypeScript host primitive support.
+// Command-generation owns the generated runtime shell; this module owns
+// Agentic Workspace primitive behavior that is copied into generated packages.
 
 import {
   copyFileSync,
@@ -417,12 +416,12 @@ function payloadStatus(values, args) {
   const actions = [];
   const notice = isObject(policy.workspace_orchestrator_notice) ? policy.workspace_orchestrator_notice : {};
   if (notice.marker && !existsSync(join(targetRoot, notice.marker))) actions.push(statusAction('warning', String(notice.marker), String(notice.detail ?? ''), { role: String(notice.role ?? 'workspace-orchestration'), safety: String(notice.safety ?? 'safe'), category: String(notice.category ?? 'safe-update') }));
-  for (const entry of listObjects(policy.status_files ?? [], 'payload.status status_files')) {
+  for (const entry of listObjects(policy.status_files ?? [], 'memory.payload.status status_files')) {
     const path = String(entry.path ?? '');
     const present = existsSync(join(targetRoot, path));
     actions.push(statusAction(present ? 'present' : 'missing', path, present ? 'file exists' : 'file missing', { role: String(entry.role ?? ''), safety: String(entry.safety ?? 'safe'), category: String(entry[present ? 'present_category' : 'missing_category'] ?? '') }));
   }
-  for (const obsolete of stringList(policy.obsolete_files ?? [], 'payload.status obsolete_files')) if (existsSync(join(targetRoot, obsolete))) actions.push(statusAction('obsolete', obsolete, 'legacy shared file should be removed on upgrade', { role: 'shared-replaceable', safety: 'safe', category: 'obsolete-managed-file' }));
+  for (const obsolete of stringList(policy.obsolete_files ?? [], 'memory.payload.status obsolete_files')) if (existsSync(join(targetRoot, obsolete))) actions.push(statusAction('obsolete', obsolete, 'legacy shared file should be removed on upgrade', { role: 'shared-replaceable', safety: 'safe', category: 'obsolete-managed-file' }));
   return { target_root: targetRoot, dry_run: Boolean(args.dry_run ?? false), mode: '', message: String(args.message ?? 'Status report'), health: active.status === 'present' ? 'healthy' : 'attention-needed', detected_version: readFirstVersion(targetRoot, [policy.version_path, policy.legacy_version_path]), bootstrap_version: bootstrapVersion, action_count: actions.length, actions, active, detail_command: String(args.detail_command ?? '') };
 }
 
@@ -430,7 +429,7 @@ function payloadLifecyclePlan(values, args) {
   const policy = readJson(resolveInside(resourceRoot(String(args.policy_root ?? '')), String(args.policy_path ?? '')));
   const targetRoot = resolve(String(values[String(args.target_root_value ?? 'target_root')] ?? process.cwd()));
   const actions = [];
-  for (const entry of listObjects(policy.status_files ?? [], 'payload.lifecycle-plan status_files')) {
+  for (const entry of listObjects(policy.status_files ?? [], 'memory.payload.lifecycle-plan status_files')) {
     const path = String(entry.path ?? '');
     if (!path) continue;
     const present = existsSync(join(targetRoot, path));
@@ -443,7 +442,7 @@ function payloadCurrentMemory(values, args) {
   const policy = readJson(resolveInside(resourceRoot(String(args.policy_root ?? '')), String(args.policy_path ?? '')));
   const targetRoot = resolve(String(values[String(args.target_root_value ?? 'target_root')] ?? process.cwd()));
   const current = isObject(policy.current_memory) ? policy.current_memory : {};
-  const notes = stringList(current.view_files ?? [], 'payload.current-memory current_memory.view_files').map((path) => {
+  const notes = stringList(current.view_files ?? [], 'memory.payload.current-memory current_memory.view_files').map((path) => {
     const absolute = join(targetRoot, path);
     const present = existsSync(absolute);
     return { path, exists: present, content: present ? readText(absolute) : '' };
@@ -457,11 +456,11 @@ function verifyPayload(values, args) {
   const targetRoot = resolve(String(values[String(args.target_root_value ?? 'target_root')] ?? process.cwd()));
   const payloadPaths = payloadFileSet(payloadRoot, policy);
   const actions = [];
-  for (const required of stringList(policy.required_files ?? [], 'payload.verify required_files')) {
+  for (const required of stringList(policy.required_files ?? [], 'memory.payload.verify required_files')) {
     const present = payloadPaths.has(required);
     actions.push(payloadAction(present ? 'current' : 'manual review', required, present ? 'required payload file present' : 'required payload file missing', present ? 'safe' : 'manual', present ? 'safe-update' : 'contract-drift'));
   }
-  for (const forbidden of stringList(policy.forbidden_files ?? [], 'payload.verify forbidden_files')) if (payloadPaths.has(forbidden)) actions.push(payloadAction('manual review', forbidden, 'forbidden file is present in the shipped payload'));
+  for (const forbidden of stringList(policy.forbidden_files ?? [], 'memory.payload.verify forbidden_files')) if (payloadPaths.has(forbidden)) actions.push(payloadAction('manual review', forbidden, 'forbidden file is present in the shipped payload'));
   return { target_root: targetRoot, dry_run: true, mode: 'full', message: 'Payload verification', detected_version: readFirstVersion(targetRoot, [policy.version_path, policy.legacy_version_path]), bootstrap_version: Number(policy.bootstrap_version ?? 0), actions, route_summary: {}, missing_note_hint: '', review_summary: {}, review_cases: [], sync_summary: {}, route_report_summary: {}, route_report_feedback_cases: [], route_report_fixture_results: [] };
 }
 
@@ -688,107 +687,27 @@ function reportMemory(values) {
   return { kind: 'memory-module-report/v1', profile: 'tiny', module: 'memory', target_root: targetRoot, health: active.status === 'present' ? 'healthy' : 'attention-needed', status: { note_count: active.note_count, manifest_status: active.status }, active, next_action: { summary: active.status === 'present' ? 'No immediate memory action.' : 'Run full memory report for remediation detail.' }, detail_commands: { full: 'agentic-memory report --target . --verbose --format json', route: 'agentic-memory route --target . --files <paths> --format json' } };
 }
 
-function executePrimitive(primitive, values, args, operationId) {
-  if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);
-  if (primitive === 'path.target_root.resolve' || primitive === 'workspace.root.resolve') {
+
+export function executeHostPrimitive(primitive, values, args, operationId) {
+  if (primitive === 'workspace.target-root.resolve') {
     const targetRoot = resolve(String(values.target ?? '.'));
     if (args.must_exist && !existsSync(targetRoot)) throw new RuntimeError(`target root does not exist: ${targetRoot}`);
     if (args.must_be_dir && (!existsSync(targetRoot) || !statSync(targetRoot).isDirectory())) throw new RuntimeError(`target root is not a directory: ${targetRoot}`);
     return targetRoot;
   }
-  if (primitive === 'filesystem.exists') {
-    const path = resolveInside(valueRoot(args, values), String(args.path ?? ''));
-    if (args.kind === 'file') return existsSync(path) && statSync(path).isFile();
-    if (args.kind === 'directory') return existsSync(path) && statSync(path).isDirectory();
-    return existsSync(path);
-  }
-  if (primitive === 'filesystem.read') return readText(resolveInside(resourceRoot(String(args.root ?? '')), String(args.path ?? '')));
-  if (primitive === 'filesystem.glob') return globFiles(valueRoot(args, values), String(args.pattern ?? '')).map((relative_path) => ({ relative_path }));
-  if (primitive === 'json.parse') return JSON.parse(String(values[String(args.source ?? 'registry_text')]));
-  if (primitive === 'toml.table.counts') {
-    const path = resolveInside(valueRoot(args, values), String(args.path ?? ''));
-    const counts = { status: 'missing', note_count: 0, required_count: 0, optional_count: 0, routing_only_count: 0, path: String(args.path ?? '') };
-    if (!existsSync(path)) return { table_counts: counts, table_present: false, table_status: counts.status };
-    const records = Object.values(parseTomlTables(readText(path), String(args.table ?? '')));
-    counts.status = 'present';
-    counts.note_count = records.length;
-    for (const record of records) {
-      if (!isObject(record)) continue;
-      const relevance = String(record[String(args.relevance_field ?? '')] ?? '').trim().toLowerCase();
-      if (relevance === String(args.required_value ?? 'required')) counts.required_count += 1;
-      else if (relevance === String(args.optional_value ?? 'optional')) counts.optional_count += 1;
-      if (record[String(args.routing_only_field ?? 'routing_only')] === true) counts.routing_only_count += 1;
-    }
-    return { table_counts: counts, table_present: true, table_status: counts.status };
-  }
-  if (primitive === 'payload.assemble') return assemblePayload(values, args);
-  if (primitive === 'payload.status') return payloadStatus(values, args);
-  if (primitive === 'payload.lifecycle-plan') return payloadLifecyclePlan(values, args);
-  if (primitive === 'payload.current-memory') return payloadCurrentMemory(values, args);
-  if (primitive === 'payload.verify') return verifyPayload(values, args);
-  if (primitive === 'output.emit') return emitOutput(values, args);
-  if (primitive === 'output.emit.install-result') return emitOutput(values, { text_style: 'install-result' });
-  if (primitive === 'output.emit.current-memory') return emitOutput(values, { text_style: 'current-memory' });
+  if (primitive === 'memory.payload.status') return payloadStatus(values, args);
+  if (primitive === 'memory.payload.lifecycle-plan') return payloadLifecyclePlan(values, args);
+  if (primitive === 'memory.payload.current-memory') return payloadCurrentMemory(values, args);
+  if (primitive === 'memory.payload.verify') return verifyPayload(values, args);
+  if (primitive === 'memory.output.emit.install-result') return emitOutput(values, { text_style: 'install-result' });
+  if (primitive === 'memory.output.emit.current-memory') return emitOutput(values, { text_style: 'current-memory' });
+  if (primitive === 'workspace.output.emit') return emitOutput(values, args);
   if (primitive === 'workspace.defaults.load') return loadJsonResource('_contracts/payload.json');
   if (primitive === 'workspace.defaults.select') return workspaceDefaultsSelect(values.defaults_payload, values);
   if (primitive === 'workspace.config.load') return workspaceConfig(values);
   if (primitive === 'output.fields.select') return selectFields(values.config, values);
   if (primitive === 'workspace.config.emit') return emitOutput({ ...values, result: values.result ?? values.config }, args);
   return domainPrimitive(primitive, values, args, operationId);
-}
-
-function operationFragments(operation) {
-  const rawFragments = operation?.ir_plan?.fragments ?? [];
-  if (!Array.isArray(rawFragments)) throw new RuntimeError('operation ir_plan.fragments must be a list');
-  const fragments = new Map();
-  for (const fragment of rawFragments) {
-    if (!isObject(fragment)) throw new RuntimeError('operation ir_plan fragment must be an object');
-    const fragmentId = String(fragment.id ?? '').trim();
-    if (!fragmentId) throw new RuntimeError('operation ir_plan fragment id is required');
-    if (fragments.has(fragmentId)) throw new RuntimeError(`duplicate operation ir_plan fragment: ${fragmentId}`);
-    if (!Array.isArray(fragment.steps) || fragment.steps.length === 0) {
-      throw new RuntimeError(`operation ir_plan fragment ${fragmentId} must declare non-empty steps`);
-    }
-    fragments.set(fragmentId, fragment.steps);
-  }
-  return fragments;
-}
-
-function expandOperationSteps(steps, fragments, stack = []) {
-  const expanded = [];
-  for (const step of steps) {
-    if (!isObject(step)) throw new RuntimeError('operation ir_plan step must be an object');
-    const uses = String(step.uses ?? '').trim();
-    const usesFragment = String(step.uses_fragment ?? '').trim();
-    if (uses && usesFragment) throw new RuntimeError(`step ${String(step.id ?? uses)} cannot declare both uses and uses_fragment`);
-    if (usesFragment) {
-      if (step.arguments !== undefined && !(isObject(step.arguments) && Object.keys(step.arguments).length === 0)) {
-        throw new RuntimeError(`fragment step ${String(step.id ?? usesFragment)} cannot declare arguments`);
-      }
-      if (step.outputs !== undefined && !(Array.isArray(step.outputs) && step.outputs.length === 0)) {
-        throw new RuntimeError(`fragment step ${String(step.id ?? usesFragment)} cannot declare outputs`);
-      }
-      if (stack.includes(usesFragment)) throw new RuntimeError(`operation ir_plan fragment cycle: ${[...stack, usesFragment].join(' -> ')}`);
-      if (!fragments.has(usesFragment)) throw new RuntimeError(`unknown operation ir_plan fragment: ${usesFragment}`);
-      expanded.push(...expandOperationSteps(fragments.get(usesFragment), fragments, [...stack, usesFragment]));
-      continue;
-    }
-    if (!uses) throw new RuntimeError(`step ${String(step.id ?? '<unknown>')} must declare uses or uses_fragment`);
-    expanded.push(step);
-  }
-  return expanded;
-}
-
-function runSteps(operation, values) {
-  const steps = operation?.ir_plan?.steps;
-  if (!Array.isArray(steps)) throw new RuntimeError(`operation ${operation?.id ?? '<unknown>'} has no executable ir_plan.steps`);
-  const fragments = operationFragments(operation);
-  for (const step of expandOperationSteps(steps, fragments)) {
-    if (!conditionMatches(step.when, values)) continue;
-    const result = executePrimitive(String(step.uses ?? ''), values, isObject(step.arguments) ? step.arguments : {}, String(operation.id ?? ''));
-    storeStepResult(values, step.outputs ?? [], result);
-  }
-  return values;
 }
 
 function executeTypescriptDomainOperation(operationId, values) {
@@ -812,33 +731,4 @@ function executeTypescriptDomainOperation(operationId, values) {
   return { command: values._command_path?.join(' ') ?? operationId, target_root: target, dry_run: Boolean(values.dry_run), message: operationId };
 }
 
-function executeGeneratedOperationValues({ operationId, operationPath, values }) {
-  if (!operationId) throw new RuntimeError('generated command has no operation id');
-  if (values.strict_preflight === true && !values.preflight_token) {
-    throw new RuntimeError('Strict preflight gate is enabled. Provide --preflight-token to continue.');
-  }
-  if (!operationPath) throw new RuntimeError(`operation ${operationId} has no operation resource path`);
-  const resourcePath = resolveInside(resourcesRoot, operationPath);
-  if (!existsSync(resourcePath)) throw new RuntimeError(`operation resource is missing: ${operationPath}`);
-  const operation = loadJsonResource(operationPath);
-  const steps = operation?.ir_plan?.steps;
-  if (!Array.isArray(steps) || steps.length === 0) throw new RuntimeError(`operation ${operationId} has no executable ir_plan.steps`);
-  return runSteps(operation, { ...values });
-}
-
-export function invokeGeneratedOperation({ operationId, operationPath, values }) {
-  const finalValues = executeGeneratedOperationValues({ operationId, operationPath, values });
-  return finalValues.result ?? finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
-}
-
-export function runGeneratedOperation({ operationId, operationPath, values }) {
-  if (values.strict_preflight === true && !values.preflight_token) {
-    writeSync(2, 'Strict preflight gate is enabled. Provide --preflight-token to continue.\n');
-    return 2;
-  }
-  const finalValues = executeGeneratedOperationValues({ operationId, operationPath, values });
-  let output = finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
-  if (typeof output !== 'string') output = `${JSON.stringify(output, null, 2)}\n`;
-  writeSync(1, output);
-  return 0;
-}
+globalThis.hostDomainOperation = executeTypescriptDomainOperation;

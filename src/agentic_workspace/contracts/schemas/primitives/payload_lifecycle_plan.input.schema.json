@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_lifecycle_plan.input.schema.json",
-  "title": "payload.lifecycle-plan input",
+  "title": "memory.payload.lifecycle-plan input",
   "type": "object",
   "required": [
     "policy_root",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/output_emit_current_memory.input.schema.json",
-  "title": "output.emit.current-memory input",
+  "title": "memory.output.emit.current-memory input",
   "type": "object",
   "required": [
     "result",

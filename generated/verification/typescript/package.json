@@ -9,7 +9,7 @@
     "generationMetadata": {
       "generator": {
         "package": "command-generation",
-        "version": "0.2.4"
+        "version": "0.2.9"
       },
       "schema_version": "command-generation/generated-artifact-metadata/v1",
       "source_ir": {

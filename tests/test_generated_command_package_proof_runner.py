@@ -1567,9 +1567,15 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
             "export function runGeneratedOperation({ operationId, operationPath, values }) {}",
             "function runSteps(operation, values) {}",
             "function executePrimitive(primitive, values, args, operationId) {}",
-            "function executeTypescriptDomainOperation(operationId, values) {}",
             "if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);",
             "throw new Error('unsupported native TypeScript primitive');",
+        ]
+    )
+    host_support_text = "\n".join(
+        [
+            "export function executeHostPrimitive(primitive, values, args, operationId) {}",
+            "function executeTypescriptDomainOperation(operationId, values) {}",
+            "globalThis.hostDomainOperation = executeTypescriptDomainOperation",
         ]
     )
 
@@ -1577,6 +1583,7 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
         package="workspace-cli",
         cli_text=cli_text,
         runtime_text=runtime_text,
+        host_support_text=host_support_text,
     )
 
     assert any("imports non-native runtime modules" in error for error in errors)

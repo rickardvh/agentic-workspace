@@ -2519,7 +2519,7 @@
         "primitive_refs": [
           "workspace.defaults.load",
           "workspace.defaults.select",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -3217,7 +3217,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "delegation.outcome.append",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -4888,7 +4888,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "0.2.4"
+      "version": "0.2.9"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
