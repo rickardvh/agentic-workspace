@@ -19,7 +19,7 @@
       "operation-function-call|generated/memory/python/operations/memory.init.lifecycle.json|memory.init.lifecycle|repo_memory_bootstrap.installer|install_bootstrap",
       "operation-function-call|generated/memory/python/operations/memory.install.lifecycle.json|memory.install.lifecycle|repo_memory_bootstrap.installer|install_bootstrap",
       "operation-function-call|generated/memory/python/operations/memory.migrate-layout.lifecycle.json|memory.migrate-layout.lifecycle|repo_memory_bootstrap.installer|migrate_layout",
-      "operation-function-call|generated/memory/python/operations/memory.promotion-report.report.json|memory.promotion-report.report|repo_memory_bootstrap.installer|promotion_report",
+      "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_promotion_report|repo_memory_bootstrap.runtime_primitives|_load_memory_promotion_report",
       "operation-function-call|generated/memory/python/operations/memory.route-review.report.json|memory.route-review.report|repo_memory_bootstrap.installer|review_routes",
       "operation-function-call|generated/memory/python/operations/memory.route.report.json|memory.route.report|repo_memory_bootstrap.installer|route_memory",
       "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|repo_memory_bootstrap.runtime_search|search_memory",
@@ -38,7 +38,6 @@
       "operation-function-call|generated/planning/python/operations/planning.upgrade.lifecycle.json|planning.upgrade.lifecycle|repo_planning_bootstrap.installer|upgrade_bootstrap",
       "operation-function-call|generated/planning/python/operations/planning.verify-payload.report.json|planning.verify-payload.report|repo_planning_bootstrap.installer|verify_payload",
       "operation-function-call|generated/verification/python/operations/verification.report.report.json|verification.report.report|repo_verification_bootstrap.runtime_primitives|verification_report_payload",
-      "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_emit_memory_operation_output|repo_memory_bootstrap.runtime_primitives|_emit_memory_operation_output",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_bootstrap_doctor|repo_memory_bootstrap.runtime_primitives|_load_memory_bootstrap_doctor",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_current|repo_memory_bootstrap.runtime_primitives|_load_memory_current",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_prompt|repo_memory_bootstrap.runtime_primitives|_load_memory_prompt",
@@ -67,7 +66,6 @@
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_lane_promote_operation|repo_planning_bootstrap.runtime_projection|apply_planning_lane_promote_operation",
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_new_plan_operation|repo_planning_bootstrap.runtime_projection|apply_planning_new_plan_operation",
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_promote_to_plan_operation|repo_planning_bootstrap.runtime_projection|apply_planning_promote_to_plan_operation",
-      "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|emit_planning_operation_output|repo_planning_bootstrap.runtime_projection|emit_planning_operation_output",
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|load_planning_reconcile_operation|repo_planning_bootstrap.runtime_projection|load_planning_reconcile_operation",
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|load_planning_summary_operation|repo_planning_bootstrap.runtime_projection|load_planning_summary_operation",
       "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|render_planning_prompt_operation|repo_planning_bootstrap.runtime_projection|render_planning_prompt_operation",
@@ -111,7 +109,7 @@
         ],
         "primitive_refs": [
           "memory.adopt.apply",
-          "memory.output.emit.install-result",
+          "output.emit",
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan"
         ],
@@ -119,7 +117,7 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
         "minimization_category": "mutation-safety-orchestration",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
@@ -226,7 +224,7 @@
         ],
         "primitive_refs": [
           "memory.init.apply",
-          "memory.output.emit.install-result",
+          "output.emit",
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan"
         ],
@@ -234,7 +232,7 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.init.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
         "minimization_category": "mutation-safety-orchestration",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
@@ -257,7 +255,7 @@
         ],
         "primitive_refs": [
           "memory.install.apply",
-          "memory.output.emit.install-result",
+          "output.emit",
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan"
         ],
@@ -265,7 +263,7 @@
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
         "conformance_ref": "memory.install.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage.",
         "minimization_category": "mutation-safety-orchestration",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
@@ -305,11 +303,9 @@
         ]
       },
       {
-        "binding_kind": "operation-function-call",
-        "operation_path": "generated/memory/python/operations/memory.promotion-report.report.json",
-        "operation_id": "memory.promotion-report.report",
-        "source_module": "repo_memory_bootstrap.installer",
-        "source_symbol": "promotion_report",
+        "binding_kind": "runtime-facade-call",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_promotion_report",
         "owner_package": "memory package runtime boundary",
         "operation_ids": [
           "memory.promotion-report.report"
@@ -318,10 +314,10 @@
           "memory.promotion_report.load"
         ],
         "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "why_not_generic_deterministic": "The symbol owns Memory promotion-report compact JSON compatibility and package-specific payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.promotion-report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the Memory package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow and generic output emission, while memory.promotion_report.load names the Memory package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
         "minimization_category": "package-specific-judgment",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
@@ -330,7 +326,9 @@
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"
-        ]
+        ],
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_promotion_report"
       },
       {
         "binding_kind": "operation-function-call",
@@ -811,50 +809,6 @@
       {
         "binding_kind": "runtime-facade-call",
         "facade_path": "generated/memory/python/primitives/memory_runtime.py",
-        "facade_symbol": "_emit_memory_operation_output",
-        "source_module": "repo_memory_bootstrap.runtime_primitives",
-        "source_symbol": "_emit_memory_operation_output",
-        "owner_package": "memory package runtime boundary",
-        "operation_ids": [
-          "memory.bootstrap-cleanup.apply",
-          "memory.capture-note.report",
-          "memory.create-note.apply",
-          "memory.current.report",
-          "memory.list-files.report",
-          "memory.list-skills.report",
-          "memory.migrate-layout.lifecycle",
-          "memory.promotion-report.report",
-          "memory.prompt.render",
-          "memory.report.report",
-          "memory.route-report.report",
-          "memory.route-review.report",
-          "memory.route.report",
-          "memory.search.report",
-          "memory.sync-memory.report",
-          "memory.uninstall.lifecycle",
-          "memory.upgrade.lifecycle"
-        ],
-        "primitive_refs": [
-          "output.emit"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text whose wording is coupled to Memory package semantics.",
-        "conformance_ref": "memory.bootstrap-cleanup.process, memory.capture-note.process, memory.create-note.dry-run.process, memory.current-show.process, memory.list-files.process, memory.list-skills.process, memory.migrate-layout.lifecycle.dry-run.process, memory.promotion-report.process, memory.prompt.process, memory.report.process, memory.route-report.process, memory.route-review.process, memory.route.process, memory.search.process, memory.sync-memory.process, memory.uninstall.lifecycle.dry-run.process, memory.upgrade.lifecycle.dry-run.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text remain in Memory runtime because they encode Memory package semantics and compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Memory-specific fallback cases.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
         "facade_symbol": "_load_memory_bootstrap_doctor",
         "source_module": "repo_memory_bootstrap.runtime_primitives",
         "source_symbol": "_load_memory_bootstrap_doctor",
@@ -869,7 +823,7 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.doctor.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.status, and memory.output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage.",
+        "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.status, and output.emit over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage.",
         "minimization_category": "package-specific-judgment",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
@@ -1641,60 +1595,6 @@
       {
         "binding_kind": "runtime-facade-call",
         "facade_path": "generated/planning/python/primitives/planning_runtime.py",
-        "facade_symbol": "emit_planning_operation_output",
-        "source_module": "repo_planning_bootstrap.runtime_projection",
-        "source_symbol": "emit_planning_operation_output",
-        "owner_package": "planning package runtime boundary",
-        "operation_ids": [
-          "planning.adopt.lifecycle",
-          "planning.archive-plan.lifecycle",
-          "planning.close-item.lifecycle",
-          "planning.closeout.lifecycle",
-          "planning.create-review.lifecycle",
-          "planning.delegation-decision.lifecycle",
-          "planning.doctor.report",
-          "planning.handoff.report",
-          "planning.init.lifecycle",
-          "planning.install.lifecycle",
-          "planning.intake-artifact.lifecycle",
-          "planning.lane-activate.lifecycle",
-          "planning.lane-archive.lifecycle",
-          "planning.lane-close.lifecycle",
-          "planning.lane-create.lifecycle",
-          "planning.lane-promote.lifecycle",
-          "planning.list-files.report",
-          "planning.new-plan.lifecycle",
-          "planning.promote-to-plan.lifecycle",
-          "planning.prompt.render",
-          "planning.reconcile.report",
-          "planning.report.report",
-          "planning.status.report",
-          "planning.summary.report",
-          "planning.uninstall.lifecycle",
-          "planning.upgrade.lifecycle",
-          "planning.verify-payload.report"
-        ],
-        "primitive_refs": [
-          "output.emit"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text whose wording is coupled to Planning state semantics.",
-        "conformance_ref": "planning.adopt.lifecycle.dry-run.process, planning.archive-plan.lifecycle.dry-run.process, planning.close-item.process, planning.closeout.lifecycle.dry-run.process, planning.create-review.process, planning.delegation-decision.lifecycle.dry-run.process, planning.doctor.process, planning.handoff.process, planning.init.lifecycle.dry-run.process, planning.install.lifecycle.dry-run.process, planning.intake-artifact.lifecycle.dry-run.process, planning.list-files.process, planning.new-plan.lifecycle.dry-run.process, planning.promote-to-plan.lifecycle.dry-run.process, planning.prompt.process, planning.reconcile.process, planning.report.process, planning.status.process, planning.summary.process, planning.uninstall.lifecycle.dry-run.process, planning.upgrade.lifecycle.dry-run.process, planning.verify-payload.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text remain in Planning runtime because they encode Planning state view semantics and package compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Planning-specific fallback cases.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
         "facade_symbol": "load_planning_reconcile_operation",
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "load_planning_reconcile_operation",
@@ -1811,12 +1711,12 @@
         "source_module": "agentic_workspace.workspace_runtime_primitives",
         "source_symbol": "_emit_workspace_operation_output",
         "owner_package": "workspace package runtime boundary",
-      "operation_ids": [
-        "config.report",
-        "prompt.init",
-        "prompt.uninstall",
-        "prompt.upgrade",
-        "system-intent.sync"
+        "operation_ids": [
+          "config.report",
+          "prompt.init",
+          "prompt.uninstall",
+          "prompt.upgrade",
+          "system-intent.sync"
         ],
         "primitive_refs": [
           "output.emit",
@@ -1825,7 +1725,7 @@
         ],
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, defaults-router, delegation-outcome, memory route/report text, and codegen-owned planning-module tiny text are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for prompt payload text, workspace-system-intent text, and config/defaults compatibility surfaces whose wording depends on workspace package policy.",
-      "conformance_ref": "config.report.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
+        "conformance_ref": "config.report.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
         "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, defaults-router text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. accepted source fallback: prompt payload text, workspace-system-intent text, and config/defaults compatibility emitters remain in workspace runtime because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named package-specific fallback cases.",
         "minimization_category": "package-specific-judgment",

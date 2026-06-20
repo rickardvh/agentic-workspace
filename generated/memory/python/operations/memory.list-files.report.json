@@ -92,6 +92,9 @@
           "format"
         ],
         "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
         "uses": "output.emit"
       }
     ],

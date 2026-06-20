@@ -291,14 +291,16 @@
         }
       },
       {
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "description": "Emit the adopt result in the requested format.",
         "id": "emit_output",
         "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "uses": "memory.output.emit.install-result"
+        "uses": "output.emit"
       }
     ],
     "summary": "Default dry-run Memory adopt executes generated operation IR through AW/Memory-owned memory.payload.lifecycle-plan. Mutating and customized adoption policy paths remain package-domain runtime."
@@ -342,7 +344,7 @@
     {
       "description": "Emit the adopt result in the requested format.",
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result"
+      "uses": "output.emit"
     }
   ],
   "summary": "Adopt Memory bootstrap capability in an existing repository.",

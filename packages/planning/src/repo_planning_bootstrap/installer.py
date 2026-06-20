@@ -347,6 +347,9 @@ class InstallResult:
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
 
+    def to_dict(self) -> dict[str, Any]:
+        return json.loads(format_result_json(self))
+
 
 def _short_file_hash(path: Path) -> str:
     if not path.exists() or not path.is_file():

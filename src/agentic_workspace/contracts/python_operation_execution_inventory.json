@@ -200,12 +200,12 @@
         "path.target_root.resolve",
         "memory.payload.status",
         "memory.bootstrap.doctor.load",
-        "memory.output.emit.install-result"
+        "output.emit"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-strict, non-verbose text and JSON doctor executes through AW/Memory-owned memory.payload.status and memory.output.emit.install-result primitives; package-domain runtime remains for verbose detail and strict doc ownership policy.",
+      "runtime_boundary_reason": "Non-strict, non-verbose text and JSON doctor executes through AW/Memory-owned memory.payload.status and output.emit primitives; package-domain runtime remains for verbose detail and strict doc ownership policy.",
       "what_would_make_portable_later": "Replace the remaining verbose and strict-ownership memory.bootstrap.doctor.load fallback after those package-domain diagnostics are represented as schema-backed policy and output primitives.",
-      "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.status, and memory.output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.status, and output.emit over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.capture-note.report",
@@ -244,12 +244,12 @@
         "path.target_root.resolve",
         "memory.payload.lifecycle-plan",
         "memory.install.apply",
-        "memory.output.emit.install-result"
+        "output.emit"
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Default dry-run install planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized install policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.install.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.init.lifecycle",
@@ -267,12 +267,12 @@
         "path.target_root.resolve",
         "memory.payload.lifecycle-plan",
         "memory.init.apply",
-        "memory.output.emit.install-result"
+        "output.emit"
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Default dry-run init planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized init policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.init.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.adopt.lifecycle",
@@ -290,12 +290,12 @@
         "path.target_root.resolve",
         "memory.payload.lifecycle-plan",
         "memory.adopt.apply",
-        "memory.output.emit.install-result"
+        "output.emit"
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Default dry-run adopt planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized adoption policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.adopt.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and output.emit. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.upgrade.lifecycle",
@@ -645,13 +645,13 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.verify-payload.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Payload verification text and JSON dataflow is generated, but memory.payload.verify and memory.output.emit.install-result are AW/Memory-owned AW-owned Memory primitives over package-owned payload_verification.memory.json.",
+      "runtime_boundary_reason": "Payload verification text and JSON dataflow is generated, but memory.payload.verify and output.emit are AW/Memory-owned AW-owned Memory primitives over package-owned payload_verification.memory.json.",
       "what_would_make_portable_later": "Already portable for the declared payload verification policy; package truth remains data-owned by payload_verification.memory.json.",
-      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.verify and memory.output.emit.install-result are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
+      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.verify and output.emit are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
         "memory.payload.verify",
-        "memory.output.emit.install-result"
+        "output.emit"
       ]
     },
     {
@@ -665,15 +665,15 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.status.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Memory status text, JSON, and verbose-compatible output execute generated operation IR, but memory.payload.status and memory.output.emit.install-result are AW/Memory-owned AW-owned Memory primitives rather than portable codegen primitives.",
+      "runtime_boundary_reason": "Memory status text, JSON, and verbose-compatible output execute generated operation IR, but memory.payload.status and output.emit are AW/Memory-owned AW-owned Memory primitives rather than portable codegen primitives.",
       "what_would_make_portable_later": "Already portable for the memory.status.report surface; broader verbose diagnostics belong to separate report/doctor surfaces.",
-      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.status and memory.output.emit.install-result are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
+      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.status and output.emit are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
       "source_runtime_dependencies": [],
       "completion_blockers": [],
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
         "memory.payload.status",
-        "memory.output.emit.install-result"
+        "output.emit"
       ]
     },
     {

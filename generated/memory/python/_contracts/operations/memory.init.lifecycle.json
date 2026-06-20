@@ -116,7 +116,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result",
+      "uses": "output.emit",
       "description": "Emit the init result in the requested format."
     }
   ],
@@ -343,9 +343,11 @@
       },
       {
         "id": "emit_output",
-        "uses": "memory.output.emit.install-result",
+        "uses": "output.emit",
         "description": "Emit the init result in the requested format.",
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "outputs": [
           "emitted"
         ],

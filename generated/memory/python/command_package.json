@@ -78,7 +78,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.status",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -174,7 +174,7 @@
           "path.target_root.resolve",
           "memory.payload.status",
           "memory.bootstrap.doctor.load",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -331,7 +331,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.install.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -488,7 +488,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.init.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -645,7 +645,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.adopt.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -1602,7 +1602,7 @@
           "memory.current.load",
           "memory.payload.current-memory",
           "output.emit",
-          "memory.output.emit.current-memory"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2374,7 +2374,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.verify",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2639,7 +2639,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "0.2.10"
+      "version": "0.2.15"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
@@ -2660,15 +2660,6 @@
     "entrypoint": "agentic-memory",
     "local_runtime_bindings": [
       {
-        "generated_function_overrides": [
-          {
-            "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",
-            "function": "_emit_memory_operation_output",
-            "implementation": "json_output_with_source_fallback",
-            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-            "selected_output_kind": "agentic-workspace/selected-output/v1"
-          }
-        ],
         "module_file": "primitives.memory_runtime",
         "source_import_module": "repo_memory_bootstrap.runtime_primitives"
       }
@@ -2721,20 +2712,9 @@
           "primitive": "memory.prompt.render"
         },
         {
-          "function": "promotion_report",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "mode": {
-              "value": "mode"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
+          "function": "_load_memory_promotion_report",
+          "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.promotion_report.load"
         },
         {
@@ -2748,12 +2728,6 @@
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.route_report.load"
-        },
-        {
-          "function": "_emit_memory_operation_output",
-          "handler": "runtime_handler",
-          "import_module": "repo_memory_bootstrap.runtime_primitives",
-          "primitive": "output.emit"
         },
         {
           "function": "install_bootstrap",

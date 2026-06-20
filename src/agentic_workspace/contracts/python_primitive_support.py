@@ -30,10 +30,6 @@ def execute_host_primitive(
         return _payload_current_memory(values=values, arguments=arguments, context=context)
     if primitive == "memory.payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
-    if primitive == "memory.output.emit.install-result":
-        return _emit_output(values=values, arguments={"text_style": "install-result"})
-    if primitive == "memory.output.emit.current-memory":
-        return _emit_output(values=values, arguments={"text_style": "current-memory"})
     if primitive == "workspace.output.emit":
         return _emit_output(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported AW host primitive: {primitive!r}")
@@ -628,11 +624,15 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
 
 
 def _plain_output_result(result: Any) -> Any:
+    if isinstance(result, Path):
+        return str(result)
     if isinstance(result, Mapping):
-        return dict(result)
+        return {str(key): _plain_output_result(value) for key, value in result.items()}
+    if isinstance(result, Sequence) and not isinstance(result, (str, bytes, bytearray)):
+        return [_plain_output_result(value) for value in result]
     to_dict = getattr(result, "to_dict", None)
     if callable(to_dict):
-        return to_dict()
+        return _plain_output_result(to_dict())
     return result
 
 

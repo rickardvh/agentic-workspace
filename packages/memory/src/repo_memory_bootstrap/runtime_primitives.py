@@ -20,6 +20,7 @@ from repo_memory_bootstrap.installer import (
     format_actions,
     format_result_json,
     memory_report,
+    promotion_report,
     report_routes,
     resolve_target_root,
     resolve_upgrade_source,
@@ -288,6 +289,13 @@ def _load_memory_current(values: dict[str, Any], _arguments: dict[str, Any], _co
 
 def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> str:
     return _build_agent_prompt(str(values.get("prompt_command") or "install"), target=values.get("target"))
+
+
+def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    result = promotion_report(mode=values.get("mode"), notes=values.get("notes"), target=values.get("target"))
+    if str(values.get("format") or "text") == "json" and not values.get("verbose"):
+        return _compact_promotion_report(result, requested_mode=values.get("mode"))
+    return result
 
 
 def _load_memory_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, object]:

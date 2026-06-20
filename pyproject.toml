@@ -19,7 +19,7 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
-  "command-generation @ https://github.com/rickardvh/command-generation/releases/download/v0.2.10/command_generation-0.2.10-py3-none-any.whl#sha256=6052bf6312aaf922bdd32b6dd5c9f18c8205bc51283cbc723e581d015b8f455b",
+  "command-generation @ https://github.com/rickardvh/command-generation/releases/download/v0.2.15/command_generation-0.2.15-py3-none-any.whl#sha256=abe89732db90d0a8f406af0da097209471f3b1107c1b7c9fad5d973edc02c5cb",
   "jsonschema",
   "pre-commit",
   "pytest",

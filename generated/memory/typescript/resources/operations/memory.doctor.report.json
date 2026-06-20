@@ -174,14 +174,16 @@
         }
       },
       {
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "description": "Emit the memory doctor payload in the requested format.",
         "id": "emit_output",
         "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "uses": "memory.output.emit.install-result"
+        "uses": "output.emit"
       }
     ],
     "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned memory.payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
@@ -229,7 +231,7 @@
     {
       "description": "Emit Memory doctor as JSON or install-result text without package-runtime formatting.",
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result"
+      "uses": "output.emit"
     }
   ],
   "summary": "Read-only agentic-memory doctor report.",

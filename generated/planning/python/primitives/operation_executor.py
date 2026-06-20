@@ -251,7 +251,6 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'planning.report.load': _handle_planning_report_load,
                 'planning.summary.load': _handle_planning_summary_load,
                 'planning.reconcile.load': _handle_planning_reconcile_load,
-                'output.emit': _handle_output_emit,
                 'planning.prompt.render': _handle_planning_prompt_render,
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
                 'planning.intake-artifact.apply': _handle_planning_intake_artifact_apply,
@@ -313,12 +312,6 @@ def _handle_planning_reconcile_load(values: dict[str, Any], arguments: dict[str,
     from .planning_runtime import load_planning_reconcile_operation
 
     return load_planning_reconcile_operation(values, arguments, context)
-
-
-def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime import emit_planning_operation_output
-
-    return emit_planning_operation_output(values, arguments, context)
 
 
 def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

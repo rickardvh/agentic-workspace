@@ -59,7 +59,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result",
+      "uses": "output.emit",
       "description": "Emit memory payload verification result in the requested format."
     }
   ],
@@ -107,9 +107,11 @@
       },
       {
         "id": "emit_output",
-        "uses": "memory.output.emit.install-result",
+        "uses": "output.emit",
         "description": "Emit memory payload verification result in the requested format.",
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "outputs": [
           "emitted"
         ],

@@ -576,36 +576,6 @@
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
-      "id": "memory.output.emit.install-result",
-      "summary": "Render AW installed-payload lifecycle/status result text or JSON for the Memory package compatibility surface.",
-      "kind": "output",
-      "portability": "domain-runtime",
-      "semantics": "Compatibility helper retained for generated Memory package operations; not counted as shared portable target-executor behavior.",
-      "input_schema_ref": "schemas/primitives/output_emit_install_result.input.schema.json",
-      "output_schema_ref": "schemas/primitives/output_emit_install_result.output.schema.json",
-      "taxonomy_tier": "tier-2-package-domain",
-      "tier_owner": "memory package installed-payload lifecycle boundary",
-      "tier_reason": "The text projection is AW/Memory installed-payload compatibility behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
-      "conformance_ref": "memory generated command conformance and compatibility-isolation checks",
-      "migration_path": "Replace with an AW-owned Memory output primitive or split stable formatting into output.emit once installed-payload result records have a host-neutral contract.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
-    },
-    {
-      "id": "memory.output.emit.current-memory",
-      "summary": "Render AW current-memory view text or JSON for the Memory package compatibility surface.",
-      "kind": "output",
-      "portability": "domain-runtime",
-      "semantics": "Compatibility helper retained for generated Memory package current-view operations; not counted as shared portable target-executor behavior.",
-      "input_schema_ref": "schemas/primitives/output_emit_current_memory.input.schema.json",
-      "output_schema_ref": "schemas/primitives/output_emit_current_memory.output.schema.json",
-      "taxonomy_tier": "tier-2-package-domain",
-      "tier_owner": "memory package current-memory view boundary",
-      "tier_reason": "Current-memory text projection is AW/Memory product behavior that AW declares as a module-owned primitive while command-generation retains the old name only for compatibility.",
-      "conformance_ref": "memory.current-show.process plus generated command conformance and compatibility-isolation checks",
-      "migration_path": "Replace with an AW-owned Memory current-view output primitive or split stable generic rendering into output.emit after the view contract is host-neutral.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; ordinary source usage is AW-owned; old command-generation IDs are compatibility-only and must not reappear in source operations."
-    },
-    {
       "id": "output.fields.select",
       "summary": "Select exact top-level or dotted JSON fields before rendering output.",
       "taxonomy_tier": "tier-2-package-domain",
