@@ -2639,7 +2639,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "0.2.9"
+      "version": "0.2.10"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
