@@ -79,9 +79,12 @@
       ],
       "proof_refs": [
         "_validate_transitional_primitive_usage_inventory",
-        "transitional_primitive_usage in --python-completion-blockers report"
+        "_validate_aw_primitive_ownership_report",
+        "transitional_primitive_usage in --python-completion-blockers report",
+        "aw_primitive_ownership in --python-completion-blockers report",
+        "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
       ],
-      "rationale": "Command-generation marks these helpers as transitional host-owned compatibility; AW owns the Memory payload/current-view and workspace-root semantics until AW-owned primitive IDs replace them."
+      "rationale": "Command-generation marks these helpers as transitional host-owned compatibility; AW owns the Memory payload/current-view and workspace-root semantics through AW-owned primitive IDs and exposes a downstream proof report so CG does not need AW product literals in package-visible metadata."
     },
     {
       "id": "release-and-generator-provenance",
