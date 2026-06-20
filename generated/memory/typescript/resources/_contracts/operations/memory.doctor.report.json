@@ -130,7 +130,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result",
+      "uses": "output.emit",
       "description": "Emit Memory doctor as JSON or install-result text without package-runtime formatting."
     }
   ],
@@ -224,9 +224,11 @@
       },
       {
         "id": "emit_output",
-        "uses": "memory.output.emit.install-result",
+        "uses": "output.emit",
         "description": "Emit the memory doctor payload in the requested format.",
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "outputs": [
           "emitted"
         ],

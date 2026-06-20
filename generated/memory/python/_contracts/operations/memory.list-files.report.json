@@ -125,6 +125,9 @@
           "result",
           "format"
         ],
+        "outputs": [
+          "emitted"
+        ],
         "on_error": "emit_usage_error"
       }
     ],

@@ -5594,16 +5594,7 @@
           },
           {
             "source_import_module": "repo_planning_bootstrap.runtime_projection",
-            "module_file": "primitives.planning_runtime",
-            "generated_function_overrides": [
-              {
-                "function": "emit_planning_operation_output",
-                "implementation": "json_output_with_source_fallback",
-                "selected_output_kind": "agentic-workspace/selected-output/v1",
-                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
-              }
-            ]
+            "module_file": "primitives.planning_runtime"
           }
         ],
         "operation_executor": {
@@ -6022,26 +6013,9 @@
           "handlers": [
             {
               "primitive": "planning.report.load",
-              "handler": "conditional_function_call",
-              "condition_value": "verbose",
-              "if_true": {
-                "import_module": "repo_planning_bootstrap.installer",
-                "function": "planning_report",
-                "kwargs": {
-                  "target": {
-                    "value": "target"
-                  }
-                }
-              },
-              "if_false": {
-                "import_module": "repo_planning_bootstrap.installer",
-                "function": "planning_report_tiny",
-                "kwargs": {
-                  "target": {
-                    "value": "target"
-                  }
-                }
-              }
+              "handler": "runtime_handler",
+              "function": "load_planning_report_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
               "primitive": "planning.summary.load",
@@ -6053,12 +6027,6 @@
               "primitive": "planning.reconcile.load",
               "handler": "runtime_handler",
               "function": "load_planning_reconcile_operation",
-              "import_module": "repo_planning_bootstrap.runtime_projection"
-            },
-            {
-              "primitive": "output.emit",
-              "handler": "runtime_handler",
-              "function": "emit_planning_operation_output",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
@@ -9486,16 +9454,7 @@
         "local_runtime_bindings": [
           {
             "source_import_module": "repo_memory_bootstrap.runtime_primitives",
-            "module_file": "primitives.memory_runtime",
-            "generated_function_overrides": [
-              {
-                "function": "_emit_memory_operation_output",
-                "implementation": "json_output_with_source_fallback",
-                "selected_output_kind": "agentic-workspace/selected-output/v1",
-                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
-              }
-            ]
+            "module_file": "primitives.memory_runtime"
           }
         ],
         "operation_executor": {
@@ -9785,20 +9744,9 @@
             },
             {
               "primitive": "memory.promotion_report.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "promotion_report",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "notes": {
-                  "value": "notes"
-                },
-                "mode": {
-                  "value": "mode"
-                }
-              }
+              "handler": "runtime_handler",
+              "function": "_load_memory_promotion_report",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.report.load",
@@ -9810,12 +9758,6 @@
               "primitive": "memory.route_report.load",
               "handler": "runtime_handler",
               "function": "_load_memory_route_report",
-              "import_module": "repo_memory_bootstrap.runtime_primitives"
-            },
-            {
-              "primitive": "output.emit",
-              "handler": "runtime_handler",
-              "function": "_emit_memory_operation_output",
               "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
@@ -10285,7 +10227,7 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "memory.payload.status",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -10381,7 +10323,7 @@
               "path.target_root.resolve",
               "memory.payload.status",
               "memory.bootstrap.doctor.load",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -10538,7 +10480,7 @@
               "path.target_root.resolve",
               "memory.payload.lifecycle-plan",
               "memory.install.apply",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -10695,7 +10637,7 @@
               "path.target_root.resolve",
               "memory.payload.lifecycle-plan",
               "memory.init.apply",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -10852,7 +10794,7 @@
               "path.target_root.resolve",
               "memory.payload.lifecycle-plan",
               "memory.adopt.apply",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -11807,7 +11749,7 @@
               "memory.current.load",
               "memory.payload.current-memory",
               "output.emit",
-              "memory.output.emit.current-memory"
+              "output.emit"
             ]
           },
           "schemas": {
@@ -12581,7 +12523,7 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "memory.payload.verify",
-              "memory.output.emit.install-result"
+              "output.emit"
             ]
           },
           "schemas": {

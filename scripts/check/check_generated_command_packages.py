@@ -205,8 +205,6 @@ AW_OWNED_PRIMITIVE_REPLACEMENTS = {
     "payload.lifecycle-plan": "memory.payload.lifecycle-plan",
     "payload.current-memory": "memory.payload.current-memory",
     "payload.verify": "memory.payload.verify",
-    "output.emit.install-result": "memory.output.emit.install-result",
-    "output.emit.current-memory": "memory.output.emit.current-memory",
 }
 AW_OWNED_ORDINARY_CHECK_ROOTS = (
     "tests",
@@ -371,10 +369,6 @@ DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "memory.note.create": {
         "import_module": "repo_memory_bootstrap.installer",
         "function": "create_memory_note",
-    },
-    "memory.promotion_report.load": {
-        "import_module": "repo_memory_bootstrap.installer",
-        "function": "promotion_report",
     },
     "memory.route.load": {
         "import_module": "repo_memory_bootstrap.installer",
@@ -1227,8 +1221,6 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "memory.payload.current-memory",
     "memory.payload.verify",
     "output.emit",
-    "memory.output.emit.install-result",
-    "memory.output.emit.current-memory",
     "workspace.defaults.load",
     "workspace.defaults.select",
     "workspace.config.load",
@@ -2376,7 +2368,7 @@ def _transitional_primitive_usage_metadata(primitive: str) -> dict[str, str]:
         }
     return {
         "owner": "command-generation compatibility boundary",
-        "reason": "old command-generation compatibility primitive; ordinary AW source operations must use memory.payload.* or memory.output.*.",
+        "reason": "old command-generation compatibility primitive; ordinary AW source operations must use memory.payload.* or portable output.emit with declarative arguments.",
         "migration_follow_up": "keep isolated to compatibility checks/fixtures unless command-generation removes the legacy primitive",
     }
 
@@ -2465,7 +2457,7 @@ def _transitional_primitive_usage_inventory() -> dict[str, object]:
         "portable_completion_boundary": "transitional helpers are not counted as REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE",
         "ordinary_source_rule": (
             "AW-owned ordinary operation contracts must use workspace.target-root.resolve, memory.payload.*, "
-            "and memory.output.*; command-generation transitional IDs are compatibility-only."
+            "and portable output.emit; command-generation transitional IDs are compatibility-only."
         ),
     }
 
@@ -3503,10 +3495,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     else:
         memory_runtime_text = memory_runtime_facade.read_text(encoding="utf-8")
         if (
-            "isinstance(result, dict)" not in memory_runtime_text
-            or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text
+            "json.dumps(_serialise_value(values['result']), indent=2)" in memory_runtime_text
+            or "_emit_memory_operation_output" in memory_runtime_text
         ):
-            errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
+            errors.append("generated memory runtime facade must not keep the old package output emitter after output.emit migration")
         for function_name in ("_load_memory_bootstrap_doctor",):
             function_marker = f"def {function_name}(*args: Any, **kwargs: Any) -> Any:"
             if function_marker not in memory_runtime_text:
@@ -3517,8 +3509,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                 errors.append(f"{function_name} JSON fast path must live in portable operation IR, not the generated memory runtime facade")
         if "_load_memory_bootstrap_status" in memory_runtime_text:
             errors.append("generated memory runtime facade must not retain retired memory status source fallback")
-    if "_load_memory_promotion_report" in memory_runtime_text:
-        errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
+    promotion_function_marker = "def _load_memory_promotion_report(*args: Any, **kwargs: Any) -> Any:"
+    if promotion_function_marker not in memory_runtime_text:
+        errors.append("generated memory runtime facade must retain _load_memory_promotion_report source fallback for compact JSON compatibility")
     report_function_marker = "def _load_memory_report(*args: Any, **kwargs: Any) -> Any:"
     if report_function_marker not in memory_runtime_text:
         errors.append("generated memory runtime facade must retain _load_memory_report source fallback for verbose/text behavior")
@@ -3566,7 +3559,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         for fragment in (
             '"uses": "path.target_root.resolve"',
             '"uses": "memory.payload.verify"',
-            '"uses": "memory.output.emit.install-result"',
+            '"uses": "output.emit"',
+            '"text_style": "install-result"',
             '"policy_root": "memory.contracts"',
             '"payload_root": "memory.package-payload"',
         ):
@@ -3659,8 +3653,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     )
     if "load_planning_list_files_operation" in planning_runtime_text:
         errors.append("planning runtime facade must not keep the dead planning.list-files source delegate")
-    if "def emit_planning_operation_output" not in planning_runtime_text or "isinstance(result, dict)" not in planning_runtime_text:
-        errors.append("generated planning runtime facade must emit dict JSON through generated-local code before source fallback")
+    if "def emit_planning_operation_output" in planning_runtime_text:
+        errors.append("generated planning runtime facade must not keep the old package output emitter after output.emit migration")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
         command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(encoding="utf-8")
         if "run_operation_ir(" not in command_text:

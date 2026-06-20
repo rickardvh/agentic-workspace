@@ -3080,7 +3080,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "0.2.10"
+      "version": "0.2.15"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
@@ -3105,15 +3105,6 @@
         "source_import_module": "repo_planning_bootstrap.installer"
       },
       {
-        "generated_function_overrides": [
-          {
-            "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",
-            "function": "emit_planning_operation_output",
-            "implementation": "json_output_with_source_fallback",
-            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-            "selected_output_kind": "agentic-workspace/selected-output/v1"
-          }
-        ],
         "module_file": "primitives.planning_runtime",
         "source_import_module": "repo_planning_bootstrap.runtime_projection"
       }
@@ -3133,26 +3124,9 @@
       ],
       "handlers": [
         {
-          "condition_value": "verbose",
-          "handler": "conditional_function_call",
-          "if_false": {
-            "function": "planning_report_tiny",
-            "import_module": "repo_planning_bootstrap.installer",
-            "kwargs": {
-              "target": {
-                "value": "target"
-              }
-            }
-          },
-          "if_true": {
-            "function": "planning_report",
-            "import_module": "repo_planning_bootstrap.installer",
-            "kwargs": {
-              "target": {
-                "value": "target"
-              }
-            }
-          },
+          "function": "load_planning_report_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.report.load"
         },
         {
@@ -3166,12 +3140,6 @@
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.reconcile.load"
-        },
-        {
-          "function": "emit_planning_operation_output",
-          "handler": "runtime_handler",
-          "import_module": "repo_planning_bootstrap.runtime_projection",
-          "primitive": "output.emit"
         },
         {
           "function": "render_planning_prompt_operation",

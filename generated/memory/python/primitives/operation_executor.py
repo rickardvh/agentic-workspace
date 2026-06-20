@@ -184,7 +184,6 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
-                'output.emit': _handle_output_emit,
                 'memory.install.apply': _handle_memory_install_apply,
                 'memory.init.apply': _handle_memory_init_apply,
                 'memory.adopt.apply': _handle_memory_adopt_apply,
@@ -246,10 +245,10 @@ def _handle_memory_prompt_render(values: dict[str, Any], arguments: dict[str, An
     return _load_memory_prompt(values, arguments, context)
 
 
-def _handle_memory_promotion_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import promotion_report
+def _handle_memory_promotion_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .memory_runtime import _load_memory_promotion_report
 
-    return promotion_report(mode=values.get('mode'), notes=values.get('notes'), target=values.get('target'))
+    return _load_memory_promotion_report(values, arguments, context)
 
 
 def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
@@ -262,12 +261,6 @@ def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str
     from .memory_runtime import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
-
-
-def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime import _emit_memory_operation_output
-
-    return _emit_memory_operation_output(values, arguments, context)
 
 
 def _handle_memory_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

@@ -812,7 +812,7 @@
           "path.target_root.resolve",
           "memory.payload.status",
           "memory.bootstrap.doctor.load",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -888,7 +888,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.install.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -965,7 +965,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.init.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -1042,7 +1042,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.adopt.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -1568,7 +1568,7 @@
           "memory.current.load",
           "memory.payload.current-memory",
           "output.emit",
-          "memory.output.emit.current-memory"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2408,7 +2408,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.verify",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2554,7 +2554,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.status",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -3709,7 +3709,10 @@
           "output.emit"
         ]
       },
-      "schemas": {"input": [], "output": []},
+      "schemas": {
+        "input": [],
+        "output": []
+      },
       "effect_hints": {
         "read_only": false,
         "destructive": false,
@@ -3726,14 +3729,39 @@
           "effect_hints",
           "conformance_refs"
         ],
-        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "help rendering", "exit-code rendering"]}]
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
       },
       "generation_boundary": {
-        "contract_owns": ["visible command name", "option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
-        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
-        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+        "contract_owns": [
+          "visible command name",
+          "option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ]
       },
-      "conformance_refs": ["planning.lane-create.lifecycle.dry-run.process"]
+      "conformance_refs": [
+        "planning.lane-create.lifecycle.dry-run.process"
+      ]
     },
     {
       "id": "planning.lane-promote.cli",
@@ -3756,7 +3784,10 @@
           "output.emit"
         ]
       },
-      "schemas": {"input": [], "output": []},
+      "schemas": {
+        "input": [],
+        "output": []
+      },
       "effect_hints": {
         "read_only": false,
         "destructive": false,
@@ -3774,14 +3805,40 @@
           "effect_hints",
           "conformance_refs"
         ],
-        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
       },
       "generation_boundary": {
-        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
-        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
-        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ]
       },
-      "conformance_refs": ["planning.lane-promote.lifecycle.dry-run.process"]
+      "conformance_refs": [
+        "planning.lane-promote.lifecycle.dry-run.process"
+      ]
     },
     {
       "id": "planning.lane-activate.cli",
@@ -3804,7 +3861,10 @@
           "output.emit"
         ]
       },
-      "schemas": {"input": [], "output": []},
+      "schemas": {
+        "input": [],
+        "output": []
+      },
       "effect_hints": {
         "read_only": false,
         "destructive": false,
@@ -3822,14 +3882,40 @@
           "effect_hints",
           "conformance_refs"
         ],
-        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
       },
       "generation_boundary": {
-        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
-        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
-        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ]
       },
-      "conformance_refs": ["planning.lane-activate.lifecycle.dry-run.process"]
+      "conformance_refs": [
+        "planning.lane-activate.lifecycle.dry-run.process"
+      ]
     },
     {
       "id": "planning.lane-close.cli",
@@ -3852,7 +3938,10 @@
           "output.emit"
         ]
       },
-      "schemas": {"input": [], "output": []},
+      "schemas": {
+        "input": [],
+        "output": []
+      },
       "effect_hints": {
         "read_only": false,
         "destructive": false,
@@ -3870,14 +3959,40 @@
           "effect_hints",
           "conformance_refs"
         ],
-        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
       },
       "generation_boundary": {
-        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
-        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
-        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ]
       },
-      "conformance_refs": ["planning.lane-close.lifecycle.dry-run.process"]
+      "conformance_refs": [
+        "planning.lane-close.lifecycle.dry-run.process"
+      ]
     },
     {
       "id": "planning.lane-archive.cli",
@@ -3900,7 +4015,10 @@
           "output.emit"
         ]
       },
-      "schemas": {"input": [], "output": []},
+      "schemas": {
+        "input": [],
+        "output": []
+      },
       "effect_hints": {
         "read_only": false,
         "destructive": false,
@@ -3918,14 +4036,40 @@
           "effect_hints",
           "conformance_refs"
         ],
-        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
       },
       "generation_boundary": {
-        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
-        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
-        "runtime_owns": ["planning lane mutation policy", "module result assembly"]
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ]
       },
-      "conformance_refs": ["planning.lane-archive.lifecycle.dry-run.process"]
+      "conformance_refs": [
+        "planning.lane-archive.lifecycle.dry-run.process"
+      ]
     },
     {
       "id": "planning.new-plan.cli",

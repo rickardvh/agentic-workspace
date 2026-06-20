@@ -237,36 +237,33 @@ def test_current_task_staleness_reason_mentions_planner_spillover() -> None:
     assert "planner, backlog, or execution-log spillover" in reason
 
 
-def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
+def test_generated_install_text_uses_portable_install_result_output(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
-    result = installer.install_bootstrap(target=target, dry_run=True)
 
-    cli._print_install_summary(result)
+    assert cli.main(["install", "--target", str(target), "--dry-run"]) == 0
 
     output = capsys.readouterr().out
-    assert "install or adopt lifecycle work" in output
-    assert "bootstrap-cleanup" in output
-    assert "install or upgrade review" not in output
-    assert "`populate` skill" not in output
-    assert "memory-router" in output
-    assert "memory-refresh" in output
-    assert "bootstrap-managed" in output
+    assert "Target:" in output
+    assert "Detected version:" in output
+    assert "planned change" in output
+    assert ".agentic-workspace" in output
 
 
-def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
+def test_generated_adopt_text_uses_portable_install_result_output(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
     (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
-    result = installer.adopt_bootstrap(target=target, dry_run=True)
 
-    cli._print_install_summary(result)
+    assert cli.main(["adopt", "--target", str(target), "--dry-run"]) == 0
 
     output = capsys.readouterr().out
-    assert "`populate` skill" not in output
+    assert "Target:" in output
+    assert "Detected version:" in output
+    assert "planned change" in output
 
 
 def test_current_view_json_shape(tmp_path: Path) -> None:

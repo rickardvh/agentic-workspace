@@ -7,9 +7,6 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 from __future__ import annotations
 
-import copy
-import json
-from pathlib import Path
 from typing import Any
 
 # DO NOT EDIT DIRECTLY.
@@ -19,193 +16,6 @@ from typing import Any
 # Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
-def _serialise_value(value: Any) -> Any:
-    if isinstance(value, Path):
-        return value.as_posix()
-    if isinstance(value, dict):
-        return {key: _serialise_value(inner) for key, inner in value.items()}
-    if isinstance(value, list):
-        return [_serialise_value(item) for item in value]
-    return value
-
-
-def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
-    current = payload
-    for part in path.split('.'):
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-            continue
-        if isinstance(current, list):
-            try:
-                current = current[int(part)]
-                continue
-            except (ValueError, IndexError):
-                return (False, None)
-        return (False, None)
-    return (True, copy.deepcopy(current))
-
-
-def _selector_tokens(select: str | None) -> list[str]:
-    return [token.strip() for token in str(select or '').split(',') if token.strip()]
-
-
-def _available_selectors_for_payload(payload: Any, prefix: str = '') -> list[str]:
-    selectors: list[str] = []
-    if isinstance(payload, dict):
-        for key in sorted(str(item) for item in payload):
-            path = f'{prefix}.{key}' if prefix else key
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(payload.get(key), path))
-    elif isinstance(payload, list):
-        for index, item in enumerate(payload[:10]):
-            path = f'{prefix}.{index}' if prefix else str(index)
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(item, path))
-    return selectors
-
-
-def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str, selected_output_kind: str) -> dict[str, Any]:
-    values: dict[str, Any] = {}
-    missing: list[str] = []
-    for selector in _selector_tokens(select):
-        found, value = _field_by_path(payload, selector)
-        if found:
-            values[selector] = value
-        else:
-            missing.append(selector)
-    selected: dict[str, Any] = {'kind': selected_output_kind, 'source_command': source_command, 'values': values}
-    if missing:
-        selected['missing'] = missing
-        selected['selector_rule'] = 'Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.'
-        selected['available_selectors'] = _available_selectors_for_payload(payload)
-    return selected
-
-
-def _selector_refs(*, command: str, answer: Any, compact_profile_ref: str = '') -> list[str]:
-    refs = [ref for ref in (compact_profile_ref, command) if ref]
-    if isinstance(answer, dict):
-        for key in ('canonical_doc', 'command', 'path', 'surface', 'ledger_path'):
-            value = answer.get(key)
-            if isinstance(value, str) and value not in refs:
-                refs.append(value)
-    return refs
-
-
-def _compact_contract_answer(*, surface: str, selector: dict[str, Any], answer: Any, refs: list[str]) -> dict[str, Any]:
-    return {'profile': 'compact-contract-answer/v1', 'surface': surface, 'selector': selector, 'matched': True, 'answer': answer, 'refs': refs}
-
-
-def _select_section(payload: dict[str, Any], *, section: str, source_command: str, command_ref: str, compact_profile_ref: str) -> dict[str, Any]:
-    normalized = section.strip()
-    if normalized not in payload:
-        supported = ', '.join(sorted(str(key) for key in payload))
-        raise ValueError(f'{source_command} --section must match one of: {supported}.')
-    answer = payload[normalized]
-    return _compact_contract_answer(surface=source_command, selector={'section': normalized}, answer=answer, refs=_selector_refs(command=command_ref, answer=answer, compact_profile_ref=compact_profile_ref))
-
-
-def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[str], sectioned_payload_kind: str, section_detail_command: str, full_detail_command: str) -> dict[str, Any]:
-    return {
-        'kind': sectioned_payload_kind,
-        'profile': 'tiny',
-        'summary': 'Default-route contract sections are available on demand; request one section or full detail instead of loading the whole contract.',
-        'available_sections': sorted(str(key) for key in payload),
-        'common_sections': list(common_sections),
-        'detail_commands': {'section': section_detail_command, 'full': full_detail_command},
-    }
-
-
-def _emit_tiny_sectioned_text(payload: dict[str, Any]) -> str:
-    lines = [str(payload.get('summary', ''))]
-    common_sections = payload.get('common_sections', [])
-    if common_sections:
-        lines.append('Common sections:')
-        lines.extend(f'- {section}' for section in common_sections)
-    detail_commands = payload.get('detail_commands', {})
-    if isinstance(detail_commands, dict) and detail_commands:
-        lines.append('Detail commands:')
-        lines.extend(f'- {key}: {value}' for key, value in detail_commands.items())
-    return '\n'.join(lines) + '\n'
-
-
-def _emit_compact_answer_text(payload: dict[str, Any]) -> str:
-    lines = [
-        f"Profile: {payload.get('profile')}",
-        f"Surface: {payload.get('surface')}",
-        f"Selector: {json.dumps(payload.get('selector', {}), sort_keys=True)}",
-        f"Matched: {payload.get('matched')}",
-        'Answer:',
-        json.dumps(_serialise_value(payload.get('answer')), indent=2),
-    ]
-    refs = payload.get('refs', [])
-    if refs:
-        lines.append('Refs:')
-        lines.extend(f'- {ref}' for ref in refs)
-    return '\n'.join(lines) + '\n'
-
-
-def _emit_selected_output_text(payload: dict[str, Any]) -> str:
-    lines = [
-        f"Kind: {payload.get('kind')}",
-        f"Source command: {payload.get('source_command')}",
-        'Values:',
-        json.dumps(_serialise_value(payload.get('values', {})), indent=2),
-    ]
-    missing = payload.get('missing', [])
-    if missing:
-        lines.append('Missing:')
-        lines.extend(f'- {item}' for item in missing)
-    return '\n'.join(lines) + '\n'
-
-
-def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
-    recorded = payload.get('recorded', {})
-    lines = [
-        f"Kind: {payload.get('kind')}",
-        f"Path: {payload.get('path')}",
-        f"Record count: {payload.get('record_count')}",
-        f"Rule: {payload.get('rule')}",
-    ]
-    if isinstance(recorded, dict):
-        lines.append('Recorded:')
-        for key in ('recorded_at', 'delegation_target', 'task_class', 'outcome', 'handoff_sufficiency', 'review_burden', 'escalation_required'):
-            if key in recorded:
-                lines.append(f'- {key}: {recorded[key]}')
-    return '\n'.join(lines) + '\n'
-
-
-
-
-def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
-    result = values['result']
-    selected_output_kind = 'agentic-workspace/selected-output/v1'
-    sectioned_payload_kind = 'agentic-workspace/defaults-router/v1'
-    delegation_outcomes_kind = 'agentic-workspace/delegation-outcomes/v1'
-    if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
-        print(json.dumps(_serialise_value(values['result']), indent=2))
-        return None
-    if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1' or (result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny')):
-        from .primitive_executor import _emit_output
-
-        print(_emit_output(values=values, arguments=arguments), end='')
-        return None
-    if isinstance(result, dict) and result.get('kind') == sectioned_payload_kind:
-        print(_emit_tiny_sectioned_text(result), end='')
-        return None
-    if isinstance(result, dict) and result.get('profile') == 'compact-contract-answer/v1':
-        print(_emit_compact_answer_text(result), end='')
-        return None
-    if isinstance(result, dict) and result.get('kind') == selected_output_kind:
-        print(_emit_selected_output_text(result), end='')
-        return None
-    if delegation_outcomes_kind and isinstance(result, dict) and result.get('kind') == delegation_outcomes_kind:
-        print(_emit_delegation_outcomes_text(result), end='')
-        return None
-    from repo_memory_bootstrap.runtime_primitives import _emit_memory_operation_output as source_function
-
-    return source_function(values, arguments, context)
-
-
 def _load_memory_bootstrap_doctor(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_doctor as source_function
 
@@ -214,6 +24,12 @@ def _load_memory_bootstrap_doctor(*args: Any, **kwargs: Any) -> Any:
 
 def _load_memory_current(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_current as source_function
+
+    return source_function(*args, **kwargs)
+
+
+def _load_memory_promotion_report(*args: Any, **kwargs: Any) -> Any:
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_promotion_report as source_function
 
     return source_function(*args, **kwargs)
 
@@ -237,9 +53,9 @@ def _load_memory_route_report(*args: Any, **kwargs: Any) -> Any:
 
 
 __all__ = [
-    '_emit_memory_operation_output',
     '_load_memory_bootstrap_doctor',
     '_load_memory_current',
+    '_load_memory_promotion_report',
     '_load_memory_prompt',
     '_load_memory_report',
     '_load_memory_route_report',

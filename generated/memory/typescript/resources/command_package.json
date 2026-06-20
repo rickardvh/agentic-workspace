@@ -78,7 +78,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.status",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -174,7 +174,7 @@
           "path.target_root.resolve",
           "memory.payload.status",
           "memory.bootstrap.doctor.load",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -331,7 +331,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.install.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -488,7 +488,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.init.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -645,7 +645,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.adopt.apply",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -1602,7 +1602,7 @@
           "memory.current.load",
           "memory.payload.current-memory",
           "output.emit",
-          "memory.output.emit.current-memory"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2374,7 +2374,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.payload.verify",
-          "memory.output.emit.install-result"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -2639,7 +2639,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "0.2.10"
+      "version": "0.2.15"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {

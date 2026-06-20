@@ -64,7 +64,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result",
+      "uses": "output.emit",
       "description": "Emit Memory status as JSON or install-result text without package-runtime formatting."
     }
   ],
@@ -110,9 +110,11 @@
       },
       {
         "id": "emit_output",
-        "uses": "memory.output.emit.install-result",
+        "uses": "output.emit",
         "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "outputs": [
           "emitted"
         ],

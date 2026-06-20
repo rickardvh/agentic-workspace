@@ -62,14 +62,16 @@
         "uses": "memory.payload.verify"
       },
       {
-        "arguments": {},
+        "arguments": {
+          "text_style": "install-result"
+        },
         "description": "Emit memory payload verification result in the requested format.",
         "id": "emit_output",
         "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "uses": "memory.output.emit.install-result"
+        "uses": "output.emit"
       }
     ],
     "summary": "Memory verify-payload text and JSON execute generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy."
@@ -112,7 +114,7 @@
     {
       "description": "Emit memory payload verification result in the requested format.",
       "id": "emit_output",
-      "uses": "memory.output.emit.install-result"
+      "uses": "output.emit"
     }
   ],
   "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",

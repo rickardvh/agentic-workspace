@@ -70,7 +70,7 @@
     },
     {
       "id": "emit_current_show",
-      "uses": "memory.output.emit.current-memory",
+      "uses": "output.emit",
       "description": "Emit current show output from the generated current-memory payload."
     }
   ],
@@ -156,13 +156,15 @@
       },
       {
         "id": "emit_current_show",
-        "uses": "memory.output.emit.current-memory",
+        "uses": "output.emit",
         "description": "Emit current show output from the generated current-memory payload.",
         "when": {
           "value": "current_command",
           "equals": "show"
         },
-        "arguments": {},
+        "arguments": {
+          "text_style": "current-memory"
+        },
         "outputs": [
           "emitted"
         ],

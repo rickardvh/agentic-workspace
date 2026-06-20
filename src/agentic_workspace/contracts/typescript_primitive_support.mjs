@@ -699,8 +699,6 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   if (primitive === 'memory.payload.lifecycle-plan') return payloadLifecyclePlan(values, args);
   if (primitive === 'memory.payload.current-memory') return payloadCurrentMemory(values, args);
   if (primitive === 'memory.payload.verify') return verifyPayload(values, args);
-  if (primitive === 'memory.output.emit.install-result') return emitOutput(values, { text_style: 'install-result' });
-  if (primitive === 'memory.output.emit.current-memory') return emitOutput(values, { text_style: 'current-memory' });
   if (primitive === 'workspace.output.emit') return emitOutput(values, args);
   if (primitive === 'workspace.defaults.load') return loadJsonResource('_contracts/payload.json');
   if (primitive === 'workspace.defaults.select') return workspaceDefaultsSelect(values.defaults_payload, values);

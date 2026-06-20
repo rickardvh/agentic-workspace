@@ -341,7 +341,7 @@ def test_full_python_completion_rejects_weak_output_boundary_audit() -> None:
         """
         inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
         entry = next(
-            item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("source_symbol") == "_emit_memory_operation_output"
+            item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("source_symbol") == "_emit_workspace_operation_output"
         )
         entry["runtime_boundary_class"] = "mutation-orchestration"
         entry["why_not_generic_deterministic"] = "package output"

@@ -105,14 +105,16 @@
         }
       },
       {
-        "arguments": {},
+        "arguments": {
+          "text_style": "current-memory"
+        },
         "description": "Emit current show output from the generated current-memory payload.",
         "id": "emit_current_show",
         "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "uses": "memory.output.emit.current-memory",
+        "uses": "output.emit",
         "when": {
           "equals": "show",
           "value": "current_command"
@@ -165,7 +167,7 @@
     {
       "description": "Emit current show output from the generated current-memory payload.",
       "id": "emit_current_show",
-      "uses": "memory.output.emit.current-memory"
+      "uses": "output.emit"
     }
   ],
   "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show output is assembled from declared target-local files while current check behavior remains package-domain.",
