@@ -505,33 +505,663 @@
           },
           {
             "operation_id": "memory.front-door",
-            "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_memory_front_door_adapter"
+            "handler": "module_front_door",
+            "command_attr": "memory_command",
+            "module_import": "repo_memory_bootstrap.cli",
+            "module_main": "main",
+            "module_program": "agentic-memory",
+            "help_payload_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "help_payload_function": "_memory_help_payload",
+            "help_text_function": "_print_memory_help",
+            "missing_module_message": "The memory module must be installed to use memory subcommands.",
+            "stdout_replacements": [
+              {
+                "old": "agentic-memory ",
+                "new": "agentic-workspace memory "
+              }
+            ],
+            "positionals": [
+              {
+                "commands": [
+                  "capture-note",
+                  "create-note"
+                ],
+                "attr": "slug"
+              }
+            ],
+            "option_specs": [
+              {
+                "option": "--target",
+                "attr": "target"
+              },
+              {
+                "option": "--title",
+                "attr": "title"
+              },
+              {
+                "option": "--folder",
+                "attr": "folder"
+              },
+              {
+                "option": "--note-type",
+                "attr": "note_type"
+              },
+              {
+                "option": "--summary",
+                "attr": "summary"
+              },
+              {
+                "option": "--task",
+                "attr": "task"
+              },
+              {
+                "option": "--stage",
+                "attr": "stage"
+              },
+              {
+                "option": "--existing-note",
+                "attr": "existing_note"
+              },
+              {
+                "option": "--force-new-reason",
+                "attr": "force_new_reason"
+              },
+              {
+                "option": "--mode",
+                "attr": "mode"
+              },
+              {
+                "option": "--memory-role",
+                "attr": "memory_role"
+              },
+              {
+                "option": "--promotion-target",
+                "attr": "promotion_target"
+              },
+              {
+                "option": "--promotion-trigger",
+                "attr": "promotion_trigger"
+              },
+              {
+                "option": "--retention-after-promotion",
+                "attr": "retention_after_promotion"
+              },
+              {
+                "option": "--local-reason",
+                "attr": "local_reason"
+              },
+              {
+                "option": "--applies-to",
+                "attr": "applies_to",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--use-when",
+                "attr": "use_when",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--routes-from",
+                "attr": "routes_from",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--stale-when",
+                "attr": "stale_when",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--evidence",
+                "attr": "evidence",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--files",
+                "attr": "files",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--surface",
+                "attr": "surfaces",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--notes",
+                "attr": "notes",
+                "kind": "repeated_group"
+              },
+              {
+                "option": "--local",
+                "attr": "local",
+                "kind": "flag"
+              },
+              {
+                "option": "--dry-run",
+                "attr": "dry_run",
+                "kind": "flag"
+              },
+              {
+                "option": "--verbose",
+                "attr": "verbose",
+                "kind": "flag"
+              },
+              {
+                "option": "--format",
+                "attr": "format"
+              }
+            ]
           },
           {
             "operation_id": "modules.report",
+            "handler": "argparse_function_call",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_modules_report_adapter"
+            "function": "_emit_modules",
+            "support_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "result": "return_zero",
+            "arguments": [
+              {
+                "name": "format_name",
+                "kind": "attr",
+                "attr": "format"
+              },
+              {
+                "name": "target_root",
+                "kind": "target_root",
+                "attr": "target",
+                "default_current": false,
+                "allow_none": true,
+                "validate_command": "modules"
+              },
+              {
+                "name": "profile",
+                "kind": "diagnostic_profile",
+                "default": "tiny"
+              }
+            ]
           },
           {
             "operation_id": "ownership.report",
+            "handler": "argparse_function_call",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_ownership_report_adapter"
+            "function": "_emit_ownership",
+            "support_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "result": "return_zero",
+            "arguments": [
+              {
+                "name": "format_name",
+                "kind": "attr",
+                "attr": "format"
+              },
+              {
+                "name": "target_root",
+                "kind": "target_root",
+                "attr": "target",
+                "validate_command": "ownership"
+              },
+              {
+                "name": "descriptors",
+                "kind": "module_descriptors"
+              },
+              {
+                "name": "concern",
+                "kind": "attr",
+                "attr": "concern"
+              },
+              {
+                "name": "repo_path",
+                "kind": "attr",
+                "attr": "path"
+              }
+            ]
           },
           {
             "operation_id": "planning.front-door",
-            "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_planning_front_door_adapter"
+            "handler": "module_front_door",
+            "command_attr": "planning_command",
+            "module_import": "repo_planning_bootstrap.cli",
+            "module_main": "main",
+            "module_program": "agentic-planning",
+            "help_payload_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "help_payload_function": "_planning_help_payload",
+            "help_text_function": "_print_planning_help",
+            "missing_module_message": "The planning module must be installed to use planning subcommands.",
+            "stdout_replacements": [
+              {
+                "old": "agentic-planning reconcile ",
+                "new": "agentic-workspace reconcile "
+              },
+              {
+                "old": "agentic-planning summary ",
+                "new": "agentic-workspace summary "
+              },
+              {
+                "old": "agentic-planning doctor ",
+                "new": "agentic-workspace doctor "
+              },
+              {
+                "old": "agentic-planning ",
+                "new": "agentic-workspace planning "
+              },
+              {
+                "old": "agentic-memory ",
+                "new": "agentic-workspace memory "
+              }
+            ],
+            "local_command_handlers": [
+              {
+                "command": "decision-scaffold",
+                "import_module": "agentic_workspace.workspace_runtime_primitives",
+                "function": "_run_planning_decision_adapter"
+              },
+              {
+                "command": "decision-promote",
+                "import_module": "agentic_workspace.workspace_runtime_primitives",
+                "function": "_run_planning_decision_adapter"
+              }
+            ],
+            "positionals": [
+              {
+                "commands": [
+                  "promote-to-plan"
+                ],
+                "attr": "item_id"
+              },
+              {
+                "commands": [
+                  "lane-promote",
+                  "lane-activate",
+                  "lane-close",
+                  "lane-archive"
+                ],
+                "attr": "lane"
+              },
+              {
+                "commands": [
+                  "archive-plan",
+                  "closeout"
+                ],
+                "attr": "plan"
+              },
+              {
+                "commands": [
+                  "close-item"
+                ],
+                "attr": "item"
+              },
+              {
+                "commands": [
+                  "create-review"
+                ],
+                "attr": "slug"
+              }
+            ],
+            "option_specs": [
+              {
+                "option": "--id",
+                "attr": "id"
+              },
+              {
+                "option": "--title",
+                "attr": "title"
+              },
+              {
+                "option": "--source",
+                "attr": "source"
+              },
+              {
+                "option": "--artifact",
+                "attr": "artifact"
+              },
+              {
+                "option": "--target",
+                "attr": "target"
+              },
+              {
+                "option": "--plan-slug",
+                "attr": "plan_slug"
+              },
+              {
+                "option": "--scope",
+                "attr": "scope"
+              },
+              {
+                "option": "--classification",
+                "attr": "classification"
+              },
+              {
+                "option": "--route",
+                "attr": "route"
+              },
+              {
+                "option": "--current-slice",
+                "attr": "current_slice"
+              },
+              {
+                "option": "--proof",
+                "attr": "proof"
+              },
+              {
+                "option": "--residual-work",
+                "attr": "residual_work"
+              },
+              {
+                "option": "--parent-contribution",
+                "attr": "parent_contribution"
+              },
+              {
+                "option": "--parent-close-permission",
+                "attr": "parent_close_permission"
+              },
+              {
+                "option": "--next-owner",
+                "attr": "next_owner"
+              },
+              {
+                "option": "--skipped-reason",
+                "attr": "skipped_reason"
+              },
+              {
+                "option": "--expected-savings",
+                "attr": "expected_savings"
+              },
+              {
+                "option": "--actual-friction",
+                "attr": "actual_friction"
+              },
+              {
+                "option": "--proof-result",
+                "attr": "proof_result"
+              },
+              {
+                "option": "--quality-concern",
+                "attr": "quality_concern"
+              },
+              {
+                "option": "--decomposition-adjustment",
+                "attr": "decomposition_adjustment"
+              },
+              {
+                "option": "--reason",
+                "attr": "reason"
+              },
+              {
+                "option": "--issue",
+                "attr": "issue"
+              },
+              {
+                "option": "--parent-lane-closeout",
+                "attr": "parent_lane_closeout"
+              },
+              {
+                "option": "--closure-decision",
+                "attr": "closure_decision"
+              },
+              {
+                "option": "--intent-satisfied",
+                "attr": "intent_satisfied"
+              },
+              {
+                "option": "--unsolved-intent",
+                "attr": "unsolved_intent"
+              },
+              {
+                "option": "--intent-evidence",
+                "attr": "intent_evidence"
+              },
+              {
+                "option": "--closure-reason",
+                "attr": "closure_reason"
+              },
+              {
+                "option": "--closure-evidence",
+                "attr": "closure_evidence"
+              },
+              {
+                "option": "--reopen-trigger",
+                "attr": "reopen_trigger"
+              },
+              {
+                "option": "--discard-summary",
+                "attr": "discard_summary"
+              },
+              {
+                "option": "--continuation-summary",
+                "attr": "continuation_summary"
+              },
+              {
+                "option": "--claim-level",
+                "attr": "claim_level"
+              },
+              {
+                "option": "--intent-status",
+                "attr": "intent_status"
+              },
+              {
+                "option": "--residue",
+                "attr": "residue"
+              },
+              {
+                "option": "--proof-from",
+                "attr": "proof_from"
+              },
+              {
+                "option": "--residue-owner",
+                "attr": "residue_owner"
+              },
+              {
+                "option": "--what-happened",
+                "attr": "what_happened"
+              },
+              {
+                "option": "--scope-touched",
+                "attr": "scope_touched"
+              },
+              {
+                "option": "--changed-surfaces",
+                "attr": "changed_surfaces"
+              },
+              {
+                "option": "--review-summary",
+                "attr": "review_summary"
+              },
+              {
+                "option": "--outcome-summary",
+                "attr": "outcome_summary"
+              },
+              {
+                "option": "--expect-planning-revision",
+                "attr": "expect_planning_revision"
+              },
+              {
+                "option": "--activate",
+                "attr": "activate",
+                "kind": "flag"
+              },
+              {
+                "option": "--queue",
+                "attr": "queue",
+                "kind": "flag"
+              },
+              {
+                "option": "--switch-active",
+                "attr": "switch_active",
+                "kind": "flag"
+              },
+              {
+                "option": "--prep-only",
+                "attr": "prep_only",
+                "kind": "flag"
+              },
+              {
+                "option": "--overwrite",
+                "attr": "overwrite",
+                "kind": "flag"
+              },
+              {
+                "option": "--remove-source",
+                "attr": "remove_source",
+                "kind": "flag"
+              },
+              {
+                "option": "--dry-run",
+                "attr": "dry_run",
+                "kind": "flag"
+              },
+              {
+                "option": "--render-markdown",
+                "attr": "render_markdown",
+                "kind": "flag"
+              },
+              {
+                "option": "--apply-cleanup",
+                "attr": "apply_cleanup",
+                "kind": "flag"
+              },
+              {
+                "option": "--prepare-closeout",
+                "attr": "prepare_closeout",
+                "kind": "flag"
+              },
+              {
+                "option": "--retain-archive",
+                "attr": "retain_archive",
+                "kind": "flag"
+              },
+              {
+                "option": "--discard-archive",
+                "attr": "discard_archive",
+                "kind": "flag"
+              },
+              {
+                "option": "--verbose",
+                "attr": "verbose",
+                "kind": "flag"
+              },
+              {
+                "option": "--path",
+                "attr": "paths",
+                "fallback_attr": "path",
+                "kind": "repeated"
+              },
+              {
+                "option": "--format",
+                "attr": "format"
+              }
+            ]
           },
           {
             "operation_id": "preflight.report",
+            "handler": "argparse_function_call",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_preflight_report_adapter"
+            "function": "_run_preflight_command",
+            "support_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "result": "emit_payload",
+            "emit_payload": {
+              "import_module": "agentic_workspace.workspace_runtime_primitives",
+              "function": "_emit_payload",
+              "format_attr": "format"
+            },
+            "arguments": [
+              {
+                "name": "target_root",
+                "kind": "target_root",
+                "attr": "target",
+                "validate_command": "preflight"
+              },
+              {
+                "name": "active_only",
+                "kind": "bool_attr",
+                "attr": "active_only"
+              },
+              {
+                "name": "task_text",
+                "kind": "attr",
+                "attr": "task"
+              },
+              {
+                "name": "profile",
+                "kind": "diagnostic_profile",
+                "default": "tiny"
+              }
+            ]
           },
           {
             "operation_id": "proof.report",
+            "handler": "argparse_function_call",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_proof_report_adapter"
+            "function": "_emit_proof",
+            "support_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "result": "return_zero",
+            "arguments": [
+              {
+                "name": "format_name",
+                "kind": "attr",
+                "attr": "format"
+              },
+              {
+                "name": "target_root",
+                "kind": "target_root",
+                "attr": "target",
+                "validate_command": "proof"
+              },
+              {
+                "name": "descriptors",
+                "kind": "module_descriptors"
+              },
+              {
+                "name": "route",
+                "kind": "attr",
+                "attr": "route"
+              },
+              {
+                "name": "current_only",
+                "kind": "bool_attr",
+                "attr": "current"
+              },
+              {
+                "name": "changed_paths",
+                "kind": "list_attr",
+                "attr": "changed"
+              },
+              {
+                "name": "profile",
+                "kind": "diagnostic_profile",
+                "default": "tiny"
+              },
+              {
+                "name": "select",
+                "kind": "attr",
+                "attr": "select"
+              },
+              {
+                "name": "record_receipt",
+                "kind": "bool_attr",
+                "attr": "record_receipt"
+              },
+              {
+                "name": "receipt_command",
+                "kind": "attr",
+                "attr": "receipt_command",
+                "default": ""
+              },
+              {
+                "name": "receipt_result",
+                "kind": "attr",
+                "attr": "receipt_result",
+                "default": ""
+              },
+              {
+                "name": "receipt_plan",
+                "kind": "attr",
+                "attr": "receipt_plan",
+                "default": ""
+              },
+              {
+                "name": "dry_run",
+                "kind": "bool_attr",
+                "attr": "dry_run"
+              }
+            ]
           },
           {
             "operation_id": "reconcile.report",
@@ -550,8 +1180,36 @@
           },
           {
             "operation_id": "skills.report",
+            "handler": "argparse_function_call",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
-            "function": "_run_skills_report_adapter"
+            "function": "_emit_skills",
+            "support_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "result": "return_zero",
+            "arguments": [
+              {
+                "name": "format_name",
+                "kind": "attr",
+                "attr": "format"
+              },
+              {
+                "name": "target_root",
+                "kind": "target_root",
+                "attr": "target",
+                "default_current": false,
+                "allow_none": true,
+                "validate_command": "skills"
+              },
+              {
+                "name": "task_text",
+                "kind": "attr",
+                "attr": "task"
+              },
+              {
+                "name": "select",
+                "kind": "attr",
+                "attr": "select"
+              }
+            ]
           },
           {
             "operation_id": "start.context",

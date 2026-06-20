@@ -295,42 +295,6 @@ def _run_lifecycle_report_adapter(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _run_memory_front_door_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_memory_front_door_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_modules_report_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_modules_report_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_ownership_report_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_ownership_report_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_planning_front_door_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_planning_front_door_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_preflight_report_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_preflight_report_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_proof_report_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_proof_report_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def _run_reconcile_report_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _run_reconcile_report_adapter as source_function
 
@@ -345,12 +309,6 @@ def _run_report_combined_adapter(*args: Any, **kwargs: Any) -> Any:
 
 def _run_setup_guidance_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _run_setup_guidance_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
-def _run_skills_report_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_skills_report_adapter as source_function
 
     return source_function(*args, **kwargs)
 
@@ -402,16 +360,9 @@ __all__ = [
     '_run_init_lifecycle_adapter',
     '_run_lifecycle_mutation_adapter',
     '_run_lifecycle_report_adapter',
-    '_run_memory_front_door_adapter',
-    '_run_modules_report_adapter',
-    '_run_ownership_report_adapter',
-    '_run_planning_front_door_adapter',
-    '_run_preflight_report_adapter',
-    '_run_proof_report_adapter',
     '_run_reconcile_report_adapter',
     '_run_report_combined_adapter',
     '_run_setup_guidance_adapter',
-    '_run_skills_report_adapter',
     '_run_start_context_adapter',
     '_run_summary_report_adapter',
     '_select_workspace_operation_defaults',

@@ -20,9 +20,27 @@ from collections.abc import Mapping
 
 
 def run(args: argparse.Namespace) -> int:
-    from ..primitives.workspace_runtime import _run_proof_report_adapter
-
-    return _run_proof_report_adapter(args)
+    from agentic_workspace.workspace_runtime_primitives import _diagnostic_profile, _module_operations, _resolve_target_root, _validate_descriptor_contract, _validate_target_root
+    _arg_0_format_name = getattr(args, 'format', None)
+    _arg_1_target_root = _resolve_target_root(getattr(args, 'target', None))
+    if _arg_1_target_root is None:
+        raise ValueError('target root resolution returned None')
+    _validate_target_root(command_name='proof', target_root=_arg_1_target_root)
+    _arg_2_descriptors = _module_operations()
+    _validate_descriptor_contract(_arg_2_descriptors)
+    _arg_3_route = getattr(args, 'route', None)
+    _arg_4_current_only = bool(getattr(args, 'current', False))
+    _arg_5_changed_paths = list(getattr(args, 'changed', []) or [])
+    _arg_6_profile = _diagnostic_profile(args, default='tiny')
+    _arg_7_select = getattr(args, 'select', None)
+    _arg_8_record_receipt = bool(getattr(args, 'record_receipt', False))
+    _arg_9_receipt_command = getattr(args, 'receipt_command', '')
+    _arg_10_receipt_result = getattr(args, 'receipt_result', '')
+    _arg_11_receipt_plan = getattr(args, 'receipt_plan', '')
+    _arg_12_dry_run = bool(getattr(args, 'dry_run', False))
+    from agentic_workspace.workspace_runtime_primitives import _emit_proof
+    _emit_proof(format_name=_arg_0_format_name, target_root=_arg_1_target_root, descriptors=_arg_2_descriptors, route=_arg_3_route, current_only=_arg_4_current_only, changed_paths=_arg_5_changed_paths, profile=_arg_6_profile, select=_arg_7_select, record_receipt=_arg_8_record_receipt, receipt_command=_arg_9_receipt_command, receipt_result=_arg_10_receipt_result, receipt_plan=_arg_11_receipt_plan, dry_run=_arg_12_dry_run)
+    return 0
 
 
 def invoke(_values: Mapping[str, Any]) -> object:

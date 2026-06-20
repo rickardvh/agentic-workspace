@@ -140,22 +140,17 @@ def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
 
 
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
-    import agentic_workspace.workspace_runtime_primitives as runtime
-
     forwarded: list[list[str]] = []
 
-    class FakePlanningModule:
-        @staticmethod
-        def main(argv: list[str]) -> int:
-            forwarded.append(argv)
-            print(json.dumps({"argv": argv}))
-            return 0
+    def fake_planning_main(argv: list[str]) -> int:
+        forwarded.append(argv)
+        print(json.dumps({"argv": argv}))
+        return 0
 
     def option_value(argv: list[str], option: str) -> str:
         return argv[argv.index(option) + 1]
 
-    loader_name = "_load_" + "generated_cli_" + "module"
-    monkeypatch.setattr(runtime, loader_name, lambda module: FakePlanningModule)
+    monkeypatch.setattr("repo_planning_bootstrap.cli.main", fake_planning_main)
 
     assert (
         cli.main(

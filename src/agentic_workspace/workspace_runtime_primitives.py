@@ -8,14 +8,12 @@ from __future__ import annotations
 
 import argparse
 import ast
-import contextlib
 import copy
 import difflib
 import fnmatch
 import hashlib
 import importlib
 import importlib.metadata
-import io
 import json
 import os
 import re
@@ -3347,197 +3345,6 @@ def _print_memory_help(payload: dict[str, Any]) -> None:
     print("Rules:")
     for rule in payload["rules"]:
         print(f"- {rule}")
-
-
-def _append_option(argv: list[str], name: str, value: Any) -> None:
-    if value is not None and value != "" and (value != []):
-        argv.extend([name, str(value)])
-
-
-def _append_repeated_option(argv: list[str], name: str, values: Any) -> None:
-    if isinstance(values, list) and values:
-        argv.append(name)
-        argv.extend((str(value) for value in values))
-
-
-def _append_flag(argv: list[str], name: str, enabled: bool) -> None:
-    if enabled:
-        argv.append(name)
-
-
-def _planning_module_argv(args: argparse.Namespace) -> list[str]:
-    command = str(args.planning_command)
-    argv = [command]
-    if command == "promote-to-plan":
-        argv.append(str(args.item_id))
-    elif command in {"lane-promote", "lane-activate", "lane-close", "lane-archive"} and getattr(args, "lane", None):
-        argv.append(str(args.lane))
-    elif command in {"archive-plan", "closeout"} and getattr(args, "plan", None):
-        argv.append(str(args.plan))
-    elif command == "close-item" and getattr(args, "item", None):
-        argv.append(str(args.item))
-    elif command == "create-review" and getattr(args, "slug", None):
-        argv.append(str(args.slug))
-    for option, attr in (
-        ("--id", "id"),
-        ("--title", "title"),
-        ("--source", "source"),
-        ("--artifact", "artifact"),
-        ("--target", "target"),
-        ("--plan-slug", "plan_slug"),
-        ("--scope", "scope"),
-        ("--classification", "classification"),
-        ("--route", "route"),
-        ("--current-slice", "current_slice"),
-        ("--proof", "proof"),
-        ("--residual-work", "residual_work"),
-        ("--parent-contribution", "parent_contribution"),
-        ("--parent-close-permission", "parent_close_permission"),
-        ("--next-owner", "next_owner"),
-        ("--skipped-reason", "skipped_reason"),
-        ("--expected-savings", "expected_savings"),
-        ("--actual-friction", "actual_friction"),
-        ("--proof-result", "proof_result"),
-        ("--quality-concern", "quality_concern"),
-        ("--decomposition-adjustment", "decomposition_adjustment"),
-        ("--reason", "reason"),
-        ("--issue", "issue"),
-        ("--parent-lane-closeout", "parent_lane_closeout"),
-        ("--closure-decision", "closure_decision"),
-        ("--intent-satisfied", "intent_satisfied"),
-        ("--unsolved-intent", "unsolved_intent"),
-        ("--intent-evidence", "intent_evidence"),
-        ("--closure-reason", "closure_reason"),
-        ("--closure-evidence", "closure_evidence"),
-        ("--reopen-trigger", "reopen_trigger"),
-        ("--discard-summary", "discard_summary"),
-        ("--continuation-summary", "continuation_summary"),
-        ("--claim-level", "claim_level"),
-        ("--intent-status", "intent_status"),
-        ("--residue", "residue"),
-        ("--proof-from", "proof_from"),
-        ("--residue-owner", "residue_owner"),
-        ("--what-happened", "what_happened"),
-        ("--scope-touched", "scope_touched"),
-        ("--changed-surfaces", "changed_surfaces"),
-        ("--review-summary", "review_summary"),
-        ("--outcome-summary", "outcome_summary"),
-        ("--expect-planning-revision", "expect_planning_revision"),
-    ):
-        _append_option(argv, option, getattr(args, attr, None))
-    if command == "delegation-decision":
-        _append_option(argv, "--plan", getattr(args, "plan", None))
-    for option, attr in (
-        ("--activate", "activate"),
-        ("--queue", "queue"),
-        ("--switch-active", "switch_active"),
-        ("--prep-only", "prep_only"),
-        ("--overwrite", "overwrite"),
-        ("--remove-source", "remove_source"),
-        ("--dry-run", "dry_run"),
-        ("--render-markdown", "render_markdown"),
-        ("--apply-cleanup", "apply_cleanup"),
-        ("--prepare-closeout", "prepare_closeout"),
-        ("--retain-archive", "retain_archive"),
-        ("--discard-archive", "discard_archive"),
-        ("--verbose", "verbose"),
-    ):
-        _append_flag(argv, option, bool(getattr(args, attr, False)))
-    path_values = getattr(args, "paths", None) or getattr(args, "path", None) or []
-    if isinstance(path_values, str):
-        path_values = [path_values]
-    for path in path_values:
-        _append_option(argv, "--path", path)
-    _append_option(argv, "--format", getattr(args, "format", None))
-    return argv
-
-
-def _memory_module_argv(args: argparse.Namespace) -> list[str]:
-    command = str(args.memory_command)
-    argv = [command]
-    if command in {"capture-note", "create-note"} and getattr(args, "slug", None):
-        argv.append(str(args.slug))
-    for option, attr in (
-        ("--target", "target"),
-        ("--title", "title"),
-        ("--folder", "folder"),
-        ("--note-type", "note_type"),
-        ("--summary", "summary"),
-        ("--task", "task"),
-        ("--stage", "stage"),
-        ("--existing-note", "existing_note"),
-        ("--force-new-reason", "force_new_reason"),
-        ("--mode", "mode"),
-        ("--memory-role", "memory_role"),
-        ("--promotion-target", "promotion_target"),
-        ("--promotion-trigger", "promotion_trigger"),
-        ("--retention-after-promotion", "retention_after_promotion"),
-        ("--local-reason", "local_reason"),
-    ):
-        _append_option(argv, option, getattr(args, attr, None))
-    _append_repeated_option(argv, "--applies-to", getattr(args, "applies_to", None))
-    _append_repeated_option(argv, "--use-when", getattr(args, "use_when", None))
-    _append_repeated_option(argv, "--routes-from", getattr(args, "routes_from", None))
-    _append_repeated_option(argv, "--stale-when", getattr(args, "stale_when", None))
-    _append_repeated_option(argv, "--evidence", getattr(args, "evidence", None))
-    _append_repeated_option(argv, "--files", getattr(args, "files", None))
-    _append_repeated_option(argv, "--surface", getattr(args, "surfaces", None))
-    _append_repeated_option(argv, "--notes", getattr(args, "notes", None))
-    _append_flag(argv, "--local", bool(getattr(args, "local", False)))
-    _append_flag(argv, "--dry-run", bool(getattr(args, "dry_run", False)))
-    _append_flag(argv, "--verbose", bool(getattr(args, "verbose", False)))
-    _append_option(argv, "--format", getattr(args, "format", None))
-    return argv
-
-
-def _run_planning_front_door(args: argparse.Namespace) -> int:
-    planning_main = _load_generated_cli_module("agentic-planning").main
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        result = planning_main(_planning_module_argv(args))
-    print(_rewrite_module_cli_commands(buffer.getvalue()), end="")
-    return result
-
-
-def _run_memory_front_door(args: argparse.Namespace) -> int:
-    memory_main = _load_generated_cli_module("agentic-memory").main
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        result = memory_main(_memory_module_argv(args))
-    print(buffer.getvalue().replace("agentic-memory ", "agentic-workspace memory "), end="")
-    return result
-
-
-def _run_planning_front_door_adapter(args: argparse.Namespace) -> int:
-    if not getattr(args, "planning_command", None):
-        payload = _planning_help_payload(target=getattr(args, "target", None))
-        if getattr(args, "format", None) == "json":
-            print(json.dumps(payload, indent=2))
-        else:
-            _print_planning_help(payload)
-        return 0
-    if getattr(args, "planning_command", None) in {"decision-scaffold", "decision-promote"}:
-        return _run_planning_decision_adapter(args)
-    try:
-        return _run_planning_front_door(args)
-    except ImportError:
-        build_generated_parser().error("The planning module must be installed to use planning subcommands.")
-        return 2
-
-
-def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
-    if not getattr(args, "memory_command", None):
-        payload = _memory_help_payload(target=getattr(args, "target", None))
-        if getattr(args, "format", None) == "json":
-            print(json.dumps(payload, indent=2))
-        else:
-            _print_memory_help(payload)
-        return 0
-    try:
-        return _run_memory_front_door(args)
-    except ImportError:
-        build_generated_parser().error("The memory module must be installed to use memory subcommands.")
-        return 2
 
 
 def _print_planning_help(payload: dict[str, Any]) -> None:
@@ -34250,14 +34057,6 @@ def _emit_proof(
             print(f"- {item}")
 
 
-def _run_modules_report_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else None
-    if target_root is not None:
-        _validate_target_root(command_name="modules", target_root=target_root)
-    _emit_modules(format_name=args.format, target_root=target_root, profile=_diagnostic_profile(args, default="tiny"))
-    return 0
-
-
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
@@ -34474,67 +34273,6 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
-    return 0
-
-
-def _run_preflight_report_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="preflight", target_root=target_root)
-    payload = _run_preflight_command(
-        target_root=target_root,
-        active_only=bool(getattr(args, "active_only", False)),
-        task_text=getattr(args, "task", None),
-        profile=_diagnostic_profile(args, default="tiny"),
-    )
-    _emit_payload(payload=payload, format_name=args.format)
-    return 0
-
-
-def _run_proof_report_adapter(args: argparse.Namespace) -> int:
-    descriptors = _module_operations()
-    _validate_descriptor_contract(descriptors)
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="proof", target_root=target_root)
-    _emit_proof(
-        format_name=args.format,
-        target_root=target_root,
-        descriptors=descriptors,
-        route=getattr(args, "route", None),
-        current_only=bool(getattr(args, "current", False)),
-        changed_paths=list(getattr(args, "changed", []) or []),
-        profile=_diagnostic_profile(args, default="tiny"),
-        select=getattr(args, "select", None),
-        record_receipt=bool(getattr(args, "record_receipt", False)),
-        receipt_command=str(getattr(args, "receipt_command", "") or ""),
-        receipt_result=str(getattr(args, "receipt_result", "") or ""),
-        receipt_plan=str(getattr(args, "receipt_plan", "") or ""),
-        dry_run=bool(getattr(args, "dry_run", False)),
-    )
-    return 0
-
-
-def _run_ownership_report_adapter(args: argparse.Namespace) -> int:
-    descriptors = _module_operations()
-    _validate_descriptor_contract(descriptors)
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="ownership", target_root=target_root)
-    _emit_ownership(
-        format_name=args.format,
-        target_root=target_root,
-        descriptors=descriptors,
-        concern=getattr(args, "concern", None),
-        repo_path=getattr(args, "path", None),
-    )
-    return 0
-
-
-def _run_skills_report_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else None
-    if target_root is not None:
-        _validate_target_root(command_name="skills", target_root=target_root)
-    _emit_skills(
-        format_name=args.format, target_root=target_root, task_text=getattr(args, "task", None), select=getattr(args, "select", None)
-    )
     return 0
 
 

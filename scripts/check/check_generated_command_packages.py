@@ -120,6 +120,7 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {
     "portable-codegen-primitive-executed",
+    "generated-runtime-handler",
     "domain-runtime-primitive-via-ir",
     "accepted-hand-owned-runtime-primitive",
 }
@@ -1575,7 +1576,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             "source is still present and must be proven permanent or retired: "
             f"{existing_runtime_source!r}"
         )
-    runtime_imports = _generated_command_module_package_runtime_imports()
+    runtime_imports = _generated_command_module_package_runtime_imports(ir)
     if runtime_imports:
         errors.append(
             "command_package_ir.json cannot claim full Python generated CLI completion while generated command modules "
@@ -1617,7 +1618,36 @@ def _generated_runtime_facade_package_runtime_imports() -> list[str]:
     return findings
 
 
-def _generated_command_module_package_runtime_imports() -> list[str]:
+def _module_name_for_operation(operation_id: str) -> str:
+    return re.sub(r"[^0-9A-Za-z]+", "_", operation_id).strip("_")
+
+
+def _generated_runtime_handler_command_module_paths(ir: dict[str, object]) -> set[str]:
+    paths: set[str] = set()
+    package_roots = {
+        "root-workspace": "workspace",
+        "planning-bootstrap": "planning",
+        "memory-bootstrap": "memory",
+        "verification-cli": "verification",
+    }
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id") or "")
+        generated_root = package_roots.get(package_id)
+        binding = package.get("python_runtime_binding", {})
+        if not generated_root or not isinstance(binding, dict):
+            continue
+        for handler in binding.get("runtime_module_handlers", []):
+            if not isinstance(handler, dict) or handler.get("handler") not in {"module_front_door", "argparse_function_call"}:
+                continue
+            operation_id = str(handler.get("operation_id") or "")
+            if operation_id:
+                paths.add(f"generated/{generated_root}/python/commands/{_module_name_for_operation(operation_id)}.py")
+    return paths
+
+
+def _generated_command_module_package_runtime_imports(ir: dict[str, object]) -> list[str]:
     forbidden_imports = (
         "from agentic_workspace.workspace_runtime_primitives import",
         "from repo_planning_bootstrap.runtime_projection import",
@@ -1625,6 +1655,7 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
         "from repo_planning_bootstrap.installer import",
         "from repo_memory_bootstrap.installer import",
     )
+    allowed_generated_runtime_handler_paths = _generated_runtime_handler_command_module_paths(ir)
     findings: list[str] = []
     for commands_dir in (
         REPO_ROOT / "generated" / "workspace" / "python" / "commands",
@@ -1634,9 +1665,12 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
         if not commands_dir.is_dir():
             continue
         for path in sorted(commands_dir.glob("*.py")):
+            relative_path = path.relative_to(REPO_ROOT).as_posix()
+            if relative_path in allowed_generated_runtime_handler_paths:
+                continue
             text = path.read_text(encoding="utf-8")
             if any(import_text in text for import_text in forbidden_imports):
-                findings.append(path.relative_to(REPO_ROOT).as_posix())
+                findings.append(relative_path)
     return findings
 
 

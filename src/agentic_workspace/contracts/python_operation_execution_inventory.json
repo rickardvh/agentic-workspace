@@ -4,6 +4,7 @@
   "status_meanings": {
     "portable-codegen-primitive-executed": "Generated Python command loads a generated operation artifact whose steps are implemented by codegen-owned portable primitives only.",
     "domain-runtime-primitive-via-ir": "Generated Python command loads a generated operation artifact and executes it through codegen-owned dataflow, but one or more steps are package-domain runtime primitives rather than portable codegen primitives.",
+    "generated-runtime-handler": "Generated Python command executes a command-generation rendered runtime handler from declarative metadata without an AW-owned _run_* adapter, while delegated package CLIs retain their own command semantics.",
     "accepted-hand-owned-runtime-primitive": "Generated Python parser/dispatch/interface metadata selects an operation id, then a thin _run_*_adapter delegates to hand-owned package runtime primitives. Each accepted entry must declare runtime_boundary_class and runtime_boundary_reason so full completion can distinguish package-specific judgment/live inspection/mutation orchestration from generic deterministic runtime debt.",
     "compatibility-runtime-handler": "Temporary unaccepted fallback status; full Python completion must reject this status.",
     "runtime_boundary_class": "Classifies accepted hand-owned runtime entries as package-specific-judgment, live-workspace-inspection, mutation-orchestration, front-door-dispatch, provider-integration, or generic-deterministic-runtime-debt. generic-deterministic-runtime-debt blocks full-generated-cli-complete."
@@ -429,18 +430,16 @@
       "command": "memory",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/memory.front-door.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/module_front_door",
       "hand_owned_runtime_code": [
-        "memory.front_door.dispatch",
-        "module generated CLI fallback",
-        "output emission mechanics"
+        "none; command-generation renders module_front_door help, delegation argv, stdout rewrite, and missing-module handling from command_package_ir.json"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "memory.front-door.process",
-      "runtime_boundary_class": "front-door-dispatch",
-      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "generated_handler": "module_front_door",
+      "handler_contract_owner": "command-generation",
+      "delegated_runtime_owner": "agentic-memory CLI",
+      "generic_behavior_audit": "Command-generation owns the front-door adapter mechanics from declarative metadata; the delegated Memory CLI owns package command semantics."
     },
     {
       "operation_id": "memory.list-files.report",
@@ -703,18 +702,22 @@
       "command": "modules",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/modules.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/argparse_function_call",
       "hand_owned_runtime_code": [
         "workspace.target-root.resolve",
         "workspace.modules.inspect",
         "output emission mechanics"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "modules.report.process",
-      "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Module inspection detects installed module state and descriptors in the target repository.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse argument mapping, target/profile setup, and command-level dispatch from declarative runtime_module_handlers metadata; AW runtime primitives retain package-specific payload and emission semantics.",
+      "what_would_make_portable_later": "Already generated at the command handler level; remaining imported runtime functions are explicit package-domain payload or emitter primitives.",
+      "generic_behavior_audit": "Command-generation owns the deterministic adapter mechanics from declarative metadata; AW-owned runtime functions own semantic payload construction, validation policy, live inspection, or output policy as named imports.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:modules.report"
+      ]
     },
     {
       "operation_id": "ownership.report",
@@ -722,18 +725,22 @@
       "command": "ownership",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/ownership.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/argparse_function_call",
       "hand_owned_runtime_code": [
         "workspace.target-root.resolve",
         "ownership.answer.resolve",
         "output emission mechanics"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "ownership.report.process",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Ownership answers apply package-specific ownership policy and route resolution.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse argument mapping, target/profile setup, and command-level dispatch from declarative runtime_module_handlers metadata; AW runtime primitives retain package-specific payload and emission semantics.",
+      "what_would_make_portable_later": "Already generated at the command handler level; remaining imported runtime functions are explicit package-domain payload or emitter primitives.",
+      "generic_behavior_audit": "Command-generation owns the deterministic adapter mechanics from declarative metadata; AW-owned runtime functions own semantic payload construction, validation policy, live inspection, or output policy as named imports.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:ownership.report"
+      ]
     },
     {
       "operation_id": "planning.adopt.lifecycle",
@@ -888,18 +895,16 @@
       "command": "planning",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/planning.front-door.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/module_front_door",
       "hand_owned_runtime_code": [
-        "planning.front_door.dispatch",
-        "module generated CLI fallback",
-        "output emission mechanics"
+        "none; command-generation renders module_front_door help, delegation argv, stdout rewrite, local override routing, and missing-module handling from command_package_ir.json"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "planning.front-door.process",
-      "runtime_boundary_class": "front-door-dispatch",
-      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "generated_handler": "module_front_door",
+      "handler_contract_owner": "command-generation",
+      "delegated_runtime_owner": "agentic-planning CLI",
+      "generic_behavior_audit": "Command-generation owns the front-door adapter mechanics from declarative metadata; the delegated Planning CLI owns package command semantics."
     },
     {
       "operation_id": "planning.handoff.report",
@@ -1319,7 +1324,7 @@
       "command": "preflight",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/preflight.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/argparse_function_call",
       "hand_owned_runtime_code": [
         "workspace.target-root.resolve",
         "workspace.defaults.load",
@@ -1329,12 +1334,16 @@
         "preflight.context.assemble",
         "output emission mechanics"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "preflight.report.process",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Preflight context assembly applies package startup, planning, proof, and token policy.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse argument mapping, target/profile setup, and command-level dispatch from declarative runtime_module_handlers metadata; AW runtime primitives retain package-specific payload and emission semantics.",
+      "what_would_make_portable_later": "Already generated at the command handler level; remaining imported runtime functions are explicit package-domain payload or emitter primitives.",
+      "generic_behavior_audit": "Command-generation owns the deterministic adapter mechanics from declarative metadata; AW-owned runtime functions own semantic payload construction, validation policy, live inspection, or output policy as named imports.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:preflight.report"
+      ]
     },
     {
       "operation_id": "prompt.init",
@@ -1411,7 +1420,7 @@
       "command": "proof",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/proof.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/argparse_function_call",
       "hand_owned_runtime_code": [
         "workspace.target-root.resolve",
         "proof.routes.resolve",
@@ -1420,12 +1429,16 @@
         "output.fields.select",
         "output emission mechanics"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "proof.report.process",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Proof route selection applies package-specific proof policy, changed-path routing, and durable-surface review.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse argument mapping, target/profile setup, and command-level dispatch from declarative runtime_module_handlers metadata; AW runtime primitives retain package-specific payload and emission semantics.",
+      "what_would_make_portable_later": "Already generated at the command handler level; remaining imported runtime functions are explicit package-domain payload or emitter primitives.",
+      "generic_behavior_audit": "Command-generation owns the deterministic adapter mechanics from declarative metadata; AW-owned runtime functions own semantic payload construction, validation policy, live inspection, or output policy as named imports.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:proof.report"
+      ]
     },
     {
       "operation_id": "reconcile.report",
@@ -1495,19 +1508,23 @@
       "command": "skills",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/skills.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "command_generation/argparse_function_call",
       "hand_owned_runtime_code": [
         "workspace.target-root.resolve",
         "skills.registry.inspect",
         "output.fields.select",
         "output emission mechanics"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
+      "status": "generated-runtime-handler",
       "conformance_ref": "skills.report.process",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Skill recommendation and ranking applies package-specific registry and task-routing policy.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse argument mapping, target/profile setup, and command-level dispatch from declarative runtime_module_handlers metadata; AW runtime primitives retain package-specific payload and emission semantics.",
+      "what_would_make_portable_later": "Already generated at the command handler level; remaining imported runtime functions are explicit package-domain payload or emitter primitives.",
+      "generic_behavior_audit": "Command-generation owns the deterministic adapter mechanics from declarative metadata; AW-owned runtime functions own semantic payload construction, validation policy, live inspection, or output policy as named imports.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:skills.report"
+      ]
     },
     {
       "operation_id": "start.context",
@@ -1664,5 +1681,5 @@
       "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     }
   ],
-  "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
+  "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, generated-runtime-handler, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
 }
