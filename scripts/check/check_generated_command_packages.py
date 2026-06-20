@@ -198,6 +198,16 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "payload.assemble",
     "output.emit",
 }
+AW_PRIMITIVE_OWNERSHIP_KIND = "agentic-workspace/aw-primitive-ownership/v1"
+AW_OWNED_PRIMITIVE_REPLACEMENTS = {
+    "workspace.root.resolve": "workspace.target-root.resolve",
+    "payload.status": "memory.payload.status",
+    "payload.lifecycle-plan": "memory.payload.lifecycle-plan",
+    "payload.current-memory": "memory.payload.current-memory",
+    "payload.verify": "memory.payload.verify",
+    "output.emit.install-result": "memory.output.emit.install-result",
+    "output.emit.current-memory": "memory.output.emit.current-memory",
+}
 AW_OWNED_ORDINARY_CHECK_ROOTS = (
     "tests",
     "scripts/check",
@@ -2460,6 +2470,264 @@ def _transitional_primitive_usage_inventory() -> dict[str, object]:
     }
 
 
+def _primitive_definition_by_id() -> dict[str, dict[str, object]]:
+    try:
+        operation_primitives = _load_json("operation_primitives.json")
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {
+        str(primitive.get("id")): primitive
+        for primitive in operation_primitives.get("primitives", [])
+        if isinstance(primitive, dict) and isinstance(primitive.get("id"), str)
+    }
+
+
+def _source_operation_aw_owned_primitive_usage() -> list[dict[str, object]]:
+    aw_owned_primitives = set(AW_OWNED_PRIMITIVE_REPLACEMENTS.values())
+    usage: list[dict[str, object]] = []
+    for operation_path in _source_operation_contract_paths():
+        try:
+            operation = json.loads(operation_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        operation_id = str(operation.get("id", operation_path.stem))
+        for step in _operation_primitive_steps(operation):
+            primitive = str(step.get("uses", ""))
+            if primitive not in aw_owned_primitives:
+                continue
+            usage.append(
+                {
+                    "operation_id": operation_id,
+                    "operation_path": operation_path.relative_to(REPO_ROOT).as_posix(),
+                    "step_id": str(step.get("id", primitive)),
+                    "primitive": primitive,
+                }
+            )
+    return usage
+
+
+def _operation_usage_counts_by_primitive(usages: list[dict[str, object]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for usage in usages:
+        primitive = str(usage.get("primitive", ""))
+        if primitive:
+            counts[primitive] = counts.get(primitive, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _generated_command_package_paths(ir: dict[str, object]) -> list[Path]:
+    paths: list[Path] = []
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        for target in package.get("targets", []):
+            if not isinstance(target, dict):
+                continue
+            generated_root = str(target.get("generated_root", "")).strip()
+            if not generated_root:
+                continue
+            if target.get("kind") == "typescript":
+                candidate = REPO_ROOT / generated_root / "resources" / "command_package.json"
+            elif target.get("kind") == "python":
+                candidate = REPO_ROOT / generated_root / "command_package.json"
+            else:
+                continue
+            if candidate.is_file():
+                paths.append(candidate)
+    return sorted(paths)
+
+
+def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[dict[str, object]]:
+    aw_owned_primitives = set(AW_OWNED_PRIMITIVE_REPLACEMENTS.values())
+    usage: list[dict[str, object]] = []
+    for path in _generated_command_package_paths(ir):
+        try:
+            package = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        package_id = str(package.get("id", path.parent.name))
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            runtime_binding = command.get("runtime_binding", {})
+            primitive_refs = runtime_binding.get("primitive_refs", []) if isinstance(runtime_binding, dict) else []
+            if not isinstance(primitive_refs, list):
+                continue
+            for primitive in primitive_refs:
+                if primitive not in aw_owned_primitives:
+                    continue
+                usage.append(
+                    {
+                        "package_id": package_id,
+                        "path": path.relative_to(REPO_ROOT).as_posix(),
+                        "adapter_id": str(command.get("adapter_id", "")),
+                        "primitive": primitive,
+                    }
+                )
+    return usage
+
+
+def _aw_primitive_declaration_report() -> dict[str, object]:
+    primitive_by_id = _primitive_definition_by_id()
+    declarations: list[dict[str, object]] = []
+    missing: list[str] = []
+    invalid: list[str] = []
+    for legacy_id, aw_id in sorted(AW_OWNED_PRIMITIVE_REPLACEMENTS.items()):
+        primitive = primitive_by_id.get(aw_id)
+        if not primitive:
+            missing.append(aw_id)
+            declarations.append(
+                {
+                    "legacy_id": legacy_id,
+                    "aw_owned_id": aw_id,
+                    "status": "missing",
+                    "owner": "",
+                    "taxonomy_tier": "",
+                    "portability": "",
+                }
+            )
+            continue
+        status = "declared"
+        if primitive.get("taxonomy_tier") != "tier-2-package-domain":
+            invalid.append(f"{aw_id} must be tier-2-package-domain")
+            status = "invalid"
+        if primitive.get("portability") == "target-executor":
+            invalid.append(f"{aw_id} must not be target-executor portable")
+            status = "invalid"
+        owner = str(primitive.get("tier_owner", ""))
+        if not owner:
+            invalid.append(f"{aw_id} must declare tier_owner")
+            status = "invalid"
+        declarations.append(
+            {
+                "legacy_id": legacy_id,
+                "aw_owned_id": aw_id,
+                "status": status,
+                "owner": owner,
+                "taxonomy_tier": str(primitive.get("taxonomy_tier", "")),
+                "portability": str(primitive.get("portability", "")),
+                "conformance_ref": str(primitive.get("conformance_ref", "")),
+                "migration_path": str(primitive.get("migration_path", "")),
+                "generic_behavior_audit": str(primitive.get("generic_behavior_audit", "")),
+            }
+        )
+    return {
+        "status": "satisfied" if not missing and not invalid else "blocked",
+        "source": "src/agentic_workspace/contracts/operation_primitives.json",
+        "declared_count": sum(1 for item in declarations if item["status"] == "declared"),
+        "required_count": len(AW_OWNED_PRIMITIVE_REPLACEMENTS),
+        "missing": missing,
+        "invalid": invalid,
+        "declarations": declarations,
+    }
+
+
+def _aw_primitive_runtime_binding_report(ir: dict[str, object]) -> dict[str, object]:
+    generated_usage = _generated_package_aw_owned_primitive_usage(ir)
+    source_usage = _source_operation_aw_owned_primitive_usage()
+    generated_counts = _operation_usage_counts_by_primitive(generated_usage)
+    source_counts = _operation_usage_counts_by_primitive(source_usage)
+    missing_generated = sorted(
+        aw_id for aw_id in AW_OWNED_PRIMITIVE_REPLACEMENTS.values() if aw_id not in generated_counts and aw_id in source_counts
+    )
+    handler_support = {
+        "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
+        "typescript_support_path": "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    }
+    return {
+        "status": "satisfied" if not missing_generated and generated_usage else "blocked",
+        "source_operation_usage_count": len(source_usage),
+        "source_operation_usage_count_by_primitive": source_counts,
+        "generated_package_runtime_ref_count": len(generated_usage),
+        "generated_package_runtime_ref_count_by_primitive": generated_counts,
+        "missing_generated_runtime_refs": missing_generated,
+        "generated_runtime_refs": generated_usage,
+        "support_modules": handler_support,
+        "rule": (
+            "AW-owned primitive references must appear as explicit operation/runtime primitive IDs; "
+            "support behavior lives in AW-owned primitive support modules, not command-generation package metadata."
+        ),
+    }
+
+
+def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
+    transitional_usage = _transitional_primitive_usage_inventory()
+    declarations = _aw_primitive_declaration_report()
+    runtime_bindings = _aw_primitive_runtime_binding_report(ir)
+    freshness = _generated_target_freshness_report(ir)
+    blockers: list[str] = []
+    if int(transitional_usage.get("ordinary_source_operation_usage_count", 0) or 0):
+        blockers.append("command-generation transitional primitive IDs remain in ordinary AW source operation IR")
+    if declarations.get("status") != "satisfied":
+        blockers.append("AW-owned primitive declarations are missing or invalid")
+    if runtime_bindings.get("status") != "satisfied":
+        blockers.append("AW-owned primitive runtime refs are missing from generated package metadata")
+    if freshness.get("status") != "fresh":
+        blockers.append("generated command package artifacts are stale")
+    return {
+        "kind": AW_PRIMITIVE_OWNERSHIP_KIND,
+        "status": "satisfied" if not blockers else "blocked",
+        "blockers": blockers,
+        "downstream_proof_command": (
+            "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
+        ),
+        "ordinary_source_operation_ir": {
+            "status": "satisfied"
+            if int(transitional_usage.get("ordinary_source_operation_usage_count", 0) or 0) == 0
+            else "blocked",
+            "aw_owned_usage_count": runtime_bindings["source_operation_usage_count"],
+            "aw_owned_usage_count_by_primitive": runtime_bindings["source_operation_usage_count_by_primitive"],
+            "transitional_usage_count": transitional_usage["ordinary_source_operation_usage_count"],
+            "transitional_usages": transitional_usage["ordinary_source_operation_usages"],
+        },
+        "primitive_declarations": declarations,
+        "runtime_bindings": runtime_bindings,
+        "generated_artifacts": {
+            "status": freshness.get("status"),
+            "target_families": freshness.get("target_families", []),
+            "stale_output_count_by_family": freshness.get("stale_output_count_by_family", {}),
+            "command_generation_package": freshness.get("command_generation_package", {}),
+        },
+        "compatibility_only_references": {
+            "status": "isolated",
+            "paths": transitional_usage["compatibility_only_paths"],
+            "usages": transitional_usage["compatibility_usages"],
+            "rule": "Legacy command-generation transitional IDs may appear only in explicit compatibility checker/test paths.",
+        },
+        "coordination": {
+            "command_generation_issue_refs": ["rickardvh/command-generation#55"],
+            "claim": (
+                "CG can remain package-neutral: AW exposes this downstream proof instead of requiring AW product literals "
+                "or AW primitive declarations in command-generation package-visible metadata."
+            ),
+        },
+        "limits": [
+            "This report proves AW primitive ownership for checked-in AW source/generated artifacts.",
+            "It does not require command-generation to know AW product semantics.",
+            "It does not claim all package-domain runtime behavior is portable codegen behavior.",
+        ],
+    }
+
+
+def _validate_aw_primitive_ownership_report(ir: dict[str, object]) -> list[str]:
+    report = _aw_primitive_ownership_report(ir)
+    errors = [str(blocker) for blocker in report.get("blockers", [])]
+    compatibility = report.get("compatibility_only_references", {})
+    if isinstance(compatibility, dict):
+        unexpected_paths = sorted(
+            path
+            for path in compatibility.get("paths", [])
+            if path
+            not in {
+                "scripts/check/check_generated_command_packages.py",
+                "tests/test_generated_command_package_proof_runner.py",
+            }
+        )
+        if unexpected_paths:
+            errors.append(f"legacy transitional primitive IDs appear outside compatibility-only paths: {unexpected_paths!r}")
+    return errors
+
+
 def _generated_command_check_inventory_report() -> dict[str, object]:
     inventory = generated_command_check_inventory_manifest()
     checks = [check for check in inventory.get("checks", []) if isinstance(check, dict)]
@@ -4607,6 +4875,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_no_shared_python_function_call_operation_ir())
         errors.extend(_validate_generated_artifact_generation_metadata(ir))
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
+        errors.extend(_validate_aw_primitive_ownership_report(ir))
         forbidden_generated_entrypoints = [
             "src/agentic_workspace/generated_cli_package.py",
             "src/agentic_workspace/generated_cli_entrypoint.py",
@@ -4861,6 +5130,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     runtime_source_edit_policy = _runtime_source_edit_policy_payload()
     lifecycle_dry_run_metrics = _lifecycle_dry_run_metrics()
     transitional_primitive_usage = _transitional_primitive_usage_inventory()
+    aw_primitive_ownership = _aw_primitive_ownership_report(ir)
     generated_command_check_inventory = _generated_command_check_inventory_report()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
     generated_command_migration_completion = _generated_command_migration_completion_report(
@@ -4885,6 +5155,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "runtime_source_edit_policy": runtime_source_edit_policy,
         "lifecycle_dry_run_metrics": lifecycle_dry_run_metrics,
         "transitional_primitive_usage": transitional_primitive_usage,
+        "aw_primitive_ownership": aw_primitive_ownership,
         "generated_command_check_inventory": generated_command_check_inventory,
         "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
@@ -5108,6 +5379,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Print the compact blocker report for Python full generated CLI completion.",
     )
     parser.add_argument(
+        "--aw-primitive-ownership",
+        action="store_true",
+        help="Print the AW-owned primitive separation proof report.",
+    )
+    parser.add_argument(
         "--format",
         choices=["text", "json"],
         default="text",
@@ -5192,6 +5468,24 @@ def main(argv: list[str] | None = None) -> int:
             output_format=str(args.format),
         )
         return 0
+    if args.aw_primitive_ownership:
+        ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+        report = _aw_primitive_ownership_report(ir)
+        if args.format == "json":
+            print(json.dumps(report, indent=2, sort_keys=True))
+        else:
+            print(f"AW primitive ownership: {report['status']}")
+            print(f"Blockers: {len(report['blockers'])}")
+            ordinary = report.get("ordinary_source_operation_ir", {})
+            if isinstance(ordinary, dict):
+                print(f"Ordinary transitional primitive usage: {ordinary.get('transitional_usage_count')}")
+                print(f"AW-owned ordinary primitive usage: {ordinary.get('aw_owned_usage_count')}")
+            compatibility = report.get("compatibility_only_references", {})
+            if isinstance(compatibility, dict):
+                print(f"Compatibility-only paths: {compatibility.get('paths')}")
+            for blocker in report.get("blockers", []):
+                print(f"- {blocker}")
+        return 0 if report.get("status") == "satisfied" else 1
 
     generator = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
     freshness = _run([_python_executable(), str(generator), "--check"])

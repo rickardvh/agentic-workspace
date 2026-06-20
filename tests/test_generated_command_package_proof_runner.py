@@ -544,6 +544,18 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
         "scripts/check/check_generated_command_packages.py",
         "tests/test_generated_command_package_proof_runner.py",
     ]
+    ownership = report["aw_primitive_ownership"]
+    assert ownership["kind"] == "agentic-workspace/aw-primitive-ownership/v1"
+    assert ownership["status"] == "satisfied"
+    assert ownership["ordinary_source_operation_ir"]["transitional_usage_count"] == 0
+    assert ownership["ordinary_source_operation_ir"]["aw_owned_usage_count"] > 0
+    assert ownership["primitive_declarations"]["status"] == "satisfied"
+    assert ownership["runtime_bindings"]["status"] == "satisfied"
+    assert ownership["compatibility_only_references"]["paths"] == [
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+    ]
+    assert "--aw-primitive-ownership --format json" in ownership["downstream_proof_command"]
 
 
 def test_generated_artifact_metadata_rejects_unexpected_generator_version() -> None:
@@ -622,6 +634,47 @@ def test_transitional_primitive_source_operation_usage_is_blocked() -> None:
     assert any(
         "command-generation transitional primitive IDs are present in ordinary source operation contracts" in error for error in errors
     )
+
+
+def test_aw_primitive_ownership_report_is_a_stable_downstream_proof(capsys) -> None:
+    checker = _load_checker()
+
+    status = checker.main(["--aw-primitive-ownership", "--format", "json"])
+
+    assert status == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/aw-primitive-ownership/v1"
+    assert payload["status"] == "satisfied"
+    assert payload["ordinary_source_operation_ir"]["transitional_usage_count"] == 0
+    assert payload["ordinary_source_operation_ir"]["aw_owned_usage_count_by_primitive"]["workspace.target-root.resolve"] > 0
+    declarations = payload["primitive_declarations"]
+    assert declarations["status"] == "satisfied"
+    declared_ids = {item["aw_owned_id"] for item in declarations["declarations"]}
+    assert "workspace.target-root.resolve" in declared_ids
+    assert "memory.payload.verify" in declared_ids
+    runtime = payload["runtime_bindings"]
+    assert runtime["generated_package_runtime_ref_count_by_primitive"]["workspace.target-root.resolve"] > 0
+    assert runtime["support_modules"] == {
+        "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
+        "typescript_support_path": "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    }
+    assert payload["compatibility_only_references"]["status"] == "isolated"
+    assert payload["coordination"]["command_generation_issue_refs"] == ["rickardvh/command-generation#55"]
+
+
+def test_aw_primitive_ownership_report_blocks_missing_aw_declaration() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        original = checker._primitive_definition_by_id
+        definitions = original()
+        definitions.pop("workspace.target-root.resolve", None)
+        checker._primitive_definition_by_id = lambda: definitions
+        _emit({"errors": checker._validate_aw_primitive_ownership_report(ir)})
+        """
+    )
+
+    assert "AW-owned primitive declarations are missing or invalid" in errors
 
 
 def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:
