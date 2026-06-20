@@ -1219,7 +1219,7 @@ def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_pat
     assert confidence["low_confidence_fixture_count"] >= 0
 
 
-def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_route_report_generated_outputs_preserve_failure_detail(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     target = tmp_path / "repo"
     _setup_routing_fixture_repo(target, "runtime-basic.json")
     _write_routing_fixture_file(target, "runtime-basic.json")
@@ -1235,18 +1235,20 @@ def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_pat
         ),
     )
 
-    cli._emit_result(installer.report_routes(target=target), output_format="text")
+    assert cli.main(["route-report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    serialized = json.dumps(payload)
+
+    assert "fixture 'failing' fails" in serialized
+    assert "case 'unresolved' is unresolved" in serialized
+    assert "fixture 'runtime-basic' fails" not in serialized
+
+    assert cli.main(["route-report", "--target", str(target), "--verbose"]) == 0
     output = capsys.readouterr().out
 
-    assert "Feedback cases:" in output
-    assert "Fixture coverage:" in output
-    assert "Missed-note summary:" in output
-    assert "Over-routing summary:" in output
-    assert "Working-set pressure:" in output
-    assert "Startup cost:" in output
-    assert "fixture 'failing' fails" in output
-    assert "case 'unresolved' is unresolved" in output
-    assert "fixture 'runtime-basic' fails" not in output
+    assert "Routing report" in output
+    assert "Feedback:" in output
+    assert "Fixtures:" in output
 
 
 def test_route_report_excludes_externalized_feedback_cases_from_live_counts(tmp_path: Path) -> None:
