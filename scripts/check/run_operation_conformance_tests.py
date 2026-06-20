@@ -23,15 +23,15 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 import check_contract_tooling_surfaces as contract_tooling_check  # noqa: E402
 import check_generated_command_packages as generated_package_check  # noqa: E402
-from command_generation import (  # noqa: E402
+from command_generation.conformance import (  # noqa: E402
     FunctionConformanceTarget,
     OperationConformanceCase,
+    ProcessConformanceCase,
     TypescriptFunctionConformanceTarget,
     materialize_case_fixture,
     run_function_conformance_case,
     run_typescript_function_conformance_case,
 )
-from command_generation.conformance import ProcessConformanceCase  # noqa: E402
 
 from agentic_workspace.contract_tooling import (  # noqa: E402
     contract_schema,

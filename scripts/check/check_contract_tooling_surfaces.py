@@ -53,7 +53,6 @@ from agentic_workspace.contract_tooling import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 from command_generation import (  # noqa: E402
-    BUILTIN_PORTABLE_PRIMITIVES,
     TargetExtensionContractError,
     command_package_schema_path,
     target_support_matrix_entries,
@@ -65,6 +64,15 @@ from command_generation.generated_package_loader import (  # noqa: E402
 )
 
 generated_workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = {
+    "workspace.root.resolve",
+    "payload.status",
+    "payload.lifecycle-plan",
+    "payload.current-memory",
+    "payload.verify",
+    "output.emit.install-result",
+    "output.emit.current-memory",
+}
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -322,11 +330,6 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
 
 def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
-    command_generation_transitional_primitives = {
-        primitive_id
-        for primitive_id in BUILTIN_PORTABLE_PRIMITIVES.ids()
-        if getattr(BUILTIN_PORTABLE_PRIMITIVES.definition(primitive_id), "kind", "") == "transitional"
-    }
     if payload.get("schema_version") != "agentic-workspace/operation-primitives/v1":
         errors.append("operation_primitives.json has unexpected schema_version")
     ir_model = payload.get("ir_model")
@@ -398,15 +401,15 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 implemented = entry.get("implemented_shared_primitives", [])
                 if status == "implemented" and (not isinstance(implemented, list) or not implemented):
                     errors.append(f"operation_primitives.json target {target} must list implemented_shared_primitives")
-                transitional_support = sorted(
+                retired_support = sorted(
                     primitive_id
                     for primitive_id in implemented
-                    if isinstance(primitive_id, str) and primitive_id in command_generation_transitional_primitives
+                    if isinstance(primitive_id, str) and primitive_id in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
                 )
-                if transitional_support:
+                if retired_support:
                     errors.append(
-                        f"operation_primitives.json target {target} counts transitional host primitive(s) as shared support: "
-                        + ", ".join(transitional_support)
+                        f"operation_primitives.json target {target} counts retired command-generation primitive(s) as shared support: "
+                        + ", ".join(retired_support)
                     )
                 if status in {"unsupported-reported", "deferred"} and not unsupported_behavior:
                     errors.append(f"operation_primitives.json target {target} must describe unsupported_behavior")
@@ -478,8 +481,8 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             errors.append(f"target-executor primitive {primitive_id} must be classified tier-1-portable-codegen")
         if primitive.get("portability") in {"domain-runtime", "external-adapter"} and taxonomy_tier == "tier-1-portable-codegen":
             errors.append(f"non-portable primitive {primitive_id} must not be classified tier-1-portable-codegen")
-        if primitive_id in command_generation_transitional_primitives and taxonomy_tier == "tier-1-portable-codegen":
-            errors.append(f"transitional host primitive {primitive_id} must not be classified tier-1-portable-codegen")
+        if primitive_id in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES:
+            errors.append(f"retired command-generation primitive {primitive_id} must not be declared in operation_primitives.json")
         if taxonomy_tier == "tier-2-package-domain":
             missing_audit = sorted(field for field in tier_2_required_fields if not str(primitive.get(field, "")).strip())
             if missing_audit:
@@ -538,14 +541,11 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     missing_classification = sorted(primitive for primitive in operation_step_primitives if primitive not in seen_ids)
     if missing_classification:
         errors.append("operation steps reference primitives missing from operation_primitives.json: " + ", ".join(missing_classification))
-    used_transitional_primitives = sorted(operation_step_primitives & command_generation_transitional_primitives)
-    primitive_by_id = {str(primitive.get("id")): primitive for primitive in primitives if isinstance(primitive, dict)}
-    for primitive_id in used_transitional_primitives:
-        primitive = primitive_by_id.get(primitive_id, {})
-        if primitive.get("taxonomy_tier") != "tier-2-package-domain":
-            errors.append(f"used transitional host primitive {primitive_id} must be inventoried as tier-2-package-domain")
-        if "transitional" not in str(primitive.get("generic_behavior_audit", "")).lower():
-            errors.append(f"used transitional host primitive {primitive_id} must name transitional usage in generic_behavior_audit")
+    used_retired_primitives = sorted(operation_step_primitives & RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES)
+    if used_retired_primitives:
+        errors.append(
+            "operation steps reference retired command-generation primitive(s): " + ", ".join(used_retired_primitives)
+        )
     tiered_primitives = {
         str(primitive["id"]): str(primitive.get("taxonomy_tier"))
         for primitive in primitives
@@ -1479,7 +1479,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "aw-host-behavior",
         "release-pinning",
         "generated-freshness",
-        "transitional-host-boundary",
+        "retired-primitive-boundary",
         "obsolete-duplicate",
     }
     seen_ids: set[str] = set()
@@ -1504,7 +1504,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
                 errors.append(f"generic target baseline check {check_id} must be owned by command-generation")
             if disposition == "keep-in-aw":
                 errors.append(f"generic target baseline check {check_id} must not be kept as an AW-owned check")
-        if classification in {"aw-host-behavior", "release-pinning", "generated-freshness", "transitional-host-boundary"}:
+        if classification in {"aw-host-behavior", "release-pinning", "generated-freshness", "retired-primitive-boundary"}:
             if owner != "agentic-workspace":
                 errors.append(f"AW-specific check {check_id} must be owned by agentic-workspace")
             if disposition != "keep-in-aw":
@@ -1546,7 +1546,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "generated-output-freshness",
         "operation-contract-and-cli-inputs",
         "host-runtime-boundaries",
-        "transitional-host-primitive-usage",
+        "retired-command-generation-primitive-usage",
         "release-and-generator-provenance",
         "operation-conformance-parity",
         "target-extension-contract-consumption",

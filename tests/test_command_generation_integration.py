@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from command_generation import PrimitiveContext, run_operation_steps
+from command_generation.primitive_executor import PrimitiveContext, run_operation_steps
 
 
 @pytest.fixture()

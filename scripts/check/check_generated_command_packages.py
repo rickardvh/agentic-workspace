@@ -33,7 +33,6 @@ for SOURCE_ROOT in (
 
 import command_generation  # noqa: E402
 from command_generation import (  # noqa: E402
-    BUILTIN_PORTABLE_PRIMITIVES,
     CliConformanceTarget,
     CommandGenerationHostManifest,
     PrimitiveRegistry,
@@ -183,7 +182,7 @@ PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
     "not accepted as generic output",
 )
 COMMAND_GENERATION_RELEASE_BASE_URL = "https://github.com/rickardvh/command-generation/releases/download"
-COMMAND_GENERATION_COMPATIBLE_RANGE = ">=0.2.4,<0.3.0"
+COMMAND_GENERATION_COMPATIBLE_RANGE = ">=1.0.0rc1,<2.0.0"
 COMMAND_GENERATION_METADATA_SCHEMA_VERSION = "command-generation/generated-artifact-metadata/v1"
 COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION = "command-generation/command-package-ir/v1"
 COMMAND_GENERATION_TARGET_LAYOUT_VERSION = {
@@ -199,28 +198,26 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "output.emit",
 }
 AW_PRIMITIVE_OWNERSHIP_KIND = "agentic-workspace/aw-primitive-ownership/v1"
-AW_OWNED_PRIMITIVE_REPLACEMENTS = {
-    "workspace.root.resolve": "workspace.target-root.resolve",
-    "payload.status": "memory.payload.status",
-    "payload.lifecycle-plan": "memory.payload.lifecycle-plan",
-    "payload.current-memory": "memory.payload.current-memory",
-    "payload.verify": "memory.payload.verify",
+AW_OWNED_PRIMITIVES = {
+    "workspace.target-root.resolve",
+    "memory.payload.status",
+    "memory.payload.lifecycle-plan",
+    "memory.payload.current-memory",
+    "memory.payload.verify",
+}
+RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = {
+    "workspace.root.resolve",
+    "payload.status",
+    "payload.lifecycle-plan",
+    "payload.current-memory",
+    "payload.verify",
+    "output.emit.install-result",
+    "output.emit.current-memory",
 }
 AW_OWNED_ORDINARY_CHECK_ROOTS = (
     "tests",
     "scripts/check",
 )
-
-
-def _command_generation_transitional_primitives() -> set[str]:
-    return {
-        primitive_id
-        for primitive_id in BUILTIN_PORTABLE_PRIMITIVES.ids()
-        if getattr(BUILTIN_PORTABLE_PRIMITIVES.definition(primitive_id), "kind", "") == "transitional"
-    }
-
-
-COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = _command_generation_transitional_primitives()
 PYTHON_EXECUTABLE_DISPATCH_NAMES = {
     "run_generated_command": "generated runtime dispatch",
     "supports_generated_command": "generated runtime dispatch",
@@ -2359,21 +2356,21 @@ def _operation_primitive_steps(operation: dict[str, object]) -> list[dict[str, o
     return steps
 
 
-def _transitional_primitive_usage_metadata(primitive: str) -> dict[str, str]:
+def _retired_primitive_usage_metadata(primitive: str) -> dict[str, str]:
     if primitive == "workspace.root.resolve":
         return {
-            "owner": "command-generation compatibility boundary",
-            "reason": "old command-generation compatibility primitive; ordinary AW source operations must use workspace.target-root.resolve.",
-            "migration_follow_up": "keep isolated to compatibility checks/fixtures unless command-generation removes the legacy primitive",
+            "owner": "retired command-generation boundary",
+            "reason": "removed command-generation transitional primitive; AW source operations must use workspace.target-root.resolve.",
+            "migration_follow_up": "remove the reference; no compatibility path remains after command-generation 1.0.",
         }
     return {
-        "owner": "command-generation compatibility boundary",
-        "reason": "old command-generation compatibility primitive; ordinary AW source operations must use memory.payload.* or portable output.emit with declarative arguments.",
-        "migration_follow_up": "keep isolated to compatibility checks/fixtures unless command-generation removes the legacy primitive",
+        "owner": "retired command-generation boundary",
+        "reason": "removed command-generation transitional primitive; AW source operations must use memory.payload.* or portable output.emit with declarative arguments.",
+        "migration_follow_up": "remove the reference; no compatibility path remains after command-generation 1.0.",
     }
 
 
-def _transitional_primitive_source_operation_usage() -> list[dict[str, object]]:
+def _retired_primitive_source_operation_usage() -> list[dict[str, object]]:
     usage: list[dict[str, object]] = []
     for operation_path in _source_operation_contract_paths():
         try:
@@ -2383,9 +2380,9 @@ def _transitional_primitive_source_operation_usage() -> list[dict[str, object]]:
         operation_id = str(operation.get("id", operation_path.stem))
         for step in _operation_primitive_steps(operation):
             primitive = str(step.get("uses", ""))
-            if primitive not in COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES:
+            if primitive not in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES:
                 continue
-            metadata = _transitional_primitive_usage_metadata(primitive)
+            metadata = _retired_primitive_usage_metadata(primitive)
             usage.append(
                 {
                     "operation_id": operation_id,
@@ -2398,7 +2395,7 @@ def _transitional_primitive_source_operation_usage() -> list[dict[str, object]]:
     return usage
 
 
-def _transitional_primitive_reference_counts(usages: list[dict[str, object]]) -> tuple[dict[str, int], int]:
+def _retired_primitive_reference_counts(usages: list[dict[str, object]]) -> tuple[dict[str, int], int]:
     primitive_counts: dict[str, int] = {}
     operation_ids: set[str] = set()
     for item in usages:
@@ -2410,13 +2407,13 @@ def _transitional_primitive_reference_counts(usages: list[dict[str, object]]) ->
     return dict(sorted(primitive_counts.items())), len(operation_ids)
 
 
-def _transitional_primitive_compatibility_usage() -> list[dict[str, object]]:
-    allowed_paths = {
-        "scripts/check/check_generated_command_packages.py": "compatibility checker allowlist, inventory, and regression guard",
-        "tests/test_generated_command_package_proof_runner.py": "compatibility checker regression tests and fixtures",
+def _retired_primitive_guard_reference_usage() -> list[dict[str, object]]:
+    guard_paths = {
+        "scripts/check/check_generated_command_packages.py": "retired primitive guard implementation",
+        "tests/test_generated_command_package_proof_runner.py": "retired primitive guard regression tests and fixtures",
     }
     usages: list[dict[str, object]] = []
-    for relative_path, reason in allowed_paths.items():
+    for relative_path, reason in guard_paths.items():
         path = REPO_ROOT / relative_path
         if not path.is_file():
             continue
@@ -2424,7 +2421,7 @@ def _transitional_primitive_compatibility_usage() -> list[dict[str, object]]:
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        for primitive in sorted(COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES):
+        for primitive in sorted(RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES):
             count = text.count(primitive)
             if count:
                 usages.append(
@@ -2438,12 +2435,12 @@ def _transitional_primitive_compatibility_usage() -> list[dict[str, object]]:
     return usages
 
 
-def _transitional_primitive_usage_inventory() -> dict[str, object]:
-    ordinary_usage = _transitional_primitive_source_operation_usage()
-    compatibility_usage = _transitional_primitive_compatibility_usage()
-    primitive_counts, operation_count = _transitional_primitive_reference_counts(ordinary_usage)
+def _retired_primitive_usage_inventory() -> dict[str, object]:
+    ordinary_usage = _retired_primitive_source_operation_usage()
+    guard_usage = _retired_primitive_guard_reference_usage()
+    primitive_counts, operation_count = _retired_primitive_reference_counts(ordinary_usage)
     return {
-        "status": "ordinary-source-clean" if not ordinary_usage else "ordinary-source-usage-found",
+        "status": "absent-from-ordinary-source" if not ordinary_usage else "retired-id-source-usage-found",
         "usage_count": len(ordinary_usage),
         "operation_count": operation_count,
         "primitive_counts": primitive_counts,
@@ -2451,13 +2448,14 @@ def _transitional_primitive_usage_inventory() -> dict[str, object]:
         "ordinary_source_operation_usage_count": len(ordinary_usage),
         "ordinary_source_operation_count": operation_count,
         "ordinary_source_operation_usages": ordinary_usage,
-        "compatibility_usage_count": sum(int(item["reference_count"]) for item in compatibility_usage),
-        "compatibility_usages": compatibility_usage,
-        "compatibility_only_paths": sorted({str(item["path"]) for item in compatibility_usage}),
-        "portable_completion_boundary": "transitional helpers are not counted as REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE",
+        "guard_reference_count": sum(int(item["reference_count"]) for item in guard_usage),
+        "guard_references": guard_usage,
+        "guard_reference_paths": sorted({str(item["path"]) for item in guard_usage}),
+        "retired_ids": sorted(RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES),
+        "portable_completion_boundary": "retired command-generation transitional helpers are not counted as REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE",
         "ordinary_source_rule": (
             "AW-owned ordinary operation contracts must use workspace.target-root.resolve, memory.payload.*, "
-            "and portable output.emit; command-generation transitional IDs are compatibility-only."
+            "and portable output.emit; command-generation transitional IDs are retired and must not be used."
         ),
     }
 
@@ -2475,7 +2473,6 @@ def _primitive_definition_by_id() -> dict[str, dict[str, object]]:
 
 
 def _source_operation_aw_owned_primitive_usage() -> list[dict[str, object]]:
-    aw_owned_primitives = set(AW_OWNED_PRIMITIVE_REPLACEMENTS.values())
     usage: list[dict[str, object]] = []
     for operation_path in _source_operation_contract_paths():
         try:
@@ -2485,7 +2482,7 @@ def _source_operation_aw_owned_primitive_usage() -> list[dict[str, object]]:
         operation_id = str(operation.get("id", operation_path.stem))
         for step in _operation_primitive_steps(operation):
             primitive = str(step.get("uses", ""))
-            if primitive not in aw_owned_primitives:
+            if primitive not in AW_OWNED_PRIMITIVES:
                 continue
             usage.append(
                 {
@@ -2530,7 +2527,6 @@ def _generated_command_package_paths(ir: dict[str, object]) -> list[Path]:
 
 
 def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[dict[str, object]]:
-    aw_owned_primitives = set(AW_OWNED_PRIMITIVE_REPLACEMENTS.values())
     usage: list[dict[str, object]] = []
     for path in _generated_command_package_paths(ir):
         try:
@@ -2546,7 +2542,7 @@ def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[d
             if not isinstance(primitive_refs, list):
                 continue
             for primitive in primitive_refs:
-                if primitive not in aw_owned_primitives:
+                if primitive not in AW_OWNED_PRIMITIVES:
                     continue
                 usage.append(
                     {
@@ -2564,13 +2560,12 @@ def _aw_primitive_declaration_report() -> dict[str, object]:
     declarations: list[dict[str, object]] = []
     missing: list[str] = []
     invalid: list[str] = []
-    for legacy_id, aw_id in sorted(AW_OWNED_PRIMITIVE_REPLACEMENTS.items()):
+    for aw_id in sorted(AW_OWNED_PRIMITIVES):
         primitive = primitive_by_id.get(aw_id)
         if not primitive:
             missing.append(aw_id)
             declarations.append(
                 {
-                    "legacy_id": legacy_id,
                     "aw_owned_id": aw_id,
                     "status": "missing",
                     "owner": "",
@@ -2592,7 +2587,6 @@ def _aw_primitive_declaration_report() -> dict[str, object]:
             status = "invalid"
         declarations.append(
             {
-                "legacy_id": legacy_id,
                 "aw_owned_id": aw_id,
                 "status": status,
                 "owner": owner,
@@ -2607,7 +2601,7 @@ def _aw_primitive_declaration_report() -> dict[str, object]:
         "status": "satisfied" if not missing and not invalid else "blocked",
         "source": "src/agentic_workspace/contracts/operation_primitives.json",
         "declared_count": sum(1 for item in declarations if item["status"] == "declared"),
-        "required_count": len(AW_OWNED_PRIMITIVE_REPLACEMENTS),
+        "required_count": len(AW_OWNED_PRIMITIVES),
         "missing": missing,
         "invalid": invalid,
         "declarations": declarations,
@@ -2620,7 +2614,7 @@ def _aw_primitive_runtime_binding_report(ir: dict[str, object]) -> dict[str, obj
     generated_counts = _operation_usage_counts_by_primitive(generated_usage)
     source_counts = _operation_usage_counts_by_primitive(source_usage)
     missing_generated = sorted(
-        aw_id for aw_id in AW_OWNED_PRIMITIVE_REPLACEMENTS.values() if aw_id not in generated_counts and aw_id in source_counts
+        aw_id for aw_id in AW_OWNED_PRIMITIVES if aw_id not in generated_counts and aw_id in source_counts
     )
     handler_support = {
         "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
@@ -2643,13 +2637,13 @@ def _aw_primitive_runtime_binding_report(ir: dict[str, object]) -> dict[str, obj
 
 
 def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
-    transitional_usage = _transitional_primitive_usage_inventory()
+    retired_usage = _retired_primitive_usage_inventory()
     declarations = _aw_primitive_declaration_report()
     runtime_bindings = _aw_primitive_runtime_binding_report(ir)
     freshness = _generated_target_freshness_report(ir)
     blockers: list[str] = []
-    if int(transitional_usage.get("ordinary_source_operation_usage_count", 0) or 0):
-        blockers.append("command-generation transitional primitive IDs remain in ordinary AW source operation IR")
+    if int(retired_usage.get("ordinary_source_operation_usage_count", 0) or 0):
+        blockers.append("retired command-generation transitional primitive IDs remain in ordinary AW source operation IR")
     if declarations.get("status") != "satisfied":
         blockers.append("AW-owned primitive declarations are missing or invalid")
     if runtime_bindings.get("status") != "satisfied":
@@ -2665,12 +2659,12 @@ def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
         ),
         "ordinary_source_operation_ir": {
             "status": "satisfied"
-            if int(transitional_usage.get("ordinary_source_operation_usage_count", 0) or 0) == 0
+            if int(retired_usage.get("ordinary_source_operation_usage_count", 0) or 0) == 0
             else "blocked",
             "aw_owned_usage_count": runtime_bindings["source_operation_usage_count"],
             "aw_owned_usage_count_by_primitive": runtime_bindings["source_operation_usage_count_by_primitive"],
-            "transitional_usage_count": transitional_usage["ordinary_source_operation_usage_count"],
-            "transitional_usages": transitional_usage["ordinary_source_operation_usages"],
+            "retired_primitive_usage_count": retired_usage["ordinary_source_operation_usage_count"],
+            "retired_primitive_usages": retired_usage["ordinary_source_operation_usages"],
         },
         "primitive_declarations": declarations,
         "runtime_bindings": runtime_bindings,
@@ -2680,11 +2674,12 @@ def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
             "stale_output_count_by_family": freshness.get("stale_output_count_by_family", {}),
             "command_generation_package": freshness.get("command_generation_package", {}),
         },
-        "compatibility_only_references": {
-            "status": "isolated",
-            "paths": transitional_usage["compatibility_only_paths"],
-            "usages": transitional_usage["compatibility_usages"],
-            "rule": "Legacy command-generation transitional IDs may appear only in explicit compatibility checker/test paths.",
+        "retired_command_generation_primitive_usage": {
+            "status": retired_usage["status"],
+            "guard_reference_paths": retired_usage["guard_reference_paths"],
+            "guard_references": retired_usage["guard_references"],
+            "retired_ids": retired_usage["retired_ids"],
+            "rule": "Retired command-generation transitional IDs must not appear in AW ordinary operation IR.",
         },
         "coordination": {
             "command_generation_issue_refs": ["rickardvh/command-generation#55"],
@@ -2704,19 +2699,6 @@ def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
 def _validate_aw_primitive_ownership_report(ir: dict[str, object]) -> list[str]:
     report = _aw_primitive_ownership_report(ir)
     errors = [str(blocker) for blocker in report.get("blockers", [])]
-    compatibility = report.get("compatibility_only_references", {})
-    if isinstance(compatibility, dict):
-        unexpected_paths = sorted(
-            path
-            for path in compatibility.get("paths", [])
-            if path
-            not in {
-                "scripts/check/check_generated_command_packages.py",
-                "tests/test_generated_command_package_proof_runner.py",
-            }
-        )
-        if unexpected_paths:
-            errors.append(f"legacy transitional primitive IDs appear outside compatibility-only paths: {unexpected_paths!r}")
     return errors
 
 
@@ -2815,36 +2797,27 @@ def _validate_generated_command_check_inventory_removals() -> list[str]:
     return errors
 
 
-def _validate_transitional_primitive_usage_inventory() -> list[str]:
+def _validate_retired_command_generation_primitive_usage_inventory() -> list[str]:
     errors: list[str] = []
-    try:
-        operation_primitives = _load_json("operation_primitives.json")
-    except (OSError, json.JSONDecodeError) as exc:
-        return [f"operation_primitives.json is missing or invalid for transitional primitive audit: {exc}"]
-    primitive_by_id = {
-        str(primitive.get("id")): primitive
-        for primitive in operation_primitives.get("primitives", [])
-        if isinstance(primitive, dict)
-    }
-    usage_inventory = _transitional_primitive_usage_inventory()
+    usage_inventory = _retired_primitive_usage_inventory()
     ordinary_count = int(usage_inventory.get("ordinary_source_operation_usage_count", 0) or 0)
     if ordinary_count:
         errors.append(
-            "command-generation transitional primitive IDs are present in ordinary source operation contracts: "
+            "retired command-generation transitional primitive IDs are present in ordinary source operation contracts: "
             f"{ordinary_count} step(s); use AW-owned primitive IDs instead"
         )
-    for primitive_id in sorted(usage_inventory.get("primitive_counts", {})):
-        primitive = primitive_by_id.get(primitive_id)
-        if not isinstance(primitive, dict):
-            errors.append(f"transitional primitive {primitive_id} is used but missing from operation_primitives.json")
-            continue
-        if primitive.get("taxonomy_tier") != "tier-2-package-domain":
-            errors.append(f"transitional primitive {primitive_id} must be classified tier-2-package-domain")
-        if primitive.get("portability") == "target-executor":
-            errors.append(f"transitional primitive {primitive_id} must not be declared target-executor portable")
-        for field in ("tier_owner", "tier_reason", "conformance_ref", "migration_path", "generic_behavior_audit"):
-            if not str(primitive.get(field, "")).strip():
-                errors.append(f"transitional primitive {primitive_id} missing {field}")
+    try:
+        operation_primitives = _load_json("operation_primitives.json")
+    except (OSError, json.JSONDecodeError) as exc:
+        return [*errors, f"operation_primitives.json is missing or invalid for retired primitive audit: {exc}"]
+    primitive_ids = {
+        str(primitive.get("id"))
+        for primitive in operation_primitives.get("primitives", [])
+        if isinstance(primitive, dict)
+    }
+    declared_retired = sorted(primitive_id for primitive_id in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES if primitive_id in primitive_ids)
+    if declared_retired:
+        errors.append(f"retired command-generation transitional primitive IDs remain declared: {declared_retired!r}")
     support_matrix = operation_primitives.get("primitive_extension_boundary", {}).get("target_support_matrix", [])
     if isinstance(support_matrix, list):
         for entry in support_matrix:
@@ -2853,13 +2826,13 @@ def _validate_transitional_primitive_usage_inventory() -> list[str]:
             shared = entry.get("implemented_shared_primitives", [])
             if not isinstance(shared, list):
                 continue
-            transitional_shared = sorted(
-                primitive for primitive in shared if isinstance(primitive, str) and primitive in COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
+            retired_shared = sorted(
+                primitive for primitive in shared if isinstance(primitive, str) and primitive in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
             )
-            if transitional_shared:
+            if retired_shared:
                 errors.append(
-                    f"operation_primitives.json target {entry.get('target')} counts transitional primitive(s) as shared support: "
-                    + ", ".join(transitional_shared)
+                    f"operation_primitives.json target {entry.get('target')} counts retired primitive(s) as shared support: "
+                    + ", ".join(retired_shared)
                 )
     return errors
 
@@ -3833,15 +3806,19 @@ def _command_generation_dependency_from_pyproject() -> str:
 def _command_generation_package_provenance() -> dict[str, object]:
     dependency = _command_generation_dependency_from_pyproject()
     installed_version = importlib.metadata.version("command-generation")
-    version_match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\.whl", dependency)
-    declared_version = version_match.group("version") if version_match else ""
     release_url = dependency.split(" @ ", 1)[1] if " @ " in dependency else ""
-    compatible = bool(
-        declared_version
+    version_match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\.whl", dependency)
+    git_match = re.search(r"git\+https://github\.com/rickardvh/command-generation\.git@(?P<ref>[0-9a-f]{40})$", release_url)
+    declared_version = version_match.group("version") if version_match else installed_version if git_match else ""
+    source = "released-wheel" if version_match else "immutable-git-ref" if git_match else "unknown"
+    released_wheel_compatible = bool(
+        version_match
         and declared_version == installed_version
         and release_url.startswith(f"{COMMAND_GENERATION_RELEASE_BASE_URL}/v{declared_version}/")
         and "#sha256=" in release_url
     )
+    git_ref_compatible = bool(git_match and declared_version == installed_version)
+    compatible = released_wheel_compatible or git_ref_compatible
     return {
         "kind": "command-generation/package-provenance/v1",
         "package": "command-generation",
@@ -3849,7 +3826,10 @@ def _command_generation_package_provenance() -> dict[str, object]:
         "declared_version": declared_version,
         "compatible_range": COMMAND_GENERATION_COMPATIBLE_RANGE,
         "dependency_url": release_url,
-        "source": "released-wheel",
+        "source": source,
+        "git_ref": git_match.group("ref") if git_match else "",
+        "released_wheel_compatible": released_wheel_compatible,
+        "immutable_git_ref_compatible": git_ref_compatible,
         "compatible": compatible,
     }
 
@@ -3861,9 +3841,7 @@ def _validate_command_generation_release_provenance() -> list[str]:
     declared_version = str(provenance.get("declared_version", ""))
     errors: list[str] = []
     if not dependency:
-        errors.append("pyproject.toml dev dependencies must declare command-generation as a released package URL")
-    if "git+https://github.com/rickardvh/command-generation.git" in dependency:
-        errors.append("pyproject.toml command-generation dependency must use the released wheel URL, not a Git source ref")
+        errors.append("pyproject.toml dev dependencies must declare command-generation as a released wheel URL or immutable Git ref")
     if not provenance.get("compatible"):
         errors.append(
             "command-generation package provenance mismatch: "
@@ -3879,9 +3857,7 @@ def _validate_command_generation_release_provenance() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         if release_url not in text:
-            errors.append(f"{relative_path} command-generation install URL must match pyproject.toml released package URL")
-        if "command-generation.git@" in text or "git+https://github.com/rickardvh/command-generation.git" in text:
-            errors.append(f"{relative_path} must not install command-generation from a Git source ref")
+            errors.append(f"{relative_path} command-generation install URL must match pyproject.toml package URL")
     return errors
 
 
@@ -4694,7 +4670,7 @@ def _validate_static_surfaces() -> list[str]:
                 )
             )
         errors.extend(_validate_python_operation_execution_inventory(ir))
-        errors.extend(_validate_transitional_primitive_usage_inventory())
+        errors.extend(_validate_retired_command_generation_primitive_usage_inventory())
         errors.extend(_validate_generated_command_check_inventory_removals())
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
@@ -5123,7 +5099,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     generated_target_freshness = _generated_target_freshness_report(ir)
     runtime_source_edit_policy = _runtime_source_edit_policy_payload()
     lifecycle_dry_run_metrics = _lifecycle_dry_run_metrics()
-    transitional_primitive_usage = _transitional_primitive_usage_inventory()
+    retired_primitive_usage = _retired_primitive_usage_inventory()
     aw_primitive_ownership = _aw_primitive_ownership_report(ir)
     generated_command_check_inventory = _generated_command_check_inventory_report()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
@@ -5148,7 +5124,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "generated_target_freshness": generated_target_freshness,
         "runtime_source_edit_policy": runtime_source_edit_policy,
         "lifecycle_dry_run_metrics": lifecycle_dry_run_metrics,
-        "transitional_primitive_usage": transitional_primitive_usage,
+        "retired_command_generation_primitive_usage": retired_primitive_usage,
         "aw_primitive_ownership": aw_primitive_ownership,
         "generated_command_check_inventory": generated_command_check_inventory,
         "generated_command_migration_completion": generated_command_migration_completion,
@@ -5345,13 +5321,13 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
         )
         print(f"Package-runtime default dry-run operations: {lifecycle_metrics.get('package_runtime_default_dry_run_operation_count')}")
         print(f"Operation-runtime default dry-run operations: {lifecycle_metrics.get('operation_runtime_default_dry_run_operation_count')}")
-    transitional_usage = report.get("transitional_primitive_usage", {})
-    if isinstance(transitional_usage, dict) and transitional_usage.get("status"):
+    retired_usage = report.get("retired_command_generation_primitive_usage", {})
+    if isinstance(retired_usage, dict) and retired_usage.get("status"):
         print(
-            "Transitional primitive ordinary source usage: "
-            f"{transitional_usage.get('ordinary_source_operation_usage_count')}"
+            "Retired command-generation primitive ordinary source usage: "
+            f"{retired_usage.get('ordinary_source_operation_usage_count')}"
         )
-        print(f"Transitional primitive compatibility references: {transitional_usage.get('compatibility_usage_count')}")
+        print(f"Retired command-generation primitive guard references: {retired_usage.get('guard_reference_count')}")
     check_inventory = report.get("generated_command_check_inventory", {})
     if isinstance(check_inventory, dict) and check_inventory.get("status") == "available":
         print(f"Generated-command check inventory: {check_inventory.get('check_count')} checks")
@@ -5472,11 +5448,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Blockers: {len(report['blockers'])}")
             ordinary = report.get("ordinary_source_operation_ir", {})
             if isinstance(ordinary, dict):
-                print(f"Ordinary transitional primitive usage: {ordinary.get('transitional_usage_count')}")
+                print(f"Ordinary retired primitive usage: {ordinary.get('retired_primitive_usage_count')}")
                 print(f"AW-owned ordinary primitive usage: {ordinary.get('aw_owned_usage_count')}")
-            compatibility = report.get("compatibility_only_references", {})
-            if isinstance(compatibility, dict):
-                print(f"Compatibility-only paths: {compatibility.get('paths')}")
+            retired = report.get("retired_command_generation_primitive_usage", {})
+            if isinstance(retired, dict):
+                print(f"Retired primitive guard paths: {retired.get('guard_reference_paths')}")
             for blocker in report.get("blockers", []):
                 print(f"- {blocker}")
         return 0 if report.get("status") == "satisfied" else 1

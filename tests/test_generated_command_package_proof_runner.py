@@ -486,15 +486,18 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert target_freshness["status"] == "fresh"
     provenance = target_freshness["command_generation_package"]
     assert provenance["kind"] == "command-generation/package-provenance/v1"
-    assert provenance["source"] == "released-wheel"
+    assert provenance["source"] in {"released-wheel", "immutable-git-ref"}
     assert provenance["declared_version"] == provenance["installed_version"]
-    assert re.fullmatch(r"\d+\.\d+\.\d+", provenance["declared_version"])
+    assert re.fullmatch(r"\d+\.\d+\.\d+(?:rc\d+)?", provenance["declared_version"])
     assert provenance["compatible"] is True
-    assert provenance["dependency_url"].startswith(
-        f"https://github.com/rickardvh/command-generation/releases/download/v{provenance['declared_version']}/"
-    )
-    assert f"command_generation-{provenance['declared_version']}-py3-none-any.whl" in provenance["dependency_url"]
-    assert "#sha256=" in provenance["dependency_url"]
+    if provenance["source"] == "released-wheel":
+        assert provenance["dependency_url"].startswith(
+            f"https://github.com/rickardvh/command-generation/releases/download/v{provenance['declared_version']}/"
+        )
+        assert f"command_generation-{provenance['declared_version']}-py3-none-any.whl" in provenance["dependency_url"]
+        assert "#sha256=" in provenance["dependency_url"]
+    else:
+        assert re.fullmatch(r"[0-9a-f]{40}", provenance["git_ref"])
     metadata = target_freshness["generation_metadata"]
     assert metadata["kind"] == "command-generation/generated-artifact-metadata-proof/v1"
     assert metadata["status"] == "fresh"
@@ -536,22 +539,22 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert "memory.install.lifecycle" in {
         operation["operation_id"] for operation in lifecycle_metrics["memory_payload_default_dry_run_operations"]
     }
-    transitional_usage = report["transitional_primitive_usage"]
-    assert transitional_usage["status"] == "ordinary-source-clean"
-    assert transitional_usage["ordinary_source_operation_usage_count"] == 0
-    assert transitional_usage["compatibility_usage_count"] > 0
-    assert transitional_usage["compatibility_only_paths"] == [
+    retired_usage = report["retired_command_generation_primitive_usage"]
+    assert retired_usage["status"] == "absent-from-ordinary-source"
+    assert retired_usage["ordinary_source_operation_usage_count"] == 0
+    assert retired_usage["guard_reference_count"] > 0
+    assert retired_usage["guard_reference_paths"] == [
         "scripts/check/check_generated_command_packages.py",
         "tests/test_generated_command_package_proof_runner.py",
     ]
     ownership = report["aw_primitive_ownership"]
     assert ownership["kind"] == "agentic-workspace/aw-primitive-ownership/v1"
     assert ownership["status"] == "satisfied"
-    assert ownership["ordinary_source_operation_ir"]["transitional_usage_count"] == 0
+    assert ownership["ordinary_source_operation_ir"]["retired_primitive_usage_count"] == 0
     assert ownership["ordinary_source_operation_ir"]["aw_owned_usage_count"] > 0
     assert ownership["primitive_declarations"]["status"] == "satisfied"
     assert ownership["runtime_bindings"]["status"] == "satisfied"
-    assert ownership["compatibility_only_references"]["paths"] == [
+    assert ownership["retired_command_generation_primitive_usage"]["guard_reference_paths"] == [
         "scripts/check/check_generated_command_packages.py",
         "tests/test_generated_command_package_proof_runner.py",
     ]
@@ -612,7 +615,7 @@ def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
     assert any("does not route the default dry-run branch through memory.payload.lifecycle-plan" in error for error in errors)
 
 
-def test_transitional_primitive_source_operation_usage_is_blocked() -> None:
+def test_retired_command_generation_primitive_source_operation_usage_is_blocked() -> None:
     errors = _checker_case_errors(
         """
         temp_root = checker.REPO_ROOT / ".tmp-checker-case"
@@ -624,7 +627,7 @@ def test_transitional_primitive_source_operation_usage_is_blocked() -> None:
         }), encoding="utf-8")
         checker._source_operation_contract_paths = lambda: [operation_path]
         try:
-            _emit({"errors": checker._validate_transitional_primitive_usage_inventory()})
+            _emit({"errors": checker._validate_retired_command_generation_primitive_usage_inventory()})
         finally:
             operation_path.unlink(missing_ok=True)
             temp_root.rmdir()
@@ -632,7 +635,8 @@ def test_transitional_primitive_source_operation_usage_is_blocked() -> None:
     )
 
     assert any(
-        "command-generation transitional primitive IDs are present in ordinary source operation contracts" in error for error in errors
+        "retired command-generation transitional primitive IDs are present in ordinary source operation contracts" in error
+        for error in errors
     )
 
 
@@ -645,7 +649,7 @@ def test_aw_primitive_ownership_report_is_a_stable_downstream_proof(capsys) -> N
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/aw-primitive-ownership/v1"
     assert payload["status"] == "satisfied"
-    assert payload["ordinary_source_operation_ir"]["transitional_usage_count"] == 0
+    assert payload["ordinary_source_operation_ir"]["retired_primitive_usage_count"] == 0
     assert payload["ordinary_source_operation_ir"]["aw_owned_usage_count_by_primitive"]["workspace.target-root.resolve"] > 0
     declarations = payload["primitive_declarations"]
     assert declarations["status"] == "satisfied"
@@ -658,7 +662,7 @@ def test_aw_primitive_ownership_report_is_a_stable_downstream_proof(capsys) -> N
         "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
         "typescript_support_path": "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
     }
-    assert payload["compatibility_only_references"]["status"] == "isolated"
+    assert payload["retired_command_generation_primitive_usage"]["status"] == "absent-from-ordinary-source"
     assert payload["coordination"]["command_generation_issue_refs"] == ["rickardvh/command-generation#55"]
 
 
@@ -782,8 +786,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert "new-primitive-implementation" in payload["runtime_source_edit_policy"]["accepted_direct_edit_reasons"]
     assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
     assert payload["lifecycle_dry_run_metrics"]["memory_payload_default_dry_run_operation_count"] >= 3
-    assert payload["transitional_primitive_usage"]["ordinary_source_operation_usage_count"] == 0
-    assert payload["transitional_primitive_usage"]["compatibility_usage_count"] > 0
+    assert payload["retired_command_generation_primitive_usage"]["ordinary_source_operation_usage_count"] == 0
+    assert payload["retired_command_generation_primitive_usage"]["guard_reference_count"] > 0
     check_inventory = payload["generated_command_check_inventory"]
     assert check_inventory["generic_baseline_owner"] == "command-generation"
     assert "generated-output-freshness" in check_inventory["aw_kept_checks"]
@@ -802,8 +806,8 @@ def test_python_completion_blocker_report_surfaces_command_generation_package_po
     assert status == 0
     output = capsys.readouterr().out
     match = re.search(
-        r"Command-generation package: declared=(?P<declared>\d+\.\d+\.\d+) "
-        r"installed=(?P<installed>\d+\.\d+\.\d+) source=released-wheel compatible=true",
+        r"Command-generation package: declared=(?P<declared>\d+\.\d+\.\d+(?:rc\d+)?) "
+        r"installed=(?P<installed>\d+\.\d+\.\d+(?:rc\d+)?) source=(released-wheel|immutable-git-ref) compatible=true",
         output,
     )
     assert match is not None
