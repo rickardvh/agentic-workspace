@@ -20,9 +20,15 @@ from collections.abc import Mapping
 
 
 def run(args: argparse.Namespace) -> int:
-    from ..primitives.workspace_runtime import _run_modules_report_adapter
-
-    return _run_modules_report_adapter(args)
+    from agentic_workspace.workspace_runtime_primitives import _diagnostic_profile, _resolve_target_root, _validate_target_root
+    _arg_0_format_name = getattr(args, 'format', None)
+    _arg_1_target_root = _resolve_target_root(getattr(args, 'target', None)) if getattr(args, 'target', None) else None
+    if _arg_1_target_root is not None:
+        _validate_target_root(command_name='modules', target_root=_arg_1_target_root)
+    _arg_2_profile = _diagnostic_profile(args, default='tiny')
+    from agentic_workspace.workspace_runtime_primitives import _emit_modules
+    _emit_modules(format_name=_arg_0_format_name, target_root=_arg_1_target_root, profile=_arg_2_profile)
+    return 0
 
 
 def invoke(_values: Mapping[str, Any]) -> object:

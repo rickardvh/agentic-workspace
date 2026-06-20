@@ -20,9 +20,19 @@ from collections.abc import Mapping
 
 
 def run(args: argparse.Namespace) -> int:
-    from ..primitives.workspace_runtime import _run_ownership_report_adapter
-
-    return _run_ownership_report_adapter(args)
+    from agentic_workspace.workspace_runtime_primitives import _module_operations, _resolve_target_root, _validate_descriptor_contract, _validate_target_root
+    _arg_0_format_name = getattr(args, 'format', None)
+    _arg_1_target_root = _resolve_target_root(getattr(args, 'target', None))
+    if _arg_1_target_root is None:
+        raise ValueError('target root resolution returned None')
+    _validate_target_root(command_name='ownership', target_root=_arg_1_target_root)
+    _arg_2_descriptors = _module_operations()
+    _validate_descriptor_contract(_arg_2_descriptors)
+    _arg_3_concern = getattr(args, 'concern', None)
+    _arg_4_repo_path = getattr(args, 'path', None)
+    from agentic_workspace.workspace_runtime_primitives import _emit_ownership
+    _emit_ownership(format_name=_arg_0_format_name, target_root=_arg_1_target_root, descriptors=_arg_2_descriptors, concern=_arg_3_concern, repo_path=_arg_4_repo_path)
+    return 0
 
 
 def invoke(_values: Mapping[str, Any]) -> object:

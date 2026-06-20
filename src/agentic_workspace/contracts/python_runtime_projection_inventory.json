@@ -81,16 +81,9 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_init_lifecycle_adapter|agentic_workspace.workspace_runtime_primitives|_run_init_lifecycle_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_lifecycle_mutation_adapter|agentic_workspace.workspace_runtime_primitives|_run_lifecycle_mutation_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_lifecycle_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_lifecycle_report_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_memory_front_door_adapter|agentic_workspace.workspace_runtime_primitives|_run_memory_front_door_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_modules_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_modules_report_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_ownership_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_ownership_report_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_planning_front_door_adapter|agentic_workspace.workspace_runtime_primitives|_run_planning_front_door_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_preflight_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_preflight_report_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_proof_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_proof_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_reconcile_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_reconcile_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_report_combined_adapter|agentic_workspace.workspace_runtime_primitives|_run_report_combined_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_setup_guidance_adapter|agentic_workspace.workspace_runtime_primitives|_run_setup_guidance_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_skills_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_skills_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_start_context_adapter|agentic_workspace.workspace_runtime_primitives|_run_start_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_summary_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_summary_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_select_workspace_operation_fields|agentic_workspace.workspace_runtime_primitives|_select_workspace_operation_fields"
@@ -2030,174 +2023,6 @@
       {
         "binding_kind": "runtime-facade-call",
         "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_memory_front_door_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_memory_front_door_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "memory.front-door"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:memory.front-door"
-        ],
-        "runtime_boundary_class": "front-door-dispatch",
-        "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
-        "conformance_ref": "memory.front-door.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as front-door-dispatch; the adapter loads the installed Memory module CLI, preserves module-owned command semantics, and rewrites host-facing command text. This is cross-package integration policy, not deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "front-door-dispatch-extraction-candidate",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "workspace package runtime boundary for cross-package module front-door integration",
-        "minimization_tracking_issue": "#1449",
-        "stale_when": "Stale when command-generation has a stable cross-package module-dispatch primitive that can load optional installed modules, preserve module CLI semantics, rewrite host-facing command text, and report absent-module recovery without package runtime policy.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_modules_report_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_modules_report_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "modules.report"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:modules.report"
-        ],
-        "runtime_boundary_class": "live-workspace-inspection",
-        "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
-        "conformance_ref": "modules.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "live-workspace-inspection",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_ownership_report_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_ownership_report_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "ownership.report"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:ownership.report"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "ownership.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_planning_front_door_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_planning_front_door_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "planning.front-door"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:planning.front-door"
-        ],
-        "runtime_boundary_class": "front-door-dispatch",
-        "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
-        "conformance_ref": "planning.front-door.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as front-door-dispatch; the adapter loads the installed Planning module CLI, preserves module-owned command semantics, rewrites host-facing command text, and routes planning decision subcommands through workspace-owned decision adapters. This is cross-package integration policy, not deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "front-door-dispatch-extraction-candidate",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "workspace package runtime boundary for cross-package module front-door integration",
-        "minimization_tracking_issue": "#1449",
-        "stale_when": "Stale when command-generation has a stable cross-package module-dispatch primitive that can load optional installed modules, preserve module CLI semantics, rewrite host-facing command text, route workspace-owned decision adapters, and report absent-module recovery without package runtime policy.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_preflight_report_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_preflight_report_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "preflight.report"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:preflight.report"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "preflight.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_proof_report_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_proof_report_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "proof.report"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:proof.report"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "proof.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
         "facade_symbol": "_run_reconcile_report_adapter",
         "source_module": "agentic_workspace.workspace_runtime_primitives",
         "source_symbol": "_run_reconcile_report_adapter",
@@ -2274,34 +2099,6 @@
         "minimization_owner": "package runtime primitive owner for live repository inspection semantics",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when the live inspection can be expressed as stable IR inputs plus portable filesystem/schema primitives without losing current-checkout semantics.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_skills_report_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_run_skills_report_adapter",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "skills.report"
-        ],
-        "primitive_refs": [
-          "runtime_module_handler:skills.report"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "skills.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior.",
-        "minimization_category": "package-specific-judgment",
-        "minimization_route": "keep-as-hand-owned-primitive",
-        "minimization_owner": "package runtime primitive owner for semantic package judgment",
-        "minimization_tracking_issue": "#1364",
-        "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"
