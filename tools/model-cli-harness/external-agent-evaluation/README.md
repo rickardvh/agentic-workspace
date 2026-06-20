@@ -12,6 +12,7 @@ Use it to evaluate whether generic external agents follow the AW operating loop 
 - closeout and residue ownership;
 - package/host/generated/local boundary hygiene;
 - recovery.
+- parent-intent satisfaction vs slice-local progress.
 
 The pack is intentionally compact. It provides machine-readable scorecard/taxonomy data, scenario probes, historical regression fixtures, sample result records, promotion decisions, surface-simplification decisions, evaluator invariants, and a lane-level closure report.
 
@@ -30,6 +31,10 @@ uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py report
 ```
 
 The report distinguishes fixture-backed readiness from live-run closure. `ready_for_fixture_closure` means the scorecard, scenarios, records, and report contract are internally consistent. `ready_for_full_closure` additionally requires clean live external-agent runs; unresolved live failures should stay routed through the lane instead of closing the parent issue.
+
+Artifact-backed probes must record the artifact source, checksum or equivalent identity, installed entrypoint, and installed-state compatibility before they can support a host-startup claim. The evaluator distinguishes artifact/install failure, installed payload compatibility failure, and agent-loop failure.
+
+Scenarios that require an operational decision trace do not ask for private chain-of-thought. They require observable route, Memory, Planning, Verification/proof, residue-owner, and safe-claim decisions so evaluators can distinguish “not applicable,” “dismissed,” “partial,” and “ignored.”
 
 Run a real external-agent scenario only when maintainer evidence is needed. The Codex adapter defaults to GPT-5.3 Codex Spark:
 
@@ -67,3 +72,4 @@ The lane is ready for parent closure only when the generated report can show:
 - artifact-backed host operation has a defined probe;
 - surface simplification has evidence-backed decisions;
 - safe claim boundaries and closeout residue are represented.
+- partial slice progress is not reported as full parent-lane closure without explicit evidence.

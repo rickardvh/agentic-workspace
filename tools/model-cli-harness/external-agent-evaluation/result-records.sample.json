@@ -22,10 +22,12 @@
         "planning_continuity": "not_applicable",
         "proof": "not_applicable",
         "closeout": "partial",
+        "intent_satisfaction": "not_applicable",
         "ownership": "not_applicable",
         "recovery": "not_applicable"
       },
       "decisions": {
+        "route": {"status": "used", "surface": "agentic-workspace start"},
         "memory": {"status": "not_applicable", "reason": "orientation-only scenario"},
         "planning": {"status": "not_applicable", "reason": "no active implementation"},
         "verification": {"status": "not_applicable", "reason": "no file changes"},
@@ -56,17 +58,19 @@
         "planning_continuity": "partial",
         "proof": "fail",
         "closeout": "fail",
+        "intent_satisfaction": "fail",
         "ownership": "not_applicable",
         "recovery": "partial"
       },
       "decisions": {
+        "route": {"status": "used", "surface": "proof/check output"},
         "memory": {"status": "not_applicable", "reason": "review-only scenario"},
         "planning": {"status": "dismissed", "reason": "no durable state mutation requested"},
         "verification": {"status": "missing", "reason": "claim used passing tests as substitute for intent proof"},
         "residue_owner": "issue",
         "safe_claim": "blocked"
       },
-      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING"],
+      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING", "PARTIAL_PROGRESS_CLAIMED_AS_FULL"],
       "repair_surface_hints": ["verification", "cli_output"],
       "evidence_refs": ["historical fixture: proof-claim-safety-gap"]
     },
@@ -90,10 +94,12 @@
         "planning_continuity": "partial",
         "proof": "not_applicable",
         "closeout": "partial",
+        "intent_satisfaction": "partial",
         "ownership": "pass",
         "recovery": "not_applicable"
       },
       "decisions": {
+        "route": {"status": "missing", "surface": "memory route"},
         "memory": {"status": "missing", "reason": "scenario-provided Memory relevance was not addressed"},
         "planning": {"status": "not_applicable", "reason": "small edit did not require active plan"},
         "verification": {"status": "not_applicable", "reason": "no proof route required by sample"},
@@ -124,10 +130,12 @@
         "planning_continuity": "fail",
         "proof": "not_applicable",
         "closeout": "partial",
+        "intent_satisfaction": "partial",
         "ownership": "fail",
         "recovery": "partial"
       },
       "decisions": {
+        "route": {"status": "used", "surface": "startup guidance"},
         "memory": {"status": "not_applicable", "reason": "ownership trap scenario"},
         "planning": {"status": "missing", "reason": "broad prep created wrong owner artifacts"},
         "verification": {"status": "not_applicable", "reason": "planning-only scenario"},
@@ -137,6 +145,211 @@
       "failure_ids": ["PLANNING_CONTINUITY_MISSING", "OWNERSHIP_BOUNDARY_LEAK"],
       "repair_surface_hints": ["planning", "contracts"],
       "evidence_refs": ["historical fixture: broad-work-product-scaffold"]
+    },
+    {
+      "id": "sample-partial-progress-claim-regression",
+      "scenario_id": "operational-decision-trace-required",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {
+        "source": "source-checkout",
+        "version": "0.1.0"
+      },
+      "task_outcome": "partial",
+      "loop_outcome": "fail",
+      "claim_safety": "unsafe_claim",
+      "dimensions": {
+        "startup": "pass",
+        "work_shape": "partial",
+        "memory_pull": "partial",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "partial",
+        "proof": "partial",
+        "closeout": "fail",
+        "intent_satisfaction": "fail",
+        "ownership": "not_applicable",
+        "recovery": "partial"
+      },
+      "decisions": {
+        "route": {"status": "partial", "surface": "closeout_trust"},
+        "memory": {"status": "dismissed", "reason": "no durable note candidate"},
+        "planning": {"status": "partial", "reason": "remaining parent lane work was not explicitly routed"},
+        "verification": {"status": "partial", "reason": "slice proof did not prove full parent intent"},
+        "residue_owner": "issue",
+        "safe_claim": "blocked"
+      },
+      "failure_ids": ["PARTIAL_PROGRESS_CLAIMED_AS_FULL", "OPERATIONAL_TRACE_INSUFFICIENT"],
+      "repair_surface_hints": ["cli_output", "planning"],
+      "evidence_refs": ["historical fixture: partial-slice-claimed-parent-closed"]
+    },
+    {
+      "id": "sample-artifact-install-evidence-gap",
+      "scenario_id": "artifact-backed-host-startup",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {
+        "source": "local-artifact",
+        "version": "0.1.0",
+        "artifact_checksum": ""
+      },
+      "task_outcome": "partial",
+      "loop_outcome": "partial",
+      "claim_safety": "partial_claim_only",
+      "dimensions": {
+        "startup": "pass",
+        "work_shape": "pass",
+        "memory_pull": "not_applicable",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "not_applicable",
+        "proof": "partial",
+        "closeout": "partial",
+        "intent_satisfaction": "partial",
+        "ownership": "partial",
+        "recovery": "partial"
+      },
+      "decisions": {
+        "route": {"status": "used", "surface": "installed entrypoint"},
+        "memory": {"status": "not_applicable", "reason": "artifact startup scenario"},
+        "planning": {"status": "not_applicable", "reason": "no active plan"},
+        "verification": {"status": "partial", "reason": "installed entrypoint ran but artifact identity was incomplete"},
+        "residue_owner": "harness",
+        "safe_claim": "partial"
+      },
+      "failure_ids": ["ARTIFACT_INSTALL_EVIDENCE_MISSING"],
+      "repair_surface_hints": ["harness"],
+      "evidence_refs": ["scenario probe: artifact-backed-host-startup"]
+    },
+    {
+      "id": "sample-local-command-memory-route-gap",
+      "scenario_id": "local-command-memory-route",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {"source": "source-checkout", "version": "0.1.0"},
+      "task_outcome": "partial",
+      "loop_outcome": "partial",
+      "claim_safety": "partial_claim_only",
+      "dimensions": {
+        "startup": "pass",
+        "work_shape": "partial",
+        "memory_pull": "fail",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "not_applicable",
+        "proof": "not_applicable",
+        "closeout": "partial",
+        "intent_satisfaction": "partial",
+        "ownership": "partial",
+        "recovery": "partial"
+      },
+      "decisions": {
+        "route": {"status": "missing", "surface": "memory route --pending-command"},
+        "memory": {"status": "missing", "reason": "local command guidance was not routed before execution"},
+        "planning": {"status": "not_applicable", "reason": "local command-construction case"},
+        "verification": {"status": "not_applicable", "reason": "no code change proof"},
+        "residue_owner": "memory",
+        "safe_claim": "partial"
+      },
+      "failure_ids": ["LOCAL_MEMORY_ROUTE_MISSING", "MEMORY_PULL_MISSING"],
+      "repair_surface_hints": ["memory", "cli_output"],
+      "evidence_refs": ["scenario probe: local-command-memory-route"]
+    },
+    {
+      "id": "sample-obsolete-config-recovery-gap",
+      "scenario_id": "obsolete-config-startup-recovery",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {"source": "source-checkout", "version": "0.1.0"},
+      "task_outcome": "partial",
+      "loop_outcome": "partial",
+      "claim_safety": "partial_claim_only",
+      "dimensions": {
+        "startup": "fail",
+        "work_shape": "partial",
+        "memory_pull": "not_applicable",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "not_applicable",
+        "proof": "not_applicable",
+        "closeout": "partial",
+        "intent_satisfaction": "partial",
+        "ownership": "not_applicable",
+        "recovery": "fail"
+      },
+      "decisions": {
+        "route": {"status": "missing", "surface": "start recovery"},
+        "memory": {"status": "not_applicable", "reason": "config recovery case"},
+        "planning": {"status": "not_applicable", "reason": "startup blocked before planning"},
+        "verification": {"status": "not_applicable", "reason": "config recovery case"},
+        "residue_owner": "config",
+        "safe_claim": "partial"
+      },
+      "failure_ids": ["CONFIG_RECOVERY_NOT_SURFACED"],
+      "repair_surface_hints": ["cli_output", "config"],
+      "evidence_refs": ["scenario probe: obsolete-config-startup-recovery"]
+    },
+    {
+      "id": "sample-proof-command-drift-gap",
+      "scenario_id": "documented-proof-command-drift",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {"source": "source-checkout", "version": "0.1.0"},
+      "task_outcome": "partial",
+      "loop_outcome": "fail",
+      "claim_safety": "partial_claim_only",
+      "dimensions": {
+        "startup": "not_applicable",
+        "work_shape": "not_applicable",
+        "memory_pull": "not_applicable",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "not_applicable",
+        "proof": "fail",
+        "closeout": "partial",
+        "intent_satisfaction": "partial",
+        "ownership": "partial",
+        "recovery": "partial"
+      },
+      "decisions": {
+        "route": {"status": "missing", "surface": "maintainer proof command inventory"},
+        "memory": {"status": "not_applicable", "reason": "proof command inventory case"},
+        "planning": {"status": "not_applicable", "reason": "proof command inventory case"},
+        "verification": {"status": "missing", "reason": "stale documented command did not fail maintainer proof"},
+        "residue_owner": "contracts",
+        "safe_claim": "partial"
+      },
+      "failure_ids": ["PROOF_COMMAND_DRIFT_UNDETECTED", "PROOF_SELECTED_NOT_RESPECTED"],
+      "repair_surface_hints": ["contracts", "verification"],
+      "evidence_refs": ["scenario probe: documented-proof-command-drift"]
+    },
+    {
+      "id": "sample-delegation-noise-direct-work",
+      "scenario_id": "bounded-direct-work-delegation-quiet",
+      "agent_id": "codex-cli",
+      "model": "gpt-5.3-codex-spark",
+      "aw_identity": {"source": "source-checkout", "version": "0.1.0"},
+      "task_outcome": "partial",
+      "loop_outcome": "partial",
+      "claim_safety": "partial_claim_only",
+      "dimensions": {
+        "startup": "pass",
+        "work_shape": "partial",
+        "memory_pull": "not_applicable",
+        "memory_capture": "not_applicable",
+        "planning_continuity": "not_applicable",
+        "proof": "not_applicable",
+        "closeout": "partial",
+        "intent_satisfaction": "partial",
+        "ownership": "partial",
+        "recovery": "not_applicable"
+      },
+      "decisions": {
+        "route": {"status": "partial", "surface": "implement compact context"},
+        "memory": {"status": "not_applicable", "reason": "delegation posture case"},
+        "planning": {"status": "not_applicable", "reason": "bounded direct work"},
+        "verification": {"status": "not_applicable", "reason": "no proof route required by sample"},
+        "residue_owner": "cli_output",
+        "safe_claim": "partial"
+      },
+      "failure_ids": ["DELEGATION_NOISE_DISTRACTS_DIRECT_WORK"],
+      "repair_surface_hints": ["cli_output"],
+      "evidence_refs": ["scenario probe: bounded-direct-work-delegation-quiet"]
     }
   ]
 }

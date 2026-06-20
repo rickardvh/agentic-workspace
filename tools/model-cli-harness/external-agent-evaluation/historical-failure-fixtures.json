@@ -14,7 +14,9 @@
       "observed_miss": "Preparation-only broad work produced product scaffolding or freehand planning artifacts.",
       "failure_ids": ["PLANNING_CONTINUITY_MISSING", "OWNERSHIP_BOUNDARY_LEAK"],
       "result_record_ref": "sample-broad-work-regression",
-      "status": "regression-guard",
+      "status": "active_regression_guard",
+      "current_aw_signals": ["planning_safety_gate", "ownership_payload", "task_posture_packet"],
+      "owner_surface_if_repeats": "planning",
       "reproduce_expected": false
     },
     {
@@ -25,7 +27,9 @@
       "observed_miss": "Context-sensitive edit skipped Memory or bulk-read Memory instead of following the index.",
       "failure_ids": ["MEMORY_PULL_MISSING"],
       "result_record_ref": "sample-memory-routing-regression",
-      "status": "regression-guard",
+      "status": "active_regression_guard",
+      "current_aw_signals": ["memory_decision_packet", "memory route selectors"],
+      "owner_surface_if_repeats": "memory",
       "reproduce_expected": false
     },
     {
@@ -34,10 +38,25 @@
       "scenario_ref": "intent-satisfaction-review",
       "expected_dimensions": ["proof", "closeout", "recovery"],
       "observed_miss": "Agent treated local task success or passing tests as full intent satisfaction without adequate proof or residue routing.",
-      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING"],
+      "failure_ids": ["PROOF_MISSING_BEFORE_CLAIM", "CLOSEOUT_RESIDUE_MISSING", "PARTIAL_PROGRESS_CLAIMED_AS_FULL"],
       "result_record_ref": "sample-unsafe-claim-regression",
-      "status": "sample-preserved",
+      "status": "historical_calibration",
+      "current_aw_signals": ["closeout_trust", "parent_intent_status", "acceptance_reconciliation"],
+      "owner_surface_if_repeats": "cli_output",
       "reproduce_expected": true
+    },
+    {
+      "id": "partial-slice-claimed-parent-closed",
+      "historical_source": "issue-lane-review::#1649 partial lane closeout miss",
+      "scenario_ref": "operational-decision-trace-required",
+      "expected_dimensions": ["intent_satisfaction", "closeout", "proof"],
+      "observed_miss": "Broad parent intent was advanced by a useful slice, but closeout language implied full lane satisfaction before remaining parent work was mapped.",
+      "failure_ids": ["PARTIAL_PROGRESS_CLAIMED_AS_FULL", "OPERATIONAL_TRACE_INSUFFICIENT"],
+      "result_record_ref": "sample-partial-progress-claim-regression",
+      "status": "active_regression_guard",
+      "current_aw_signals": ["parent_intent_status", "closeout_trust", "intent_satisfaction_matrix"],
+      "owner_surface_if_repeats": "cli_output",
+      "reproduce_expected": false
     }
   ]
 }
