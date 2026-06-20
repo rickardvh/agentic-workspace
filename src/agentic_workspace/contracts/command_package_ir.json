@@ -24,16 +24,6 @@
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
         {
-          "id": "generic-output-compatibility-renderers",
-          "kind": "accepted-output-compatibility-boundary",
-          "paths": [
-            "command_generation/primitive_executor.py"
-          ],
-          "owner": "#892 python completion lane",
-          "reason": "The primitive executor owns generic JSON/text emission and keeps compact compatibility renderers for current memory and planning report payload shapes already routed through generated operation IR.",
-          "migration_path": "Keep only schema-generic output rendering in command-generation; move package-specific text compatibility to generated target-local resources or package runtime handlers when the compatibility surface stops being universal enough to share."
-        },
-        {
           "id": "portable-primitive-registry-legacy-ids",
           "kind": "accepted-primitive-id-vocabulary",
           "paths": [

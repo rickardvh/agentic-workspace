@@ -199,8 +199,7 @@ function executeHostDomainOperation(operationId, values) {
 
 function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'typescript.domain.execute') return executeHostDomainOperation(String(args.operation_id ?? operationId), values);
-  const rootResolvePrimitives = new Set(['path.target_root.resolve', ['workspace', 'root', 'resolve'].join('.')]);
-  if (rootResolvePrimitives.has(primitive)) {
+  if (primitive === 'path.target_root.resolve') {
     const targetRoot = resolve(String(values.target ?? '.'));
     if (args.must_exist && !existsSync(targetRoot)) throw new RuntimeError(`target root does not exist: ${targetRoot}`);
     if (args.must_be_dir && (!existsSync(targetRoot) || !statSync(targetRoot).isDirectory())) throw new RuntimeError(`target root is not a directory: ${targetRoot}`);
@@ -216,7 +215,7 @@ function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'filesystem.glob') return globFiles(valueRoot(args, values), String(args.pattern ?? '')).map((relative_path) => ({ relative_path }));
   if (primitive === 'json.parse') return JSON.parse(String(values[String(args.source ?? 'registry_text')]));
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
-  if (primitive === 'output.emit' || primitive === 'output.emit.install-result' || primitive === 'output.emit.current-memory') return emitOutput(values);
+  if (primitive === 'output.emit') return emitOutput(values);
   return executeHostPrimitive(primitive, values, args, operationId);
 }
 
