@@ -24,16 +24,6 @@
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
         {
-          "id": "portable-primitive-registry-legacy-ids",
-          "kind": "accepted-primitive-id-vocabulary",
-          "paths": [
-            "command_generation/primitive_registry.py"
-          ],
-          "owner": "#1204 command-generation primitive registry",
-          "reason": "The package-owned registry declares legacy primitive identifiers so host manifests can prove support and unsupported states during extraction.",
-          "migration_path": "Keep primitive identifiers schema-backed and deprecate host-specific names only through explicit registry migrations."
-        },
-        {
           "id": "legacy-ir-schema-canonicalization",
           "kind": "accepted-schema-compatibility-boundary",
           "paths": [

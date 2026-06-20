@@ -87,6 +87,7 @@
               "release-pinning",
               "generated-freshness",
               "transitional-host-boundary",
+              "retired-primitive-boundary",
               "obsolete-duplicate"
             ]
           },
