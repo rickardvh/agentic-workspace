@@ -107,7 +107,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
             initial_values=dict(initial_values),
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
-                'workspace.root.resolve': _handle_workspace_root_resolve,
+                'workspace.target-root.resolve': _handle_workspace_target_root_resolve,
                 'workspace.config.load': _handle_workspace_config_load,
                 'workspace.defaults.load': _handle_workspace_defaults_load,
                 'workspace.defaults.select': _handle_workspace_defaults_select,
@@ -127,7 +127,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         raise OperationIrExecutionError(str(exc)) from exc
 
 
-def _handle_workspace_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+def _handle_workspace_target_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
     from .workspace_runtime import _resolve_workspace_operation_target_root
 
     return _resolve_workspace_operation_target_root(values, arguments, context)

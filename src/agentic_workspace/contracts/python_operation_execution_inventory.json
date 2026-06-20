@@ -23,7 +23,7 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "config.report.process",
       "domain_runtime_primitive_refs": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "output.fields.select",
         "workspace.config.emit"
@@ -31,7 +31,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow and selected-output text are generated; package-domain primitive steps still own config loading and tiny/full config compatibility text.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.target-root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "defaults.report",
@@ -62,19 +62,19 @@
       "operation_contract": "operations/delegation-outcome.append.json",
       "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "local-only delegation outcome append"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "delegation-outcome.append.process",
       "domain_runtime_primitive_refs": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "delegation.outcome.append"
       ],
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow and text output are generated; package-domain primitive steps still own target resolution and the local-only append operation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.target-root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "doctor.report",
@@ -84,7 +84,7 @@
       "operation_contract": "operations/doctor.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.selection.resolve",
         "workspace.report.assemble",
         "output.fields.select",
@@ -105,7 +105,7 @@
       "operation_contract": "operations/external-intent.refresh-github.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "external_intent.github.repo.resolve",
         "external_intent.github.issues.list",
         "external_intent.evidence.normalize",
@@ -127,7 +127,7 @@
       "operation_contract": "operations/implement.context.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "implementer.context.assemble",
         "output.profile.select",
         "output.fields.select",
@@ -148,7 +148,7 @@
       "operation_contract": "operations/init.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "workspace.selection.resolve",
         "workspace.lifecycle.plan",
@@ -170,7 +170,7 @@
       "operation_contract": "operations/install.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "workspace.selection.resolve",
         "workspace.lifecycle.plan",
@@ -198,14 +198,14 @@
       "conformance_ref": "memory.doctor.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.status",
+        "memory.payload.status",
         "memory.bootstrap.doctor.load",
-        "output.emit.install-result"
+        "memory.output.emit.install-result"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-strict, non-verbose text and JSON doctor executes through AW/Memory-owned transitional payload.status and output.emit.install-result primitives; package-domain runtime remains for verbose detail and strict doc ownership policy.",
+      "runtime_boundary_reason": "Non-strict, non-verbose text and JSON doctor executes through AW/Memory-owned memory.payload.status and memory.output.emit.install-result primitives; package-domain runtime remains for verbose detail and strict doc ownership policy.",
       "what_would_make_portable_later": "Replace the remaining verbose and strict-ownership memory.bootstrap.doctor.load fallback after those package-domain diagnostics are represented as schema-backed policy and output primitives.",
-      "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.status, and memory.output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.capture-note.report",
@@ -242,14 +242,14 @@
       "conformance_ref": "memory.install.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.lifecycle-plan",
+        "memory.payload.lifecycle-plan",
         "memory.install.apply",
-        "output.emit.install-result"
+        "memory.output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Default dry-run install planning executes through AW/Memory-owned transitional payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized install policy safety.",
+      "runtime_boundary_reason": "Default dry-run install planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized install policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.install.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.init.lifecycle",
@@ -265,14 +265,14 @@
       "conformance_ref": "memory.init.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.lifecycle-plan",
+        "memory.payload.lifecycle-plan",
         "memory.init.apply",
-        "output.emit.install-result"
+        "memory.output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Default dry-run init planning executes through AW/Memory-owned transitional payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized init policy safety.",
+      "runtime_boundary_reason": "Default dry-run init planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized init policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.init.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.adopt.lifecycle",
@@ -288,14 +288,14 @@
       "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.lifecycle-plan",
+        "memory.payload.lifecycle-plan",
         "memory.adopt.apply",
-        "output.emit.install-result"
+        "memory.output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Default dry-run adopt planning executes through AW/Memory-owned transitional payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized adoption policy safety.",
+      "runtime_boundary_reason": "Default dry-run adopt planning executes through AW/Memory-owned memory.payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized adoption policy safety.",
       "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.adopt.apply for mutating paths.",
-      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, memory.payload.lifecycle-plan, and memory.output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.upgrade.lifecycle",
@@ -645,13 +645,13 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.verify-payload.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Payload verification text and JSON dataflow is generated, but payload.verify and output.emit.install-result are AW/Memory-owned transitional host helpers over package-owned payload_verification.memory.json.",
+      "runtime_boundary_reason": "Payload verification text and JSON dataflow is generated, but memory.payload.verify and memory.output.emit.install-result are AW/Memory-owned AW-owned Memory primitives over package-owned payload_verification.memory.json.",
       "what_would_make_portable_later": "Already portable for the declared payload verification policy; package truth remains data-owned by payload_verification.memory.json.",
-      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while payload.verify and output.emit.install-result are inventoried transitional AW host behavior pending AW-owned Memory primitive migration.",
+      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.verify and memory.output.emit.install-result are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.verify",
-        "output.emit.install-result"
+        "memory.payload.verify",
+        "memory.output.emit.install-result"
       ]
     },
     {
@@ -665,15 +665,15 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.status.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Memory status text, JSON, and verbose-compatible output execute generated operation IR, but payload.status and output.emit.install-result are AW/Memory-owned transitional host helpers rather than portable codegen primitives.",
+      "runtime_boundary_reason": "Memory status text, JSON, and verbose-compatible output execute generated operation IR, but memory.payload.status and memory.output.emit.install-result are AW/Memory-owned AW-owned Memory primitives rather than portable codegen primitives.",
       "what_would_make_portable_later": "Already portable for the memory.status.report surface; broader verbose diagnostics belong to separate report/doctor surfaces.",
-      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while payload.status and output.emit.install-result are inventoried transitional AW host behavior pending AW-owned Memory primitive migration.",
+      "generic_behavior_audit": "Not counted as portable codegen coverage: path resolution is portable, while memory.payload.status and memory.output.emit.install-result are inventoried AW-owned Memory primitive behavior pending AW-owned Memory primitive migration.",
       "source_runtime_dependencies": [],
       "completion_blockers": [],
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "payload.status",
-        "output.emit.install-result"
+        "memory.payload.status",
+        "memory.output.emit.install-result"
       ]
     },
     {
@@ -705,7 +705,7 @@
       "operation_contract": "operations/modules.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.modules.inspect",
         "output emission mechanics"
       ],
@@ -724,7 +724,7 @@
       "operation_contract": "operations/ownership.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "ownership.answer.resolve",
         "output emission mechanics"
       ],
@@ -1321,7 +1321,7 @@
       "operation_contract": "operations/preflight.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.defaults.load",
         "workspace.config.load",
         "planning.summary.load",
@@ -1413,7 +1413,7 @@
       "operation_contract": "operations/proof.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "proof.routes.resolve",
         "proof.routes.resolve",
         "output.profile.select",
@@ -1435,7 +1435,7 @@
       "operation_contract": "operations/reconcile.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "planning.reconcile.load",
         "planning.reconcile.load",
         "output emission mechanics"
@@ -1455,7 +1455,7 @@
       "operation_contract": "operations/report.combined.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "workspace.selection.resolve",
         "workspace.report.assemble",
@@ -1477,7 +1477,7 @@
       "operation_contract": "operations/setup.guidance.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.selection.resolve",
         "workspace.report.assemble",
         "output emission mechanics"
@@ -1497,7 +1497,7 @@
       "operation_contract": "operations/skills.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "skills.registry.inspect",
         "output.fields.select",
         "output emission mechanics"
@@ -1517,7 +1517,7 @@
       "operation_contract": "operations/start.context.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "preflight.context.assemble",
         "startup.context.assemble",
         "output emission mechanics"
@@ -1537,7 +1537,7 @@
       "operation_contract": "operations/status.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.selection.resolve",
         "workspace.report.assemble",
         "output emission mechanics"
@@ -1557,7 +1557,7 @@
       "operation_contract": "operations/summary.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "planning.summary.load",
         "output.fields.select",
         "output emission mechanics"
@@ -1577,13 +1577,13 @@
       "operation_contract": "operations/system-intent.sync.json",
       "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace operation compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "system-intent.sync.process",
       "domain_runtime_primitive_refs": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "system_intent.config.resolve",
         "system_intent.source_metadata.refresh",
         "system_intent.mirror.read_or_create",
@@ -1592,7 +1592,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.target-root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "verification.report.report",
@@ -1627,7 +1627,7 @@
       "operation_contract": "operations/uninstall.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "workspace.selection.resolve",
         "workspace.lifecycle.plan",
@@ -1649,7 +1649,7 @@
       "operation_contract": "operations/upgrade.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
+        "workspace.target-root.resolve",
         "workspace.config.load",
         "workspace.selection.resolve",
         "workspace.lifecycle.plan",

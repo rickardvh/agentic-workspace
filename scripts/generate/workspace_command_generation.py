@@ -17,7 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
 SCHEMA_PATH = "command_generation:schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
-TYPESCRIPT_RUNTIME_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_runtime_support.mjs"
+PYTHON_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/python_primitive_support.py"
+TYPESCRIPT_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_primitive_support.mjs"
 OPERATION_PRIMITIVES_PATH = "src/agentic_workspace/contracts/operation_primitives.json"
 RELEASE_OWNERSHIP_PATH = ".github/release-ownership.json"
 
@@ -231,7 +232,8 @@ def workspace_command_generation_host_manifest(*, repo_root: Path = REPO_ROOT) -
             if isinstance(package, dict) and package.get("id") and package.get("operation_contract_root")
         },
         primitive_registry=PrimitiveRegistry.from_definitions(_host_primitive_definitions(manifest, repo_root=repo_root)),
-        typescript_runtime_support_path=repo_root / TYPESCRIPT_RUNTIME_SUPPORT_PATH,
+        python_primitive_support_path=repo_root / PYTHON_PRIMITIVE_SUPPORT_PATH,
+        typescript_primitive_support_path=repo_root / TYPESCRIPT_PRIMITIVE_SUPPORT_PATH,
         operation_schema_version="agentic-workspace/operation/v1",
     )
 

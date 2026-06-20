@@ -111,7 +111,7 @@
     {
       "description": "Resolve the target repository.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Load config defaults and selection policy.",

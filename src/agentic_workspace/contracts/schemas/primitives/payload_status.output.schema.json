@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_status.output.schema.json",
-  "title": "payload.status output",
+  "title": "memory.payload.status output",
   "type": "object",
   "required": [
     "payload"

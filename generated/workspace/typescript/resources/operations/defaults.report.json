@@ -65,7 +65,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "workspace.output.emit"
       }
     ],
     "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow; generated workspace output loads the defaults payload from generated _contracts/payload.json and owns tiny-router, compact-answer, and selected-output text formatting."
@@ -110,7 +110,7 @@
     {
       "description": "Emit defaults in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "workspace.output.emit"
     }
   ],
   "summary": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",

@@ -532,14 +532,18 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert "IR-defined schema-coupled generated command tests" in migration["remaining_parent_scope"][0]
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
-    assert lifecycle_metrics["transitional_host_default_dry_run_operation_count"] >= 3
+    assert lifecycle_metrics["memory_payload_default_dry_run_operation_count"] >= 3
     assert "memory.install.lifecycle" in {
-        operation["operation_id"] for operation in lifecycle_metrics["transitional_host_default_dry_run_operations"]
+        operation["operation_id"] for operation in lifecycle_metrics["memory_payload_default_dry_run_operations"]
     }
     transitional_usage = report["transitional_primitive_usage"]
-    assert transitional_usage["status"] == "inventory-backed"
-    assert transitional_usage["operation_count"] >= 7
-    assert transitional_usage["primitive_counts"]["payload.lifecycle-plan"] == 3
+    assert transitional_usage["status"] == "ordinary-source-clean"
+    assert transitional_usage["ordinary_source_operation_usage_count"] == 0
+    assert transitional_usage["compatibility_usage_count"] > 0
+    assert transitional_usage["compatibility_only_paths"] == [
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+    ]
 
 
 def test_generated_artifact_metadata_rejects_unexpected_generator_version() -> None:
@@ -593,7 +597,31 @@ def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
         """
     )
 
-    assert any("does not route the default dry-run branch through transitional payload.lifecycle-plan" in error for error in errors)
+    assert any("does not route the default dry-run branch through memory.payload.lifecycle-plan" in error for error in errors)
+
+
+def test_transitional_primitive_source_operation_usage_is_blocked() -> None:
+    errors = _checker_case_errors(
+        """
+        temp_root = checker.REPO_ROOT / ".tmp-checker-case"
+        temp_root.mkdir(exist_ok=True)
+        operation_path = temp_root / "operation.json"
+        operation_path.write_text(json.dumps({
+            "id": "example.report",
+            "ir_plan": {"steps": [{"id": "resolve", "uses": "workspace.root.resolve"}]},
+        }), encoding="utf-8")
+        checker._source_operation_contract_paths = lambda: [operation_path]
+        try:
+            _emit({"errors": checker._validate_transitional_primitive_usage_inventory()})
+        finally:
+            operation_path.unlink(missing_ok=True)
+            temp_root.rmdir()
+        """
+    )
+
+    assert any(
+        "command-generation transitional primitive IDs are present in ordinary source operation contracts" in error for error in errors
+    )
 
 
 def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:
@@ -700,8 +728,9 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["runtime_source_edit_policy"]["status"] == "available"
     assert "new-primitive-implementation" in payload["runtime_source_edit_policy"]["accepted_direct_edit_reasons"]
     assert "package-domain boundary" in payload["runtime_source_edit_policy"]["rejected_vague_reasons"]
-    assert payload["lifecycle_dry_run_metrics"]["transitional_host_default_dry_run_operation_count"] >= 3
-    assert payload["transitional_primitive_usage"]["usage_count"] >= 14
+    assert payload["lifecycle_dry_run_metrics"]["memory_payload_default_dry_run_operation_count"] >= 3
+    assert payload["transitional_primitive_usage"]["ordinary_source_operation_usage_count"] == 0
+    assert payload["transitional_primitive_usage"]["compatibility_usage_count"] > 0
     check_inventory = payload["generated_command_check_inventory"]
     assert check_inventory["generic_baseline_owner"] == "command-generation"
     assert "generated-output-freshness" in check_inventory["aw_kept_checks"]
@@ -1538,9 +1567,15 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
             "export function runGeneratedOperation({ operationId, operationPath, values }) {}",
             "function runSteps(operation, values) {}",
             "function executePrimitive(primitive, values, args, operationId) {}",
-            "function executeTypescriptDomainOperation(operationId, values) {}",
             "if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);",
             "throw new Error('unsupported native TypeScript primitive');",
+        ]
+    )
+    host_support_text = "\n".join(
+        [
+            "export function executeHostPrimitive(primitive, values, args, operationId) {}",
+            "function executeTypescriptDomainOperation(operationId, values) {}",
+            "globalThis.hostDomainOperation = executeTypescriptDomainOperation",
         ]
     )
 
@@ -1548,6 +1583,7 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
         package="workspace-cli",
         cli_text=cli_text,
         runtime_text=runtime_text,
+        host_support_text=host_support_text,
     )
 
     assert any("imports non-native runtime modules" in error for error in errors)

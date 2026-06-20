@@ -154,7 +154,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "payload.lifecycle-plan",
+        "uses": "memory.payload.lifecycle-plan",
         "when": {
           "all": [
             {
@@ -298,10 +298,10 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit.install-result"
+        "uses": "memory.output.emit.install-result"
       }
     ],
-    "summary": "Default dry-run Memory init executes generated operation IR through AW/Memory-owned transitional payload.lifecycle-plan. Mutating and customized init policy paths remain package-domain runtime."
+    "summary": "Default dry-run Memory init executes generated operation IR through AW/Memory-owned memory.payload.lifecycle-plan. Mutating and customized init policy paths remain package-domain runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -332,7 +332,7 @@
     {
       "description": "Plan default dry-run init actions from declarative payload policy.",
       "id": "plan_default_dry_run",
-      "uses": "payload.lifecycle-plan"
+      "uses": "memory.payload.lifecycle-plan"
     },
     {
       "description": "Apply or plan Memory bootstrap init through package runtime when mutation or customized install policy is required.",
@@ -342,7 +342,7 @@
     {
       "description": "Emit the init result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit.install-result"
+      "uses": "memory.output.emit.install-result"
     }
   ],
   "summary": "Initialize Memory bootstrap files in a repository.",

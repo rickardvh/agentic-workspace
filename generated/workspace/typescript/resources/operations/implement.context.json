@@ -144,7 +144,7 @@
     {
       "description": "Resolve the target root.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Build inspect scope, boundary warnings, proof commands, task routing guardrails, and handoff requirements.",

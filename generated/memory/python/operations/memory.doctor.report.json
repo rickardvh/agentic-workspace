@@ -137,7 +137,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "payload.status",
+        "uses": "memory.payload.status",
         "when": {
           "all": [
             {
@@ -181,10 +181,10 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit.install-result"
+        "uses": "memory.output.emit.install-result"
       }
     ],
-    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned transitional payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
+    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through an AW/Memory-owned memory.payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -219,7 +219,7 @@
     {
       "description": "Assemble Memory doctor status from declarative payload status policy.",
       "id": "assemble_doctor",
-      "uses": "payload.status"
+      "uses": "memory.payload.status"
     },
     {
       "description": "Load the package-domain doctor report when verbose output or strict doc ownership is requested.",
@@ -229,7 +229,7 @@
     {
       "description": "Emit Memory doctor as JSON or install-result text without package-runtime formatting.",
       "id": "emit_output",
-      "uses": "output.emit.install-result"
+      "uses": "memory.output.emit.install-result"
     }
   ],
   "summary": "Read-only agentic-memory doctor report.",

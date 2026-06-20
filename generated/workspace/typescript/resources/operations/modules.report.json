@@ -92,7 +92,7 @@
     {
       "description": "Resolve the target root when provided.",
       "id": "resolve_root",
-      "uses": "workspace.root.resolve"
+      "uses": "workspace.target-root.resolve"
     },
     {
       "description": "Inspect available module descriptors and installed signals.",

@@ -54,19 +54,19 @@
     },
     {
       "id": "verify_payload_policy",
-      "uses": "payload.verify",
+      "uses": "memory.payload.verify",
       "description": "Verify bundled memory payload files through package-owned payload verification policy."
     },
     {
       "id": "emit_output",
-      "uses": "output.emit.install-result",
+      "uses": "memory.output.emit.install-result",
       "description": "Emit memory payload verification result in the requested format."
     }
   ],
   "guards": [
     "Verification must remain read-only.",
     "Generated code owns parser/help/dispatch shape.",
-    "Text and JSON output must execute payload verification through the AW/Memory-owned transitional payload.verify primitive and package-owned policy JSON."
+    "Text and JSON output must execute payload verification through the AW/Memory-owned memory.payload.verify primitive and package-owned policy JSON."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
@@ -92,7 +92,7 @@
       },
       {
         "id": "verify_payload_policy",
-        "uses": "payload.verify",
+        "uses": "memory.payload.verify",
         "description": "Verify bundled memory payload files through package-owned payload verification policy.",
         "arguments": {
           "policy_root": "memory.contracts",
@@ -107,7 +107,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit.install-result",
+        "uses": "memory.output.emit.install-result",
         "description": "Emit memory payload verification result in the requested format.",
         "arguments": {},
         "outputs": [

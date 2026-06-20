@@ -60,7 +60,7 @@
     },
     {
       "id": "assemble_current_view",
-      "uses": "payload.current-memory",
+      "uses": "memory.payload.current-memory",
       "description": "Assemble current show JSON from declared target-local current-memory note files."
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "id": "emit_current_show",
-      "uses": "output.emit.current-memory",
+      "uses": "memory.output.emit.current-memory",
       "description": "Emit current show output from the generated current-memory payload."
     }
   ],
@@ -122,7 +122,7 @@
       },
       {
         "id": "assemble_current_view",
-        "uses": "payload.current-memory",
+        "uses": "memory.payload.current-memory",
         "description": "Assemble current show JSON from declared target-local current-memory note files.",
         "when": {
           "value": "current_command",
@@ -156,7 +156,7 @@
       },
       {
         "id": "emit_current_show",
-        "uses": "output.emit.current-memory",
+        "uses": "memory.output.emit.current-memory",
         "description": "Emit current show output from the generated current-memory payload.",
         "when": {
           "value": "current_command",

@@ -114,7 +114,7 @@
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Memory payload verification policy is module-owned product truth consumed by the codegen-owned payload.verify primitive.",
+      "notes": "Memory payload verification policy is module-owned product truth consumed by the codegen-owned memory.payload.verify primitive.",
       "storage_class": "source-of-truth",
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },

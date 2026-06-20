@@ -80,7 +80,7 @@
   "steps": [
     {
       "id": "resolve_root",
-      "uses": "workspace.root.resolve",
+      "uses": "workspace.target-root.resolve",
       "description": "Resolve the target root."
     },
     {
@@ -90,7 +90,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit",
+      "uses": "workspace.output.emit",
       "description": "Emit append result."
     }
   ],
@@ -110,7 +110,7 @@
     "steps": [
       {
         "id": "resolve_root",
-        "uses": "workspace.root.resolve",
+        "uses": "workspace.target-root.resolve",
         "description": "Resolve and validate the target root for the local-only delegation outcome file.",
         "arguments": {},
         "outputs": [
@@ -130,7 +130,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit",
+        "uses": "workspace.output.emit",
         "description": "Emit the append result in the requested format.",
         "arguments": {},
         "outputs": [

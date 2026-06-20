@@ -106,7 +106,7 @@
     },
     {
       "id": "plan_default_dry_run",
-      "uses": "payload.lifecycle-plan",
+      "uses": "memory.payload.lifecycle-plan",
       "description": "Plan default dry-run install actions from declarative payload policy."
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit.install-result",
+      "uses": "memory.output.emit.install-result",
       "description": "Emit the install result in the requested format."
     }
   ],
@@ -131,7 +131,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Default dry-run Memory install executes generated operation IR through AW/Memory-owned transitional payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
+    "summary": "Default dry-run Memory install executes generated operation IR through AW/Memory-owned memory.payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
     "steps": [
       {
         "id": "resolve_target_root",
@@ -192,7 +192,7 @@
       },
       {
         "id": "plan_default_dry_run",
-        "uses": "payload.lifecycle-plan",
+        "uses": "memory.payload.lifecycle-plan",
         "description": "Plan default dry-run install actions from declarative payload policy.",
         "when": {
           "all": [
@@ -343,7 +343,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit.install-result",
+        "uses": "memory.output.emit.install-result",
         "description": "Emit the install result in the requested format.",
         "arguments": {},
         "outputs": [

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/primitives/payload_verify.input.schema.json",
-  "title": "payload.verify input",
+  "title": "memory.payload.verify input",
   "type": "object",
   "properties": {
     "policy_root": {

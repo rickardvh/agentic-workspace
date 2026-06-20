@@ -23,9 +23,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.lifecycle-plan",
+          "memory.payload.lifecycle-plan",
           "memory.adopt.apply",
-          "output.emit.install-result"
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
@@ -155,9 +155,9 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "memory.current.load",
-          "payload.current-memory",
+          "memory.payload.current-memory",
           "output.emit",
-          "output.emit.current-memory"
+          "memory.output.emit.current-memory"
         ]
       },
       "schemas": {
@@ -189,9 +189,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.status",
+          "memory.payload.status",
           "memory.bootstrap.doctor.load",
-          "output.emit.install-result"
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
@@ -223,9 +223,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.lifecycle-plan",
+          "memory.payload.lifecycle-plan",
           "memory.init.apply",
-          "output.emit.install-result"
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
@@ -257,9 +257,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.lifecycle-plan",
+          "memory.payload.lifecycle-plan",
           "memory.install.apply",
-          "output.emit.install-result"
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
@@ -622,8 +622,8 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.status",
-          "output.emit.install-result"
+          "memory.payload.status",
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
@@ -751,8 +751,8 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "payload.verify",
-          "output.emit.install-result"
+          "memory.payload.verify",
+          "memory.output.emit.install-result"
         ]
       },
       "schemas": {
