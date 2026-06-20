@@ -301,6 +301,59 @@ def test_start_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
     assert "No keyword-triggered Memory requirement." in packet["limits"]
 
 
+def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[workspace]",
+                'default_preset = "planning"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/start-recovery/v1"
+    assert payload["status"] == "recovery-required"
+    assert payload["problem"]["obsolete_field"] == "workspace.default_preset"
+    assert payload["problem"]["replacement"] == "[modules] enabled = [...]"
+    assert payload["problem"]["config_valid"] is False
+    assert payload["automated_repair"]["safe"] is False
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert payload["recovery_packet"]["next_safe_command"] == "agentic-workspace config --target . --format json"
+
+
+def test_start_recovery_for_obsolete_default_preset_uses_configured_cli_invoke(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[workspace]",
+                'cli_invoke = "uv run aw-dev"',
+                'default_preset = "planning"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/start-recovery/v1"
+    assert payload["recovery_packet"]["next_safe_command"] == "uv run aw-dev config --target . --format json"
+
+
 def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

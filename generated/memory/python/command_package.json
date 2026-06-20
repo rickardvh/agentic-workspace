@@ -1965,6 +1965,14 @@
           {
             "default": "",
             "flags": [
+              "--pending-command"
+            ],
+            "help": "Pending local command to route as structured execution-surface context before running it.",
+            "name": "pending_command"
+          },
+          {
+            "default": "",
+            "flags": [
               "--task"
             ],
             "help": "Task text for route context. Task prose is not routing authority.",
@@ -3061,6 +3069,9 @@
             "files": {
               "value": "files"
             },
+            "pending_command": {
+              "value": "pending_command"
+            },
             "stage": {
               "value": "stage"
             },
@@ -3189,6 +3200,11 @@
           "arg": "surface",
           "default": [],
           "name": "surface"
+        },
+        {
+          "arg": "pending_command",
+          "default": "",
+          "name": "pending_command"
         },
         {
           "arg": "task",

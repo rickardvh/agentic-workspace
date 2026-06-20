@@ -25,6 +25,11 @@
       "required": false
     },
     {
+      "name": "pending_command",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "task",
       "source": "cli-option",
       "required": false
@@ -100,6 +105,9 @@
           },
           "surfaces": {
             "value": "surface"
+          },
+          "pending_command": {
+            "value": "pending_command"
           },
           "task": {
             "value": "task"

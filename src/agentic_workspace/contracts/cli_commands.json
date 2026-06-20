@@ -1217,6 +1217,14 @@
               "help": "Explicit routing surfaces."
             },
             {
+              "name": "pending_command",
+              "flags": [
+                "--pending-command"
+              ],
+              "default": "",
+              "help": "Pending local command to route as structured execution-surface context before running it."
+            },
+            {
               "name": "task",
               "flags": [
                 "--task"

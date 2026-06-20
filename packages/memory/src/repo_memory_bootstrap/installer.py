@@ -676,25 +676,8 @@ def _capture_candidate_view(note: MemoryNoteRecord, *, score: int, reasons: list
     return candidate
 
 
-def _looks_like_local_memory_capture(*, summary: str, task: str | None, files: tuple[str, ...], surfaces: tuple[str, ...]) -> bool:
-    text = " ".join([summary, task or "", " ".join(files), " ".join(surfaces)]).lower()
-    local_markers = (
-        "machine-local",
-        "local-only",
-        "local execution",
-        "local shell",
-        "this windows",
-        "windows codex",
-        "codex desktop shell",
-        "bare python",
-        "python is unavailable",
-        "not on path",
-        "local runtime",
-        "environment-specific",
-        "user-local",
-        "private",
-    )
-    return any(marker in text for marker in local_markers)
+def _local_memory_capture_requested(*, surfaces: tuple[str, ...]) -> bool:
+    return "local_memory" in {_normalise_surface_name(surface) for surface in surfaces}
 
 
 def suggest_memory_note_capture(
@@ -789,12 +772,7 @@ def suggest_memory_note_capture(
     force_reason = force_new_reason.strip()
     best_score = best.get("score", 0) if best else 0
     strong_best = best if isinstance(best_score, int) and best_score >= 20 else None
-    local_capture = _looks_like_local_memory_capture(
-        summary=summary,
-        task=task,
-        files=normalized_files,
-        surfaces=tuple(effective_surfaces),
-    )
+    local_capture = _local_memory_capture_requested(surfaces=tuple(effective_surfaces))
     create_command = (
         f"agentic-memory create-note {safe_slug} --local --local-reason <why-local> --target ./repo --summary <text> --format json"
         if local_capture
@@ -813,7 +791,7 @@ def suggest_memory_note_capture(
         recommended_action = "create-local-note" if local_capture else "create-new-note"
         next_command = create_command
         reason = (
-            "the capture request appears local/runtime-specific, so local-only Memory is the safer default"
+            "the capture request supplied the explicit local_memory surface, so local-only Memory is the safer default"
             if local_capture
             else "no existing Memory note matched the capture request"
         )
@@ -1672,17 +1650,19 @@ def route_memory(
     target: str | Path | None = None,
     files: list[str] | None = None,
     surfaces: list[str] | None = None,
+    pending_command: str | None = None,
     task: str | None = None,
     stage: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=True, message="Memory routing suggestions")
     normalized_stage = _normalise_surface_name(stage or "")
+    pending_command_supplied = bool(pending_command and pending_command.strip())
     if not files and not surfaces and not normalized_stage:
         result.add(
             "manual review",
             target_root / Path(".agentic-workspace/memory/repo/index.md"),
-            "provide --files, --surface, or --stage to request routing suggestions",
+            "provide --files, --surface, or --stage to request routing suggestions; --pending-command is context only",
             role="memory-route",
             safety="manual",
             source=".agentic-workspace/memory/repo/index.md",
@@ -1700,10 +1680,11 @@ def route_memory(
                 "explicit_surfaces": [],
                 "stage_surface": "",
                 "inferred_surfaces": [],
+                "pending_command_supplied": pending_command_supplied,
                 "stage": "",
                 "task_supplied": bool(task and task.strip()),
                 "task_used_for_matching": False,
-                "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
+                "rule": "Files, explicit surfaces, and stage are route signals; task prose and pending command text are context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
             },
         }
         return result
@@ -1801,10 +1782,11 @@ def route_memory(
         "explicit_surfaces": explicit_surfaces,
         "stage_surface": normalized_stage,
         "inferred_surfaces": inferred_surfaces,
+        "pending_command_supplied": pending_command_supplied,
         "stage": normalized_stage,
         "task_supplied": bool(task and task.strip()),
         "task_used_for_matching": False,
-        "rule": "Files, explicit surfaces, and stage are route signals; task prose is context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
+        "rule": "Files, explicit surfaces, and stage are route signals; task prose and pending command text are context for the agent, not routing authority. route_context.surfaces is the merged matching set; explicit_surfaces preserves caller input.",
     }
     result.route_summary["selected_note_trust"] = _selected_route_note_trust(
         manifest=manifest,

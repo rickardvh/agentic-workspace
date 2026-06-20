@@ -584,18 +584,27 @@ def test_memory_capture_note_does_not_update_unrelated_note_from_weak_tokens(tmp
         routes_from=["memory", "verification", "routing"],
     )
 
-    payload = installer.suggest_memory_note_capture(
+    prose_only = installer.suggest_memory_note_capture(
         target=target,
         slug="local-python-invocation",
         summary="Bare python is unavailable in this local Windows Codex shell; use uv run python.",
         task="Capture local shell execution memory for this Codex environment.",
         surfaces=["python", "shell", "codex"],
     )
+    explicit_local = installer.suggest_memory_note_capture(
+        target=target,
+        slug="local-python-invocation",
+        summary="Bare python is unavailable in this local Windows Codex shell; use uv run python.",
+        task="Capture local shell execution memory for this Codex environment.",
+        surfaces=["python", "shell", "codex", "local_memory"],
+    )
 
-    assert payload["recommended_action"] == "create-local-note"
-    assert payload["storage_decision"]["recommended_owner"] == "local_memory"
-    assert "--local" in payload["commands"][0]
-    assert all(candidate["evidence_class"] != "ownership-evidence" for candidate in payload["candidates"])
+    assert prose_only["recommended_action"] == "create-new-note"
+    assert prose_only["storage_decision"]["recommended_owner"] == "repo_memory"
+    assert explicit_local["recommended_action"] == "create-local-note"
+    assert explicit_local["storage_decision"]["recommended_owner"] == "local_memory"
+    assert "--local" in explicit_local["commands"][0]
+    assert all(candidate["evidence_class"] != "ownership-evidence" for candidate in explicit_local["candidates"])
 
 
 def test_memory_capture_note_surfaces_improvement_promotion_metadata(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

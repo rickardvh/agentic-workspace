@@ -2282,6 +2282,58 @@ def _validate_product_managed_enclave() -> list[str]:
     return errors
 
 
+def _validate_documented_proof_command_inventory(
+    *,
+    repo_root: Path = REPO_ROOT,
+    inventory_path: Path | None = None,
+) -> list[str]:
+    inventory = inventory_path or repo_root / "docs" / "maintainer" / "proof-command-inventory.json"
+    errors: list[str] = []
+    try:
+        payload = json.loads(inventory.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return [f"{inventory.relative_to(repo_root).as_posix()} could not be read: {exc}"]
+    except json.JSONDecodeError as exc:
+        return [f"{inventory.relative_to(repo_root).as_posix()} is invalid JSON: {exc}"]
+    if payload.get("kind") != "agentic-workspace/documented-proof-command-inventory/v1":
+        errors.append("proof-command-inventory kind drifted")
+    source_paths = [str(item) for item in payload.get("sources", []) if isinstance(item, str) and item.strip()]
+    source_texts: dict[str, str] = {}
+    for source in source_paths:
+        path = repo_root / source
+        if not path.is_file():
+            errors.append(f"inventory source is missing: {source}")
+            continue
+        source_texts[source] = path.read_text(encoding="utf-8")
+    allowed_statuses = {"runnable", "obsolete", "removed"}
+    for raw_command in payload.get("commands", []):
+        if not isinstance(raw_command, dict):
+            errors.append("inventory command entries must be objects")
+            continue
+        command_id = str(raw_command.get("id") or "<missing-id>")
+        command = str(raw_command.get("command") or "").strip()
+        status = str(raw_command.get("status") or "").strip()
+        refs = [str(item) for item in raw_command.get("source_refs", []) if isinstance(item, str) and item.strip()]
+        if not command:
+            errors.append(f"{command_id} must declare command text")
+            continue
+        if status not in allowed_statuses:
+            errors.append(f"{command_id} status must be one of: {', '.join(sorted(allowed_statuses))}")
+            continue
+        for ref in refs:
+            if ref not in source_texts:
+                errors.append(f"{command_id} references unknown or missing source {ref}")
+        if status == "runnable":
+            missing_refs = [ref for ref in refs if command not in source_texts.get(ref, "")]
+            if missing_refs:
+                errors.append(f"{command_id} runnable command is missing from source refs: {', '.join(missing_refs)}")
+        if status == "obsolete":
+            stale_refs = [ref for ref, text in source_texts.items() if command in text]
+            if stale_refs:
+                errors.append(f"{command_id} obsolete command still appears in ordinary routing sources: {', '.join(stale_refs)}")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -2295,6 +2347,7 @@ def main(argv: list[str] | None = None) -> int:
         ("contract_inventory owner choice", _validate_contract_inventory_owner_choice()),
         ("review artifacts startup hygiene", _validate_review_artifacts_not_startup_inputs()),
         ("product-managed enclave", _validate_product_managed_enclave()),
+        ("documented proof command inventory", _validate_documented_proof_command_inventory()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),

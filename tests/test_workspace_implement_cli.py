@@ -100,6 +100,83 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["authority_boundary"]["agent_owns"]
 
 
+def test_implement_compact_omits_routine_stay_local_delegation_noise(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "docs" / "note.md", "# Note\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/note.md",
+                "--task",
+                "Update a small doc note",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _implement_context(payload)
+
+    assert "delegation_decision" not in context
+    assert "context.delegation_decision" not in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "context.delegation_decision" not in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_compact_keeps_delegation_when_route_changes_next_action(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[delegation]",
+                'mode = "manual"',
+            ]
+        ),
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "schemas" / "workspace_local_override.schema.json", "{}\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "Update delegation config schema",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    context = _implement_context(payload)
+
+    assert context["delegation_decision"]["recommended_route"] == "suggest-escalation"
+    assert context["delegation_decision"]["required_next_action"] == "prepare-handoff"
+    assert "context.delegation_decision" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "context.delegation_decision" in payload["drill_down"]["available_selectors"]
+
+
 def test_implement_memory_decision_packet_reports_relevant_route_matches(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

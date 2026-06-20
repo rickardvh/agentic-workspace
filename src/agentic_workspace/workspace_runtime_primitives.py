@@ -20325,7 +20325,7 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
     config_changes_effective_behavior = isinstance(config_effect, dict) and (
         config_effect.get("configured_delegation_mode") != config_effect.get("delegation_mode")
         or config_effect.get("disabled_reason") not in (None, "")
-        or config_effect.get("safe_to_auto_run_commands") is False
+        or (config_effect.get("configured_delegation_mode") == "auto" and config_effect.get("safe_to_auto_run_commands") is False)
         or (
             isinstance(manual_external_relay, dict)
             and manual_external_relay.get("target_kind") == "manual-external"
@@ -20443,6 +20443,24 @@ def _compact_start_delegation_decision(value: Any, *, include_manual_handoff_det
                 {key: next_step.get(key) for key in next_step_keys if key in next_step} if isinstance(next_step, dict) else next_step
             )
     return compact
+
+
+def _delegation_decision_requires_attention(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    route = value.get("recommended_route") or value.get("decision")
+    required = value.get("required_next_action")
+    if route not in {"", None, "stay-local"} or required not in {"", None, "continue-local"}:
+        return True
+    config_effect = value.get("config_effect", {})
+    if isinstance(config_effect, dict) and (
+        config_effect.get("configured_delegation_mode") != config_effect.get("delegation_mode")
+        or config_effect.get("disabled_reason") not in (None, "")
+        or (config_effect.get("configured_delegation_mode") == "auto" and config_effect.get("safe_to_auto_run_commands") is False)
+    ):
+        return True
+    audit = value.get("auto_delegation_audit", {})
+    return isinstance(audit, dict) and audit.get("must_report_if_not_run") is True
 
 
 def _compact_effort_guidance(value: dict[str, Any]) -> dict[str, Any]:
@@ -21978,7 +21996,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     delegation_config_changes_behavior = isinstance(delegation_config_effect, dict) and (
         delegation_config_effect.get("configured_delegation_mode") != delegation_config_effect.get("delegation_mode")
         or delegation_config_effect.get("disabled_reason") not in (None, "")
-        or delegation_config_effect.get("safe_to_auto_run_commands") is False
+        or (
+            delegation_config_effect.get("configured_delegation_mode") == "auto"
+            and delegation_config_effect.get("safe_to_auto_run_commands") is False
+        )
     )
     if isinstance(delegation, dict) and (delegation_route not in {"", None, "stay-local"} or delegation_config_changes_behavior):
         context["delegation_decision"] = _compact_start_delegation_decision(delegation, include_manual_handoff_detail=False)
@@ -27254,6 +27275,18 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not (isinstance(reuse_pressure, dict) and reuse_pressure.get("status") == "deferred"):
         context_reuse_pressure["state"] = reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None
         context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
+    delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
+    delegation_attention = _delegation_decision_requires_attention(delegation_decision)
+    advisory_selectors = [
+        "context.reuse_pressure",
+        "context.guidance",
+        "requirement_grounding",
+        "plan_delegation_packet",
+        "test_strategy_check",
+        "routine_work_context",
+    ]
+    if delegation_attention:
+        advisory_selectors.insert(2, "context.delegation_decision")
     detail_commands = {
         "full_context": _command_with_cli_invoke(
             command="agentic-workspace implement --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
@@ -27317,15 +27350,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     else []
                 ),
             ],
-            advisory_selectors=[
-                "context.reuse_pressure",
-                "context.guidance",
-                "context.delegation_decision",
-                "requirement_grounding",
-                "plan_delegation_packet",
-                "test_strategy_check",
-                "routine_work_context",
-            ],
+            advisory_selectors=advisory_selectors,
             agent_judgment="Agent owns semantic work shape and completion judgment after proof and acceptance reconciliation.",
         ),
         "next": {
@@ -27452,8 +27477,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
                 "rule": "AW exposes facts, blockers, and guidelines; the agent owns work-shape and proof proportionality judgment.",
             },
-            "delegation_decision": _compact_start_delegation_decision(
-                execution_posture.get("delegation_decision", {}), include_manual_handoff_detail=False
+            **(
+                {"delegation_decision": _compact_start_delegation_decision(delegation_decision, include_manual_handoff_detail=False)}
+                if delegation_attention
+                else {}
             ),
             "requirement_grounding": {
                 "status": payload.get("requirement_grounding", {}).get("status", "not-applicable")
@@ -27555,6 +27582,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(selectors, list):
             drill_down["available_selectors"] = [item for item in selectors if item != selector]
 
+    if not delegation_attention:
+        remove_available_selector("context.delegation_decision")
     if isinstance(payload.get("generated_surface_trust"), dict) and payload["generated_surface_trust"].get("status") == "present":
         tiny_context = projected.get("context", {})
         if isinstance(tiny_context, dict):
@@ -34060,6 +34089,10 @@ def _emit_proof(
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
+    if args.format == "json":
+        if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
+            _emit_payload(payload=recovery_payload, format_name=args.format)
+            return 0
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)
     selected_fields = getattr(args, "select", None)
@@ -34081,6 +34114,83 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _raw_config_cli_invoke(*, target_root: Path, config_payload: dict[str, Any]) -> str:
+    cli_invoke = DEFAULT_CLI_INVOKE
+    raw_workspace = config_payload.get("workspace", {})
+    if isinstance(raw_workspace, dict) and isinstance(raw_workspace.get("cli_invoke"), str) and raw_workspace["cli_invoke"].strip():
+        cli_invoke = raw_workspace["cli_invoke"].strip()
+    local_config_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    if local_config_path.exists():
+        try:
+            local_payload = tomllib.loads(local_config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            return cli_invoke
+        local_workspace = local_payload.get("workspace", {})
+        if (
+            isinstance(local_workspace, dict)
+            and isinstance(local_workspace.get("cli_invoke"), str)
+            and local_workspace["cli_invoke"].strip()
+        ):
+            cli_invoke = local_workspace["cli_invoke"].strip()
+    return cli_invoke
+
+
+def _obsolete_default_preset_start_recovery_payload(*, target_root: Path) -> dict[str, Any] | None:
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if not config_path.exists():
+        return None
+    try:
+        payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    raw_workspace = payload.get("workspace", {})
+    if not isinstance(raw_workspace, dict) or "default_preset" not in raw_workspace:
+        return None
+    preset = raw_workspace.get("default_preset")
+    modules = payload.get("modules", {})
+    has_replacement = isinstance(modules, dict) and isinstance(modules.get("enabled"), list)
+    repair_safe = has_replacement
+    cli_invoke = _raw_config_cli_invoke(target_root=target_root, config_payload=payload)
+    return {
+        "kind": "agentic-workspace/start-recovery/v1",
+        "status": "recovery-required",
+        "target": ".",
+        "problem": {
+            "kind": "agentic-workspace/config-migration/v1",
+            "config_path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "obsolete_field": "workspace.default_preset",
+            "observed_value": preset,
+            "reason": "workspace.default_preset is no longer accepted by Agentic Workspace config loading.",
+            "replacement": "[modules] enabled = [...]",
+            "config_valid": False,
+        },
+        "automated_repair": {
+            "safe": repair_safe,
+            "reason": "replacement modules.enabled is already present" if repair_safe else "module selection cannot be inferred safely",
+        },
+        "next_safe_action": {
+            "next_safe_action": "repair-config-before-work",
+            "implementation_allowed": False,
+            "read_only_allowed": True,
+            "proof_required": False,
+            "closure_blockers": ["stale workspace config blocks ordinary startup routing"],
+            "recommended_action": (
+                f"Edit {WORKSPACE_CONFIG_PATH.as_posix()} to remove [workspace].default_preset and declare [modules] enabled = [...]."
+            ),
+        },
+        "recovery_packet": {
+            "kind": "agentic-workspace/config-recovery-packet/v1",
+            "source": WORKSPACE_CONFIG_PATH.as_posix(),
+            "blocked_because": "ordinary start cannot load authoritative workspace config while obsolete fields remain",
+            "next_safe_command": _command_with_cli_invoke(
+                command="agentic-workspace config --target . --format json", cli_invoke=cli_invoke
+            ),
+            "agent_owns": ["choose the correct module list from repo context or ask the maintainer when unclear"],
+            "human_owns": ["confirm module intent when the stale preset cannot be mapped safely"],
+        },
+    }
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
