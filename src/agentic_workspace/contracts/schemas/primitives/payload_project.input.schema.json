@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_project.input.schema.json",
+  "title": "payload.project input",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string",
+      "description": "Operation value name containing the source payload."
+    },
+    "selectors": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ],
+      "description": "Exact dot-path selectors, either comma-separated or as a declared list."
+    },
+    "select_value": {
+      "type": "string",
+      "description": "Operation value name containing selectors when selectors are not declared directly."
+    },
+    "source_command": {
+      "type": "string",
+      "description": "Command identifier copied into the selected-output wrapper."
+    },
+    "selected_output_kind": {
+      "type": "string",
+      "description": "Kind value for the selected-output wrapper."
+    }
+  },
+  "additionalProperties": true
+}

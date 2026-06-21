@@ -25,7 +25,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "workspace.config.load",
-          "output.fields.select",
+          "payload.project",
           "workspace.config.emit"
         ]
       },

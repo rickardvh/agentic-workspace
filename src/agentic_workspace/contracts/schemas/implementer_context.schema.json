@@ -26,6 +26,7 @@
     "objective_drift",
     "generated_surface_trust",
     "reuse_pressure",
+    "architecture_principles",
     "assurance_requirements",
     "verification",
     "routine_work_context",
@@ -63,6 +64,11 @@
     "memory_consult": {
       "type": "object",
       "description": "Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory.",
+      "additionalProperties": true
+    },
+    "architecture_principles": {
+      "type": "object",
+      "description": "Structured architecture-principle routing packet derived from authoritative system-intent configuration and changed paths.",
       "additionalProperties": true
     },
     "planning_revision": {

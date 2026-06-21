@@ -113,6 +113,8 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
+    if primitive == "payload.project":
+        return _project_payload(values=values, arguments=arguments)
     if primitive == "output.emit":
         return _emit_output(values=values, arguments=arguments)
     if primitive == "python.function.call":
@@ -521,6 +523,46 @@ def _emit_output(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _project_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+    source_name = str(arguments.get("source") or "result")
+    source_command = str(arguments.get("source_command") or values.get("operation_id") or "")
+    selected_output_kind = str(arguments.get("selected_output_kind") or "command-generation/selected-output/v1")
+    if source_name not in values:
+        raise PrimitiveExecutionError(f"payload.project source value is missing: {source_name!r}")
+    payload = values[source_name]
+    selectors = _projection_selectors(values=values, arguments=arguments)
+    if not selectors:
+        return _plain_output_result(payload)
+    selected: dict[str, Any] = {
+        "kind": selected_output_kind,
+        "source_command": source_command,
+        "values": {},
+    }
+    missing: list[str] = []
+    projected_values = cast(dict[str, Any], selected["values"])
+    for selector in selectors:
+        found, value = _field_by_path(payload, selector)
+        if found:
+            projected_values[selector] = _plain_output_result(value)
+        else:
+            missing.append(selector)
+    if missing:
+        selected["missing"] = missing
+        selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
+        selected["available_selectors"] = _available_selectors_for_payload(payload)
+    return selected
+
+
+def _projection_selectors(*, values: dict[str, Any], arguments: dict[str, Any]) -> list[str]:
+    raw_selectors = arguments.get("selectors")
+    if raw_selectors is None:
+        select_value_name = str(arguments.get("select_value") or "select")
+        raw_selectors = values.get(select_value_name)
+    if isinstance(raw_selectors, Sequence) and not isinstance(raw_selectors, (str, bytes, bytearray)):
+        return [str(item).strip() for item in raw_selectors if str(item).strip()]
+    return [token.strip() for token in str(raw_selectors or "").split(",") if token.strip()]
+
+
 def _plain_output_result(result: Any) -> Any:
     if isinstance(result, Path):
         return str(result)
@@ -712,6 +754,39 @@ def _resolve_dotted_value(payload: Mapping[str, Any], dotted_path: str) -> Any:
             return None
         current = current[part]
     return current
+
+
+def _field_by_path(payload: Any, dotted_path: str) -> tuple[bool, Any]:
+    if not dotted_path:
+        return False, None
+    current: Any = payload
+    for part in dotted_path.split("."):
+        if isinstance(current, Mapping) and part in current:
+            current = current[part]
+            continue
+        if isinstance(current, Sequence) and not isinstance(current, (str, bytes, bytearray)):
+            try:
+                current = current[int(part)]
+                continue
+            except (ValueError, IndexError):
+                return False, None
+        return False, None
+    return True, current
+
+
+def _available_selectors_for_payload(payload: Any, prefix: str = "") -> list[str]:
+    selectors: list[str] = []
+    if isinstance(payload, Mapping):
+        for key in sorted(str(item) for item in payload):
+            path = f"{prefix}.{key}" if prefix else key
+            selectors.append(path)
+            selectors.extend(_available_selectors_for_payload(payload.get(key), path))
+    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        for index, item in enumerate(payload[:10]):
+            path = f"{prefix}.{index}" if prefix else str(index)
+            selectors.append(path)
+            selectors.extend(_available_selectors_for_payload(item, path))
+    return selectors
 
 
 def _resolve_inside(root: Path, relative: str) -> Path:

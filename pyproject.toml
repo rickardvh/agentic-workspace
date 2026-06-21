@@ -19,7 +19,7 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
-  "command-generation @ git+https://github.com/rickardvh/command-generation.git@234c80cf546d233851af9ee4e1e9fc444879c8e3",
+  "command-generation @ git+https://github.com/rickardvh/command-generation.git@1adffcbf62baa530385f8b7a95aab90086632593",
   "jsonschema",
   "pre-commit",
   "pytest",

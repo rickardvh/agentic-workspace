@@ -338,12 +338,6 @@ def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dic
     return _serialise_value(payload)
 
 
-def _select_workspace_operation_fields(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _select_workspace_operation_fields as source_function
-
-    return source_function(*args, **kwargs)
-
-
 __all__ = [
     '_append_workspace_operation_delegation_outcome',
     '_emit_workspace_operation_output',
@@ -366,5 +360,4 @@ __all__ = [
     '_run_start_context_adapter',
     '_run_summary_report_adapter',
     '_select_workspace_operation_defaults',
-    '_select_workspace_operation_fields',
 ]

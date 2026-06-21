@@ -111,6 +111,7 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.project",
           "output.emit"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
@@ -128,6 +129,7 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.project",
           "output.emit"
         ],
         "domain_runtime_extension_behavior": "Generated TypeScript packages execute declared command contracts with native Node/TypeScript runtime helpers and contract-backed domain output projection instead of delegating ordinary command execution to Python.",
@@ -574,6 +576,18 @@
       "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
       "output_schema_ref": "schemas/primitives/output_emit.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
+      "id": "payload.project",
+      "summary": "Project exact dot-path selectors from a payload into a selected-output wrapper.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Resolve declared object/list selector paths without host-specific policy, expression evaluation, or prose-derived routing.",
+      "input_schema_ref": "schemas/primitives/payload_project.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_project.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen",
+      "tier_owner": "command-generation portable primitive",
+      "conformance_ref": "rickardvh/command-generation#68 payload.project primitive tests"
     },
     {
       "id": "output.fields.select",
