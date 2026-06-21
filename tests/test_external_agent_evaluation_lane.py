@@ -73,6 +73,7 @@ def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> 
         "planning_continuity",
         "proof",
         "closeout",
+        "intent_satisfaction",
         "ownership",
         "recovery",
     } <= dimensions
@@ -80,6 +81,13 @@ def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> 
         "MEMORY_PULL_MISSING",
         "PLANNING_CONTINUITY_MISSING",
         "PROOF_MISSING_BEFORE_CLAIM",
+        "PARTIAL_PROGRESS_CLAIMED_AS_FULL",
+        "LOCAL_MEMORY_ROUTE_MISSING",
+        "CONFIG_RECOVERY_NOT_SURFACED",
+        "PROOF_COMMAND_DRIFT_UNDETECTED",
+        "DELEGATION_NOISE_DISTRACTS_DIRECT_WORK",
+        "OPERATIONAL_TRACE_INSUFFICIENT",
+        "ARTIFACT_INSTALL_EVIDENCE_MISSING",
         "CLOSEOUT_RESIDUE_MISSING",
         "OWNERSHIP_BOUNDARY_LEAK",
         "HARNESS_SCENARIO_AMBIGUOUS",
@@ -98,6 +106,11 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
         "failed-proof-claim-boundary",
         "ownership-boundary-trap",
         "artifact-backed-host-startup",
+        "local-command-memory-route",
+        "obsolete-config-startup-recovery",
+        "documented-proof-command-drift",
+        "bounded-direct-work-delegation-quiet",
+        "operational-decision-trace-required",
     } <= probe_ids
     assert {
         "startup",
@@ -106,22 +119,33 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
         "planning_continuity",
         "proof",
         "closeout",
+        "intent_satisfaction",
         "ownership",
         "recovery",
     } <= covered_dimensions
     assert any(probe.get("artifact_backed") for probe in probes)
+    artifact_probe = next(probe for probe in probes if probe["id"] == "artifact-backed-host-startup")
+    assert {"artifact_source", "artifact_checksum", "installed_entrypoint"} <= set(artifact_probe["artifact_evidence"]["required_fields"])
 
 
 def test_external_agent_lane_historical_fixtures_map_to_result_records() -> None:
     fixtures = _read_json("historical-failure-fixtures.json")["fixtures"]
     records = {record["id"]: record for record in _read_json("result-records.sample.json")["records"]}
 
-    assert len(fixtures) >= 3
+    assert len(fixtures) >= 4
     assert any("proof" in fixture["id"] for fixture in fixtures)
     assert any("memory" in fixture["id"] for fixture in fixtures)
+    assert {fixture["status"] for fixture in fixtures} <= {
+        "active_regression_guard",
+        "historical_calibration",
+        "retired",
+    }
+    assert any(fixture["id"] == "partial-slice-claimed-parent-closed" for fixture in fixtures)
     for fixture in fixtures:
         assert fixture["result_record_ref"] in records
         assert fixture["failure_ids"]
+        assert fixture["current_aw_signals"]
+        assert fixture["owner_surface_if_repeats"]
 
 
 def test_external_agent_lane_rejects_fixture_failures_absent_from_result_record() -> None:
@@ -132,6 +156,27 @@ def test_external_agent_lane_rejects_fixture_failures_absent_from_result_record(
     errors = module.validate_pack(pack)
 
     assert any("failure MEMORY_PULL_MISSING is not represented by sample-broad-work-regression" in error for error in errors)
+
+
+def test_external_agent_lane_rejects_trace_required_record_without_decisions() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    record = next(item for item in pack["results"]["records"] if item["scenario_id"] == "operational-decision-trace-required")
+    record["decisions"] = {"memory": {"status": "dismissed"}}
+
+    errors = module.validate_pack(pack)
+
+    assert any("must include operational decision trace keys" in error for error in errors)
+
+
+def test_external_agent_lane_rejects_invalid_historical_fixture_status() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    pack["historical"]["fixtures"][0]["status"] = "regression-guard"
+
+    errors = module.validate_pack(pack)
+
+    assert any("has invalid status" in error for error in errors)
 
 
 def test_external_agent_lane_rejects_promotions_without_actionable_remediation() -> None:
@@ -159,6 +204,7 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
+    assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
     assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["live_evaluation"]["promoted_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["live_evaluation"]["actionable_remediation_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1

@@ -61,6 +61,12 @@
       "default_owner_surface": "cli_output"
     },
     {
+      "id": "intent_satisfaction",
+      "description": "The agent distinguishes slice-local progress from full parent-intent satisfaction.",
+      "observable_evidence": ["parent intent checked", "partial closure or full closure claim justified"],
+      "default_owner_surface": "cli_output"
+    },
+    {
       "id": "ownership",
       "description": "Package-owned, host-owned, generated, local-only, and external tracker surfaces are not conflated.",
       "observable_evidence": ["local config not treated as repo policy", "generated/package boundaries preserved"],
@@ -135,9 +141,51 @@
       "claim_safety_impact": "partial_claim_only"
     },
     {
+      "id": "PARTIAL_PROGRESS_CLAIMED_AS_FULL",
+      "description": "The agent completed a useful slice but claimed the full parent or lane intent was satisfied without evidence.",
+      "owner_surface": "cli_output",
+      "claim_safety_impact": "unsafe_claim"
+    },
+    {
       "id": "OWNERSHIP_BOUNDARY_LEAK",
       "description": "The agent confused package, host, generated, local-only, or external-tracker authority.",
       "owner_surface": "contracts",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "LOCAL_MEMORY_ROUTE_MISSING",
+      "description": "Local execution guidance should have been routed from structured command/surface facts before running a local command.",
+      "owner_surface": "memory",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "CONFIG_RECOVERY_NOT_SURFACED",
+      "description": "Known stale or invalid workspace config blocked startup but no compact recovery packet or next safe action was surfaced.",
+      "owner_surface": "cli_output",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "PROOF_COMMAND_DRIFT_UNDETECTED",
+      "description": "A documented proof or conformance command drifted from runnable maintained surfaces without maintainer proof failing.",
+      "owner_surface": "contracts",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "DELEGATION_NOISE_DISTRACTS_DIRECT_WORK",
+      "description": "Delegation guidance was surfaced as an action item during bounded direct work where it should have been absent or explicitly non-blocking.",
+      "owner_surface": "cli_output",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "OPERATIONAL_TRACE_INSUFFICIENT",
+      "description": "The evaluator cannot observe route, Memory, Planning, proof, residue, or safe-claim decisions required by the scenario.",
+      "owner_surface": "harness",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
+      "id": "ARTIFACT_INSTALL_EVIDENCE_MISSING",
+      "description": "Artifact-backed host evaluation lacks installed artifact identity, checksum/source, or installed entrypoint proof.",
+      "owner_surface": "harness",
       "claim_safety_impact": "partial_claim_only"
     },
     {

@@ -69,8 +69,25 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         _require(invariant.get("dimension") in dimensions, f"invariant {invariant.get('id')} references unknown dimension", errors)
 
     scenario_ids: set[str] = set()
+    trace_required_scenarios: set[str] = set()
+    artifact_backed_scenarios: set[str] = set()
     for probe in pack["scenarios"].get("probes", []):
-        scenario_ids.add(str(probe.get("id")))
+        probe_id = str(probe.get("id"))
+        scenario_ids.add(probe_id)
+        if probe.get("requires_operational_trace") is True:
+            trace_required_scenarios.add(probe_id)
+        if probe.get("artifact_backed"):
+            artifact_backed_scenarios.add(probe_id)
+            artifact_evidence = probe.get("artifact_evidence", {})
+            _require(isinstance(artifact_evidence, dict), f"artifact-backed probe {probe_id} must define artifact_evidence", errors)
+            required_fields = artifact_evidence.get("required_fields", []) if isinstance(artifact_evidence, dict) else []
+            _require(
+                {"artifact_source", "artifact_checksum", "installed_entrypoint"}.issubset(
+                    {str(item) for item in required_fields if isinstance(item, str)}
+                ),
+                f"artifact-backed probe {probe_id} must require artifact source, checksum, and installed entrypoint",
+                errors,
+            )
         for dimension in probe.get("expected_dimensions", []):
             _require(dimension in dimensions, f"probe {probe.get('id')} references unknown dimension {dimension}", errors)
         for failure_id in probe.get("failure_ids", []):
@@ -80,8 +97,10 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     record_ids: set[str] = set()
     records_by_id: dict[str, dict[str, Any]] = {}
     failure_ids_seen: set[str] = set()
+    required_decision_keys = {"route", "memory", "planning", "verification", "residue_owner", "safe_claim"}
     for record in pack["results"].get("records", []):
         record_id = str(record.get("id"))
+        scenario_id = str(record.get("scenario_id") or "")
         record_ids.add(record_id)
         records_by_id[record_id] = record
         _require(record.get("scenario_id") in scenario_ids, f"record {record.get('id')} references unknown scenario", errors)
@@ -96,6 +115,22 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             _require(failure_id in failure_ids, f"record {record.get('id')} references unknown failure id {failure_id}", errors)
         for owner in record.get("repair_surface_hints", []):
             _require(owner in owner_surfaces, f"record {record.get('id')} references unknown owner surface {owner}", errors)
+        decisions = record.get("decisions", {})
+        if scenario_id in trace_required_scenarios:
+            _require(
+                isinstance(decisions, dict) and required_decision_keys.issubset(set(decisions)),
+                f"record {record.get('id')} must include operational decision trace keys",
+                errors,
+            )
+        if scenario_id in artifact_backed_scenarios:
+            identity = record.get("aw_identity", {})
+            _require(
+                isinstance(identity, dict)
+                and bool(str(identity.get("source") or "").strip())
+                and "artifact_checksum" in identity,
+                f"record {record.get('id')} must include artifact source and checksum evidence",
+                errors,
+            )
     for record in pack.get("live_results", {}).get("runs", []):
         record_id = str(record.get("id"))
         record_ids.add(record_id)
@@ -104,10 +139,21 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         for failure_id in record.get("failure_ids", []):
             _require(failure_id in failure_ids, f"live run {record.get('id')} references unknown failure id {failure_id}", errors)
 
+    allowed_fixture_statuses = {"active_regression_guard", "historical_calibration", "retired"}
     for fixture in pack["historical"].get("fixtures", []):
         result_record_ref = str(fixture.get("result_record_ref") or "")
         referenced_record = records_by_id.get(result_record_ref)
         _require(result_record_ref in record_ids, f"historical fixture {fixture.get('id')} has unknown record ref", errors)
+        _require(
+            fixture.get("status") in allowed_fixture_statuses,
+            f"historical fixture {fixture.get('id')} has invalid status",
+            errors,
+        )
+        _require(
+            bool(fixture.get("current_aw_signals")) and bool(fixture.get("owner_surface_if_repeats")),
+            f"historical fixture {fixture.get('id')} must name current AW signals and repeat owner",
+            errors,
+        )
         for failure_id in fixture.get("failure_ids", []):
             _require(failure_id in failure_ids, f"historical fixture {fixture.get('id')} references unknown failure id", errors)
             _require(

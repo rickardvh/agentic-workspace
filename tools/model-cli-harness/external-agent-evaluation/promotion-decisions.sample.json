@@ -17,7 +17,7 @@
     {
       "id": "promote-memory-routing",
       "failure_ids": ["MEMORY_PULL_MISSING"],
-      "evidence_record_ids": ["sample-memory-routing-regression"],
+      "evidence_record_ids": ["sample-local-command-memory-route-gap"],
       "threshold": "historical repeated miss preserved as regression fixture",
       "decision": "promote",
       "owner_surface": "memory",
@@ -47,6 +47,66 @@
       "owner_surface": "harness",
       "fallback_owner_surface": "cli_output",
       "followup_ref": "#1616",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-local-command-memory-route",
+      "failure_ids": ["LOCAL_MEMORY_ROUTE_MISSING"],
+      "evidence_record_ids": ["sample-local-command-memory-route-gap"],
+      "threshold": "repeated local command-construction miss observed in dogfooding",
+      "decision": "promote",
+      "owner_surface": "memory",
+      "fallback_owner_surface": "cli_output",
+      "followup_ref": "#1653",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-stale-config-startup-recovery",
+      "failure_ids": ["CONFIG_RECOVERY_NOT_SURFACED"],
+      "evidence_record_ids": ["sample-obsolete-config-recovery-gap"],
+      "threshold": "known stale config should return compact recovery before any implementation claim",
+      "decision": "promote",
+      "owner_surface": "cli_output",
+      "fallback_owner_surface": "config",
+      "followup_ref": "#1623",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-proof-command-drift",
+      "failure_ids": ["PROOF_COMMAND_DRIFT_UNDETECTED"],
+      "evidence_record_ids": ["sample-proof-command-drift-gap"],
+      "threshold": "documented proof command drift can bypass ordinary pytest proof",
+      "decision": "promote",
+      "owner_surface": "contracts",
+      "fallback_owner_surface": "verification",
+      "followup_ref": "#1624",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-delegation-noise-direct-work",
+      "failure_ids": ["DELEGATION_NOISE_DISTRACTS_DIRECT_WORK"],
+      "evidence_record_ids": ["sample-delegation-noise-direct-work"],
+      "threshold": "bounded direct work should not be made noisier by advisory delegation posture",
+      "decision": "promote",
+      "owner_surface": "cli_output",
+      "fallback_owner_surface": "planning",
+      "followup_ref": "#1633",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
+    },
+    {
+      "id": "promote-partial-progress-claim-boundary",
+      "failure_ids": ["PARTIAL_PROGRESS_CLAIMED_AS_FULL", "OPERATIONAL_TRACE_INSUFFICIENT"],
+      "evidence_record_ids": ["sample-partial-progress-claim-regression"],
+      "threshold": "broad intent plus partial slice must not be scored as full closure without trace evidence",
+      "decision": "promote",
+      "owner_surface": "cli_output",
+      "fallback_owner_surface": "planning",
+      "followup_ref": "#1649",
       "remediation_kind": "actionable-issue",
       "closure_effect": "routed"
     }
