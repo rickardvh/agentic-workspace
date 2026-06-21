@@ -1250,6 +1250,14 @@ const commandDefinitions = [
         {
           "default": "",
           "flags": [
+            "--pending-command"
+          ],
+          "help": "Pending local command to route as structured execution-surface context before running it.",
+          "name": "pending_command"
+        },
+        {
+          "default": "",
+          "flags": [
             "--task"
           ],
           "help": "Task text for route context. Task prose is not routing authority.",

@@ -48,6 +48,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'notes': getattr(args, 'notes', None),
                 'files': getattr(args, 'files', []),
                 'surface': getattr(args, 'surface', []),
+                'pending_command': getattr(args, 'pending_command', ''),
                 'task': getattr(args, 'task', ''),
                 'stage': getattr(args, 'stage', ''),
                 'mode': getattr(args, 'mode', None),
@@ -104,6 +105,7 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'notes': values.get('notes', None),
                 'files': values.get('files', []),
                 'surface': values.get('surface', []),
+                'pending_command': values.get('pending_command', ''),
                 'task': values.get('task', ''),
                 'stage': values.get('stage', ''),
                 'mode': values.get('mode', None),
@@ -320,7 +322,7 @@ def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any
 def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.installer import route_memory
 
-    return route_memory(files=values.get('files'), stage=values.get('stage'), surfaces=values.get('surface'), target=values.get('target'), task=values.get('task'))
+    return route_memory(files=values.get('files'), pending_command=values.get('pending_command'), stage=values.get('stage'), surfaces=values.get('surface'), target=values.get('target'), task=values.get('task'))
 
 
 def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

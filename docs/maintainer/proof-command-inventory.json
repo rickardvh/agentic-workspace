@@ -1,0 +1,47 @@
+{
+  "kind": "agentic-workspace/documented-proof-command-inventory/v1",
+  "sources": [
+    "AGENTS.md",
+    "README.md",
+    ".agentic-workspace/verification/manifest.toml",
+    "docs/maintainer/contributor-playbook.md",
+    "docs/maintainer/generated-command-check-inventory.md",
+    "docs/maintainer/maintainer-commands.md",
+    "docs/maintainer/test-knowledge-inventory.md"
+  ],
+  "commands": [
+    {
+      "id": "generated-command-packages-static",
+      "command": "uv run python scripts/check/check_generated_command_packages.py",
+      "status": "runnable",
+      "source_refs": [
+        "docs/maintainer/contributor-playbook.md",
+        "docs/maintainer/test-knowledge-inventory.md"
+      ]
+    },
+    {
+      "id": "generated-command-python-conformance",
+      "command": "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "status": "runnable",
+      "source_refs": [
+        "docs/maintainer/contributor-playbook.md",
+        "docs/maintainer/maintainer-commands.md"
+      ]
+    },
+    {
+      "id": "legacy-primitive-conformance-script",
+      "command": "uv run python tests/primitive_conformance.py",
+      "status": "obsolete",
+      "source_refs": [
+        "AGENTS.md",
+        "README.md",
+        ".agentic-workspace/verification/manifest.toml",
+        "docs/maintainer/contributor-playbook.md",
+        "docs/maintainer/generated-command-check-inventory.md",
+        "docs/maintainer/maintainer-commands.md",
+        "docs/maintainer/test-knowledge-inventory.md"
+      ],
+      "replacement": "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+    }
+  ]
+}

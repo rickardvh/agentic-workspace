@@ -177,6 +177,64 @@ def test_route_memory_preserves_explicit_surfaces_separately_from_stage(tmp_path
     assert any(action.match_source == "surface" and "codex" in action.detail for action in result.actions)
 
 
+def test_route_memory_keeps_pending_command_context_separate_from_explicit_surfaces(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    note = target / ".agentic-workspace" / "local" / "memory" / "local-python-invocation.md"
+    note.parent.mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    note.write_text("# Local Python Invocation\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/local/memory/local-python-invocation.md"]
+note_type = "mistake"
+canonical_home = ".agentic-workspace/local/memory/local-python-invocation.md"
+authority = "local"
+audience = "agent"
+canonicality = "local_only"
+task_relevance = "optional"
+routes_from = ["python", "shell", "local-tooling"]
+surfaces = ["python", "shell", "local-tooling"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    routed = installer.route_memory(
+        target=target,
+        pending_command="python - <<'PY'",
+        surfaces=["python", "shell"],
+        task="memory memory memory",
+    )
+    command_only = installer.route_memory(target=target, pending_command="python - <<'PY'")
+    task_only = installer.route_memory(target=target, task="python shell local tooling")
+
+    routed_sources = {action.source for action in routed.actions}
+    command_only_sources = {action.source for action in command_only.actions}
+    task_only_sources = {action.source for action in task_only.actions}
+    context = routed.route_summary["route_context"]
+
+    assert ".agentic-workspace/local/memory/local-python-invocation.md" in routed_sources
+    assert ".agentic-workspace/local/memory/local-python-invocation.md" not in command_only_sources
+    assert ".agentic-workspace/local/memory/local-python-invocation.md" not in task_only_sources
+    assert context["explicit_surfaces"] == ["python", "shell"]
+    assert "command_surfaces" not in context
+    assert context["pending_command_supplied"] is True
+    assert context["task_used_for_matching"] is False
+
+
 def test_capture_note_exposes_non_memory_owner_routes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
