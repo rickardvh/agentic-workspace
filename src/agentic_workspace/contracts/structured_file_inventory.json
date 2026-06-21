@@ -684,6 +684,30 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "docs/maintainer/proof-command-inventory.json",
+      "format": "json",
+      "owner": "workspace-maintainer-checks",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "scripts/check/check_contract_tooling_surfaces.py::_validate_documented_proof_command_inventory",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Maintainer audit of documented proof commands so obsolete command guidance cannot remain in ordinary routing docs.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority."
+    },
+    {
+      "pattern": "docs/maintainer/non-enum-keyword-routing-audit.json",
+      "format": "json",
+      "owner": "workspace-maintainer-checks",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "scripts/check/check_contract_tooling_surfaces.py::_validate_non_enum_keyword_routing_audit",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Maintainer audit of route-shaped string tables so package runtime code cannot silently add non-enum keyword routing policy.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority."
+    },
+    {
       "pattern": "packages/memory/**/manifest.toml",
       "format": "toml",
       "owner": "memory",
