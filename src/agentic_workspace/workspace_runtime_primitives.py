@@ -25408,17 +25408,12 @@ def _reuse_pressure_memory_signals(
 
 
 def _reuse_pressure_memory_match_reason(*, changed_paths: list[str], note_path: str, note: dict[str, Any]) -> str | None:
-    keywords = {"abstraction", "boundary", "duplicate", "duplication", "extraction", "helper", "pattern", "reuse"}
-    haystack_values: list[str] = [note_path]
-    for key in ("surfaces", "subsystems", "routes_from", "stale_when", "memory_role", "promotion_target", "improvement_note"):
-        value = note.get(key)
-        if isinstance(value, str):
-            haystack_values.append(value)
-        elif isinstance(value, list):
-            haystack_values.extend(str(item) for item in value)
-    haystack = " ".join(haystack_values).lower()
-    if any(keyword in haystack for keyword in keywords):
-        return "memory metadata mentions reuse, duplication, abstraction, extraction, boundary, helper, or pattern"
+    structured_role = str(note.get("memory_role") or "").strip()
+    if structured_role in {"improvement_signal", "invariant", "runbook"}:
+        return f"memory metadata role {structured_role!r} may carry reusable workflow evidence"
+    promotion_target = str(note.get("promotion_target") or "").strip()
+    if promotion_target:
+        return "memory metadata declares a promotion target"
     route_patterns = [item for item in note.get("routes_from", []) if isinstance(item, str)]
     stale_patterns = [item for item in note.get("stale_when", []) if isinstance(item, str)]
     for changed_path in changed_paths:
@@ -28503,12 +28498,10 @@ def _active_plan_delegation_requirement(
     normalized_task = " ".join((task_text or "").lower().split())
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     work_shape, proof_burden = _capability_structural_hints(capability)
-    trigger_terms = ("decomposed", "decomposition", "delegate", "delegation", "mechanical", "lane", "epic", "high-assurance")
-    active_plan_continuation = _task_appears_to_continue_active_plan(
+    active_plan_continuation = _task_explicitly_references_active_plan(
         active_surface=active_surface,
         record=record,
         normalized_task=normalized_task,
-        trigger_terms=trigger_terms,
     )
     if not active_plan_continuation:
         return {"required": False, "status": "delegation-decision-not-needed-for-direct-task", "path": active_surface}
@@ -28535,12 +28528,7 @@ def _active_plan_delegation_requirement(
                 "state and cannot prove the current session made or reviewed the decision."
             ),
         }
-    required = (
-        status in {"pending", "required", "available", "suitable"}
-        or work_shape in {"lane", "epic"}
-        or proof_burden == "high"
-        or any((term in normalized_task for term in trigger_terms))
-    )
+    required = status in {"pending", "required", "available", "suitable"} or work_shape in {"lane", "epic"} or proof_burden == "high"
     if not required:
         return {"required": False, "status": "delegation-decision-not-needed", "path": active_surface}
     planning_revision = _planning_revision_payload(target_root=target_root)
@@ -28569,28 +28557,9 @@ def _delegation_decision_has_command_provenance(delegation: dict[str, Any]) -> b
     return decision_command in {"agentic-planning delegation-decision", "agentic-workspace planning delegation-decision"}
 
 
-def _task_appears_to_continue_active_plan(
-    *, active_surface: str, record: dict[str, Any], normalized_task: str, trigger_terms: tuple[str, ...]
-) -> bool:
+def _task_explicitly_references_active_plan(*, active_surface: str, record: dict[str, Any], normalized_task: str) -> bool:
     if not normalized_task:
         return False
-    continuation_terms = (
-        "continue",
-        "resume",
-        "advance",
-        "finish",
-        "complete",
-        "implement",
-        "implementation",
-        "closeout",
-        "close out",
-        "run proof",
-        "validate",
-    )
-    if not any((term in normalized_task for term in continuation_terms)):
-        return False
-    if any((term in normalized_task for term in trigger_terms)):
-        return True
     identifiers: list[str] = [Path(active_surface).stem.replace(".plan", "")]
     for key in ("id", "title"):
         value = record.get(key)

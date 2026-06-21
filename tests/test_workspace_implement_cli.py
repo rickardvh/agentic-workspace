@@ -1931,6 +1931,60 @@ candidates = []
     assert payload["kind"] == "implementer-context-tiny/v1"
 
 
+def test_implement_generic_continuation_task_does_not_link_active_plan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Active Plan",
+            "post_decomposition_delegation": {"status": "required"},
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Active Plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "continue resume finish follow up",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    reliance = payload["context"]["planning_safety_gate"]["active_plan_reliance"]
+    assert reliance["permission_claim"] == "direct-work-not-active-plan-continuation"
+    assert reliance["requirement_status"] == "delegation-decision-not-needed-for-direct-task"
+    assert payload["context"]["planning_safety_gate"]["delegation_decision_required"] is False
+
+
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -4615,18 +4669,12 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
     )
 
     payload = json.loads(capsys.readouterr().out)
-    decision = _implement_context(payload)["delegation_decision"]
-    assert decision["recommended_route"] == "stay-local"
-    assert decision["required_next_action"] == "continue-local"
-    assert decision["effort_guidance"]["orchestrator"] == "medium"
-    assert decision["effort_guidance"]["implementer"] == "medium"
-    assert decision["effort_guidance"]["validator"] == "high"
-    assert decision["effort_guidance"]["cost_posture"] == "quality-first"
-    assert "target" not in decision["effort_guidance"]
-    assert "manual_external_relay" not in decision
-    assert "config_effect" not in decision
-    assert "manual_prompt" not in decision
-    assert "handoff_command" not in decision
+    context = _implement_context(payload)
+    assert "delegation_decision" not in context
+    payload_text = json.dumps(payload)
+    assert "manual_external_relay" not in payload_text
+    assert "manual_prompt" not in payload_text
+    assert "handoff_command" not in payload_text
 
 
 def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
@@ -5089,7 +5137,7 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["missing"] == ["does_not_exist"]
-    assert "context.delegation_decision" in payload["available_selectors"]
+    assert "context.delegation_decision" not in payload["available_selectors"]
     assert "next" in payload["available_selectors"]
     assert "context.scope" in payload["available_selectors"]
     assert "proof" in payload["available_selectors"]

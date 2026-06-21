@@ -73,3 +73,76 @@ def test_documented_proof_command_inventory_accepts_runnable_source_ref(tmp_path
     )
 
     assert module._validate_documented_proof_command_inventory(repo_root=tmp_path, inventory_path=inventory) == []
+
+
+def test_non_enum_keyword_routing_audit_rejects_unclassified_candidate(tmp_path: Path) -> None:
+    module = _load_module()
+    source = tmp_path / "src" / "sample.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "\n".join(
+            [
+                "def neutral_helper_name(value):",
+                '    local_markers = ("alpha", "beta", "gamma")',
+                "    return any(marker in value for marker in local_markers)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    audit = tmp_path / "docs" / "maintainer" / "non-enum-keyword-routing-audit.json"
+    audit.parent.mkdir(parents=True)
+    audit.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/non-enum-keyword-routing-audit/v1",
+                "entries": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = module._validate_non_enum_keyword_routing_audit(repo_root=tmp_path, audit_path=audit)
+
+    assert errors == ["non-enum-keyword-routing-audit missing structural candidate: src/sample.py|neutral_helper_name|local_markers"]
+
+
+def test_non_enum_keyword_routing_audit_rejects_disallowed_policy(tmp_path: Path) -> None:
+    module = _load_module()
+    source = tmp_path / "src" / "sample.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "\n".join(
+            [
+                "def neutral_helper_name(value):",
+                '    local_markers = ("alpha", "beta", "gamma")',
+                "    return any(marker in value for marker in local_markers)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    audit = tmp_path / "docs" / "maintainer" / "non-enum-keyword-routing-audit.json"
+    audit.parent.mkdir(parents=True)
+    audit.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/non-enum-keyword-routing-audit/v1",
+                "entries": [
+                    {
+                        "path": "src/sample.py",
+                        "function": "neutral_helper_name",
+                        "variable": "local_markers",
+                        "classification": "disallowed-package-policy",
+                        "authority": "sample",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = module._validate_non_enum_keyword_routing_audit(repo_root=tmp_path, audit_path=audit)
+
+    assert errors == [
+        "src/sample.py|neutral_helper_name|local_markers is classified as disallowed-package-policy; "
+        "remove the keyword table or demote it to non-authoritative evidence"
+    ]

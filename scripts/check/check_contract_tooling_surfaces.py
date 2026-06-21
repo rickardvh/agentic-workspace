@@ -2334,6 +2334,129 @@ def _validate_documented_proof_command_inventory(
     return errors
 
 
+KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS = {
+    "enum-vocabulary",
+    "structured-field-projection",
+    "advisory-diagnostic",
+    "advisory-search",
+    "test-fixture-schema",
+    "documented-command-set",
+}
+
+
+def _keyword_routing_scan_excluded(path: Path) -> bool:
+    return any(part == "__pycache__" or part.startswith(".uv-cache") for part in path.parts)
+
+
+def _name_occurs(node: ast.AST, name: str) -> bool:
+    return any(isinstance(child, ast.Name) and child.id == name for child in ast.walk(node))
+
+
+def _string_table_drives_substring_decision(*, node: ast.FunctionDef, variable: str) -> bool:
+    for child in ast.walk(node):
+        if not isinstance(child, ast.GeneratorExp):
+            continue
+        for generator in child.generators:
+            if not isinstance(generator.iter, ast.Name) or generator.iter.id != variable:
+                continue
+            target_name = generator.target.id if isinstance(generator.target, ast.Name) else ""
+            if not target_name:
+                continue
+            for expression in ast.walk(child.elt):
+                if not isinstance(expression, ast.Compare) or not _name_occurs(expression, target_name):
+                    continue
+                if any(isinstance(operator, (ast.In, ast.NotIn)) for operator in expression.ops):
+                    return True
+    return False
+
+
+def _keyword_routing_candidate_keys(*, repo_root: Path) -> set[str]:
+    candidates: set[str] = set()
+    for root in (repo_root / "src", repo_root / "packages"):
+        if not root.exists():
+            continue
+        for path in root.rglob("*.py"):
+            if _keyword_routing_scan_excluded(path):
+                continue
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except (OSError, SyntaxError, UnicodeDecodeError):
+                continue
+
+            class CandidateVisitor(ast.NodeVisitor):
+                def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+                    assignments: dict[str, int] = {}
+                    for child in ast.walk(node):
+                        if not isinstance(child, ast.Assign) or not isinstance(child.value, (ast.Set, ast.List, ast.Tuple)):
+                            continue
+                        literal_count = sum(
+                            1 for element in child.value.elts if isinstance(element, ast.Constant) and isinstance(element.value, str)
+                        )
+                        if literal_count < 3 or not child.targets:
+                            continue
+                        target = child.targets[0]
+                        variable = getattr(target, "id", getattr(target, "attr", ""))
+                        if variable:
+                            assignments[variable] = literal_count
+                    for variable in sorted(assignments):
+                        if not _string_table_drives_substring_decision(node=node, variable=variable):
+                            continue
+                        relative = path.relative_to(repo_root).as_posix()
+                        candidates.add(f"{relative}|{node.name}|{variable}")
+                    self.generic_visit(node)
+
+            CandidateVisitor().visit(tree)
+    return candidates
+
+
+def _validate_non_enum_keyword_routing_audit(
+    *,
+    repo_root: Path = REPO_ROOT,
+    audit_path: Path | None = None,
+) -> list[str]:
+    path = audit_path or repo_root / "docs" / "maintainer" / "non-enum-keyword-routing-audit.json"
+    errors: list[str] = []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return [f"{path.relative_to(repo_root).as_posix()} could not be read: {exc}"]
+    except json.JSONDecodeError as exc:
+        return [f"{path.relative_to(repo_root).as_posix()} is invalid JSON: {exc}"]
+    if payload.get("kind") != "agentic-workspace/non-enum-keyword-routing-audit/v1":
+        errors.append("non-enum-keyword-routing-audit kind drifted")
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list):
+        return errors + ["non-enum-keyword-routing-audit entries must be a list"]
+    observed = _keyword_routing_candidate_keys(repo_root=repo_root)
+    classified: dict[str, dict[str, object]] = {}
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            errors.append("non-enum-keyword-routing-audit entries must be objects")
+            continue
+        key = "|".join(
+            str(raw_entry.get(field, "")).strip()
+            for field in ("path", "function", "variable")
+        )
+        if key in classified:
+            errors.append(f"non-enum-keyword-routing-audit duplicates entry: {key}")
+        classified[key] = raw_entry
+        classification = str(raw_entry.get("classification") or "").strip()
+        if classification == "disallowed-package-policy":
+            errors.append(f"{key} is classified as disallowed-package-policy; remove the keyword table or demote it to non-authoritative evidence")
+        elif classification not in KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS:
+            allowed = ", ".join(sorted([*KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS, "disallowed-package-policy"]))
+            errors.append(f"{key} has unknown classification {classification!r}; expected one of: {allowed}")
+        if not str(raw_entry.get("authority") or "").strip():
+            errors.append(f"{key} must explain why the string table is not package-owned routing authority")
+    missing = sorted(observed - set(classified))
+    extra = sorted(set(classified) - observed)
+    for key in missing:
+        errors.append(f"non-enum-keyword-routing-audit missing structural candidate: {key}")
+    for key in extra:
+        errors.append(f"non-enum-keyword-routing-audit contains stale candidate: {key}")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -2348,6 +2471,7 @@ def main(argv: list[str] | None = None) -> int:
         ("review artifacts startup hygiene", _validate_review_artifacts_not_startup_inputs()),
         ("product-managed enclave", _validate_product_managed_enclave()),
         ("documented proof command inventory", _validate_documented_proof_command_inventory()),
+        ("non-enum keyword routing audit", _validate_non_enum_keyword_routing_audit()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),
