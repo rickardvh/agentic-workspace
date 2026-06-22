@@ -1,0 +1,411 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Operating loop closeout decision projection",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the first complete #1605/#1606 slice: a shared agentic-workspace/operating-loop-decision/v1 projection embedded into existing compact outputs so agents can see closeout state, safe claim boundary, residue owner, and Memory/Planning/Verification state without a new command or verbose report.",
+    "hard_constraints": "Do not add a new ordinary command, orchestrator, or primary report section. Use enum-backed fields and structured refs only; do not infer state from task prose, keywords, Memory note bodies, plan prose, proof logs, or generated explanatory paragraphs.",
+    "agent_may_decide": "Exact builder placement, carrier outputs, schema file shape, and test fixtures, while preserving the packet semantics and compact text budget.",
+    "escalate_when": "A correct implementation requires semantic completion certification, a new orchestration command, broad evaluation-record machinery, or keyword/prose routing.",
+    "next_action": "Inspect existing implement/report compact builders, add a pure operating-loop projection over structured facts, wire it into compact implement JSON/text and an existing closeout/report surface, then validate with focused schema and output tests.",
+    "proof_expectations": [
+      "Schema/enumeration tests for the packet.",
+      "Focused implement/report tests for proof blocker, ready full closure, planning residue, memory residue, and no-prose-routing fixtures.",
+      "Changed-path proof selected by AW before closeout."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/schemas/",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_cli.py or a narrower existing report/closeout test",
+      "docs/reference generated only if schema references require it"
+    ],
+    "completion_criteria": [
+      "implement --format json includes operating_loop with kind agentic-workspace/operating-loop-decision/v1.",
+      "Ordinary compact implement text renders a bounded one- or two-line projection of the same packet.",
+      "An existing closeout/report compact output reuses the same packet builder or exact projection.",
+      "Proof missing/stale/skipped/failed blocks ready_for_full_closure.",
+      "Planning and Memory residue map to residue_owner and required_before_full_closure without forcing actions.",
+      "Tests prove packet state comes from structured facts, not task prose."
+    ],
+    "continuation_owner": "GitHub issues #1603, #1604, #1608, #1680",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Make current AW operating-loop state visible and testable in existing compact outputs.",
+    "Expose whether full closure, partial claim, no claim, or blocked claim is structurally safe.",
+    "Show which AW surface owns residue across Memory, Planning, and Verification without deciding semantic completion."
+  ],
+  "non_goals": [
+    "Do not add a new integrated-loop command, report, or orchestrator.",
+    "Do not implement #1603/#1604 evaluation records or promotion routing.",
+    "Do not certify that the implementation satisfies a product issue; the packet only exposes structural claim boundaries.",
+    "Do not add keyword or prose scanning for closeout, Memory, Planning, Verification, or residue state."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement a normalized operating-loop closeout decision packet in existing compact outputs.",
+      "constraints": "No new command/orchestrator/report; enum-backed packet; structured facts only; compact text budget.",
+      "latitude": "Choose exact implementation seams and test fixtures that fit current runtime patterns.",
+      "escalation": "Escalate if the slice requires semantic completion certification, full evaluation-record work, or broad architecture changes.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "operating-loop-decision-projection",
+      "status": "completed",
+      "next_step": "Continue via GitHub issues #1603, #1604, #1608, #1680.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "workspace runtime projection and schema/test surfaces required for the packet"
+      ],
+      "invariants": [
+        "Agent judgment owns semantic completion.",
+        "AW exposes structural blockers and residue owners only.",
+        "Compact text must not include evidence bodies, plan prose, proof logs, or Memory note content."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1605 and #1606 should make closeout readiness and the integrated Memory/Planning/Verification loop observable in ordinary AW outputs.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub issues #1603, #1604, #1608, #1680"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub issues #1603, #1604, #1608, #1680",
+    "activation trigger": "After the operating_loop packet lands and is available to those lanes as structured input."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Parent/lane continuation remains routed to Open issues #1603, #1604, #1608, and #1680 remain separate follow-on lanes.."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1605 and #1606 together using the supplied high-reasoning shaping.",
+    "inferred intended outcome": "Add a single normalized operating-loop decision projection to existing compact outputs.",
+    "chosen concrete what": "A pure packet builder with kind agentic-workspace/operating-loop-decision/v1, enum-backed closeout/safe-claim/residue/module states, JSON inclusion in implement and closeout/report output, and compact text rendering.",
+    "interpretation distance": "low",
+    "review guidance": "Reject scope creep into new commands, verbose reports, evaluation result records, or semantic done certification."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/schemas/ as needed; generated schema/reference artifacts as needed; focused tests under tests/.",
+    "max changed files": "About 8 source/test/schema/reference files unless generated schema docs require more.",
+    "required validation commands": "Focused pytest for changed implement/report/schema behavior; uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task <task> --format json; AW-selected proof after paths are known.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "New command surfaces, evaluation harness records, Memory route semantics, Planning mutation semantics, Verification proof execution semantics, or broad generated-command migration."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement a shared operating_loop packet projection in existing compact outputs; do not add a new command or verbose report.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the #1605/#1606 operating-loop closeout decision projection.",
+    "hard constraints": "No new command/orchestrator/report; structured enum-backed facts only; compact text budget; preserve agent-owned semantic judgment.",
+    "agent may decide locally": "Exact builder placement, schema file placement, carrier surfaces, and focused fixture shape.",
+    "escalate when": "The implementation would need to run modules, infer from prose, or certify product completion."
+  },
+  "post_decomposition_delegation": {
+    "status": "keep-local",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "Keep local because this is a cross-surface runtime/schema/test change with tight feedback from local grep, focused tests, and AW proof selection."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "operating-loop-decision-projection",
+    "status": "completed",
+    "scope": "Add one shared operating_loop decision packet to existing compact implement and closeout/report surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect implement/report compact builders, add the packet builder, wire compact JSON/text carriers, and add focused tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/schemas/",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_cli.py or existing closeout/report tests"
+  ],
+  "invariants": [
+    "The packet is a pure projection over existing structured facts.",
+    "No new ordinary command/report/orchestrator.",
+    "No keyword/prose routing.",
+    "Compact text is a bounded projection and contains no evidence bodies."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_cli.py -q",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement #1605 and #1606 operating-loop closeout decision projection\" --format json",
+    "Use AW-selected changed-path proof before closeout."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "operating_loop JSON packet appears in implement output.",
+    "Compact implement text renders the packet within a strict line budget.",
+    "Existing closeout/report output exposes the same packet shape or exact projection.",
+    "Enum/schema tests reject unknown packet states.",
+    "Proof, Planning, and Memory residue scenarios map to closeout_state, safe_claim, residue_owner, and required_before_full_closure.",
+    "Task prose alone cannot change packet state."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added shared operating_loop decision packet projection and embedded it in implement and closeout_trust compact outputs.",
+    "scope touched": "Workspace runtime/report compact projections, implementer-context schema, focused implement/closeout tests, schema reference docs.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; tests/test_workspace_implement_cli.py; tests/test_workspace_summary_cli.py",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from GitHub issues #1603, #1604, #1608, #1680",
+    "next step": "promote the next bounded slice from GitHub issues #1603, #1604, #1608, #1680"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "This slice is complete. Broader evaluation-record and completion-cost work remains intentionally routed to existing follow-on issues, so the parent/lane intent remains open outside this slice.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=deferred-with-owner keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "GitHub issues #1603, #1604, #1608, #1680"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make schema-reference-docs",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Operating loop closeout decision projection.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "GitHub issues #1603, #1604, #1608, #1680"
+  },
+  "execution_summary": {
+    "outcome delivered": "Existing compact implement JSON/text and report --section closeout_trust now expose agentic-workspace/operating-loop-decision/v1 with closeout state, safe claim, residue owner, required actions, and module states.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "GitHub issues #1603, #1604, #1608, #1680",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "GitHub issues #1603, #1604, #1608, #1680",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub issues #1603, #1604, #1608, #1680.",
+    "motivation worth preserving": "Future agents should continue from GitHub issues #1603, #1604, #1608, #1680 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub issues #1603, #1604, #1608, #1680",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status deferred-with-owner.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when GitHub issues #1603, #1604, #1608, #1680 activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to GitHub issues #1603, #1604, #1608, #1680.",
+        "owner": "GitHub issues #1603, #1604, #1608, #1680",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to GitHub issues #1603, #1604, #1608, #1680.",
+        "owner": "GitHub issues #1603, #1604, #1608, #1680",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub issues #1603, #1604, #1608, #1680",
+          "owner": "GitHub issues #1603, #1604, #1608, #1680",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-22: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "GitHub issues #1603, #1604, #1608, #1680",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "GitHub issues #1603, #1604, #1608, #1680"
+    },
+    "continuation": {
+      "owner_surface": "GitHub issues #1603, #1604, #1608, #1680",
+      "created_or_required": true,
+      "reason": "GitHub issues #1603, #1604, #1608, #1680"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Operating loop closeout decision projection.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make schema-reference-docs\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; tests/test_workspace_implement_cli.py; tests/test_workspace_summary_cli.py\nDurable residue: planning (GitHub issues #1603, #1604, #1608, #1680)\nMemory learning: none\nFollow-up: GitHub issues #1603, #1604, #1608, #1680\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+  }
+}

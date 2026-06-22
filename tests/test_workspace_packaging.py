@@ -36,7 +36,7 @@ def _package_build_lock():
         try:
             lock_path.mkdir()
             break
-        except FileExistsError:
+        except (FileExistsError, PermissionError):
             time.sleep(0.05)
     try:
         yield

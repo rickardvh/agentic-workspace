@@ -45,6 +45,26 @@ Cheap implementer context for a bounded changed-path scope.
 | `memory_decision_packet.capture` | object | yes |  | Durable-learning capture status, candidate owner surfaces, and capture commands. |  |  |
 | `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
 | `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |
+| `operating_loop` | ref `#/$defs/operating_loop` | no |  | Normalized operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts. |  |  |
+| `operating_loop.kind` | const `"agentic-workspace/operating-loop-decision/v1"` | yes |  | Discriminator for the normalized operating-loop decision packet. |  |  |
+| `operating_loop.closeout_state` | enum `"no_closeout_needed"`, `"ready_for_full_closure"`, `"partial_claim_only"`, `"blocked_missing_proof"`, `"blocked_active_planning"`, `"residue_routing_required"` | yes |  | Structural closeout state derived from Memory, Planning, and Verification facts. |  |  |
+| `operating_loop.safe_claim` | enum `"none"`, `"full"`, `"partial"`, `"blocked"` | yes |  | Maximum structurally safe completion claim class for this output. |  |  |
+| `operating_loop.residue_owner` | enum `"memory"`, `"planning"`, `"verification"`, `"docs"`, `"issue"`, `"config"`, `"none"` | yes |  | Primary owner surface for unresolved residue or blockers. |  |  |
+| `operating_loop.required_before_full_closure` | array of enum `"run_or_refresh_proof"`, `"continue_or_close_plan"`, `"route_memory_residue"`, `"route_external_residue"` | yes |  | Structured action codes required before full closure is structurally safe. |  |  |
+| `operating_loop.memory` | object | yes |  | Memory pull and capture state projected from the Memory decision packet. |  |  |
+| `operating_loop.memory.state` | enum `"pulled"`, `"dismissed"`, `"not_applicable"` | yes |  | Whether relevant Memory was pulled, structurally dismissed, or not applicable. |  |  |
+| `operating_loop.memory.reason_code` | enum `"matched_route"`, `"no_relevant_route"`, `"not_requested"`, `"unavailable"`, `"explicitly_dismissed"` | yes |  | Structured reason for the Memory pull state. |  |  |
+| `operating_loop.memory.route_ref` | string \| null | yes |  | Selector or route reference for pulled Memory, when available. |  |  |
+| `operating_loop.memory.capture` | enum `"none"`, `"recommended"`, `"required"` | yes |  | Whether reusable learning capture is absent, recommended, or required. |  |  |
+| `operating_loop.planning` | object | yes |  | Planning state relevant to full closure safety. |  |  |
+| `operating_loop.planning.state` | enum `"none"`, `"active"`, `"continuation"`, `"closeout_required"` | yes |  | Active, continuation, closeout-required, or absent Planning state. |  |  |
+| `operating_loop.planning.plan_ref` | string \| null | yes |  | Planning record or execplan reference, when available. |  |  |
+| `operating_loop.planning.blocks_full_closure` | boolean | yes |  | Whether the Planning state structurally blocks an unqualified full closure claim. |  |  |
+| `operating_loop.verification` | object | yes |  | Verification or proof state relevant to the current claim boundary. |  |  |
+| `operating_loop.verification.state` | enum `"proof_not_required"`, `"proof_required"`, `"proof_selected"`, `"proof_missing"`, `"proof_stale"`, `"proof_skipped"`, `"proof_failed"`, `"proof_passed"` | yes |  | Selected proof status used to decide structural closure safety. |  |  |
+| `operating_loop.verification.proof_ref` | string \| null | yes |  | Proof command, receipt, or source reference, when available. |  |  |
+| `operating_loop.verification.blocks_full_closure` | boolean | yes |  | Whether the proof state structurally blocks an unqualified full closure claim. |  |  |
+| `operating_loop.reasons` | array of object | yes |  | Short structured reason codes explaining blockers or residue. |  |  |
 | `memory_consult` | object | no |  | Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory. |  |  |
 | `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
 | `planning_revision` | object | no |  | Optimistic Planning state revision observed by this implementer read surface. |  |  |
