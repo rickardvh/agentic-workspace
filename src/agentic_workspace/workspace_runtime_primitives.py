@@ -13763,6 +13763,7 @@ def _operating_loop_verification_state(
 
 def _operating_loop_decision_payload(
     *,
+    claim_context: str = "implement",
     memory_decision_packet: dict[str, Any] | None = None,
     planning_safety_gate: dict[str, Any] | None = None,
     active_plan_reliance: dict[str, Any] | None = None,
@@ -13818,6 +13819,12 @@ def _operating_loop_decision_payload(
         residue_owner = "planning"
         required.append("continue_or_close_plan")
         add_reason("plan_closeout_required", "planning", planning.get("plan_ref"))
+    elif planning.get("state") == "active":
+        closeout_state = "blocked_active_planning"
+        safe_claim = "blocked"
+        residue_owner = "planning"
+        required.append("continue_or_close_plan")
+        add_reason("active_plan", "planning", planning.get("plan_ref"))
     elif planning.get("blocks_full_closure"):
         closeout_state = "partial_claim_only"
         safe_claim = "partial"
@@ -13831,8 +13838,8 @@ def _operating_loop_decision_payload(
         required.append("route_memory_residue")
         add_reason("memory_capture_required", "memory", memory.get("route_ref"))
     else:
-        closeout_state = "ready_for_full_closure"
-        safe_claim = "full"
+        closeout_state = "ready_for_full_closure" if claim_context == "closeout" else "no_closeout_needed"
+        safe_claim = "full" if claim_context == "closeout" else "none"
         residue_owner = "none"
 
     return {
@@ -13868,6 +13875,35 @@ def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
         f"owner {loop.get('residue_owner')} · "
         f"required {required_text}",
     ]
+
+
+def _emit_implement_text(payload: dict[str, Any]) -> None:
+    for line in _operating_loop_text_lines(payload.get("operating_loop") if isinstance(payload.get("operating_loop"), dict) else None):
+        print(line)
+    next_payload = _as_dict(payload.get("next"))
+    action = str(next_payload.get("action") or next_payload.get("summary") or "").strip()
+    if action:
+        print(f"next: {action}")
+    commands = [str(item) for item in _list_payload(next_payload.get("commands")) if str(item).strip()]
+    if commands:
+        print(f"proof: {commands[0]}")
+        if len(commands) > 1:
+            print(f"proof_more: {len(commands) - 1}")
+    elif proof_payload := _as_dict(payload.get("proof")):
+        proof_commands = [str(item) for item in _list_payload(proof_payload.get("required_commands")) if str(item).strip()]
+        if proof_commands:
+            print(f"proof: {proof_commands[0]}")
+            if len(proof_commands) > 1:
+                print(f"proof_more: {len(proof_commands) - 1}")
+        elif proof_detail := str(proof_payload.get("detail_command") or "").strip():
+            print(f"proof_detail: {proof_detail}")
+    drill_down = _as_dict(payload.get("drill_down"))
+    selectors = [str(item) for item in _list_payload(drill_down.get("available_selectors")) if str(item).strip()]
+    if selectors:
+        print("selectors: " + ", ".join(selectors[:8]))
+    detail_command = str(drill_down.get("detail_command") or "").strip()
+    if detail_command:
+        print(f"detail: {detail_command}")
 
 
 def _memory_route_command(
@@ -16839,6 +16875,7 @@ def _report_closeout_trust_payload(
         },
     )
     operating_loop = _operating_loop_decision_payload(
+        claim_context="closeout",
         memory_decision_packet=memory_decision_packet,
         closeout_trust={
             "trust": trust,
@@ -27590,9 +27627,10 @@ def _implement_payload(
         force="required_before_claim" if normalized_paths and memory_consult.get("status") == "recommended" else None,
     )
     payload["operating_loop"] = _operating_loop_decision_payload(
+        claim_context="implement",
         memory_decision_packet=payload["memory_decision_packet"],
         planning_safety_gate=planning_safety_gate,
-        active_plan_reliance=payload.get("active_plan_reliance", {}),
+        active_plan_reliance=_as_dict(payload.get("active_plan_reliance")),
         proof=proof if isinstance(proof, dict) else {},
     )
     if include_task_contract:
@@ -41998,10 +42036,11 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
             print(f"  commands: {', '.join(module_data['commands'])}")
             print(f"  capabilities: {', '.join(module_data['capabilities'])}")
         return
+    if payload.get("kind") in {"implementer-context-tiny/v1", "implementer-context/v1"}:
+        _emit_implement_text(payload)
+        return
     for line in _operating_loop_text_lines(payload.get("operating_loop") if isinstance(payload.get("operating_loop"), dict) else None):
         print(line)
-    if payload.get("kind") in {"implementer-context-tiny/v1", "implementer-context/v1"}:
-        return
     _emit_lifecycle_text(payload)
 
 

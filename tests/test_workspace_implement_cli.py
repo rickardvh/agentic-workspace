@@ -218,6 +218,10 @@ def test_implement_text_renders_bounded_operating_loop_summary(tmp_path: Path, c
     assert "claim " in loop_lines[1]
     assert len("\n".join(loop_lines).encode("utf-8")) < 240
     assert "candidate_routes" not in "\n".join(loop_lines)
+    assert any(line.startswith("next: ") for line in lines)
+    assert any(line.startswith(("proof: ", "proof_detail: ")) for line in lines)
+    assert any(line.startswith("selectors: ") and "operating_loop" in line for line in lines)
+    assert any(line.startswith("detail: ") for line in lines)
 
 
 def test_implement_compact_omits_routine_stay_local_delegation_noise(tmp_path: Path, capsys) -> None:
