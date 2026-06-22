@@ -933,16 +933,15 @@ def _validate_operation_cli_inputs_for_interface(
                         generated_artifact = ""
                         if generated_root is not None:
                             generated_artifact = _relative_posix(generated_root / "command_package.json")
+                        current_interface_owner = " ".join((source_id, *nested_interface_path)).strip()
                         sibling_owners = [
-                            owner
-                            for owner in (sibling_option_owners or {}).get(input_name, [])
-                            if owner != source_id and not owner.startswith(f"{source_id} ")
+                            owner for owner in (sibling_option_owners or {}).get(input_name, []) if owner != current_interface_owner
                         ]
                         sibling_hint = ""
                         if sibling_owners:
                             sibling_hint = (
                                 f"; option {input_name!r} appears on sibling command interface(s) {sibling_owners!r}, "
-                                f"but expected command id is {source_id!r}"
+                                f"but expected command interface is {current_interface_owner!r}"
                             )
                         errors.append(
                             f"{package_id} {command_path} operation {operation_id} declares cli-option input "
