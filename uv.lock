@@ -63,7 +63,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "command-generation", git = "https://github.com/rickardvh/command-generation.git?rev=1adffcbf62baa530385f8b7a95aab90086632593" },
+    { name = "command-generation", url = "https://github.com/rickardvh/command-generation/releases/download/v1.0.0/command_generation-1.0.0-py3-none-any.whl" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -144,11 +144,17 @@ wheels = [
 
 [[package]]
 name = "command-generation"
-version = "1.0.0rc1"
-source = { git = "https://github.com/rickardvh/command-generation.git?rev=1adffcbf62baa530385f8b7a95aab90086632593#1adffcbf62baa530385f8b7a95aab90086632593" }
+version = "1.0.0"
+source = { url = "https://github.com/rickardvh/command-generation/releases/download/v1.0.0/command_generation-1.0.0-py3-none-any.whl" }
 dependencies = [
     { name = "jsonschema" },
 ]
+wheels = [
+    { url = "https://github.com/rickardvh/command-generation/releases/download/v1.0.0/command_generation-1.0.0-py3-none-any.whl", hash = "sha256:71eb7788c6baac9728891981273049256aa1420afa30b676108fc278107c4970" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jsonschema", specifier = ">=4.26.0" }]
 
 [[package]]
 name = "coverage"
