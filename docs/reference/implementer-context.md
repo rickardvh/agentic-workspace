@@ -46,7 +46,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
 | `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |
 | `memory_consult` | object | no |  | Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory. |  |  |
-| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from authoritative system-intent configuration and changed paths. |  |  |
+| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
 | `planning_revision` | object | no |  | Optimistic Planning state revision observed by this implementer read surface. |  |  |
 | `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
 | `adaptive_routing` | object | yes |  | Machine-readable need classification, read budget, and escalation detail commands for this implementer packet. |  |  |

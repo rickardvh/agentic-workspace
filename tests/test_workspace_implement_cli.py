@@ -34,25 +34,35 @@ def _implement_context(payload: dict[str, object]) -> dict[str, object]:
 
 def _write_architecture_principles(target_root: Path) -> None:
     _write(
-        target_root / ".agentic-workspace" / "system-intent" / "architecture-principles.toml",
+        target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
         """
-kind = "agentic-workspace/architecture-principles/v1"
-owner = "repo-system-intent"
-authority = "SYSTEM_INTENT.md"
-relationship_to_system_intent = "Scoped projection of durable system intent."
+kind = "agentic-workspace/system-intent/v1"
+summary = "Portable host-neutral operating intent."
+governing_intents = ["Keep package contracts portable across host repos."]
+anti_intents = ["Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions."]
+decision_tests = ["Favor work that improves portability by reducing accidental repo assumptions."]
+confidence = "high"
+needs_review = false
 
-[[principles]]
-id = "non-enum-keyword-routing"
-title = "Do not infer workflow authority from non-enum keyword matches"
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+title = "Preserve host-agnostic agent judgment"
 authority = "repo-system-intent"
 owner = "workspace-runtime"
-summary = "AW must not infer routing from arbitrary prose marker phrases."
+summary = "AW provides infrastructure for agent judgment instead of package-owned host assumptions."
+derived_from = ["anti_intents:Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.", "issue:#1665"]
 allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
-forbidden_sources = ["arbitrary prose marker phrases", "filename substring authority"]
+forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
 affected_decisions = ["routing", "ownership", "proof-selection"]
 path_globs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
 guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
+derived_applications = ["non-enum-keyword-routing"]
 proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
+
+[[architecture_principles.guardrails]]
+id = "non-enum-keyword-routing"
+summary = "Do not infer workflow authority from arbitrary prose marker phrases."
+guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
 """,
     )
 
@@ -3260,7 +3270,11 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     packet = payload["context"]["architecture_principles"]
     assert packet["kind"] == "agentic-workspace/architecture-principles-status/v1"
     assert packet["status"] == "attention"
-    assert packet["matched_principles"][0]["id"] == "non-enum-keyword-routing"
+    assert packet["source"] == ".agentic-workspace/system-intent/intent.toml"
+    assert packet["source_kind"] == "agentic-workspace/system-intent/v1"
+    assert packet["matched_principles"][0]["id"] == "host-agnostic-agent-judgment"
+    assert packet["matched_principles"][0]["derived_applications"] == ["non-enum-keyword-routing"]
+    assert packet["matched_principles"][0]["guardrails"][0]["id"] == "non-enum-keyword-routing"
     assert packet["matched_principles"][0]["matched_paths"] == [
         {
             "path": "src/agentic_workspace/workspace_runtime_primitives.py",
@@ -3327,7 +3341,8 @@ def test_proof_surfaces_architecture_principle_closeout_claim(tmp_path: Path, ca
 
     packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
     assert packet["status"] == "attention"
-    assert packet["matched_principles"][0]["id"] == "non-enum-keyword-routing"
+    assert packet["matched_principles"][0]["id"] == "host-agnostic-agent-judgment"
+    assert packet["matched_principles"][0]["derived_applications"] == ["non-enum-keyword-routing"]
     assert packet["matched_principles"][0]["closeout_question"].startswith("Was this principle preserved")
     assert packet["closeout"]["required_claim"] == "preserved|re-scoped-by-human|unresolved"
 

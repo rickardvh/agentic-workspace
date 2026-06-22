@@ -14506,7 +14506,7 @@ def _architecture_principles_payload(
     cli_invoke: str,
     compact: bool = False,
 ) -> dict[str, Any]:
-    surface_path = ".agentic-workspace/system-intent/architecture-principles.toml"
+    surface_path = ".agentic-workspace/system-intent/intent.toml"
     if target_root is None:
         return {"kind": "agentic-workspace/architecture-principles-status/v1", "status": "unavailable", "matched_count": 0}
     path = target_root / surface_path
@@ -14529,7 +14529,7 @@ def _architecture_principles_payload(
         }
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     matched: list[dict[str, Any]] = []
-    for principle in _list_payload(document.get("principles")):
+    for principle in _list_payload(document.get("architecture_principles")):
         if not isinstance(principle, dict):
             continue
         path_matches = _note_glob_matches(changed_paths=normalized_paths, patterns=principle.get("path_globs"))
@@ -14545,12 +14545,24 @@ def _architecture_principles_payload(
                 "owner": str(principle.get("owner", "")).strip(),
                 "authority": str(principle.get("authority", document.get("authority", ""))).strip(),
                 "source": surface_path,
+                "source_kind": str(document.get("kind", "")),
                 "summary": str(principle.get("summary", "")).strip(),
+                "derived_from": [str(item) for item in _list_payload(principle.get("derived_from"))],
                 "allowed_sources": [str(item) for item in _list_payload(principle.get("allowed_sources"))],
                 "forbidden_sources": [str(item) for item in _list_payload(principle.get("forbidden_sources"))],
                 "affected_decisions": [str(item) for item in _list_payload(principle.get("affected_decisions"))],
                 "matched_paths": path_matches,
                 "guardrail_refs": [str(item) for item in _list_payload(principle.get("guardrail_refs"))],
+                "derived_applications": [str(item) for item in _list_payload(principle.get("derived_applications"))],
+                "guardrails": [
+                    {
+                        "id": str(guardrail.get("id", "")).strip(),
+                        "summary": str(guardrail.get("summary", "")).strip(),
+                        "guardrail_refs": [str(item) for item in _list_payload(guardrail.get("guardrail_refs"))],
+                    }
+                    for guardrail in _list_payload(principle.get("guardrails"))
+                    if isinstance(guardrail, dict) and str(guardrail.get("id", "")).strip()
+                ],
                 "proof_expectation": str(principle.get("proof_expectation", "")).strip(),
                 "closeout_question": (
                     "Was this principle preserved for the matching changed paths, or did the human owner explicitly re-scope it?"
@@ -14563,8 +14575,8 @@ def _architecture_principles_payload(
         "status": status,
         "source": surface_path,
         "source_kind": str(document.get("kind", "")),
-        "owner": str(document.get("owner", "")),
-        "relationship_to_system_intent": str(document.get("relationship_to_system_intent", "")),
+        "owner": "repo-system-intent",
+        "relationship_to_system_intent": "Architecture principles are typed subsections of the normalized system-intent record.",
         "matched_count": len(matched),
         "matched_principles": matched,
         "closeout": {
@@ -14596,12 +14608,15 @@ def _architecture_principles_payload(
                 "status": status,
                 "matched_count": 0,
                 "source": surface_path,
+                "source_kind": payload["source_kind"],
             }
         return {
             "kind": payload["kind"],
             "status": status,
             "matched_count": len(matched),
             "source": surface_path,
+            "source_kind": payload["source_kind"],
+            "relationship_to_system_intent": payload["relationship_to_system_intent"],
             "matched_principles": [
                 {
                     "id": item["id"],
@@ -14609,6 +14624,8 @@ def _architecture_principles_payload(
                     "owner": item["owner"],
                     "matched_paths": item["matched_paths"],
                     "guardrail_refs": item["guardrail_refs"],
+                    "derived_applications": item["derived_applications"],
+                    "guardrails": item["guardrails"],
                     "closeout_question": item["closeout_question"],
                 }
                 for item in matched
