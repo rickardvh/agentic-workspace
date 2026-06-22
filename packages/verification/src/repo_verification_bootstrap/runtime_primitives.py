@@ -1324,31 +1324,88 @@ def _match_protocol(
     task_text: str | None,
     active_planning_record: dict[str, Any] | None,
     assurance_requirements: dict[str, Any] | None,
-) -> tuple[bool, list[str]]:
+) -> tuple[bool, list[str], list[dict[str, Any]]]:
     applies_because: list[str] = []
+    match_signals: list[dict[str, Any]] = []
     for path in _normalize_changed_paths(changed_paths):
         for pattern in _list_payload(protocol.get("applies_to_paths")):
             pattern_text = str(pattern).strip()
             if pattern_text and fnmatch.fnmatch(path, pattern_text):
-                applies_because.append(f"changed path matched {pattern_text}")
+                reason = f"changed path matched {pattern_text}"
+                applies_because.append(reason)
+                match_signals.append(
+                    {
+                        "signal_type": "changed_path",
+                        "authority": "structured-input",
+                        "priority": "structured",
+                        "value": path,
+                        "matched": pattern_text,
+                        "reason": reason,
+                    }
+                )
         for pattern in _list_payload(protocol.get("stale_when")):
             pattern_text = str(pattern).strip()
             if pattern_text and fnmatch.fnmatch(path, pattern_text):
-                applies_because.append(f"changed path may stale protocol via {pattern_text}")
+                reason = f"changed path may stale protocol via {pattern_text}"
+                applies_because.append(reason)
+                match_signals.append(
+                    {
+                        "signal_type": "stale_path",
+                        "authority": "structured-input",
+                        "priority": "structured",
+                        "value": path,
+                        "matched": pattern_text,
+                        "reason": reason,
+                    }
+                )
     normalized_task = (task_text or "").lower()
     for marker in _list_payload(protocol.get("applies_to_task_markers")):
         marker_text = str(marker).strip()
         if marker_text and marker_text.lower() in normalized_task:
-            applies_because.append(f"task marker matched {marker_text}")
+            reason = f"task marker matched {marker_text}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "task_marker",
+                    "authority": "host-declared-verification-manifest",
+                    "priority": "advisory",
+                    "value": marker_text,
+                    "matched": marker_text,
+                    "reason": reason,
+                    "agent_decision_required": True,
+                }
+            )
     planning_refs = set(_planning_refs(active_planning_record))
     for ref in _list_payload(protocol.get("planning_refs")):
         ref_text = str(ref).strip()
         if ref_text and ref_text in planning_refs:
-            applies_because.append(f"planning ref matched {ref_text}")
+            reason = f"planning ref matched {ref_text}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "planning_ref",
+                    "authority": "structured-planning-state",
+                    "priority": "structured",
+                    "value": ref_text,
+                    "matched": ref_text,
+                    "reason": reason,
+                }
+            )
     for ref in _list_payload(protocol.get("protocol_refs")):
         ref_text = str(ref).strip()
         if ref_text and ref_text in planning_refs:
-            applies_because.append(f"active planning protocol ref matched {ref_text}")
+            reason = f"active planning protocol ref matched {ref_text}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "protocol_ref",
+                    "authority": "structured-planning-state",
+                    "priority": "structured",
+                    "value": ref_text,
+                    "matched": ref_text,
+                    "reason": reason,
+                }
+            )
     active_requirements = []
     if isinstance(assurance_requirements, dict):
         active_requirements = [item for item in _list_payload(assurance_requirements.get("active")) if isinstance(item, dict)]
@@ -1358,12 +1415,45 @@ def _match_protocol(
         required_evidence = {str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()}
         protocol_evidence = {str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()}
         if requirement_id and requirement_id in {str(item).strip() for item in _list_payload(protocol.get("assurance_requirement_refs"))}:
-            applies_because.append(f"assurance requirement matched {requirement_id}")
+            reason = f"assurance requirement matched {requirement_id}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "assurance_requirement",
+                    "authority": "host-declared-assurance-config",
+                    "priority": "structured",
+                    "value": requirement_id,
+                    "matched": requirement_id,
+                    "reason": reason,
+                }
+            )
         if proof_profile and proof_profile in {str(item).strip() for item in _list_payload(protocol.get("proof_profiles"))}:
-            applies_because.append(f"assurance proof profile matched {proof_profile}")
+            reason = f"assurance proof profile matched {proof_profile}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "proof_profile",
+                    "authority": "host-declared-assurance-config",
+                    "priority": "structured",
+                    "value": proof_profile,
+                    "matched": proof_profile,
+                    "reason": reason,
+                }
+            )
         for label in sorted(required_evidence & protocol_evidence):
-            applies_because.append(f"required evidence label matched {label}")
-    return (bool(applies_because), _dedupe(applies_because))
+            reason = f"required evidence label matched {label}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "required_evidence",
+                    "authority": "host-declared-assurance-config",
+                    "priority": "structured",
+                    "value": label,
+                    "matched": label,
+                    "reason": reason,
+                }
+            )
+    return (bool(applies_because), _dedupe(applies_because), match_signals)
 
 
 def verification_report_payload(
@@ -1391,7 +1481,7 @@ def verification_report_payload(
     evidence_status: list[dict[str, Any]] = []
     normalized_paths = _normalize_changed_paths(changed_paths)
     for protocol in configured_protocols:
-        matched, applies_because = _match_protocol(
+        matched, applies_because, match_signals = _match_protocol(
             protocol=protocol,
             changed_paths=normalized_paths,
             task_text=task_text,
@@ -1403,6 +1493,9 @@ def verification_report_payload(
                 "id": protocol["id"],
                 "matched": matched,
                 "applies_because": applies_because,
+                "match_signals": match_signals,
+                "structured_signal_count": sum(1 for item in match_signals if item.get("priority") == "structured"),
+                "advisory_marker_count": sum(1 for item in match_signals if item.get("signal_type") == "task_marker"),
                 "non_match_reason": "" if matched else "no verification activation signal matched current work",
             }
         )
@@ -1435,6 +1528,7 @@ def verification_report_payload(
                 {
                     **protocol,
                     "applies_because": applies_because,
+                    "match_signals": match_signals,
                     "evidence_bundle_ids": [b["id"] for b in bundles],
                     "authority_boundary": {
                         "kind": "agentic-workspace/authority-boundary/v1",
@@ -1444,6 +1538,14 @@ def verification_report_payload(
                             f"configured verification protocol {protocol['id']}",
                             *applies_because,
                         ],
+                        "match_authority": {
+                            "structured_signal_count": sum(1 for item in match_signals if item.get("priority") == "structured"),
+                            "advisory_marker_count": sum(1 for item in match_signals if item.get("signal_type") == "task_marker"),
+                            "rule": (
+                                "Path, planning, proof-profile, requirement, and evidence-label signals are structured evidence. "
+                                "Task markers are host-declared manifest hints and remain advisory."
+                            ),
+                        },
                         "recommended_by_aw": ["run or record the configured verification evidence when agent judgment finds it relevant"],
                         "agent_owned_decisions": [
                             "whether the configured protocol is semantically relevant to the current work",

@@ -84,12 +84,58 @@ review_owner = "privacy-owner"
     assert payload["status"] == "attention"
     assert payload["active_protocols"][0]["id"] == "privacy_review"
     assert payload["active_protocols"][0]["applies_because"] == ["task marker matched privacy"]
+    assert payload["active_protocols"][0]["match_signals"] == [
+        {
+            "signal_type": "task_marker",
+            "authority": "host-declared-verification-manifest",
+            "priority": "advisory",
+            "value": "privacy",
+            "matched": "privacy",
+            "reason": "task marker matched privacy",
+            "agent_decision_required": True,
+        }
+    ]
+    assert payload["match_evidence"]["matching"][0]["advisory_marker_count"] == 1
+    assert payload["match_evidence"]["matching"][0]["structured_signal_count"] == 0
     protocol_boundary = payload["active_protocols"][0]["authority_boundary"]
     assert "configured verification protocol privacy_review" in protocol_boundary["observed_by_aw"]
     assert "task marker matched privacy" in protocol_boundary["observed_by_aw"]
+    assert protocol_boundary["match_authority"]["advisory_marker_count"] == 1
+    assert "Task markers are host-declared manifest hints" in protocol_boundary["match_authority"]["rule"]
     assert "whether the configured protocol is semantically relevant to the current work" in protocol_boundary["agent_owned_decisions"]
     assert "does not classify user intent" in protocol_boundary["reporting_rule"]
     assert "does not decide the user's semantic intent" in payload["authority_boundary"]["reporting_rule"]
+
+
+def test_verification_report_separates_structured_and_marker_match_signals(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Check privacy-sensitive behavior."
+applies_to_paths = ["docs/privacy/**"]
+applies_to_task_markers = ["privacy"]
+review_owner = "privacy-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=["docs/privacy/policy.md"],
+        task_text="Update privacy wording",
+    )
+
+    record = payload["match_evidence"]["matching"][0]
+    assert record["structured_signal_count"] == 1
+    assert record["advisory_marker_count"] == 1
+    signal_types = {signal["signal_type"] for signal in record["match_signals"]}
+    assert signal_types == {"changed_path", "task_marker"}
+    assert {signal["priority"] for signal in record["match_signals"]} == {"structured", "advisory"}
 
 
 def test_verification_report_rejects_protocol_without_activation(tmp_path: Path) -> None:

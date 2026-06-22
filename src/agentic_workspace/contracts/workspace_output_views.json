@@ -1,0 +1,31 @@
+{
+  "kind": "agentic-workspace/workspace-output-views/v1",
+  "purpose": "Declared AW-owned view metadata for stable workspace text projections. This file owns view labels and field order; portable render mechanics can consume it without owning AW semantics.",
+  "views": [
+    {
+      "id": "defaults-router.text",
+      "payload_kind": "agentic-workspace/defaults-router/v1",
+      "format": "text",
+      "owner": "workspace-output-contract",
+      "status": "declared",
+      "sections": [
+        {
+          "label": "",
+          "field": "summary",
+          "item_prefix": ""
+        },
+        {
+          "label": "Common sections:",
+          "field": "common_sections",
+          "item_prefix": "- "
+        },
+        {
+          "label": "Detail commands:",
+          "field": "detail_commands",
+          "item_prefix": "- "
+        }
+      ],
+      "agent_judgment_boundary": "The view contract defines stable presentation metadata only; the agent decides whether the defaults router is relevant to the task."
+    }
+  ]
+}
