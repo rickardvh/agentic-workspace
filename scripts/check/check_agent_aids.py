@@ -204,6 +204,17 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
                     ),
                 )
             )
+    boundary = payload.get("authority_boundary")
+    if isinstance(boundary, dict):
+        runtime_authority = boundary.get("runtime_authority")
+        if payload.get("proof_role") != "canonical-proof" and runtime_authority == "canonical":
+            findings.append(Finding(path=path, message="advisory or candidate aids cannot declare canonical runtime authority"))
+        if (
+            str(payload.get("id") or "").startswith("github-")
+            and boundary.get("fact_owner") != "external-intent-evidence"
+            and payload.get("proof_role") != "canonical-proof"
+        ):
+            findings.append(Finding(path=path, message="GitHub-specific advisory aids must route behavior-relevant facts to external-intent evidence"))
     promotion = payload.get("promotion")
     if isinstance(promotion, dict):
         if payload.get("status") == "promoted" and promotion.get("retention_after_promotion") == "delete":

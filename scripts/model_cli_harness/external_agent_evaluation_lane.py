@@ -64,6 +64,30 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     _require(scorecard.get("kind") == "agentic-workspace/external-agent-scorecard/v1", "scorecard kind is invalid", errors)
     _require(len(dimensions) >= 8, "scorecard must define the major AW loop dimensions", errors)
     _require(len(failure_ids) >= 10, "scorecard must define stable failure ids", errors)
+    boundary = scorecard.get("authority_boundary")
+    _require(isinstance(boundary, dict), "scorecard must define authority_boundary", errors)
+    if isinstance(boundary, dict):
+        _require(
+            boundary.get("harness_role") == "maintainer-evaluation-evidence",
+            "scorecard authority_boundary.harness_role must be maintainer-evaluation-evidence",
+            errors,
+        )
+        _require(boundary.get("runtime_authority") == "none", "scorecard authority_boundary.runtime_authority must be none", errors)
+        _require(
+            boundary.get("portable_contract_status") in {"not-declared", "declared"},
+            "scorecard authority_boundary.portable_contract_status is invalid",
+            errors,
+        )
+        _require(
+            bool(str(boundary.get("promotion_rule") or "").strip()),
+            "scorecard authority_boundary must name promotion_rule",
+            errors,
+        )
+        _require(
+            bool(str(boundary.get("agent_decision") or "").strip()),
+            "scorecard authority_boundary must name agent_decision",
+            errors,
+        )
 
     for invariant in pack["invariants"].get("invariants", []):
         _require(invariant.get("dimension") in dimensions, f"invariant {invariant.get('id')} references unknown dimension", errors)

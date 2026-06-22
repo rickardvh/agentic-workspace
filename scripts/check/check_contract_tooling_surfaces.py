@@ -2342,6 +2342,13 @@ KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS = {
     "test-fixture-schema",
     "documented-command-set",
 }
+KEYWORD_ROUTING_AUDIT_ALLOWED_DECISION_AUTHORITIES = {
+    "advisory-only",
+    "checker-only",
+    "enum-owned",
+    "structured-owned",
+    "decision-affecting-package-policy",
+}
 
 def _keyword_routing_scan_excluded(path: Path) -> bool:
     return any(part == "__pycache__" or part.startswith(".uv-cache") for part in path.parts)
@@ -2447,6 +2454,14 @@ def _validate_non_enum_keyword_routing_audit(
             errors.append(f"{key} has unknown classification {classification!r}; expected one of: {allowed}")
         if not str(raw_entry.get("authority") or "").strip():
             errors.append(f"{key} must explain why the string table is not package-owned routing authority")
+        decision_authority = str(raw_entry.get("decision_authority") or "").strip()
+        if decision_authority not in KEYWORD_ROUTING_AUDIT_ALLOWED_DECISION_AUTHORITIES:
+            allowed = ", ".join(sorted(KEYWORD_ROUTING_AUDIT_ALLOWED_DECISION_AUTHORITIES))
+            errors.append(f"{key} has unknown decision_authority {decision_authority!r}; expected one of: {allowed}")
+        elif decision_authority == "decision-affecting-package-policy":
+            errors.append(f"{key} is decision-affecting package policy; migrate it to structured authority before accepting the audit")
+        if not str(raw_entry.get("agent_judgment_boundary") or "").strip():
+            errors.append(f"{key} must name the agent judgment boundary")
     missing = sorted(observed - set(classified))
     extra = sorted(set(classified) - observed)
     for key in missing:

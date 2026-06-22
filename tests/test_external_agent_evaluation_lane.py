@@ -60,6 +60,7 @@ def test_external_agent_lane_pack_validates() -> None:
 
 def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> None:
     scorecard = _read_json("scorecard-taxonomy.json")
+    boundary = scorecard["authority_boundary"]
 
     dimensions = {item["id"] for item in scorecard["dimensions"]}
     failure_ids = {item["id"] for item in scorecard["failure_taxonomy"]}
@@ -93,6 +94,19 @@ def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> 
         "HARNESS_SCENARIO_AMBIGUOUS",
     } <= failure_ids
     assert {"cli_output", "memory", "planning", "verification", "contracts", "harness", "no_change"} <= owner_surfaces
+    assert boundary["harness_role"] == "maintainer-evaluation-evidence"
+    assert boundary["runtime_authority"] == "none"
+    assert boundary["portable_contract_status"] == "not-declared"
+
+
+def test_external_agent_lane_rejects_missing_harness_authority_boundary() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    pack["scorecard"].pop("authority_boundary", None)
+
+    errors = module.validate_pack(pack)
+
+    assert "scorecard must define authority_boundary" in errors
 
 
 def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
