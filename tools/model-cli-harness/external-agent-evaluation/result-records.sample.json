@@ -178,6 +178,36 @@
         "residue_owner": "issue",
         "safe_claim": "blocked"
       },
+      "operating_loop": {
+        "kind": "agentic-workspace/operating-loop-decision/v1",
+        "closeout_state": "residue_routing_required",
+        "safe_claim": "blocked",
+        "residue_owner": "issue",
+        "required_before_full_closure": ["route_external_residue"],
+        "memory": {
+          "state": "dismissed",
+          "reason_code": "explicitly_dismissed",
+          "route_ref": null,
+          "capture": "none"
+        },
+        "planning": {
+          "state": "continuation",
+          "plan_ref": "#1600",
+          "blocks_full_closure": true
+        },
+        "verification": {
+          "state": "proof_selected",
+          "proof_ref": "slice-local proof",
+          "blocks_full_closure": true
+        },
+        "reasons": [
+          {
+            "code": "external_residue",
+            "owner": "issue",
+            "ref": "#1600"
+          }
+        ]
+      },
       "failure_ids": ["PARTIAL_PROGRESS_CLAIMED_AS_FULL", "OPERATIONAL_TRACE_INSUFFICIENT"],
       "repair_surface_hints": ["cli_output", "planning"],
       "evidence_refs": ["historical fixture: partial-slice-claimed-parent-closed"]

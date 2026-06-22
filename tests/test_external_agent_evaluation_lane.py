@@ -183,6 +183,30 @@ def test_external_agent_lane_rejects_trace_required_record_without_decisions() -
     assert any("must include operational decision trace keys" in error for error in errors)
 
 
+def test_external_agent_lane_rejects_invalid_operating_loop_packet() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    record = next(item for item in pack["results"]["records"] if item["scenario_id"] == "operational-decision-trace-required")
+    record["operating_loop"]["safe_claim"] = "probably"
+
+    errors = module.validate_pack(pack)
+
+    assert any("operating_loop safe_claim is invalid" in error for error in errors)
+
+
+def test_trace_required_result_records_embed_integrated_operating_loop() -> None:
+    records = _read_json("result-records.sample.json")["records"]
+    record = next(item for item in records if item["scenario_id"] == "operational-decision-trace-required")
+    loop = record["operating_loop"]
+
+    assert loop["kind"] == "agentic-workspace/operating-loop-decision/v1"
+    assert loop["memory"]["state"] == "dismissed"
+    assert loop["planning"]["state"] == "continuation"
+    assert loop["verification"]["state"] == "proof_selected"
+    assert loop["safe_claim"] == "blocked"
+    assert loop["residue_owner"] == "issue"
+
+
 def test_external_agent_lane_rejects_invalid_historical_fixture_status() -> None:
     module = _load_module()
     pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
@@ -217,12 +241,18 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["live_evaluation"]["clean_run_count"] == 3
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
+    assert report["acceptance"]["operating_loop_observable"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
     assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["live_evaluation"]["promoted_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["live_evaluation"]["actionable_remediation_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
     assert report["promotion_count"] >= 1
+    loop = report["operating_loop_observability"]
+    assert loop["kind"] == "agentic-workspace/external-agent-operating-loop-observability/v1"
+    assert loop["record_count"] >= 1
+    assert loop["safe_claim_counts"]["blocked"] >= 1
+    assert loop["residue_owner_counts"]["issue"] >= 1
 
 
 def test_operational_decision_trace_avoids_chain_of_thought_requirement() -> None:
