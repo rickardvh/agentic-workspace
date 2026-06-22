@@ -35194,44 +35194,84 @@ def _read_or_create_workspace_operation_system_intent_mirror(
     return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=False)
 
 
-def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
-    payload = values["result"]
-    output_format = str(values.get("format") or "text")
+def _emit_workspace_prompt_output(payload: dict[str, Any], output_format: str) -> bool:
     if isinstance(payload, dict) and payload.get("command") == "prompt":
         _emit_payload(payload=payload, format_name=output_format)
-        return
+        return True
+    return False
+
+
+def _emit_workspace_system_intent_output(payload: dict[str, Any], output_format: str) -> bool:
     if isinstance(payload, dict) and payload.get("kind") == "workspace-system-intent/v1":
         if output_format == "json":
             print(json.dumps(serialise_value(payload), indent=2))
         else:
             _emit_workspace_operation_system_intent_payload_text(payload)
-        return
+        return True
+    return False
+
+
+def _emit_workspace_delegation_outcomes_output(payload: dict[str, Any], output_format: str) -> bool:
     if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/delegation-outcomes/v1":
         _emit_payload(payload=payload, format_name=output_format)
-        return
-    if output_format == "json":
-        print(json.dumps(payload, indent=2))
-        return
+        return True
+    return False
+
+
+def _emit_workspace_defaults_router_output(payload: dict[str, Any]) -> bool:
     if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/defaults-router/v1":
         _emit_tiny_defaults_text(payload)
-        return
+        return True
+    return False
+
+
+def _emit_workspace_compact_section_answer_output(values: dict[str, Any], payload: Any) -> bool:
     if values.get("section") is not None and isinstance(payload, dict):
         _emit_compact_answer_text(payload)
-        return
-    if "config" in values:
-        _emit_config(
-            format_name=output_format,
-            config=values["config"],
-            profile=_workspace_operation_profile(values),
-            select=str(values["select"]) if values.get("select") is not None else None,
-        )
-        return
+        return True
+    return False
+
+
+def _emit_workspace_config_compat_output(values: dict[str, Any], output_format: str) -> bool:
+    if "config" not in values:
+        return False
+    _emit_config(
+        format_name=output_format,
+        config=values["config"],
+        profile=_workspace_operation_profile(values),
+        select=str(values["select"]) if values.get("select") is not None else None,
+    )
+    return True
+
+
+def _emit_workspace_defaults_compat_output(values: dict[str, Any], output_format: str) -> None:
     _emit_defaults(
         format_name=output_format,
         section=None,
         profile=_workspace_operation_profile(values),
         select=str(values["select"]) if values.get("select") is not None else None,
     )
+
+
+def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
+    payload = values["result"]
+    output_format = str(values.get("format") or "text")
+    if _emit_workspace_prompt_output(payload, output_format):
+        return
+    if _emit_workspace_system_intent_output(payload, output_format):
+        return
+    if _emit_workspace_delegation_outcomes_output(payload, output_format):
+        return
+    if output_format == "json":
+        print(json.dumps(payload, indent=2))
+        return
+    if _emit_workspace_defaults_router_output(payload):
+        return
+    if _emit_workspace_compact_section_answer_output(values, payload):
+        return
+    if _emit_workspace_config_compat_output(values, output_format):
+        return
+    _emit_workspace_defaults_compat_output(values, output_format)
 
 
 def _emit_workspace_operation_system_intent_payload_text(payload: dict[str, Any]) -> None:
