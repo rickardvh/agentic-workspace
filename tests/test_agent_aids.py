@@ -219,6 +219,30 @@ def test_candidate_agent_aid_cannot_claim_canonical_proof_role(tmp_path: Path) -
     assert any("only promoted aids may declare proof_role='canonical-proof'" in finding.message for finding in findings)
 
 
+def test_github_specific_advisory_aid_routes_facts_to_external_intent(tmp_path: Path) -> None:
+    _prepare_schema(tmp_path)
+    manifest = ".agentic-workspace/agent-aids/scripts/github-issue-body/manifest.json"
+    entrypoint = ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py"
+    payload = _valid_manifest(
+        id="github-issue-body",
+        entrypoint=entrypoint,
+        authority_boundary={
+            "runtime_authority": "none",
+            "fact_owner": "agent-aid",
+            "agent_decision": "Agent interprets issue intent.",
+        },
+    )
+    _write(tmp_path / manifest, json.dumps(payload))
+    _write(tmp_path / entrypoint, "print('ok')\n")
+
+    findings = check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path)
+
+    assert any(
+        "GitHub-specific advisory aids must route behavior-relevant facts to external-intent evidence" in finding.message
+        for finding in findings
+    )
+
+
 def test_agent_aid_manifest_requires_promotion_target_kind(tmp_path: Path) -> None:
     _prepare_schema(tmp_path)
     manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"

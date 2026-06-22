@@ -189,6 +189,49 @@
       "additionalProperties": false,
       "description": "How this aid is validated, or why validation is absent."
     },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "runtime_authority",
+        "fact_owner",
+        "agent_decision"
+      ],
+      "properties": {
+        "runtime_authority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "advisory-only",
+            "canonical"
+          ],
+          "description": "Whether this aid can act as package runtime authority."
+        },
+        "fact_owner": {
+          "type": "string",
+          "enum": [
+            "agent-aid",
+            "external-intent-evidence",
+            "planning-state",
+            "memory",
+            "docs-contract",
+            "host-config"
+          ],
+          "description": "Canonical owner for behavior-relevant facts related to the aid."
+        },
+        "promote_behavior_relevant_facts_to": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target surface for behavior-relevant facts if the aid reveals reusable package behavior."
+        },
+        "agent_decision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Decision that remains owned by the agent."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Boundary that prevents advisory aids from becoming hidden workflow or package authority."
+    },
     "promotion": {
       "type": "object",
       "required": [

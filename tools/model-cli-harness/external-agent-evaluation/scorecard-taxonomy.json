@@ -1,6 +1,13 @@
 {
   "kind": "agentic-workspace/external-agent-scorecard/v1",
   "lane": "#1600",
+  "authority_boundary": {
+    "harness_role": "maintainer-evaluation-evidence",
+    "runtime_authority": "none",
+    "portable_contract_status": "not-declared",
+    "promotion_rule": "Harness findings may become package behavior only after an explicit provider-neutral contract or owner surface is declared.",
+    "agent_decision": "The agent interprets harness findings as evidence and decides whether they indicate product ambiguity, model/provider limits, fixture gaps, or no change."
+  },
   "result_values": ["pass", "partial", "fail", "not_applicable"],
   "claim_safety_values": ["safe_full_claim", "partial_claim_only", "unsafe_claim", "not_applicable"],
   "owner_surfaces": [

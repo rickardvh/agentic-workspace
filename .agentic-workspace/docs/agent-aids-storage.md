@@ -42,6 +42,8 @@ Use this for repo-shared aids that are still proving value. Suggested subfolders
 
 Checked-in candidate aids are reviewable repo state. Put each aid in its own directory under the relevant subfolder and add `manifest.json` beside the aid files. The manifest kind is `agentic-workspace/agent-aid/v1`; it records type, status, scope, portability, owner, why it exists, when to use it, entrypoint, safety, validation, promotion, and retirement criteria.
 
+Use `authority_boundary` when an aid is provider-specific, tracker-specific, or close to workflow routing. Advisory aids should declare `runtime_authority: none` or `advisory-only` and name the owner surface for behavior-relevant facts, such as external-intent evidence, Planning state, Memory, docs contracts, or host config. This makes the aid's boundary explicit without making the aid a package-owned policy source.
+
 Run `python scripts/check/check_agent_aids.py` or `make agent-aids` to validate checked-in aid manifests and ensure aid files are covered by nearby metadata.
 
 Run `agentic-workspace report --target . --section agent_aids --format json` to list checked-in and local-only aids without scanning the repo. Run `agentic-workspace skills --target . --task "<task>" --format json` when the question is task-specific aid or skill recommendation.

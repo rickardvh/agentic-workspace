@@ -27,6 +27,12 @@
       "uv run python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --input-json .agentic-workspace/agent-aids/scripts/github-issue-body/examples/direction-request.json --format json"
     ]
   },
+  "authority_boundary": {
+    "runtime_authority": "none",
+    "fact_owner": "external-intent-evidence",
+    "promote_behavior_relevant_facts_to": ".agentic-workspace/local/cache/external-intent-evidence.json or .agentic-workspace/planning/external-intent-evidence.json",
+    "agent_decision": "The agent interprets issue intent; the aid only renders this repo's GitHub issue body from structured input."
+  },
   "promotion": {
     "target_kind": "command",
     "target": "agentic-workspace issue-body",

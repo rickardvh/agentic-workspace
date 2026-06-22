@@ -34,6 +34,11 @@ Manifest for a checked-in agent aid such as a script, runbook, prompt, template,
 | `validation` | object | yes |  | How this aid is validated, or why validation is absent. |  |  |
 | `validation.commands` | array of string | no |  | Commands associated with this check, proof, or workflow step. |  |  |
 | `validation.absent_reason` | string | no |  | Reason validation commands are intentionally absent. |  |  |
+| `authority_boundary` | object | no |  | Boundary that prevents advisory aids from becoming hidden workflow or package authority. |  |  |
+| `authority_boundary.runtime_authority` | enum `"none"`, `"advisory-only"`, `"canonical"` | yes |  | Whether this aid can act as package runtime authority. |  |  |
+| `authority_boundary.fact_owner` | enum `"agent-aid"`, `"external-intent-evidence"`, `"planning-state"`, `"memory"`, `"docs-contract"`, `"host-config"` | yes |  | Canonical owner for behavior-relevant facts related to the aid. |  |  |
+| `authority_boundary.promote_behavior_relevant_facts_to` | string | no |  | Target surface for behavior-relevant facts if the aid reveals reusable package behavior. |  |  |
+| `authority_boundary.agent_decision` | string | yes |  | Decision that remains owned by the agent. |  |  |
 | `promotion` | object | yes |  | Promotion path if the aid should become more canonical or package-owned. |  |  |
 | `promotion.target_kind` | enum `"command"`, `"check"`, `"skill"`, `"runbook"`, `"prompt"`, `"template"`, `"module-component"`, `"docs-contract"` | yes |  | Kind of destination this entry may promote or point to. |  |  |
 | `promotion.target` | string | yes |  | Destination file, surface, package, or record referenced by this entry. |  |  |

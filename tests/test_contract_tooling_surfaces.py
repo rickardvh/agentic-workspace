@@ -132,7 +132,9 @@ def test_non_enum_keyword_routing_audit_rejects_disallowed_policy(tmp_path: Path
                         "function": "neutral_helper_name",
                         "variable": "local_markers",
                         "classification": "disallowed-package-policy",
+                        "decision_authority": "advisory-only",
                         "authority": "sample",
+                        "agent_judgment_boundary": "Agent decides.",
                     }
                 ],
             }
@@ -145,4 +147,48 @@ def test_non_enum_keyword_routing_audit_rejects_disallowed_policy(tmp_path: Path
     assert errors == [
         "src/sample.py|neutral_helper_name|local_markers is classified as disallowed-package-policy; "
         "remove the keyword table or demote it to non-authoritative evidence"
+    ]
+
+
+def test_non_enum_keyword_routing_audit_rejects_decision_affecting_package_policy(tmp_path: Path) -> None:
+    module = _load_module()
+    source = tmp_path / "src" / "sample.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "\n".join(
+            [
+                "def neutral_helper_name(value):",
+                '    local_markers = ("alpha", "beta", "gamma")',
+                "    return any(marker in value for marker in local_markers)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    audit = tmp_path / "docs" / "maintainer" / "non-enum-keyword-routing-audit.json"
+    audit.parent.mkdir(parents=True)
+    audit.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/non-enum-keyword-routing-audit/v1",
+                "entries": [
+                    {
+                        "path": "src/sample.py",
+                        "function": "neutral_helper_name",
+                        "variable": "local_markers",
+                        "classification": "advisory-diagnostic",
+                        "decision_authority": "decision-affecting-package-policy",
+                        "authority": "sample",
+                        "agent_judgment_boundary": "Agent decides.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = module._validate_non_enum_keyword_routing_audit(repo_root=tmp_path, audit_path=audit)
+
+    assert errors == [
+        "src/sample.py|neutral_helper_name|local_markers is decision-affecting package policy; "
+        "migrate it to structured authority before accepting the audit"
     ]
