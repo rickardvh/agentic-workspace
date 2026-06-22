@@ -1103,11 +1103,92 @@ def test_generated_operation_cli_input_proof_scenarios(monkeypatch) -> None:
         interface=route_command["interface"],
         inherited_operation_ref=route_command["operation_ref"],
         inherited_option_names=set(),
+        command_source_id="memory.route-report.cli",
+        operation_contract_root="packages/memory/src/repo_memory_bootstrap/contracts",
+        sibling_option_owners=checker._generated_command_option_owners(command_package["commands"]),
         generated_root=generated_root,
     )
 
     assert any(
         "memory-bootstrap route-report operation memory.route-report.report declares cli-option input 'verbose'" in error
+        for error in errors
+    )
+    assert any(
+        "source interface: src/agentic_workspace/contracts/command_package_ir.json "
+        "$.packages[id=memory-bootstrap].commands[adapter_id=memory.route-report.cli].interface.options" in error
+        for error in errors
+    )
+    assert any(
+        "source operation: packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json" in error
+        for error in errors
+    )
+    assert any("generated artifact: generated/memory/python/command_package.json" in error for error in errors)
+
+    route_command = copy.deepcopy(next(command for command in command_package["commands"] if command["adapter_id"] == "memory.route.cli"))
+    route_command["interface"]["options"] = [
+        option for option in route_command["interface"]["options"] if option.get("name") != "pending_command"
+    ]
+    wrong_neighbor_option_owners = {"pending_command": ["memory.capture-note.cli"]}
+
+    errors = checker._validate_operation_cli_inputs_for_interface(
+        package_id="memory-bootstrap",
+        command_path="route",
+        interface=route_command["interface"],
+        inherited_operation_ref=route_command["operation_ref"],
+        inherited_option_names=set(),
+        command_source_id="memory.route.cli",
+        operation_contract_root="packages/memory/src/repo_memory_bootstrap/contracts",
+        sibling_option_owners=wrong_neighbor_option_owners,
+        generated_root=generated_root,
+    )
+
+    assert any(
+        "option 'pending_command' appears on sibling command interface(s) ['memory.capture-note.cli'], "
+        "but expected command interface is 'memory.route.cli'" in error
+        for error in errors
+    )
+
+    nested_operation = {
+        "inputs": [
+            {"name": "format", "source": "cli-option"},
+            {"name": "misplaced", "source": "cli-option"},
+        ]
+    }
+    monkeypatch.setattr(checker, "_load_json", lambda path: nested_operation)
+    nested_interface = {
+        "name": "parent",
+        "options": [{"name": "format"}],
+        "subcommands": [
+            {
+                "name": "expected",
+                "options": [],
+                "operation_ref": {"id": "example.expected", "path": "operations/example.expected.json"},
+            },
+            {
+                "name": "wrong",
+                "options": [{"name": "misplaced"}],
+                "operation_ref": {"id": "example.wrong", "path": "operations/example.wrong.json"},
+            },
+        ],
+    }
+    nested_option_owners = checker._generated_command_option_owners(
+        [{"status": "generated", "adapter_id": "example.parent.cli", "interface": nested_interface}]
+    )
+
+    errors = checker._validate_operation_cli_inputs_for_interface(
+        package_id="example-package",
+        command_path="parent",
+        interface=nested_interface,
+        inherited_operation_ref={"id": "example.parent", "path": "operations/example.parent.json"},
+        inherited_option_names=set(),
+        command_source_id="example.parent.cli",
+        operation_contract_root="packages/example/contracts",
+        sibling_option_owners=nested_option_owners,
+    )
+
+    assert any(
+        "option 'misplaced' appears on sibling command interface(s) ['example.parent.cli wrong'], "
+        "but expected command interface is 'example.parent.cli expected'" in error
         for error in errors
     )
 

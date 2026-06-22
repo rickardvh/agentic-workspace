@@ -837,6 +837,54 @@ def _operation_input_matches_interface(input_name: str, parameter_names: set[str
     return f"{input_name}s" in parameter_names
 
 
+def _generated_command_option_owners(commands: list[object]) -> dict[str, list[str]]:
+    owners: dict[str, list[str]] = {}
+
+    def collect(interface: dict[str, object], owner: str) -> None:
+        for option_name in _interface_parameter_names(interface):
+            owners.setdefault(option_name, []).append(owner)
+        subcommands = interface.get("subcommands", [])
+        if not isinstance(subcommands, list):
+            return
+        for subcommand in subcommands:
+            if not isinstance(subcommand, dict):
+                continue
+            subcommand_name = str(subcommand.get("name", "")).strip() or "<unnamed>"
+            collect(subcommand, f"{owner} {subcommand_name}")
+
+    for command in commands:
+        if not isinstance(command, dict) or command.get("status") != "generated":
+            continue
+        interface = command.get("interface", {})
+        if not isinstance(interface, dict):
+            continue
+        raw_command = command.get("command", {})
+        command_name = str(interface.get("name") or (raw_command.get("name") if isinstance(raw_command, dict) else "") or "<unnamed>")
+        adapter_id = str(command.get("adapter_id", "")).strip()
+        owner = adapter_id or command_name
+        collect(interface, owner)
+    return {name: sorted(set(name_owners)) for name, name_owners in owners.items()}
+
+
+def _relative_posix(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _command_interface_source_hint(
+    *, package_id: str, command_source_id: str, nested_interface_path: tuple[str, ...] = ()
+) -> str:
+    hint = (
+        "src/agentic_workspace/contracts/command_package_ir.json "
+        f"$.packages[id={package_id}].commands[adapter_id={command_source_id}].interface"
+    )
+    for subcommand_name in nested_interface_path:
+        hint += f".subcommands[name={subcommand_name}]"
+    return f"{hint}.options"
+
+
 def _validate_operation_cli_inputs_for_interface(
     *,
     package_id: str,
@@ -844,6 +892,10 @@ def _validate_operation_cli_inputs_for_interface(
     interface: dict[str, object],
     inherited_operation_ref: dict[str, object],
     inherited_option_names: set[str],
+    command_source_id: str = "",
+    operation_contract_root: str = "",
+    sibling_option_owners: dict[str, list[str]] | None = None,
+    nested_interface_path: tuple[str, ...] = (),
     generated_root: Path | None = None,
 ) -> list[str]:
     errors: list[str] = []
@@ -869,11 +921,35 @@ def _validate_operation_cli_inputs_for_interface(
                         continue
                     input_name = str(input_record.get("name", "")).strip()
                     if input_name and not _operation_input_matches_interface(input_name, option_names):
+                        source_id = command_source_id or command_path
+                        source_hint = _command_interface_source_hint(
+                            package_id=package_id,
+                            command_source_id=source_id,
+                            nested_interface_path=nested_interface_path,
+                        )
+                        operation_source = operation_path
+                        if operation_contract_root:
+                            operation_source = f"{operation_contract_root.rstrip('/')}/{operation_path}"
+                        generated_artifact = ""
+                        if generated_root is not None:
+                            generated_artifact = _relative_posix(generated_root / "command_package.json")
+                        current_interface_owner = " ".join((source_id, *nested_interface_path)).strip()
+                        sibling_owners = [
+                            owner for owner in (sibling_option_owners or {}).get(input_name, []) if owner != current_interface_owner
+                        ]
+                        sibling_hint = ""
+                        if sibling_owners:
+                            sibling_hint = (
+                                f"; option {input_name!r} appears on sibling command interface(s) {sibling_owners!r}, "
+                                f"but expected command interface is {current_interface_owner!r}"
+                            )
                         errors.append(
                             f"{package_id} {command_path} operation {operation_id} declares cli-option input "
                             f"{input_name!r} but generated command options are {sorted(option_names)!r}; "
-                            "add the option to the command interface or mark the input command_visibility='runtime-only' "
-                            "or command_visibility='non-command-visible'"
+                            f"source interface: {source_hint}; source operation: {operation_source}; "
+                            f"generated artifact: {generated_artifact or '<unknown>'}{sibling_hint}; "
+                            "add the option to the source command interface before regenerating, or mark the input "
+                            "command_visibility='runtime-only' or command_visibility='non-command-visible'"
                         )
     if isinstance(subcommands, list):
         for subcommand in subcommands:
@@ -887,6 +963,10 @@ def _validate_operation_cli_inputs_for_interface(
                     interface=subcommand,
                     inherited_operation_ref=current_operation_ref,
                     inherited_option_names=option_names,
+                    command_source_id=command_source_id,
+                    operation_contract_root=operation_contract_root,
+                    sibling_option_owners=sibling_option_owners,
+                    nested_interface_path=(*nested_interface_path, subcommand_name),
                     generated_root=generated_root,
                 )
             )
@@ -899,6 +979,7 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
         if not isinstance(package, dict):
             continue
         package_id = str(package.get("id", "")).strip() or "<unknown-package>"
+        operation_contract_root = str(package.get("operation_contract_root", "")).strip()
         python_targets = [
             target
             for target in package.get("targets", [])
@@ -911,7 +992,10 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
             except (OSError, json.JSONDecodeError) as exc:
                 errors.append(f"{package_id} generated Python command package cannot be loaded for CLI input proof: {exc}")
                 continue
-            for command in command_package.get("commands", []):
+            commands = command_package.get("commands", [])
+            command_records = commands if isinstance(commands, list) else []
+            command_option_owners = _generated_command_option_owners(command_records)
+            for command in command_records:
                 if not isinstance(command, dict) or command.get("status") != "generated":
                     continue
                 interface = command.get("interface", {})
@@ -929,6 +1013,9 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
                         interface=interface,
                         inherited_operation_ref=operation_ref,
                         inherited_option_names=set(),
+                        command_source_id=str(command.get("adapter_id", "")).strip(),
+                        operation_contract_root=operation_contract_root,
+                        sibling_option_owners=command_option_owners,
                         generated_root=generated_root,
                     )
                 )
