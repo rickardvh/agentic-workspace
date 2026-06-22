@@ -359,6 +359,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
         memory_decision_packet = answer.get("memory_decision_packet", {})
         memory_decision_packet = memory_decision_packet if isinstance(memory_decision_packet, dict) else {}
+        operating_loop = answer.get("operating_loop", {})
+        operating_loop = operating_loop if isinstance(operating_loop, dict) else {}
         detail_command = _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
@@ -409,6 +411,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "terminal_action": terminal_action,
             "completion_options": completion_options,
             "memory_decision_packet": memory_decision_packet,
+            "operating_loop": operating_loop,
             "closeout_protocol": {
                 key: closeout_protocol.get(key)
                 for key in (

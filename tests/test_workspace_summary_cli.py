@@ -8,7 +8,7 @@ from pathlib import Path
 from repo_planning_bootstrap.installer import install_bootstrap
 from tests.workspace_cli_support import cli
 
-from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload
+from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload, _operating_loop_decision_payload
 
 
 def _write(path: Path, content: str) -> None:
@@ -113,6 +113,11 @@ candidates = []
     assert "repo_memory" in packet["capture"]["candidate_owner_surfaces"]
     assert "local_memory" in packet["capture"]["candidate_owner_surfaces"]
     assert packet["capture"]["agent_decision_required"] is False
+    loop = closeout["operating_loop"]
+    assert loop["kind"] == "agentic-workspace/operating-loop-decision/v1"
+    assert loop["memory"]["state"] in {"dismissed", "not_applicable", "pulled"}
+    assert loop["verification"]["state"] in {"proof_not_required", "proof_passed"}
+    assert loop["safe_claim"] in {"full", "partial", "blocked", "none"}
 
 
 def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
@@ -210,6 +215,36 @@ def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> 
     assert checked_none["pull"]["status"] == "checked_none"
     assert relevant["pull"]["status"] == "relevant_notes_found"
     assert hinted_only["pull"]["status"] == "not_checked"
+
+
+def test_operating_loop_projection_keeps_task_prose_from_changing_state() -> None:
+    base = _operating_loop_decision_payload()
+    repeated_words = _operating_loop_decision_payload(
+        memory_decision_packet={
+            "pull": {"status": "not_checked", "candidate_routes": []},
+            "capture": {"status": "not_evaluated"},
+        },
+        proof={},
+        planning_safety_gate={},
+    )
+
+    assert base["memory"] == repeated_words["memory"]
+    assert base["planning"] == repeated_words["planning"]
+    assert base["verification"] == repeated_words["verification"]
+
+
+def test_operating_loop_projection_maps_memory_capture_residue() -> None:
+    packet = _operating_loop_decision_payload(
+        memory_decision_packet={
+            "pull": {"status": "checked_none", "candidate_routes": []},
+            "capture": {"status": "follow_up_required"},
+        }
+    )
+
+    assert packet["memory"]["capture"] == "required"
+    assert packet["residue_owner"] == "memory"
+    assert packet["closeout_state"] == "residue_routing_required"
+    assert "route_memory_residue" in packet["required_before_full_closure"]
 
 
 def test_workspace_summary_json_warns_on_closed_lanes_in_live_state(tmp_path: Path, capsys) -> None:

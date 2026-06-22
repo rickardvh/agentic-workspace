@@ -61,6 +61,10 @@
       "$ref": "#/$defs/memory_decision_packet",
       "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
     },
+    "operating_loop": {
+      "$ref": "#/$defs/operating_loop",
+      "description": "Normalized operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts."
+    },
     "memory_consult": {
       "type": "object",
       "description": "Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory.",
@@ -722,6 +726,231 @@
         }
       },
       "additionalProperties": true
+    },
+    "operating_loop": {
+      "type": "object",
+      "required": [
+        "kind",
+        "closeout_state",
+        "safe_claim",
+        "residue_owner",
+        "required_before_full_closure",
+        "memory",
+        "planning",
+        "verification",
+        "reasons"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/operating-loop-decision/v1",
+          "description": "Discriminator for the normalized operating-loop decision packet."
+        },
+        "closeout_state": {
+          "description": "Structural closeout state derived from Memory, Planning, and Verification facts.",
+          "enum": [
+            "no_closeout_needed",
+            "ready_for_full_closure",
+            "partial_claim_only",
+            "blocked_missing_proof",
+            "blocked_active_planning",
+            "residue_routing_required"
+          ]
+        },
+        "safe_claim": {
+          "description": "Maximum structurally safe completion claim class for this output.",
+          "enum": [
+            "none",
+            "full",
+            "partial",
+            "blocked"
+          ]
+        },
+        "residue_owner": {
+          "description": "Primary owner surface for unresolved residue or blockers.",
+          "enum": [
+            "memory",
+            "planning",
+            "verification",
+            "docs",
+            "issue",
+            "config",
+            "none"
+          ]
+        },
+        "required_before_full_closure": {
+          "type": "array",
+          "items": {
+            "description": "One required action code before a full closure claim.",
+            "enum": [
+              "run_or_refresh_proof",
+              "continue_or_close_plan",
+              "route_memory_residue",
+              "route_external_residue"
+            ]
+          },
+          "description": "Structured action codes required before full closure is structurally safe."
+        },
+        "memory": {
+          "type": "object",
+          "description": "Memory pull and capture state projected from the Memory decision packet.",
+          "required": [
+            "state",
+            "reason_code",
+            "route_ref",
+            "capture"
+          ],
+          "properties": {
+            "state": {
+              "description": "Whether relevant Memory was pulled, structurally dismissed, or not applicable.",
+              "enum": [
+                "pulled",
+                "dismissed",
+                "not_applicable"
+              ]
+            },
+            "reason_code": {
+              "description": "Structured reason for the Memory pull state.",
+              "enum": [
+                "matched_route",
+                "no_relevant_route",
+                "not_requested",
+                "unavailable",
+                "explicitly_dismissed"
+              ]
+            },
+            "route_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Selector or route reference for pulled Memory, when available."
+            },
+            "capture": {
+              "description": "Whether reusable learning capture is absent, recommended, or required.",
+              "enum": [
+                "none",
+                "recommended",
+                "required"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "planning": {
+          "type": "object",
+          "description": "Planning state relevant to full closure safety.",
+          "required": [
+            "state",
+            "plan_ref",
+            "blocks_full_closure"
+          ],
+          "properties": {
+            "state": {
+              "description": "Active, continuation, closeout-required, or absent Planning state.",
+              "enum": [
+                "none",
+                "active",
+                "continuation",
+                "closeout_required"
+              ]
+            },
+            "plan_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Planning record or execplan reference, when available."
+            },
+            "blocks_full_closure": {
+              "type": "boolean",
+              "description": "Whether the Planning state structurally blocks an unqualified full closure claim."
+            }
+          },
+          "additionalProperties": false
+        },
+        "verification": {
+          "type": "object",
+          "description": "Verification or proof state relevant to the current claim boundary.",
+          "required": [
+            "state",
+            "proof_ref",
+            "blocks_full_closure"
+          ],
+          "properties": {
+            "state": {
+              "description": "Selected proof status used to decide structural closure safety.",
+              "enum": [
+                "proof_not_required",
+                "proof_required",
+                "proof_selected",
+                "proof_missing",
+                "proof_stale",
+                "proof_skipped",
+                "proof_failed",
+                "proof_passed"
+              ]
+            },
+            "proof_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Proof command, receipt, or source reference, when available."
+            },
+            "blocks_full_closure": {
+              "type": "boolean",
+              "description": "Whether the proof state structurally blocks an unqualified full closure claim."
+            }
+          },
+          "additionalProperties": false
+        },
+        "reasons": {
+          "type": "array",
+          "description": "Short structured reason codes explaining blockers or residue.",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "owner",
+              "ref"
+            ],
+            "properties": {
+              "code": {
+                "description": "Structured blocker or residue reason code.",
+                "enum": [
+                  "proof_missing",
+                  "proof_stale",
+                  "proof_failed",
+                  "active_plan",
+                  "plan_closeout_required",
+                  "memory_capture_required",
+                  "external_residue"
+                ]
+              },
+              "owner": {
+                "description": "Owner surface responsible for resolving the reason.",
+                "enum": [
+                  "memory",
+                  "planning",
+                  "verification",
+                  "docs",
+                  "issue",
+                  "config"
+                ]
+              },
+              "ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional reference to the proof, plan, route, or owner surface."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "task_posture_packet": {
       "type": "object",

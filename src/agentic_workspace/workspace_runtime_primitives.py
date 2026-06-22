@@ -13592,6 +13592,282 @@ _MEMORY_CAPTURE_STATUSES = {
     "dismissed",
     "follow_up_required",
 }
+_OPERATING_LOOP_KIND = "agentic-workspace/operating-loop-decision/v1"
+_OPERATING_LOOP_CLOSEOUT_STATES = {
+    "no_closeout_needed",
+    "ready_for_full_closure",
+    "partial_claim_only",
+    "blocked_missing_proof",
+    "blocked_active_planning",
+    "residue_routing_required",
+}
+_OPERATING_LOOP_SAFE_CLAIMS = {"none", "full", "partial", "blocked"}
+_OPERATING_LOOP_RESIDUE_OWNERS = {"memory", "planning", "verification", "docs", "issue", "config", "none"}
+_OPERATING_LOOP_REQUIRED_ACTIONS = {
+    "run_or_refresh_proof",
+    "continue_or_close_plan",
+    "route_memory_residue",
+    "route_external_residue",
+}
+_OPERATING_LOOP_MEMORY_STATES = {"pulled", "dismissed", "not_applicable"}
+_OPERATING_LOOP_MEMORY_REASONS = {
+    "matched_route",
+    "no_relevant_route",
+    "not_requested",
+    "unavailable",
+    "explicitly_dismissed",
+}
+_OPERATING_LOOP_MEMORY_CAPTURE = {"none", "recommended", "required"}
+_OPERATING_LOOP_PLANNING_STATES = {"none", "active", "continuation", "closeout_required"}
+_OPERATING_LOOP_VERIFICATION_STATES = {
+    "proof_not_required",
+    "proof_required",
+    "proof_selected",
+    "proof_missing",
+    "proof_stale",
+    "proof_skipped",
+    "proof_failed",
+    "proof_passed",
+}
+_OPERATING_LOOP_REASON_CODES = {
+    "proof_missing",
+    "proof_stale",
+    "proof_failed",
+    "active_plan",
+    "plan_closeout_required",
+    "memory_capture_required",
+    "external_residue",
+}
+
+
+def _first_ref(*values: Any) -> str | None:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, dict):
+            for key in ("ref", "path", "source", "command", "run", "id"):
+                item = value.get(key)
+                if isinstance(item, str) and item.strip():
+                    return item.strip()
+        for item in _list_payload(value):
+            ref = _first_ref(item)
+            if ref:
+                return ref
+    return None
+
+
+def _operating_loop_memory_state(memory_decision_packet: dict[str, Any] | None) -> dict[str, Any]:
+    packet = _as_dict(memory_decision_packet)
+    pull = _as_dict(packet.get("pull"))
+    capture = _as_dict(packet.get("capture"))
+    pull_status = str(pull.get("status") or "").strip()
+    if pull_status == "relevant_notes_found":
+        memory_state = "pulled"
+        reason_code = "matched_route"
+    elif pull_status == "checked_none":
+        memory_state = "dismissed"
+        reason_code = "no_relevant_route"
+    elif pull_status in {"stale", "unavailable"}:
+        memory_state = "dismissed"
+        reason_code = "unavailable"
+    elif pull_status == "dismissed":
+        memory_state = "dismissed"
+        reason_code = "explicitly_dismissed"
+    else:
+        memory_state = "not_applicable"
+        reason_code = "not_requested"
+
+    capture_status = str(capture.get("status") or "").strip()
+    if capture_status == "follow_up_required":
+        capture_state = "required"
+    elif capture_status == "capture_candidate":
+        capture_state = "recommended"
+    else:
+        capture_state = "none"
+
+    return {
+        "state": memory_state,
+        "reason_code": reason_code,
+        "route_ref": _first_ref(pull.get("candidate_routes")),
+        "capture": capture_state,
+    }
+
+
+def _operating_loop_planning_state(
+    *,
+    planning_safety_gate: dict[str, Any] | None = None,
+    active_plan_reliance: dict[str, Any] | None = None,
+    closeout_trust: dict[str, Any] | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    gate = _as_dict(planning_safety_gate)
+    reliance = _as_dict(active_plan_reliance or gate.get("active_plan_reliance"))
+    closeout = _as_dict(closeout_trust)
+    completion_gate = _as_dict(closeout.get("completion_gate"))
+    active_record = _as_dict(active_planning_record)
+    plan_ref = _first_ref(
+        reliance.get("active_execplan"),
+        reliance.get("plan_ref"),
+        gate.get("planning_revision"),
+        active_record.get("path"),
+        active_record.get("id"),
+    )
+
+    if str(completion_gate.get("status") or "") in {"blocked", "requires-closeout", "closeout-required"}:
+        return {"state": "closeout_required", "plan_ref": plan_ref, "blocks_full_closure": True}
+    if _as_int(closeout.get("lower_trust_closeout_count")) > 0 or str(closeout.get("trust") or "") == "lower-trust":
+        return {"state": "closeout_required", "plan_ref": plan_ref, "blocks_full_closure": True}
+    if gate.get("workflow_sufficient") is False:
+        return {"state": "active", "plan_ref": plan_ref, "blocks_full_closure": True}
+    if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
+        return {"state": "continuation", "plan_ref": plan_ref, "blocks_full_closure": True}
+    if active_record.get("status") == "present":
+        return {"state": "active", "plan_ref": plan_ref, "blocks_full_closure": True}
+    return {"state": "none", "plan_ref": None, "blocks_full_closure": False}
+
+
+def _operating_loop_verification_state(
+    *,
+    proof: dict[str, Any] | None = None,
+    closeout_trust: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    proof_payload = _as_dict(proof)
+    closeout = _as_dict(closeout_trust)
+    proof_confidence = _as_dict(closeout.get("proof_confidence"))
+    required_commands = _tiny_required_proof_commands(proof_payload) if proof_payload else []
+    proof_ref = _first_ref(required_commands, proof_confidence.get("source"), proof_confidence.get("proof_report"))
+
+    status_values = {
+        str(proof_payload.get("status") or "").strip(),
+        str(proof_payload.get("state") or "").strip(),
+        str(proof_confidence.get("status") or "").strip(),
+        str(proof_confidence.get("state") or "").strip(),
+        str(_as_dict(proof_confidence.get("validation_proof")).get("status") or "").strip(),
+    }
+    if status_values & {"failed", "proof_failed", "failure"}:
+        return {"state": "proof_failed", "proof_ref": proof_ref, "blocks_full_closure": True}
+    if status_values & {"stale", "proof_stale"}:
+        return {"state": "proof_stale", "proof_ref": proof_ref, "blocks_full_closure": True}
+    if status_values & {"skipped", "proof_skipped"}:
+        return {"state": "proof_skipped", "proof_ref": proof_ref, "blocks_full_closure": True}
+    if status_values & {"passed", "proof_passed", "recorded", "satisfied"}:
+        return {"state": "proof_passed", "proof_ref": proof_ref, "blocks_full_closure": False}
+    if required_commands:
+        return {"state": "proof_missing", "proof_ref": proof_ref, "blocks_full_closure": True}
+    if proof_payload:
+        required_proof = _as_dict(_as_dict(proof_payload.get("proof_obligations")).get("required_proof"))
+        if str(required_proof.get("status") or "") in {"required", "selected"}:
+            return {"state": "proof_missing", "proof_ref": proof_ref, "blocks_full_closure": True}
+    return {"state": "proof_not_required", "proof_ref": None, "blocks_full_closure": False}
+
+
+def _operating_loop_decision_payload(
+    *,
+    memory_decision_packet: dict[str, Any] | None = None,
+    planning_safety_gate: dict[str, Any] | None = None,
+    active_plan_reliance: dict[str, Any] | None = None,
+    proof: dict[str, Any] | None = None,
+    closeout_trust: dict[str, Any] | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    memory = _operating_loop_memory_state(memory_decision_packet)
+    planning = _operating_loop_planning_state(
+        planning_safety_gate=planning_safety_gate,
+        active_plan_reliance=active_plan_reliance,
+        closeout_trust=closeout_trust,
+        active_planning_record=active_planning_record,
+    )
+    verification = _operating_loop_verification_state(proof=proof, closeout_trust=closeout_trust)
+    reasons: list[dict[str, Any]] = []
+    required: list[str] = []
+
+    def add_reason(code: str, owner: str, ref: str | None = None) -> None:
+        if code in _OPERATING_LOOP_REASON_CODES and owner in _OPERATING_LOOP_RESIDUE_OWNERS:
+            reasons.append({"code": code, "owner": owner, "ref": ref})
+
+    verification_state = str(verification.get("state") or "")
+    if verification_state in {"proof_missing", "proof_selected", "proof_required"}:
+        closeout_state = "blocked_missing_proof"
+        safe_claim = "blocked"
+        residue_owner = "verification"
+        required.append("run_or_refresh_proof")
+        add_reason("proof_missing", "verification", verification.get("proof_ref"))
+    elif verification_state == "proof_stale":
+        closeout_state = "blocked_missing_proof"
+        safe_claim = "blocked"
+        residue_owner = "verification"
+        required.append("run_or_refresh_proof")
+        add_reason("proof_stale", "verification", verification.get("proof_ref"))
+    elif verification_state in {"proof_failed", "proof_skipped"}:
+        closeout_state = "blocked_missing_proof"
+        safe_claim = "blocked"
+        residue_owner = "verification"
+        required.append("run_or_refresh_proof")
+        add_reason(
+            "proof_failed" if verification_state == "proof_failed" else "proof_missing", "verification", verification.get("proof_ref")
+        )
+    elif memory.get("capture") == "required":
+        closeout_state = "residue_routing_required"
+        safe_claim = "blocked"
+        residue_owner = "memory"
+        required.append("route_memory_residue")
+        add_reason("memory_capture_required", "memory", memory.get("route_ref"))
+    elif planning.get("state") == "closeout_required":
+        closeout_state = "residue_routing_required"
+        safe_claim = "blocked"
+        residue_owner = "planning"
+        required.append("continue_or_close_plan")
+        add_reason("plan_closeout_required", "planning", planning.get("plan_ref"))
+    elif planning.get("blocks_full_closure"):
+        closeout_state = "partial_claim_only"
+        safe_claim = "partial"
+        residue_owner = "planning"
+        required.append("continue_or_close_plan")
+        add_reason("active_plan", "planning", planning.get("plan_ref"))
+    elif memory.get("capture") == "recommended":
+        closeout_state = "residue_routing_required"
+        safe_claim = "partial"
+        residue_owner = "memory"
+        required.append("route_memory_residue")
+        add_reason("memory_capture_required", "memory", memory.get("route_ref"))
+    else:
+        closeout_state = "ready_for_full_closure"
+        safe_claim = "full"
+        residue_owner = "none"
+
+    return {
+        "kind": _OPERATING_LOOP_KIND,
+        "closeout_state": closeout_state,
+        "safe_claim": safe_claim,
+        "residue_owner": residue_owner,
+        "required_before_full_closure": _dedupe([item for item in required if item in _OPERATING_LOOP_REQUIRED_ACTIONS]),
+        "memory": memory,
+        "planning": planning,
+        "verification": verification,
+        "reasons": reasons,
+    }
+
+
+def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
+    loop = _as_dict(packet)
+    if loop.get("kind") != _OPERATING_LOOP_KIND:
+        return []
+    memory = _as_dict(loop.get("memory"))
+    planning = _as_dict(loop.get("planning"))
+    verification = _as_dict(loop.get("verification"))
+    required = _list_payload(loop.get("required_before_full_closure"))
+    required_text = ",".join((str(item) for item in required)) or "none"
+    return [
+        "loop: "
+        f"Memory {memory.get('state', 'not_applicable')} · "
+        f"Planning {planning.get('state', 'none')} · "
+        f"Verification {verification.get('state', 'proof_not_required')}",
+        "closeout: "
+        f"{loop.get('closeout_state')} · "
+        f"claim {loop.get('safe_claim')} · "
+        f"owner {loop.get('residue_owner')} · "
+        f"required {required_text}",
+    ]
 
 
 def _memory_route_command(
@@ -16562,6 +16838,16 @@ def _report_closeout_trust_payload(
             "memory_decision_required": effective_lower_trust_count > 0,
         },
     )
+    operating_loop = _operating_loop_decision_payload(
+        memory_decision_packet=memory_decision_packet,
+        closeout_trust={
+            "trust": trust,
+            "lower_trust_closeout_count": effective_lower_trust_count,
+            "completion_gate": completion_gate,
+            "proof_confidence": proof_confidence,
+        },
+        active_planning_record=raw_active_planning_record,
+    )
     return {
         "status": "present",
         "trust": trust,
@@ -16588,6 +16874,7 @@ def _report_closeout_trust_payload(
         "verification": verification,
         "memory_consult": memory_consult,
         "memory_decision_packet": memory_decision_packet,
+        "operating_loop": operating_loop,
         "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -27302,6 +27589,12 @@ def _implement_payload(
         task_text=task_text,
         force="required_before_claim" if normalized_paths and memory_consult.get("status") == "recommended" else None,
     )
+    payload["operating_loop"] = _operating_loop_decision_payload(
+        memory_decision_packet=payload["memory_decision_packet"],
+        planning_safety_gate=planning_safety_gate,
+        active_plan_reliance=payload.get("active_plan_reliance", {}),
+        proof=proof if isinstance(proof, dict) else {},
+    )
     if include_task_contract:
         payload["task_contract"] = _task_contract_payload(
             changed_paths=normalized_paths,
@@ -27579,6 +27872,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else {}
         ),
         "memory_decision_packet": payload.get("memory_decision_packet", {}),
+        "operating_loop": payload.get("operating_loop", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
             "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -27730,6 +28024,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "detail_commands": detail_commands,
             "available_selectors": [
                 "next",
+                "operating_loop",
                 "proof",
                 "context.scope",
                 "context.workflow_sufficiency",
@@ -33526,8 +33821,12 @@ def _emit_compact_answer_text(payload: dict[str, Any]) -> None:
     print(f"Surface: {payload.get('surface')}")
     print(f"Selector: {json.dumps(payload.get('selector', {}), sort_keys=True)}")
     print(f"Matched: {payload.get('matched')}")
+    answer = payload.get("answer")
+    operating_loop = answer.get("operating_loop") if isinstance(answer, dict) else None
+    for line in _operating_loop_text_lines(operating_loop):
+        print(line)
     print("Answer:")
-    print(json.dumps(serialise_value(payload.get("answer")), indent=2))
+    print(json.dumps(serialise_value(answer), indent=2))
     refs = payload.get("refs", [])
     if refs:
         print("Refs:")
@@ -41698,6 +41997,10 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
             print(f"{module_data['name']}: {module_data['description']}")
             print(f"  commands: {', '.join(module_data['commands'])}")
             print(f"  capabilities: {', '.join(module_data['capabilities'])}")
+        return
+    for line in _operating_loop_text_lines(payload.get("operating_loop") if isinstance(payload.get("operating_loop"), dict) else None):
+        print(line)
+    if payload.get("kind") in {"implementer-context-tiny/v1", "implementer-context/v1"}:
         return
     _emit_lifecycle_text(payload)
 
