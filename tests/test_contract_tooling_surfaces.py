@@ -146,3 +146,77 @@ def test_non_enum_keyword_routing_audit_rejects_disallowed_policy(tmp_path: Path
         "src/sample.py|neutral_helper_name|local_markers is classified as disallowed-package-policy; "
         "remove the keyword table or demote it to non-authoritative evidence"
     ]
+
+
+def test_package_owned_assumptions_inventory_accepts_migration_rows(tmp_path: Path) -> None:
+    module = _load_module()
+    inventory = tmp_path / "docs" / "maintainer" / "package-owned-assumptions-inventory.json"
+    inventory.parent.mkdir(parents=True)
+    inventory.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/package-owned-assumptions-inventory/v1",
+                "source_principle": ".agentic-workspace/system-intent/intent.toml#architecture_principles.host-agnostic-agent-judgment",
+                "entries": [
+                    {
+                        "id": "sample-current-assumption",
+                        "surface": "src/sample.py",
+                        "assumption_kind": "routing-signal-authority",
+                        "current_assumption": "The package currently owns a routing assumption.",
+                        "current_authority": "package runtime code",
+                        "desired_owner": "host-declared config",
+                        "migration_status": "partly-narrowed",
+                        "risk": "low",
+                        "next_migration_step": "Move the assumption to config once the contract is declared.",
+                        "agent_judgment_boundary": "The agent owns semantic application.",
+                        "ordinary_flow_surface": "sample.packet",
+                        "evidence": ["structured field, not prose"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert module._validate_package_owned_assumptions_inventory(repo_root=tmp_path, inventory_path=inventory) == []
+
+
+def test_package_owned_assumptions_inventory_rejects_incomplete_migration_rows(tmp_path: Path) -> None:
+    module = _load_module()
+    inventory = tmp_path / "docs" / "maintainer" / "package-owned-assumptions-inventory.json"
+    inventory.parent.mkdir(parents=True)
+    inventory.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/package-owned-assumptions-inventory/v1",
+                "source_principle": ".agentic-workspace/system-intent/intent.toml#architecture_principles.host-agnostic-agent-judgment",
+                "entries": [
+                    {
+                        "id": "sample-bad",
+                        "surface": "src/sample.py",
+                        "assumption_kind": "routing-signal-authority",
+                        "current_assumption": "",
+                        "current_authority": "prose",
+                        "desired_owner": "",
+                        "migration_status": "magic",
+                        "risk": "severe",
+                        "next_migration_step": "",
+                        "agent_judgment_boundary": "",
+                        "ordinary_flow_surface": "sample.packet",
+                        "evidence": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    errors = module._validate_package_owned_assumptions_inventory(repo_root=tmp_path, inventory_path=inventory)
+
+    assert "sample-bad must include non-empty current_assumption" in errors
+    assert "sample-bad must include non-empty desired_owner" in errors
+    assert "sample-bad must include non-empty next_migration_step" in errors
+    assert "sample-bad must include non-empty agent_judgment_boundary" in errors
+    assert any("sample-bad has unknown migration_status" in error for error in errors)
+    assert "sample-bad risk must be low, medium, or high" in errors
+    assert "sample-bad must include non-empty evidence" in errors

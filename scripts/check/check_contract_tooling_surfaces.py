@@ -2343,6 +2343,18 @@ KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS = {
     "documented-command-set",
 }
 
+ASSUMPTION_INVENTORY_ALLOWED_MIGRATION_STATUSES = {
+    "inventory-only",
+    "partly-narrowed",
+    "retained-host-declared",
+    "move-to-config",
+    "move-to-contract",
+    "move-to-memory",
+    "move-to-planning",
+    "move-to-external-intent",
+    "remove",
+}
+
 
 def _keyword_routing_scan_excluded(path: Path) -> bool:
     return any(part == "__pycache__" or part.startswith(".uv-cache") for part in path.parts)
@@ -2457,6 +2469,70 @@ def _validate_non_enum_keyword_routing_audit(
     return errors
 
 
+def _validate_package_owned_assumptions_inventory(
+    *,
+    repo_root: Path = REPO_ROOT,
+    inventory_path: Path | None = None,
+) -> list[str]:
+    path = inventory_path or repo_root / "docs" / "maintainer" / "package-owned-assumptions-inventory.json"
+    errors: list[str] = []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return [f"{path.relative_to(repo_root).as_posix()} could not be read: {exc}"]
+    except json.JSONDecodeError as exc:
+        return [f"{path.relative_to(repo_root).as_posix()} is invalid JSON: {exc}"]
+    if payload.get("kind") != "agentic-workspace/package-owned-assumptions-inventory/v1":
+        errors.append("package-owned-assumptions-inventory kind drifted")
+    if not str(payload.get("source_principle") or "").strip():
+        errors.append("package-owned-assumptions-inventory must name its source_principle")
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list) or not entries:
+        return errors + ["package-owned-assumptions-inventory entries must be a non-empty list"]
+    seen: set[str] = set()
+    has_migration_or_justification = False
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            errors.append("package-owned-assumptions-inventory entries must be objects")
+            continue
+        entry_id = str(raw_entry.get("id") or "").strip()
+        if not entry_id:
+            errors.append("package-owned-assumptions-inventory entry is missing id")
+            continue
+        if entry_id in seen:
+            errors.append(f"package-owned-assumptions-inventory duplicates entry: {entry_id}")
+        seen.add(entry_id)
+        for field in (
+            "surface",
+            "assumption_kind",
+            "current_assumption",
+            "current_authority",
+            "desired_owner",
+            "next_migration_step",
+            "agent_judgment_boundary",
+            "ordinary_flow_surface",
+        ):
+            if not str(raw_entry.get(field) or "").strip():
+                errors.append(f"{entry_id} must include non-empty {field}")
+        migration_status = str(raw_entry.get("migration_status") or "").strip()
+        if migration_status not in ASSUMPTION_INVENTORY_ALLOWED_MIGRATION_STATUSES:
+            allowed = ", ".join(sorted(ASSUMPTION_INVENTORY_ALLOWED_MIGRATION_STATUSES))
+            errors.append(f"{entry_id} has unknown migration_status {migration_status!r}; expected one of: {allowed}")
+        risk = str(raw_entry.get("risk") or "").strip()
+        if risk not in {"low", "medium", "high"}:
+            errors.append(f"{entry_id} risk must be low, medium, or high")
+        evidence = raw_entry.get("evidence", [])
+        if not isinstance(evidence, list) or not any(str(item).strip() for item in evidence):
+            errors.append(f"{entry_id} must include non-empty evidence")
+        if migration_status in {"partly-narrowed", "retained-host-declared"}:
+            has_migration_or_justification = True
+        if migration_status == "remove":
+            errors.append(f"{entry_id} is still marked remove; remove it or migrate it before closing #1670")
+    if not has_migration_or_justification:
+        errors.append("package-owned-assumptions-inventory must include at least one partly-narrowed or retained-host-declared entry")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -2472,6 +2548,7 @@ def main(argv: list[str] | None = None) -> int:
         ("product-managed enclave", _validate_product_managed_enclave()),
         ("documented proof command inventory", _validate_documented_proof_command_inventory()),
         ("non-enum keyword routing audit", _validate_non_enum_keyword_routing_audit()),
+        ("package-owned assumptions inventory", _validate_package_owned_assumptions_inventory()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),
