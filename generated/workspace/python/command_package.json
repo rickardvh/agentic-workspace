@@ -2979,7 +2979,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "workspace.config.load",
-          "output.fields.select",
+          "payload.project",
           "workspace.config.emit"
         ]
       },
@@ -4888,7 +4888,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "1.0.0rc1"
+      "version": "1.0.0"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
@@ -5023,12 +5023,6 @@
           "handler": "runtime_handler",
           "import_module": "agentic_workspace.workspace_runtime_primitives",
           "primitive": "system_intent.result.emit"
-        },
-        {
-          "function": "_select_workspace_operation_fields",
-          "handler": "runtime_handler",
-          "import_module": "agentic_workspace.workspace_runtime_primitives",
-          "primitive": "output.fields.select"
         },
         {
           "function": "_emit_workspace_operation_output",

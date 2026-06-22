@@ -24,3 +24,70 @@ present = true
 sha256 = "5b2d56668e994bd535eaf57689123de80c0d0f9bedbfa53871bde5dbd07bacf2"
 first_heading = "Agentic Workspace"
 line_count = 102
+
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+title = "Preserve host-agnostic agent judgment"
+authority = "repo-system-intent"
+owner = "workspace-runtime"
+summary = "AW provides infrastructure, state, evidence, routing surfaces, and guardrails that make agent judgment cheap, efficient, and reliable; it must not encode repo-specific rules, routing tables, workflow meanings, executable names, file-name conventions, issue taxonomy, or local heuristics as package-owned a priori policy."
+derived_from = [
+  "governing_intents:Keep package contracts portable across host repos, languages, agents, vendors, and local dogfooding environments.",
+  "anti_intents:Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.",
+  "decision_tests:Favor work that improves portability by reducing accidental repo-, language-, agent-, vendor-, or local-tool assumptions.",
+  "issue:#1665",
+  "issue:#1666"
+]
+allowed_sources = [
+  "explicit structured facts",
+  "AW-owned enum labels",
+  "configuration",
+  "manifest metadata",
+  "planning state",
+  "generated contracts",
+  "learned host or local Memory surfaced as owner evidence",
+  "explicit user or issue intent"
+]
+forbidden_sources = [
+  "package-owned assumptions about host repo structure",
+  "package-owned assumptions about file names",
+  "package-owned assumptions about executable names",
+  "package-owned assumptions about prose keywords",
+  "package-owned assumptions about issue taxonomy",
+  "package-owned assumptions about local workflows",
+  "package-owned routing tables not supplied or learned as host-specific state"
+]
+affected_decisions = [
+  "routing",
+  "ownership",
+  "proof-selection",
+  "delegation",
+  "memory-routing",
+  "memory-capture",
+  "workflow-state",
+  "static-guardrail-design",
+  "runtime-boundary-design"
+]
+path_globs = [
+  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/config.py",
+  "src/agentic_workspace/reporting_support.py",
+  "scripts/check/check_contract_tooling_surfaces.py",
+  "packages/memory/src/repo_memory_bootstrap/**/*.py",
+  "packages/planning/src/repo_planning_bootstrap/**/*.py",
+  "packages/verification/src/repo_verification_bootstrap/**/*.py"
+]
+guardrail_refs = [
+  "docs/maintainer/non-enum-keyword-routing-audit.json"
+]
+derived_applications = [
+  "non-enum-keyword-routing"
+]
+proof_expectation = "For matching runtime work, closeout must state whether the host-agnostic agent-judgment principle was preserved or whether the human owner explicitly re-scoped it."
+
+[[architecture_principles.guardrails]]
+id = "non-enum-keyword-routing"
+summary = "Do not infer routing, ownership, proof selection, delegation, Memory storage, or workflow state from arbitrary prose marker phrases, filenames, executable names, or package-owned keyword tables."
+guardrail_refs = [
+  "docs/maintainer/non-enum-keyword-routing-audit.json"
+]

@@ -32,6 +32,41 @@ def _implement_context(payload: dict[str, object]) -> dict[str, object]:
     return context if isinstance(context, dict) else payload
 
 
+def _write_architecture_principles(target_root: Path) -> None:
+    _write(
+        target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+summary = "Portable host-neutral operating intent."
+governing_intents = ["Keep package contracts portable across host repos."]
+anti_intents = ["Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions."]
+decision_tests = ["Favor work that improves portability by reducing accidental repo assumptions."]
+confidence = "high"
+needs_review = false
+
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+title = "Preserve host-agnostic agent judgment"
+authority = "repo-system-intent"
+owner = "workspace-runtime"
+summary = "AW provides infrastructure for agent judgment instead of package-owned host assumptions."
+derived_from = ["anti_intents:Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.", "issue:#1665"]
+allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
+forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
+affected_decisions = ["routing", "ownership", "proof-selection"]
+path_globs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
+derived_applications = ["non-enum-keyword-routing"]
+proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
+
+[[architecture_principles.guardrails]]
+id = "non-enum-keyword-routing"
+summary = "Do not infer workflow authority from arbitrary prose marker phrases."
+guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
+""",
+    )
+
+
 def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path)]) == 0
@@ -3205,6 +3240,111 @@ candidates = []
     assert grounding["requirement_refs"][0]["ref"] == "docs/requirements.md#trace"
     assert grounding["requirement_refs"][0]["source_metadata"]["freshness"] in {"repo-current", "external-or-unverified"}
     assert grounding["closeout_claims"]["blocked"] == ["requirement-grounded-completion"]
+
+
+def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Refactor runtime routing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "architecture_principles=1" in payload["action_signals"]["changed_signals"]
+    packet = payload["context"]["architecture_principles"]
+    assert packet["kind"] == "agentic-workspace/architecture-principles-status/v1"
+    assert packet["status"] == "attention"
+    assert packet["source"] == ".agentic-workspace/system-intent/intent.toml"
+    assert packet["source_kind"] == "agentic-workspace/system-intent/v1"
+    assert packet["matched_principles"][0]["id"] == "host-agnostic-agent-judgment"
+    assert packet["matched_principles"][0]["derived_applications"] == ["non-enum-keyword-routing"]
+    assert packet["matched_principles"][0]["guardrails"][0]["id"] == "non-enum-keyword-routing"
+    assert packet["matched_principles"][0]["matched_paths"] == [
+        {
+            "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+            "pattern": "src/agentic_workspace/workspace_runtime_primitives.py",
+        }
+    ]
+    assert packet["matched_principles"][0]["guardrail_refs"] == ["docs/maintainer/non-enum-keyword-routing-audit.json"]
+    assert packet["closeout"]["required_claim"] == "preserved|re-scoped-by-human|unresolved"
+
+
+def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(tmp_path / "README.md", "# Keyword trap\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Avoid keyword routing and non-enum marker phrases in workflow ownership",
+                "--select",
+                "architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
+    assert packet["status"] == "clear"
+    assert packet["matched_count"] == 0
+    assert packet["matched_principles"] == []
+
+
+def test_proof_surfaces_architecture_principle_closeout_claim(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--select",
+                "architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
+    assert packet["status"] == "attention"
+    assert packet["matched_principles"][0]["id"] == "host-agnostic-agent-judgment"
+    assert packet["matched_principles"][0]["derived_applications"] == ["non-enum-keyword-routing"]
+    assert packet["matched_principles"][0]["closeout_question"].startswith("Was this principle preserved")
+    assert packet["closeout"]["required_claim"] == "preserved|re-scoped-by-human|unresolved"
 
 
 def test_requirement_grounding_reports_missing_sensitive_refs(tmp_path: Path, capsys) -> None:

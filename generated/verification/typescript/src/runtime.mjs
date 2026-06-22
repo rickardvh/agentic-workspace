@@ -128,6 +128,75 @@ function dottedValue(root, dottedPath) {
   return current;
 }
 
+function fieldByPath(root, dottedPath) {
+  if (!dottedPath) return [false, null];
+  let current = root;
+  for (const part of String(dottedPath).split('.')) {
+    if (isObject(current) && Object.prototype.hasOwnProperty.call(current, part)) {
+      current = current[part];
+      continue;
+    }
+    if (Array.isArray(current)) {
+      const index = Number(part);
+      if (Number.isInteger(index) && index >= 0 && index < current.length) {
+        current = current[index];
+        continue;
+      }
+    }
+    return [false, null];
+  }
+  return [true, current];
+}
+
+function selectorTokens(value) {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function availableSelectorsForPayload(payload, prefix = '') {
+  const selectors = [];
+  if (isObject(payload)) {
+    for (const key of Object.keys(payload).map(String).sort()) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      selectors.push(path);
+      selectors.push(...availableSelectorsForPayload(payload[key], path));
+    }
+  } else if (Array.isArray(payload)) {
+    for (const [index, item] of payload.slice(0, 10).entries()) {
+      const path = prefix ? `${prefix}.${index}` : String(index);
+      selectors.push(path);
+      selectors.push(...availableSelectorsForPayload(item, path));
+    }
+  }
+  return selectors;
+}
+
+function projectPayload(values, args) {
+  const sourceName = String(args.source ?? 'result');
+  if (!Object.prototype.hasOwnProperty.call(values, sourceName)) throw new RuntimeError(`payload.project source value is missing: ${sourceName}`);
+  const payload = values[sourceName];
+  const selectValueName = String(args.select_value ?? 'select');
+  const selectors = selectorTokens(args.selectors ?? values[selectValueName]);
+  if (selectors.length === 0) return payload;
+  const selected = {
+    kind: String(args.selected_output_kind ?? 'command-generation/selected-output/v1'),
+    source_command: String(args.source_command ?? values.operation_id ?? ''),
+    values: {}
+  };
+  const missing = [];
+  for (const selector of selectors) {
+    const [found, value] = fieldByPath(payload, selector);
+    if (found) selected.values[selector] = value;
+    else missing.push(selector);
+  }
+  if (missing.length) {
+    selected.missing = missing;
+    selected.selector_rule = 'Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.';
+    selected.available_selectors = availableSelectorsForPayload(payload);
+  }
+  return selected;
+}
+
 function assemblePayload(values, args) {
   const fields = args.fields ?? {};
   if (fields.template !== undefined) return resolveTemplate(fields.template, values);
@@ -215,6 +284,7 @@ function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'filesystem.glob') return globFiles(valueRoot(args, values), String(args.pattern ?? '')).map((relative_path) => ({ relative_path }));
   if (primitive === 'json.parse') return JSON.parse(String(values[String(args.source ?? 'registry_text')]));
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
+  if (primitive === 'payload.project') return projectPayload(values, args);
   if (primitive === 'output.emit') return emitOutput(values);
   return executeHostPrimitive(primitive, values, args, operationId);
 }

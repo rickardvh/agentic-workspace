@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_project.output.schema.json",
+  "title": "payload.project output",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["kind", "source_command", "values"],
+      "properties": {
+        "kind": { "type": "string" },
+        "source_command": { "type": "string" },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "missing": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "selector_rule": { "type": "string" },
+        "available_selectors": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    {
+      "description": "When no selectors are supplied, the primitive returns the source payload unchanged."
+    }
+  ]
+}

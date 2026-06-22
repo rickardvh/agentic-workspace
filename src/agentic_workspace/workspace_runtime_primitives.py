@@ -8183,6 +8183,12 @@ def _run_report_command(
         assurance_requirements=assurance_requirements,
     )
     assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
+    architecture_principles = _architecture_principles_payload(
+        target_root=target_root,
+        changed_paths=[],
+        cli_invoke=config.cli_invoke,
+        compact=False,
+    )
     requirement_grounding = _requirement_grounding_payload(
         target_root=target_root,
         task_text=None,
@@ -8277,6 +8283,7 @@ def _run_report_command(
         "improvement_pressure": improvement_pressure,
         "task_posture_packet": task_posture_packet,
         "applicable_intent": applicable_intent,
+        "architecture_principles": architecture_principles,
         "assurance_requirements": assurance_requirements,
         "verification": verification,
         "requirement_grounding": requirement_grounding,
@@ -11311,12 +11318,14 @@ def _closeout_report_payload(
     completion_contract: dict[str, Any],
     workflow_compliance_summary: dict[str, Any],
     verification: dict[str, Any],
+    architecture_principles: dict[str, Any] | None = None,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
     closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
     completion_contract = completion_contract if isinstance(completion_contract, dict) else {}
     verification = verification if isinstance(verification, dict) else {}
+    architecture_principles = architecture_principles if isinstance(architecture_principles, dict) else {}
     execution = _as_dict(active_planning_record.get("execution_run"))
     proof_report = _as_dict(active_planning_record.get("proof_report"))
     closure_check = _as_dict(active_planning_record.get("closure_check"))
@@ -11383,6 +11392,7 @@ def _closeout_report_payload(
         verification=verification,
         assurance_requirements=_as_dict(closeout_trust.get("assurance_requirements")),
     )
+    architecture_closeout = _as_dict(architecture_principles.get("closeout"))
 
     def meaningful_closeout_text(value: Any) -> str:
         text = str(value or "").strip()
@@ -11431,6 +11441,8 @@ def _closeout_report_payload(
         ] or ["claim-work-complete", "close-parent-lane"]
         for claim in blocked_claims:
             option_blockers.setdefault(claim, []).append("applicable_intent_status")
+    if architecture_closeout.get("required_claim"):
+        option_blockers.setdefault("claim-work-complete", []).append("architecture_principles_status")
     for option in completion_options:
         blockers_for_option = _dedupe([*(_list_payload(option.get("blocking_fields"))), *option_blockers.get(str(option.get("id")), [])])
         if proof_execution_recorded:
@@ -11583,6 +11595,7 @@ def _closeout_report_payload(
         "intent_evidence": intent_evidence,
         "parent_intent_status": parent_intent_status,
         "applicable_intent_status": applicable_intent_status,
+        "architecture_principles_status": architecture_principles,
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
@@ -11654,6 +11667,7 @@ def _closeout_report_payload(
             "report.closeout_trust",
             "report.completion_contract",
             "report.verification",
+            "report.architecture_principles",
         ],
         "boundary": (
             "This report is derived operator-facing presentation. It stores no execution state, does not decide proof, "
@@ -11730,12 +11744,14 @@ def _derived_continuation_projection_payloads(
         active_planning_record=active_planning_record,
         target_root=target_root,
     )
+    architecture_principles = _as_dict(source_payload.get("architecture_principles"))
     closeout_report = _closeout_report_payload(
         active_planning_record=closeout_planning_record,
         closeout_trust=source_payload.get("closeout_trust", {}),
         completion_contract=completion_contract,
         workflow_compliance_summary=workflow_compliance_summary,
         verification=verification,
+        architecture_principles=architecture_principles,
         config=config,
     )
     return {
@@ -11795,6 +11811,15 @@ def _run_lazy_report_section_command(
             active_planning_record=active_planning_record,
             durable_intent=durable_intent,
             cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "architecture_principles":
+        payload["architecture_principles"] = _architecture_principles_payload(
+            target_root=target_root,
+            changed_paths=[],
+            cli_invoke=config.cli_invoke,
+            compact=False,
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
@@ -11918,6 +11943,12 @@ def _run_lazy_report_section_command(
             payload["closeout_trust"] = closeout_trust
         payload["external_work_delta"] = external_work_delta
         payload["external_work_reconciliation"] = external_work_reconciliation
+        payload["architecture_principles"] = _architecture_principles_payload(
+            target_root=target_root,
+            changed_paths=[],
+            cli_invoke=config.cli_invoke,
+            compact=False,
+        )
         payload.update(
             _derived_continuation_projection_payloads(
                 target_root=target_root,
@@ -14468,6 +14499,142 @@ def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[
     return matches
 
 
+def _architecture_principles_payload(
+    *,
+    target_root: Path | None,
+    changed_paths: list[str] | None,
+    cli_invoke: str,
+    compact: bool = False,
+) -> dict[str, Any]:
+    surface_path = ".agentic-workspace/system-intent/intent.toml"
+    if target_root is None:
+        return {"kind": "agentic-workspace/architecture-principles-status/v1", "status": "unavailable", "matched_count": 0}
+    path = target_root / surface_path
+    if not path.is_file():
+        return {
+            "kind": "agentic-workspace/architecture-principles-status/v1",
+            "status": "not-configured",
+            "matched_count": 0,
+            "source": surface_path,
+        }
+    try:
+        document = tomllib.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/architecture-principles-status/v1",
+            "status": "unavailable",
+            "matched_count": 0,
+            "source": surface_path,
+            "error": str(exc),
+        }
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    matched: list[dict[str, Any]] = []
+    for principle in _list_payload(document.get("architecture_principles")):
+        if not isinstance(principle, dict):
+            continue
+        path_matches = _note_glob_matches(changed_paths=normalized_paths, patterns=principle.get("path_globs"))
+        if normalized_paths and not path_matches:
+            continue
+        principle_id = str(principle.get("id", "")).strip()
+        if not principle_id:
+            continue
+        matched.append(
+            {
+                "id": principle_id,
+                "title": str(principle.get("title", "")).strip(),
+                "owner": str(principle.get("owner", "")).strip(),
+                "authority": str(principle.get("authority", document.get("authority", ""))).strip(),
+                "source": surface_path,
+                "source_kind": str(document.get("kind", "")),
+                "summary": str(principle.get("summary", "")).strip(),
+                "derived_from": [str(item) for item in _list_payload(principle.get("derived_from"))],
+                "allowed_sources": [str(item) for item in _list_payload(principle.get("allowed_sources"))],
+                "forbidden_sources": [str(item) for item in _list_payload(principle.get("forbidden_sources"))],
+                "affected_decisions": [str(item) for item in _list_payload(principle.get("affected_decisions"))],
+                "matched_paths": path_matches,
+                "guardrail_refs": [str(item) for item in _list_payload(principle.get("guardrail_refs"))],
+                "derived_applications": [str(item) for item in _list_payload(principle.get("derived_applications"))],
+                "guardrails": [
+                    {
+                        "id": str(guardrail.get("id", "")).strip(),
+                        "summary": str(guardrail.get("summary", "")).strip(),
+                        "guardrail_refs": [str(item) for item in _list_payload(guardrail.get("guardrail_refs"))],
+                    }
+                    for guardrail in _list_payload(principle.get("guardrails"))
+                    if isinstance(guardrail, dict) and str(guardrail.get("id", "")).strip()
+                ],
+                "proof_expectation": str(principle.get("proof_expectation", "")).strip(),
+                "closeout_question": (
+                    "Was this principle preserved for the matching changed paths, or did the human owner explicitly re-scope it?"
+                ),
+            }
+        )
+    status = "attention" if matched else "clear" if normalized_paths else "available"
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/architecture-principles-status/v1",
+        "status": status,
+        "source": surface_path,
+        "source_kind": str(document.get("kind", "")),
+        "owner": "repo-system-intent",
+        "relationship_to_system_intent": "Architecture principles are typed subsections of the normalized system-intent record.",
+        "matched_count": len(matched),
+        "matched_principles": matched,
+        "closeout": {
+            "status": "explicit-claim-required" if matched else "not-applicable",
+            "required_claim": "preserved|re-scoped-by-human|unresolved" if matched else "",
+            "rule": "Principle matches are owner-surface evidence; the agent owns the preservation judgment and must not infer it from passing tests alone.",
+        },
+        "authority_boundary": _authority_boundary_payload(
+            surface="architecture_principles",
+            observed_by_aw=[
+                f"source={surface_path}",
+                f"changed_path_count={len(normalized_paths)}",
+                f"matched_count={len(matched)}",
+            ],
+            recommended_by_aw=["consider matched architecture principles before implementation or closeout claims"],
+            proof_hints=[str(item.get("proof_expectation", "")) for item in matched if item.get("proof_expectation")],
+            agent_owned_decisions=[
+                "whether the principle is semantically relevant to the change",
+                "whether the implementation preserves, re-scopes, or leaves the principle unresolved",
+            ],
+            human_owned_decisions=["architecture principle changes or accepted re-scoping"],
+            rule="AW routes declared principle metadata by structured path matches; it does not infer policy from prose keywords.",
+        ),
+    }
+    if compact:
+        if not matched:
+            return {
+                "kind": payload["kind"],
+                "status": status,
+                "matched_count": 0,
+                "source": surface_path,
+                "source_kind": payload["source_kind"],
+            }
+        return {
+            "kind": payload["kind"],
+            "status": status,
+            "matched_count": len(matched),
+            "source": surface_path,
+            "source_kind": payload["source_kind"],
+            "relationship_to_system_intent": payload["relationship_to_system_intent"],
+            "matched_principles": [
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "owner": item["owner"],
+                    "matched_paths": item["matched_paths"],
+                    "guardrail_refs": item["guardrail_refs"],
+                    "derived_applications": item["derived_applications"],
+                    "guardrails": item["guardrails"],
+                    "closeout_question": item["closeout_question"],
+                }
+                for item in matched
+            ],
+            "closeout": payload["closeout"],
+        }
+    return payload
+
+
 def _note_task_matches(*, task_text: str | None, values: Any) -> list[str]:
     if not task_text:
         return []
@@ -14737,6 +14904,7 @@ def _routine_work_context_payload(
     durable_intent = _as_dict(source_payload.get("durable_intent"))
     durable_subsystem = _as_dict(durable_intent.get("subsystem_intent"))
     memory_consult = _as_dict(source_payload.get("memory_consult"))
+    architecture_principles = _as_dict(source_payload.get("architecture_principles"))
     decision_pressure = _as_dict(source_payload.get("decision_pressure"))
     closeout_trust = _as_dict(source_payload.get("closeout_trust"))
     closeout_inspection = _as_dict(source_payload.get("closeout_trust_inspection"))
@@ -14762,6 +14930,7 @@ def _routine_work_context_payload(
         ]
     )
     workflow_matches = _workflow_obligation_match_count(workflow_obligations)
+    architecture_principle_matches = _routine_count(architecture_principles.get("matched_count"))
     durable_matches = _routine_count(durable_subsystem.get("matched_count"))
     improvement_candidates = len(_list_payload(improvement_intake.get("improvement_signal_candidates")))
     lower_trust_count = _routine_count(closeout_trust.get("lower_trust_closeout_count"))
@@ -14785,9 +14954,12 @@ def _routine_work_context_payload(
     categories = {
         "authority": {
             "question": "What source, policy, or owner governs this work?",
-            "status": "attention" if assurance_active or workflow_matches or verification_active else "available",
+            "status": "attention"
+            if assurance_active or workflow_matches or verification_active or architecture_principle_matches
+            else "available",
             "fronts": [
                 "effective_authority",
+                "architecture_principles",
                 "authority_hierarchy",
                 "standing_intent",
                 "workflow_obligations",
@@ -14797,6 +14969,7 @@ def _routine_work_context_payload(
             ],
             "signals": {
                 "workflow_obligation_matches": workflow_matches,
+                "architecture_principle_matches": architecture_principle_matches,
                 "active_assurance_requirements": assurance_active,
                 "active_verification_protocols": verification_active,
                 "effective_authority_status": effective_authority.get("status", "unknown"),
@@ -14804,6 +14977,7 @@ def _routine_work_context_payload(
             },
             "detail_selectors": [
                 "effective_authority",
+                "architecture_principles",
                 "authority_hierarchy",
                 "workflow_obligations",
                 "assurance_requirements",
@@ -14932,6 +15106,7 @@ def _routine_work_context_payload(
         compact_signal_allowlist = {
             "authority": [
                 "workflow_obligation_matches",
+                "architecture_principle_matches",
                 "active_assurance_requirements",
                 "effective_authority_status",
                 "decision_pressure_status",
@@ -27063,6 +27238,12 @@ def _implement_payload(
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=normalized_paths, compact=True, cli_invoke=config.cli_invoke
         ),
+        "architecture_principles": _architecture_principles_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            cli_invoke=config.cli_invoke,
+            compact=False,
+        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
@@ -27275,6 +27456,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     advisory_selectors = [
         "context.reuse_pressure",
         "context.guidance",
+        "architecture_principles",
         "requirement_grounding",
         "plan_delegation_packet",
         "test_strategy_check",
@@ -27342,6 +27524,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 *(
                     [f"reuse_pressure={reuse_pressure.get('state')}"]
                     if isinstance(reuse_pressure, dict) and reuse_pressure.get("state") not in {None, "", "none_found"}
+                    else []
+                ),
+                *(
+                    [f"architecture_principles={payload.get('architecture_principles', {}).get('matched_count')}"]
+                    if isinstance(payload.get("architecture_principles"), dict)
+                    and int(payload.get("architecture_principles", {}).get("matched_count", 0) or 0) > 0
                     else []
                 ),
             ],
@@ -27464,6 +27652,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 else 0,
                 "detail_selector": "generated_surface_trust",
             },
+            "architecture_principles": _architecture_principles_payload(
+                target_root=target_root,
+                changed_paths=payload.get("changed_paths", []) if isinstance(payload.get("changed_paths"), list) else [],
+                cli_invoke=config.cli_invoke,
+                compact=True,
+            ),
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "guidance": {
                 "work_shape_guidance": _tiny_work_shape_guidance(planning_safety_gate.get("work_shape_guidance"))
@@ -27553,6 +27747,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "change_impact",
                 "generated_surface_trust",
                 "proof.runtime_source_edit_review",
+                "architecture_principles",
                 "assurance_requirements",
                 "verification",
                 "routine_work_context",
@@ -27598,6 +27793,19 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if applicable_status in {"", "guidance-only", "not-recorded"}:
             tiny_context.pop("applicable_intent_status", None)
             remove_available_selector("context.applicable_intent_status")
+        architecture_packet = tiny_context.get("architecture_principles", {})
+        architecture_matches = _as_int(architecture_packet.get("matched_count")) if isinstance(architecture_packet, dict) else 0
+        if architecture_matches <= 0:
+            tiny_context.pop("architecture_principles", None)
+            remove_available_selector("architecture_principles")
+            action_signals = projected.get("action_signals", {})
+            if isinstance(action_signals, dict):
+                advisory_detail = action_signals.get("advisory_detail", {})
+                if isinstance(advisory_detail, dict):
+                    advisory_detail = cast(dict[str, Any], advisory_detail)
+                    advisory_selectors = advisory_detail.get("selectors", [])
+                    if isinstance(advisory_selectors, list):
+                        advisory_detail["selectors"] = [item for item in advisory_selectors if item != "architecture_principles"]
     generated_surface_trust = payload.get("generated_surface_trust", {})
     if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
         projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)
@@ -34276,6 +34484,10 @@ def _selector_requests_requirement_grounding(select: str | None) -> bool:
     return any(token == "requirement_grounding" or token.startswith("requirement_grounding.") for token in _selector_tokens(select))
 
 
+def _selector_requests_architecture_principles(select: str | None) -> bool:
+    return any(token == "architecture_principles" or token.startswith("architecture_principles.") for token in _selector_tokens(select))
+
+
 def _selector_requests_plan_delegation_packet(select: str | None) -> bool:
     return any(token == "plan_delegation_packet" or token.startswith("plan_delegation_packet.") for token in _selector_tokens(select))
 
@@ -34301,6 +34513,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     verification_selected = _selector_requests_verification(selected_fields)
     routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
     reuse_pressure_selected = _selector_requests_reuse_pressure(selected_fields)
+    architecture_principles_selected = _selector_requests_architecture_principles(selected_fields)
     requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
     plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
     test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
@@ -34338,6 +34551,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
         if requirement_grounding_selected:
             payload["requirement_grounding"] = full_payload["requirement_grounding"]
+        if architecture_principles_selected:
+            payload["architecture_principles"] = full_payload["architecture_principles"]
         if plan_delegation_packet_selected:
             payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
@@ -34879,10 +35094,20 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
     return target_root
 
 
-def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
+def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
-    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
+    config = config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
+    if _arguments.get("include_payload"):
+        payload = _config_payload(config=config)
+        if not values.get("select"):
+            profile = _workspace_operation_profile(values)
+            if profile == "tiny":
+                payload = _tiny_config_payload(payload)
+            elif profile == "compact":
+                payload = _compact_config_payload(payload)
+        return {"config": config, "result": payload}
+    return config
 
 
 def _load_workspace_operation_defaults(_values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -34899,19 +35124,6 @@ def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dic
     select = values.get("select")
     if select is not None:
         payload = _select_payload_fields(payload, select=str(select), source_command="defaults")
-    return serialise_value(payload)
-
-
-def _select_workspace_operation_fields(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    payload = _config_payload(config=values["config"])
-    select = values.get("select")
-    profile = _workspace_operation_profile(values)
-    if select:
-        payload = _select_payload_fields(payload, select=str(select), source_command="config")
-    elif profile == "tiny":
-        payload = _tiny_config_payload(payload)
-    elif profile == "compact":
-        payload = _compact_config_payload(payload)
     return serialise_value(payload)
 
 
@@ -38113,6 +38325,12 @@ def _proof_selection_for_changed_paths(
         selected_lanes=selected_lanes,
         required_commands=required_commands,
     )
+    architecture_principles = _architecture_principles_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        cli_invoke=cli_invoke,
+        compact=False,
+    )
     optional_commands = ["agentic-workspace proof --target ./repo --current --format json", "agentic-workspace summary --format json"]
     for concern_lane in [*concern_lanes, *requirement_lanes, *verification_lanes]:
         for command in concern_lane.get("optional_commands", []):
@@ -38230,6 +38448,7 @@ def _proof_selection_for_changed_paths(
         "proof_adequacy": proof_adequacy,
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
+        "architecture_principles": architecture_principles,
         "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,

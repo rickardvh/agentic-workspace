@@ -101,7 +101,7 @@ These operation families look useful without encoding AW-specific semantics in c
 | generic-cg-control | package-specific-judgment | `agentic_workspace.workspace_runtime_primitives._emit_workspace_operation_output` | Output projection/field selection should be generic emit/render policy. |
 | generic-cg-control | front-door-dispatch | `agentic_workspace.workspace_runtime_primitives._run_memory_front_door_adapter` | Front-door delegation envelope can be generic. |
 | generic-cg-control | front-door-dispatch | `agentic_workspace.workspace_runtime_primitives._run_planning_front_door_adapter` | Front-door delegation envelope can be generic. |
-| generic-cg-control | package-specific-judgment | `agentic_workspace.workspace_runtime_primitives._select_workspace_operation_fields` | Field selection is generic projection. |
+| generic-cg-control | package-specific-judgment | `agentic_workspace.workspace_runtime_primitives._select_workspace_operation_fields` | Retired by the #1655/#1659 implementation: `config.report` now uses CG `payload.project` for exact selector projection, and the AW symbol is removed. |
 | irreducible-domain-kernel | package-specific-judgment | `repo_memory_bootstrap.installer.promotion_report` | Memory promotion/remediation judgment. |
 | irreducible-domain-kernel | package-specific-judgment | `repo_memory_bootstrap.installer.review_routes` | Memory route quality judgment. |
 | irreducible-domain-kernel | package-specific-judgment | `repo_memory_bootstrap.installer.route_memory` | Memory note routing/relevance semantics. |

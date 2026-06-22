@@ -1214,6 +1214,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "json.parse",
     "toml.table.counts",
     "payload.assemble",
+    "payload.project",
     "memory.payload.status",
     "memory.payload.lifecycle-plan",
     "memory.payload.current-memory",

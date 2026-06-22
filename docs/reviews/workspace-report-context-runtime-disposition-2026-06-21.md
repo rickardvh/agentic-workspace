@@ -14,19 +14,27 @@ Source command:
 uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json
 ```
 
-Current baseline:
+Current baseline before the #1655/#1659 implementation pass:
 
 - 75 accepted runtime symbols.
 - 19 workspace package runtime boundaries.
 - 1 accepted output-emission symbol: `agentic_workspace.workspace_runtime_primitives._emit_workspace_operation_output`.
 - The high-confidence #1655 symbols `_emit_workspace_operation_output` and `_select_workspace_operation_fields` are still accepted hand-owned boundaries.
 
+Current #1655/#1659 update:
+
+- `payload.project` is added upstream in `rickardvh/command-generation#68` and pinned by AW for this stacked PR.
+- `config.report` now uses `payload.project` for exact `--select` projection from the full config payload.
+- `_select_workspace_operation_fields` is removed from AW source, generated workspace runtime facades, and the accepted runtime-boundary inventory.
+- AW still owns config loading plus tiny/compact/full compatibility text policy through `_load_workspace_operation_config` and `_emit_workspace_operation_output`.
+- Remaining `_emit_workspace_operation_output` split work is narrowed into follow-up #1668.
+
 ## Disposition Table
 
 | Symbol | Current audit classification | Proposed next owner | Semantic owner after split | Exact proof/update required | Remaining hand-owned rationale |
 | --- | --- | --- | --- | --- | --- |
-| `_emit_workspace_operation_output` | `generic-cg-control` | split | AW owns prompt/system-intent/config/defaults text policy until it is declared as view metadata. CG can own JSON emission and generic selected/tiny/compact answer rendering. | Add a host-neutral output/view primitive or declarative view spec in CG, consume it from AW IR, regenerate, then remove the accepted boundary entry. | Current generated code already handles JSON and several generic packet shapes, but falls back to AW for prompt, system-intent, config, defaults, and text emission policy. |
-| `_select_workspace_operation_fields` | `generic-cg-control` | split | AW owns config payload construction and tiny/compact config view policy until those views are declared. CG can own selector projection once the payload exists. | Add declared view policy for config tiny/compact/select or a generic projection operation that consumes host-provided payload and view metadata; regenerate and remove boundary entry. | It currently mixes payload construction from `WorkspaceConfig` with projection/view shaping. |
+| `_emit_workspace_operation_output` | `generic-cg-control` | split, follow-up #1668 | AW owns prompt/system-intent/config/defaults text policy until it is declared as view metadata. CG can own JSON emission and generic selected/tiny/compact answer rendering. | Add a host-neutral output/view primitive or declarative view spec in CG, consume it from AW IR, regenerate, then remove or narrow the accepted boundary entry. | Current generated code already handles JSON and several generic packet shapes, but falls back to AW for prompt, system-intent, config, defaults, and text emission policy. |
+| `_select_workspace_operation_fields` | `generic-cg-control` | command-generation `payload.project` plus deleted AW symbol | AW owns config payload construction and tiny/compact config view policy; CG owns exact selector projection. | Done for exact selectors: `config.report` loads a host-owned payload, `payload.project` applies `--select`, generated artifacts were refreshed, and the accepted boundary entry was removed. | No remaining hand-owned symbol. Tiny/compact/full config view policy remains in `_load_workspace_operation_config`/`_emit_workspace_operation_output`. |
 | `_run_report_combined_adapter` | `declarative-policy` | split | AW owns report section payload semantics; CG may own section dispatch and selector routing. | Declare section routing/view metadata and prove report CLI parity before moving. | Current function assembles multiple AW semantic report packets and live module state. |
 | `_run_summary_report_adapter` | `declarative-policy` | split | AW/Planning owns closeout, active state, residue, and intent-satisfaction semantics; CG may own selected output and section projection. | Add section/view metadata and focused summary CLI tests. | Summary is an operating-loop semantic surface, not only a renderer. |
 | `_run_lifecycle_report_adapter` | `declarative-policy` | split | AW owns module lifecycle/readiness interpretation; CG may own generic report envelope and output projection. | Add lifecycle report view metadata and prove module status parity. | It reads live module reports and readiness facts. |
@@ -51,7 +59,7 @@ Each primitive needs a host-neutral CG fixture and an AW pressure example. CG mu
 
 ## Implementation Decision
 
-No runtime boundary is removed by this review alone. The useful implementation in this slice is the #1663 guardrail: new keyword/string-table routing policy cannot silently enter the runtime while #1659/#1655 design work proceeds.
+This review originally removed no runtime boundary by itself. The follow-up implementation now removes `_select_workspace_operation_fields` by consuming CG `payload.project` for `config.report` exact selector projection.
 
 Closing #1655 from this document alone would be premature. A later implementation PR should either:
 

@@ -118,7 +118,6 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'system_intent.source_metadata.refresh': _handle_system_intent_source_metadata_refresh,
                 'system_intent.mirror.read_or_create': _handle_system_intent_mirror_read_or_create,
                 'system_intent.result.emit': _handle_system_intent_result_emit,
-                'output.fields.select': _handle_output_fields_select,
                 'output.emit': _handle_output_emit,
                 'workspace.config.emit': _handle_workspace_config_emit,
             },
@@ -191,12 +190,6 @@ def _handle_system_intent_result_emit(values: dict[str, Any], arguments: dict[st
     from .workspace_runtime import _emit_workspace_operation_output
 
     return _emit_workspace_operation_output(values, arguments, context)
-
-
-def _handle_output_fields_select(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .workspace_runtime import _select_workspace_operation_fields
-
-    return _select_workspace_operation_fields(values, arguments, context)
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

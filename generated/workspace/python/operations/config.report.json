@@ -42,10 +42,10 @@
   "ir_plan": {
     "fragments": [
       {
-        "description": "Reusable report tail that selects requested fields and emits the command output.",
+        "description": "Reusable report tail that projects requested fields and emits the command output.",
         "id": "select-and-emit-report",
         "inputs": [
-          "config",
+          "result",
           "select",
           "format"
         ],
@@ -55,13 +55,17 @@
         ],
         "steps": [
           {
-            "arguments": {},
-            "description": "Select the requested config profile or exact field projection.",
+            "arguments": {
+              "selected_output_kind": "agentic-workspace/selected-output/v1",
+              "source": "result",
+              "source_command": "config"
+            },
+            "description": "Project requested exact fields from the config payload.",
             "id": "select_fields",
             "outputs": [
               "result"
             ],
-            "uses": "output.fields.select"
+            "uses": "payload.project"
           },
           {
             "arguments": {},
@@ -87,21 +91,24 @@
         "uses": "workspace.target-root.resolve"
       },
       {
-        "arguments": {},
-        "description": "Load workspace config, defaults, local overrides, and valid module metadata.",
+        "arguments": {
+          "include_payload": true
+        },
+        "description": "Load workspace config, defaults, local overrides, valid module metadata, and full config payload.",
         "id": "load_config",
         "outputs": [
-          "config"
+          "config",
+          "result"
         ],
         "uses": "workspace.config.load"
       },
       {
-        "description": "Select and emit report output through a reusable operation-local fragment.",
+        "description": "Project requested fields and emit report output through a reusable operation-local fragment.",
         "id": "select_and_emit",
         "uses_fragment": "select-and-emit-report"
       }
     ],
-    "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow, using an operation-local report emission fragment while workspace runtime supplies config loading and text compatibility formatting."
+    "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow, using payload.project for exact selected-output projection while workspace runtime supplies config loading and text compatibility formatting."
   },
   "locality": {
     "network": "forbidden",
@@ -133,7 +140,7 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "json output remains compatible with existing config command tests",
-    "config.report uses an operation-local emit fragment executed by generated Python and TypeScript targets"
+    "config.report uses command-generation-owned payload.project for exact field projection"
   ],
   "reads": [
     {
@@ -165,14 +172,14 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Load workspace config, defaults, and local override state.",
+      "description": "Load workspace config, defaults, local override state, and the full config payload.",
       "id": "load_config",
       "uses": "workspace.config.load"
     },
     {
       "description": "Return only requested JSON fields when --select is provided.",
       "id": "select_fields",
-      "uses": "output.fields.select"
+      "uses": "payload.project"
     },
     {
       "description": "Emit resolved config in the requested format.",

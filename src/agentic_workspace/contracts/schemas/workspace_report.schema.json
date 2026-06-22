@@ -38,6 +38,7 @@
     "intent_elicitation_protocol",
     "intent_custody",
     "applicable_intent",
+    "architecture_principles",
     "product_managed_enclave",
     "ownership_diagnostics",
     "surface_value_guardrail",
@@ -247,6 +248,11 @@
     "applicable_intent": {
       "$ref": "#/$defs/applicable_intent",
       "description": "Compact applicable-intent source, authority, freshness, conflict, durable-outcome, and manual-verification evidence."
+    },
+    "architecture_principles": {
+      "type": "object",
+      "description": "Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths.",
+      "additionalProperties": true
     },
     "workflow_obligations": {
       "type": "object",
