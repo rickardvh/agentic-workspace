@@ -169,6 +169,73 @@ def test_implement_surfaces_operating_loop_with_proof_blocker(tmp_path: Path, ca
     assert packet["reasons"][0]["code"] == "proof_missing"
 
 
+def test_implement_does_not_require_stale_deleted_test_inventory_sweep(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "model-cli-harness"
+paths = ["tools/model-cli-harness/**", "docs/maintainer/test-knowledge-inventory.md"]
+owns = ["model CLI harness"]
+proof = [
+  "uv run pytest --collect-only -q tests packages",
+  "rg -n \\"test_model_cli_harness.py\\" docs/maintainer/test-knowledge-inventory.md",
+]
+""",
+    )
+    _write(
+        tmp_path / "docs" / "maintainer" / "test-knowledge-inventory.md",
+        "# Test Knowledge Inventory\n\nRetired: tests/test_model_cli_harness.py\n",
+    )
+    _write(tmp_path / "tools" / "model-cli-harness" / "README.md", "# Harness\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tools/model-cli-harness/README.md",
+                "--task",
+                "Update model CLI harness docs",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    required_commands = payload["proof"]["required_commands"]
+    assert "uv run pytest --collect-only -q tests packages" in required_commands
+    assert not any("test_model_cli_harness.py" in command for command in required_commands)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tools/model-cli-harness/README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    proof_payload = json.loads(capsys.readouterr().out)
+    unavailable = proof_payload["unavailable_proof_commands"]
+    assert any(
+        command["lane"] == "subsystem:model-cli-harness" and "test_model_cli_harness.py" in command.get("missing_paths", "")
+        for command in unavailable
+    )
+
+
 def test_operating_loop_schema_rejects_unknown_enum_values() -> None:
     schema_path = Path("src/agentic_workspace/contracts/schemas/implementer_context.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
