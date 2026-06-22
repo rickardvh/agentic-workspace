@@ -27794,13 +27794,18 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             tiny_context.pop("applicable_intent_status", None)
             remove_available_selector("context.applicable_intent_status")
         architecture_packet = tiny_context.get("architecture_principles", {})
-        architecture_matches = int(architecture_packet.get("matched_count", 0) or 0) if isinstance(architecture_packet, dict) else 0
+        architecture_matches = _as_int(architecture_packet.get("matched_count")) if isinstance(architecture_packet, dict) else 0
         if architecture_matches <= 0:
             tiny_context.pop("architecture_principles", None)
             remove_available_selector("architecture_principles")
-            advisory_detail = projected.get("action_signals", {}).get("advisory_detail", {})
-            if isinstance(advisory_detail, dict) and isinstance(advisory_detail.get("selectors"), list):
-                advisory_detail["selectors"] = [item for item in advisory_detail["selectors"] if item != "architecture_principles"]
+            action_signals = projected.get("action_signals", {})
+            if isinstance(action_signals, dict):
+                advisory_detail = action_signals.get("advisory_detail", {})
+                if isinstance(advisory_detail, dict):
+                    advisory_detail = cast(dict[str, Any], advisory_detail)
+                    advisory_selectors = advisory_detail.get("selectors", [])
+                    if isinstance(advisory_selectors, list):
+                        advisory_detail["selectors"] = [item for item in advisory_selectors if item != "architecture_principles"]
     generated_surface_trust = payload.get("generated_surface_trust", {})
     if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
         projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)
