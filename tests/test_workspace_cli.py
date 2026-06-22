@@ -137,6 +137,9 @@ def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
     assert "Common sections:" in output
     assert "- startup" in output
     assert "agentic-workspace defaults --verbose --format json" in output
+    repo_root = Path(__file__).resolve().parents[1]
+    view_contract = json.loads((repo_root / "src/agentic_workspace/contracts/workspace_output_views.json").read_text(encoding="utf-8"))
+    assert any(view["id"] == "defaults-router.text" for view in view_contract["views"])
 
 
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:

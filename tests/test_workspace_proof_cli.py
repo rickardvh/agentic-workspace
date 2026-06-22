@@ -1859,6 +1859,10 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(cap
     obligations = answer["proof_obligations"]
     assert obligations["required_proof"]["commands"] == answer["required_commands"]
     assert obligations["required_proof"]["status"] == "required"
+    authority = {item["command"]: item for item in obligations["required_proof"]["command_authority"]}
+    assert authority["make typecheck-planning"]["lane"] == "planning_source_typecheck_ci_parity"
+    assert authority["make typecheck-planning"]["authority_source"]
+    assert "agent still owns proof sufficiency" in authority["make typecheck-planning"]["rule"]
     assert obligations["recommended_confidence_checks"]["commands"] == answer["optional_commands"]
     assert obligations["recommended_confidence_checks"]["commands"] != answer["required_commands"]
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]

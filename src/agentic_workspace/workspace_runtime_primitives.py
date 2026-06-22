@@ -33734,15 +33734,47 @@ def _emit_defaults(*, format_name: str, section: str | None = None, profile: str
 
 
 def _emit_tiny_defaults_text(payload: dict[str, Any]) -> None:
-    print(str(payload["summary"]))
-    print("Common sections:")
-    for section in payload.get("common_sections", []):
-        print(f"- {section}")
-    print("Detail commands:")
-    detail_commands = payload.get("detail_commands", {})
-    if isinstance(detail_commands, dict):
-        for name, command in detail_commands.items():
-            print(f"- {name}: {command}")
+    view = _workspace_output_view("defaults-router.text")
+    if not view:
+        print(str(payload["summary"]))
+        print("Common sections:")
+        for section in payload.get("common_sections", []):
+            print(f"- {section}")
+        print("Detail commands:")
+        detail_commands = payload.get("detail_commands", {})
+        if isinstance(detail_commands, dict):
+            for name, command in detail_commands.items():
+                print(f"- {name}: {command}")
+        return
+    for section in _list_payload(view.get("sections")):
+        if not isinstance(section, dict):
+            continue
+        label = str(section.get("label") or "")
+        field = str(section.get("field") or "")
+        item_prefix = str(section.get("item_prefix") or "")
+        value = payload.get(field)
+        if label:
+            print(label)
+        if isinstance(value, dict):
+            for name, item in value.items():
+                print(f"{item_prefix}{name}: {item}")
+        elif isinstance(value, list):
+            for item in value:
+                print(f"{item_prefix}{item}")
+        elif value is not None:
+            print(str(value))
+
+
+def _workspace_output_view(view_id: str) -> dict[str, Any]:
+    path = Path(__file__).resolve().parent / "contracts" / "workspace_output_views.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    for view in _list_payload(payload.get("views")):
+        if isinstance(view, dict) and view.get("id") == view_id:
+            return view
+    return {}
 
 
 def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
@@ -37597,9 +37629,23 @@ def _proof_obligations_payload(
     required_commands: list[str],
     optional_commands: list[str],
     manual_verification: dict[str, Any] | None,
+    selected_commands: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manual_required = manual_verification is not None
     manual_status = manual_verification.get("status") if manual_verification is not None else "not-needed"
+    authority_by_command = {str(item.get("command", "")): item for item in selected_commands or []}
+    command_authority = []
+    for command in required_commands:
+        selected = authority_by_command.get(str(command), {})
+        command_authority.append(
+            {
+                "command": str(command),
+                "authority_source": str(selected.get("selected_from") or selected.get("lane") or "proof-route-selection"),
+                "lane": str(selected.get("lane") or ""),
+                "intent_type": str(selected.get("intent_type") or ""),
+                "rule": "Authority describes why AW surfaced the command; the agent still owns proof sufficiency.",
+            }
+        )
     return {
         "kind": "agentic-workspace/proof-obligations/v1",
         "status": "required-proof-selected" if required_commands else "manual-proof-required" if manual_required else "no-required-proof",
@@ -37607,6 +37653,7 @@ def _proof_obligations_payload(
             "kind": "agentic-workspace/required-proof/v1",
             "status": "required" if required_commands or manual_required else "not-selected",
             "commands": required_commands,
+            "command_authority": command_authority,
             "manual_verification_required": manual_required,
             "manual_verification_status": manual_status,
             "source_field": "required_commands",
@@ -38388,6 +38435,7 @@ def _proof_selection_for_changed_paths(
         required_commands=required_commands,
         optional_commands=optional_commands,
         manual_verification=manual_verification,
+        selected_commands=selected_commands,
     )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_confidence = _proof_confidence_payload(

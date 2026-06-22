@@ -792,13 +792,13 @@ def _candidate_path(value: str, *, replacements: dict[str, str]) -> str:
 
 
 def _resolve_requirement(name: str, *, candidate_paths: list[str] | None = None, replacements: dict[str, str] | None = None) -> str | None:
-    resolved = shutil.which(name)
-    if resolved:
-        return resolved
     for candidate in candidate_paths or []:
         candidate_path = Path(_candidate_path(candidate, replacements=replacements or {}))
         if candidate_path.exists():
             return str(candidate_path)
+    resolved = shutil.which(name)
+    if resolved:
+        return resolved
     return None
 
 
