@@ -36,6 +36,8 @@ Artifact-backed probes must record the artifact source, checksum or equivalent i
 
 Scenarios that require an operational decision trace do not ask for private chain-of-thought. They require observable route, Memory, Planning, Verification/proof, residue-owner, and safe-claim decisions so evaluators can distinguish “not applicable,” “dismissed,” “partial,” and “ignored.”
 
+Trace-required result records must also include the normalized `agentic-workspace/operating-loop-decision/v1` packet. The older `decisions` object remains a compact human-readable trace, while `operating_loop` is the enum-backed evaluation evidence for Memory, Planning, Verification/proof, residue owner, and safe claim state.
+
 Run a real external-agent scenario only when maintainer evidence is needed. The Codex adapter defaults to GPT-5.3 Codex Spark:
 
 ```powershell

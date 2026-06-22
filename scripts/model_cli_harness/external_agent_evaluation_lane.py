@@ -22,6 +22,53 @@ PACK_FILES = {
     "surfaces": "surface-decisions.sample.json",
 }
 
+OPERATING_LOOP_KIND = "agentic-workspace/operating-loop-decision/v1"
+OPERATING_LOOP_CLOSEOUT_STATES = {
+    "no_closeout_needed",
+    "ready_for_full_closure",
+    "partial_claim_only",
+    "blocked_missing_proof",
+    "blocked_active_planning",
+    "residue_routing_required",
+}
+OPERATING_LOOP_SAFE_CLAIMS = {"none", "full", "partial", "blocked"}
+OPERATING_LOOP_RESIDUE_OWNERS = {"memory", "planning", "verification", "docs", "issue", "config", "none"}
+OPERATING_LOOP_REQUIRED_ACTIONS = {
+    "run_or_refresh_proof",
+    "continue_or_close_plan",
+    "route_memory_residue",
+    "route_external_residue",
+}
+OPERATING_LOOP_MEMORY_STATES = {"pulled", "dismissed", "not_applicable"}
+OPERATING_LOOP_MEMORY_REASONS = {
+    "matched_route",
+    "no_relevant_route",
+    "not_requested",
+    "unavailable",
+    "explicitly_dismissed",
+}
+OPERATING_LOOP_MEMORY_CAPTURE = {"none", "recommended", "required"}
+OPERATING_LOOP_PLANNING_STATES = {"none", "active", "continuation", "closeout_required"}
+OPERATING_LOOP_VERIFICATION_STATES = {
+    "proof_not_required",
+    "proof_required",
+    "proof_selected",
+    "proof_missing",
+    "proof_stale",
+    "proof_skipped",
+    "proof_failed",
+    "proof_passed",
+}
+OPERATING_LOOP_REASON_CODES = {
+    "proof_missing",
+    "proof_stale",
+    "proof_failed",
+    "active_plan",
+    "plan_closeout_required",
+    "memory_capture_required",
+    "external_residue",
+}
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -50,6 +97,52 @@ def _actionable_remediation(decision: dict[str, Any]) -> bool:
         and bool(str(decision.get("followup_ref") or "").strip())
         and decision.get("remediation_kind") == "actionable-issue"
     )
+
+
+def _validate_operating_loop_packet(
+    packet: Any,
+    *,
+    prefix: str,
+    owner_surfaces: set[str],
+    errors: list[str],
+) -> None:
+    _require(isinstance(packet, dict), f"{prefix} must include operating_loop packet", errors)
+    if not isinstance(packet, dict):
+        return
+    _require(packet.get("kind") == OPERATING_LOOP_KIND, f"{prefix} operating_loop kind is invalid", errors)
+    _require(packet.get("closeout_state") in OPERATING_LOOP_CLOSEOUT_STATES, f"{prefix} operating_loop closeout_state is invalid", errors)
+    _require(packet.get("safe_claim") in OPERATING_LOOP_SAFE_CLAIMS, f"{prefix} operating_loop safe_claim is invalid", errors)
+    _require(packet.get("residue_owner") in OPERATING_LOOP_RESIDUE_OWNERS, f"{prefix} operating_loop residue_owner is invalid", errors)
+    if packet.get("residue_owner") != "none":
+        _require(packet.get("residue_owner") in owner_surfaces, f"{prefix} operating_loop residue_owner is not an owner surface", errors)
+    for action in packet.get("required_before_full_closure", []):
+        _require(action in OPERATING_LOOP_REQUIRED_ACTIONS, f"{prefix} operating_loop required action is invalid", errors)
+
+    memory = packet.get("memory", {})
+    planning = packet.get("planning", {})
+    verification = packet.get("verification", {})
+    _require(isinstance(memory, dict), f"{prefix} operating_loop memory must be an object", errors)
+    _require(isinstance(planning, dict), f"{prefix} operating_loop planning must be an object", errors)
+    _require(isinstance(verification, dict), f"{prefix} operating_loop verification must be an object", errors)
+    if isinstance(memory, dict):
+        _require(memory.get("state") in OPERATING_LOOP_MEMORY_STATES, f"{prefix} operating_loop memory.state is invalid", errors)
+        _require(memory.get("reason_code") in OPERATING_LOOP_MEMORY_REASONS, f"{prefix} operating_loop memory.reason_code is invalid", errors)
+        _require(memory.get("capture") in OPERATING_LOOP_MEMORY_CAPTURE, f"{prefix} operating_loop memory.capture is invalid", errors)
+    if isinstance(planning, dict):
+        _require(planning.get("state") in OPERATING_LOOP_PLANNING_STATES, f"{prefix} operating_loop planning.state is invalid", errors)
+        _require(isinstance(planning.get("blocks_full_closure"), bool), f"{prefix} operating_loop planning.blocks_full_closure is invalid", errors)
+    if isinstance(verification, dict):
+        _require(
+            verification.get("state") in OPERATING_LOOP_VERIFICATION_STATES,
+            f"{prefix} operating_loop verification.state is invalid",
+            errors,
+        )
+        _require(isinstance(verification.get("blocks_full_closure"), bool), f"{prefix} operating_loop verification.blocks_full_closure is invalid", errors)
+    for reason in packet.get("reasons", []):
+        _require(isinstance(reason, dict), f"{prefix} operating_loop reason must be an object", errors)
+        if isinstance(reason, dict):
+            _require(reason.get("code") in OPERATING_LOOP_REASON_CODES, f"{prefix} operating_loop reason code is invalid", errors)
+            _require(reason.get("owner") in OPERATING_LOOP_RESIDUE_OWNERS, f"{prefix} operating_loop reason owner is invalid", errors)
 
 
 def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
@@ -146,6 +239,12 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
                 f"record {record.get('id')} must include operational decision trace keys",
                 errors,
             )
+            _validate_operating_loop_packet(
+                record.get("operating_loop"),
+                prefix=f"record {record.get('id')}",
+                owner_surfaces=owner_surfaces,
+                errors=errors,
+            )
         if scenario_id in artifact_backed_scenarios:
             identity = record.get("aw_identity", {})
             _require(
@@ -160,6 +259,13 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         record_ids.add(record_id)
         records_by_id[record_id] = record
         _require(record.get("scenario_id") in scenario_ids, f"live run {record.get('id')} references unknown scenario", errors)
+        if "operating_loop" in record:
+            _validate_operating_loop_packet(
+                record.get("operating_loop"),
+                prefix=f"live run {record.get('id')}",
+                owner_surfaces=owner_surfaces,
+                errors=errors,
+            )
         for failure_id in record.get("failure_ids", []):
             _require(failure_id in failure_ids, f"live run {record.get('id')} references unknown failure id {failure_id}", errors)
 
@@ -257,7 +363,18 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
         for failure_id in decision.get("failure_ids", [])
     )
+    operating_loop_records = [record for record in [*records, *live_runs] if isinstance(record.get("operating_loop"), dict)]
+    operating_loop_closeout_states = Counter(record["operating_loop"].get("closeout_state") for record in operating_loop_records)
+    operating_loop_safe_claims = Counter(record["operating_loop"].get("safe_claim") for record in operating_loop_records)
+    operating_loop_residue_owners = Counter(record["operating_loop"].get("residue_owner") for record in operating_loop_records)
 
+    operating_loop_observability = {
+        "kind": "agentic-workspace/external-agent-operating-loop-observability/v1",
+        "record_count": len(operating_loop_records),
+        "closeout_state_counts": dict(sorted(operating_loop_closeout_states.items())),
+        "safe_claim_counts": dict(sorted(operating_loop_safe_claims.items())),
+        "residue_owner_counts": dict(sorted(operating_loop_residue_owners.items())),
+    }
     acceptance = {
         "scorecard_exists": bool(pack["scorecard"].get("dimensions") and pack["scorecard"].get("failure_taxonomy")),
         "scenario_probes_cover_major_phases": set(dimensions).issubset(
@@ -270,6 +387,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "artifact_backed_path_defined": artifact_probe_count > 0,
         "surface_simplification_decisions_exist": bool(pack["surfaces"]["decisions"]),
         "operational_trace_protocol_exists": (LANE_DIR / "operational-decision-trace.md").exists(),
+        "operating_loop_observable": operating_loop_observability["record_count"] > 0,
     }
     fixture_closure_state = "ready_for_fixture_closure" if all(acceptance.values()) else "continued_work"
     live_status = "not-run"
@@ -302,6 +420,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "promotion_count": len(promoted),
         "dismissal_count": len(dismissed),
         "surface_decision_counts": dict(sorted(surface_decisions.items())),
+        "operating_loop_observability": operating_loop_observability,
         "acceptance": acceptance,
         "fixture_closure_state": fixture_closure_state,
         "closure_state": closure_state,
