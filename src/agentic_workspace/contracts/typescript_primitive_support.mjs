@@ -702,7 +702,10 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   if (primitive === 'workspace.output.emit') return emitOutput(values, args);
   if (primitive === 'workspace.defaults.load') return loadJsonResource('_contracts/payload.json');
   if (primitive === 'workspace.defaults.select') return workspaceDefaultsSelect(values.defaults_payload, values);
-  if (primitive === 'workspace.config.load') return workspaceConfig(values);
+  if (primitive === 'workspace.config.load') {
+    const config = workspaceConfig(values);
+    return args?.include_payload ? { config, result: config } : config;
+  }
   if (primitive === 'output.fields.select') return selectFields(values.config, values);
   if (primitive === 'workspace.config.emit') return emitOutput({ ...values, result: values.result ?? values.config }, args);
   return domainPrimitive(primitive, values, args, operationId);
