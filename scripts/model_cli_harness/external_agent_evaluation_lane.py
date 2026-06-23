@@ -597,6 +597,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "kind": "agentic-workspace/external-agent-lane-closure-report/v1",
         "lane": "#1600",
         "default_external_agent": pack["scenarios"].get("default_external_agent"),
+        "live_evaluation_agent": pack.get("live_results", {}).get("agent", {}),
         "scorecard_dimension_count": len(dimensions),
         "scenario_probe_count": len(pack["scenarios"]["probes"]),
         "result_record_count": len(records),

@@ -47,14 +47,14 @@
     {
       "id": "long-horizon-behavior-proof",
       "title": "Long-horizon behavior evidence for completion-cost impact",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "json-corpus-cost-ranking"
       ],
       "purpose_for_lane": "Reuse and strengthen #1602 to show whether suspected surfaces cause rereads, proof churn, over-planning, stale residue, review/repair loops, unsafe closure, or handoff/recovery failures.",
-      "proof": "External-agent evaluation pack records representative completion-cost observation support with Codex GPT 5.3 Spark, including sample rereads, proof churn, review repair loops, unsafe closure, and cost-driver classifications tied to AW sections and owner surfaces. This is evidence-present support, not completed live long-horizon behavior proof.",
-      "residual_after_slice": "Live Codex Spark proof evidence is now checkable, but the slice remains active until the routed OWNERSHIP_BOUNDARY_LEAK live failure is fixed, accepted as non-blocking, or superseded by clean live runs."
+      "proof": "External-agent evaluation pack records representative completion-cost observation support plus checked-in allowed-model live evidence. The refreshed Codex GPT 5.4 Mini memory-consult run repaired the prompt-resistant local absolute Markdown link in exported final_message/session.md, and check_completion_cost_live_behavior_proof.py reports status complete.",
+      "residual_after_slice": "Live long-horizon behavior proof is complete for the checked-in evidence pack; remaining #1680 closure work is child issue reconciliation, remaining-cost owner decisions, and explicit parent close permission."
     },
     {
       "id": "first-reduction-tranche",
@@ -81,7 +81,7 @@
       "residual_after_slice": "Close #1680 only if the strict completion rule is satisfied; otherwise route residual owner surfaces."
     }
   ],
-  "current_slice": "long-horizon-behavior-proof",
+  "current_slice": "before-after-closure-evidence",
   "acceptance_boundary": "This lane is complete only when the evidence loop has found, ranked, reduced, and re-measured meaningful AW-induced cost across representative bounded work. Closure must distinguish landed reductions, the intent served, unresolved cost sources, and whether small bounded work is actually cheaper, without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "proof_strategy": "Aggregate proof from the five lane slices: static schema suspect inventory, actual JSON corpus ranking, long-horizon behavior evidence, at least one landed reduction, and before/after measurement. A useful one-off fix or cost report is partial evidence, not lane completion.",
   "proof_aggregation": {
@@ -92,26 +92,25 @@
       ".agentic-workspace/planning/closeout-evidence/github-1680-json-corpus-cost-ranking.closeout.json",
       "scripts/check/check_completion_cost_json_corpus.py captures and ranks actual ordinary JSON outputs for start, summary, implement, and doctor samples.",
       "tools/model-cli-harness/external-agent-evaluation/result-records.sample.json records representative completion-cost observations for Codex GPT 5.3 Spark scenarios.",
-      "tools/model-cli-harness/external-agent-evaluation/live-results-2026-06-18.json records checked-in Codex GPT 5.3 Spark live-run evidence for the long-horizon behavior gate.",
-      ".agentic-workspace/planning/closeout-evidence/github-1680-live-behavior-proof-gate-2.closeout.json records the live proof gate and the remaining routed OWNERSHIP_BOUNDARY_LEAK blocker.",
-      "scripts/check/check_completion_cost_live_behavior_proof.py reports live behavior proof as blocked until checked-in live runs are clean or routed failures are explicitly accepted.",
+      "tools/model-cli-harness/external-agent-evaluation/live-results-2026-06-18.json records checked-in allowed-model live-run evidence for the long-horizon behavior gate.",
+      ".agentic-workspace/planning/closeout-evidence/github-1680-live-behavior-proof-gate-2.closeout.json records the prior live proof gate and the formerly routed OWNERSHIP_BOUNDARY_LEAK blocker.",
+      "scripts/check/check_completion_cost_live_behavior_proof.py now reports live behavior proof as complete for the checked-in evidence pack.",
       "tools/model-cli-harness/external-agent-evaluation/surface-decisions.sample.json records before/after cost signals and rollback conditions for landed reduction slices.",
       ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json records compact before/after evidence, child issue reconciliation, remaining cost sources, and the blocked parent close permission.",
       "scripts/check/check_completion_cost_lane_evidence.py aggregates the #1680 evidence loop and keeps parent closure blocked until remaining before/after evidence is explicit."
     ],
     "known_gaps": [
-      "Live Codex Spark behavior evidence is present, but completed live long-horizon behavior proof remains blocked by OWNERSHIP_BOUNDARY_LEAK routed to #1616.",
       "Child issue reconciliation and remaining-cost owner decisions remain open before #1680 can close."
     ]
   },
-  "residual_lane_work": "Open: fix, accept, or supersede the routed OWNERSHIP_BOUNDARY_LEAK live failure (#1616), then complete actual long-horizon behavior proof; reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and close #1680 only if evidence proves representative bounded work is cheaper or cheaper to continue without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
+  "residual_lane_work": "Open: reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and close #1680 only if evidence proves representative bounded work is cheaper or cheaper to continue without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
   "parent_close_permission": "not-evaluated",
   "closeout_state": {
     "status": "open",
-    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, checkable live Codex Spark proof evidence, first-tranche reduction signals, and compact before/after closeout evidence have landed; parent closure remains blocked on the routed live OWNERSHIP_BOUNDARY_LEAK failure, child issue reconciliation, and remaining-cost owner decisions.",
-    "residual_work": "Fix, accept, or supersede the routed OWNERSHIP_BOUNDARY_LEAK live failure (#1616), then complete actual long-horizon behavior proof; reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and require explicit parent close permission before any #1680 closeout claim.",
-    "next_owner": "long-horizon-behavior-proof"
+    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, clean checked-in live proof evidence, first-tranche reduction signals, and compact before/after closeout evidence have landed; parent closure remains blocked on child issue reconciliation, remaining-cost owner decisions, and explicit parent close permission.",
+    "residual_work": "Reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and require explicit parent close permission before any #1680 closeout claim.",
+    "next_owner": "before-after-closure-evidence"
   },
   "references": [
     {

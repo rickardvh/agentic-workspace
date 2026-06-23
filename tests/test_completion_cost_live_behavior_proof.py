@@ -26,16 +26,16 @@ def test_live_behavior_proof_reports_checked_in_codex_spark_gate() -> None:
     assert payload["kind"] == "agentic-workspace/completion-cost-live-behavior-proof/v1"
     assert payload["lane"] == "#1680"
     assert payload["default_external_agent"]["model"] == "gpt-5.3-codex-spark"
+    assert payload["live_evaluation_agent"]["model"] == "gpt-5.4-mini"
     assert payload["evidence_present"] is True
-    assert payload["proof_complete"] is False
-    assert payload["status"] == "blocked"
+    assert payload["proof_complete"] is True
+    assert payload["status"] == "complete"
     assert payload["live_evaluation"]["run_count"] >= 4
-    assert payload["live_evaluation"]["clean_run_count"] >= 3
-    assert payload["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
-    assert payload["live_evaluation"]["failure_counts"]["LOCAL_ABSOLUTE_PATH_LEAK"] == 1
-    assert payload["closure_boundary"]["may_complete_long_horizon_behavior_proof"] is False
+    assert payload["live_evaluation"]["clean_run_count"] >= 4
+    assert payload["live_evaluation"]["failure_counts"] == {}
+    assert payload["closure_boundary"]["may_complete_long_horizon_behavior_proof"] is True
     assert payload["closure_boundary"]["missing_live_failure_routes"] == []
-    assert any("unresolved failures" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
+    assert payload["closure_boundary"]["remaining_blockers"] == []
 
 
 def test_live_behavior_proof_keeps_actionable_failure_route_visible() -> None:
@@ -44,11 +44,7 @@ def test_live_behavior_proof_keeps_actionable_failure_route_visible() -> None:
     payload = checker.build_live_behavior_proof_report()
     routes = payload["live_failure_routes"]
 
-    assert routes
-    assert set(routes[0]["failure_ids"]) == {"OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"}
-    assert routes[0]["followup_ref"] == "#1616"
-    assert routes[0]["remediation_kind"] == "actionable-issue"
-    assert routes[0]["closure_effect"] == "routed"
+    assert routes == []
 
 
 def test_live_behavior_proof_cli_outputs_json(capsys) -> None:

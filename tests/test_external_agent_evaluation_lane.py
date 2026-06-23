@@ -307,24 +307,26 @@ def test_external_agent_lane_rejects_invalid_historical_fixture_status() -> None
 def test_external_agent_lane_rejects_promotions_without_actionable_remediation() -> None:
     module = _load_module()
     pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
-    live_promotion = next(item for item in pack["promotions"]["decisions"] if item["id"] == "promote-live-local-path-leak")
-    live_promotion["followup_ref"] = "#1601"
-    live_promotion.pop("remediation_kind", None)
+    promotion = next(item for item in pack["promotions"]["decisions"] if item["id"] == "promote-proof-claim-boundary")
+    promotion["followup_ref"] = "#1601"
+    promotion.pop("remediation_kind", None)
 
     errors = module.validate_pack(pack)
 
-    assert any("promote-live-local-path-leak must route to an actionable remediation owner" in error for error in errors)
+    assert any("promote-proof-claim-boundary must route to an actionable remediation owner" in error for error in errors)
 
 
-def test_external_agent_lane_rejects_local_path_leak_without_owner_route() -> None:
+def test_external_agent_lane_records_repaired_live_local_path_leak() -> None:
     module = _load_module()
-    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
-    live_run = next(item for item in pack["live_results"]["runs"] if item["id"] == "live-memory-consult-20260618T093207Z")
-    live_run.pop("local_path_leak", None)
+    pack = module.load_pack(repo_root=REPO_ROOT)
+    live_run = next(item for item in pack["live_results"]["runs"] if item["id"] == "live-memory-consult-20260623T152211Z")
 
-    errors = module.validate_pack(pack)
-
-    assert any("live-memory-consult-20260618T093207Z local_path_leak must be an object" in error for error in errors)
+    assert live_run["live_outcome"] == "pass"
+    assert live_run["failure_ids"] == []
+    assert live_run["remediated_failure_ids"] == ["LOCAL_ABSOLUTE_PATH_LEAK"]
+    assert live_run["raw_warning_classes"] == ["model_cli_local_path_leak"]
+    assert live_run["final_message_repair"]["status"] == "repaired"
+    assert live_run["final_message_repair"]["repairs"][0]["replacement"] == "README.md"
 
 
 def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None:
@@ -333,10 +335,11 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
 
     assert report["kind"] == "agentic-workspace/external-agent-lane-closure-report/v1"
     assert report["default_external_agent"] == {"adapter": "codex", "model": "gpt-5.3-codex-spark"}
+    assert report["live_evaluation_agent"] == {"adapter": "codex", "model": "gpt-5.4-mini"}
     assert report["fixture_closure_state"] == "ready_for_fixture_closure"
-    assert report["closure_state"] == "partial_closure"
-    assert report["live_evaluation"]["status"] == "unresolved-failures"
-    assert report["live_evaluation"]["clean_run_count"] == 3
+    assert report["closure_state"] == "ready_for_full_closure"
+    assert report["live_evaluation"]["status"] == "clean"
+    assert report["live_evaluation"]["clean_run_count"] == 4
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["acceptance"]["operating_loop_observable"] is True
@@ -344,11 +347,9 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["acceptance"]["completion_cost_observations_exist"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
-    assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
-    assert report["live_evaluation"]["failure_counts"]["LOCAL_ABSOLUTE_PATH_LEAK"] == 1
-    for failure_id in ("OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"):
-        assert report["live_evaluation"]["promoted_failure_counts"][failure_id] == 1
-        assert report["live_evaluation"]["actionable_remediation_failure_counts"][failure_id] == 1
+    assert report["live_evaluation"]["failure_counts"] == {}
+    assert report["live_evaluation"]["promoted_failure_counts"] == {}
+    assert report["live_evaluation"]["actionable_remediation_failure_counts"] == {}
     assert report["promotion_count"] >= 1
     loop = report["operating_loop_observability"]
     assert loop["kind"] == "agentic-workspace/external-agent-operating-loop-observability/v1"
@@ -404,8 +405,8 @@ def test_model_cli_harness_startup_prompt_has_final_answer_path_hygiene(tmp_path
     assert "Final answer path rule" in prompt
     assert "convert any absolute cwd, fixture, run_root, session, prompt-file" in prompt
     assert "repo-relative path when it is inside the copied repository" in prompt
-    assert "Markdown link targets count as reported paths" in prompt
-    assert "[README.md](README.md)" in prompt
+    assert "do not use Markdown file links" in prompt
+    assert "plain file names such as `README.md`" in prompt
     assert "describe it by role instead of printing the local absolute path" in prompt
 
 

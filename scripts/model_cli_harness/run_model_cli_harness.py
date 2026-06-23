@@ -60,9 +60,9 @@ FINAL_ANSWER_PATH_RULE = (
     "Final answer path rule: cite changed files and evidence using repo-relative paths only. "
     "Before writing the final answer, convert any absolute cwd, fixture, run_root, session, prompt-file, "
     "or .agentic-workspace/local/scratch path to a repo-relative path when it is inside the copied repository. "
-    "Markdown link targets count as reported paths: use `[README.md](README.md)` or plain `README.md`, "
-    "never a local absolute link target. If an artifact is outside the copied repository, describe it by role "
-    "instead of printing the local absolute path."
+    "Prefer plain file names such as `README.md`; do not use Markdown file links in the final answer because "
+    "some runtimes auto-fill local absolute link targets. If an artifact is outside the copied repository, "
+    "describe it by role instead of printing the local absolute path."
 )
 
 
