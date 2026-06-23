@@ -34663,6 +34663,76 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 
 
+def _proof_receipt_result_failed(result: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "-", str(result or "").strip().lower()).strip("-")
+    if not normalized:
+        return False
+    failure_tokens = {
+        "fail",
+        "failed",
+        "failure",
+        "error",
+        "errored",
+        "timeout",
+        "timed-out",
+        "cancelled",
+        "canceled",
+    }
+    if normalized in failure_tokens:
+        return True
+    parts = {part for part in normalized.split("-") if part}
+    return bool(parts & failure_tokens)
+
+
+def _proof_receipt_focused_commands(changed_paths: list[str]) -> list[str]:
+    test_paths = [path for path in _normalize_changed_paths(changed_paths) if path.startswith("tests/") and path.endswith(".py")]
+    if not test_paths:
+        return []
+    return [f"uv run pytest {' '.join(test_paths)} -q"]
+
+
+def _proof_receipt_retry_ladder(*, command: str, result: str, changed_paths: list[str]) -> dict[str, Any] | None:
+    if not _proof_receipt_result_failed(result):
+        return None
+    focused_commands = _proof_receipt_focused_commands(changed_paths)
+    steps: list[dict[str, Any]] = [
+        {
+            "order": 1,
+            "scope": "focused-failure",
+            "intent": "Reproduce or repair the first failing regression, nearest unit test, or nearest contract test before another broad rerun.",
+        },
+        {
+            "order": 2,
+            "scope": "affected-subset",
+            "intent": "Run the smallest affected package or workspace subset after the focused failure is fixed.",
+        },
+        {
+            "order": 3,
+            "scope": "full-selected-proof",
+            "command": command,
+            "intent": "Rerun the full originally selected proof only after focused checks pass, unless the failure is clearly cross-cutting.",
+        },
+    ]
+    if focused_commands:
+        steps[0]["commands"] = focused_commands
+    else:
+        steps[0]["command_source"] = "failure log node id, nearest changed test, or nearest contract test"
+    steps[1]["command_source"] = "smallest affected package or workspace subset after the focused failure passes"
+    return {
+        "kind": "agentic-workspace/proof-repair-retry-ladder/v1",
+        "status": "available",
+        "trigger": "failed-proof-receipt",
+        "failed_command": command,
+        "full_selected_proof": command,
+        "full_proof_still_required": True,
+        "full_rerun_premature": True,
+        "focused_commands": focused_commands,
+        "steps": steps,
+        "override_rule": "Agents may skip ahead for cross-cutting failures, but should report why the focused/subset ladder was not useful.",
+        "closeout_rule": "The ladder guides repair iteration only; it does not replace the originally selected proof required before completion.",
+    }
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -34679,7 +34749,7 @@ def _record_proof_receipt_payload(
     if not result:
         raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
     receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
-    receipt = {
+    receipt: dict[str, Any] = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": command,
         "result": result,
@@ -34688,16 +34758,22 @@ def _record_proof_receipt_payload(
         "plan_id": str(plan_id or "").strip(),
         "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
     }
+    repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
+    if repair_retry_ladder is not None:
+        receipt["repair_retry_ladder"] = repair_retry_ladder
     if not dry_run:
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
-    return {
+    payload = {
         "kind": "agentic-workspace/proof-receipt-write/v1",
         "status": "dry-run" if dry_run else "written",
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
+    if repair_retry_ladder is not None:
+        payload["repair_retry_ladder"] = repair_retry_ladder
+    return payload
 
 
 def _emit_proof(

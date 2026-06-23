@@ -1649,6 +1649,52 @@ def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, c
     assert receipt["result"] == "passed"
     assert receipt["changed_paths"] == ["tests/test_workspace_proof_cli.py"]
     assert receipt["plan_id"] == "plan-alpha"
+    assert "repair_retry_ladder" not in receipt
+    assert "repair_retry_ladder" not in payload
+
+
+def test_proof_failed_receipt_includes_repair_retry_ladder(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    (target / ".agentic-workspace").mkdir()
+    (target / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(target),
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "failed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    receipt_path = target / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    ladder = payload["repair_retry_ladder"]
+    written_ladder = receipt["repair_retry_ladder"]
+    assert ladder == written_ladder
+    assert ladder["kind"] == "agentic-workspace/proof-repair-retry-ladder/v1"
+    assert ladder["trigger"] == "failed-proof-receipt"
+    assert ladder["failed_command"] == "make test-workspace"
+    assert ladder["full_selected_proof"] == "make test-workspace"
+    assert ladder["full_proof_still_required"] is True
+    assert ladder["full_rerun_premature"] is True
+    assert ladder["focused_commands"] == ["uv run pytest tests/test_workspace_proof_cli.py -q"]
+    assert ladder["steps"][0]["commands"] == ["uv run pytest tests/test_workspace_proof_cli.py -q"]
+    assert ladder["steps"][1]["command_source"] == "smallest affected package or workspace subset after the focused failure passes"
+    assert ladder["steps"][2]["command"] == "make test-workspace"
 
 
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> None:
