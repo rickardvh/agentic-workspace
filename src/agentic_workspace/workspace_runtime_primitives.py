@@ -21976,6 +21976,14 @@ def _select_summary_payload(
             changed_paths=changed_paths,
             cli_invoke=cli_invoke,
         )
+        if _selector_requests(select, "fresh_session_digest"):
+            tiny_summary["fresh_session_digest"] = _fresh_session_digest_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=changed_paths,
+                summary=tiny_summary,
+                cli_invoke=cli_invoke,
+            )
     selected = _select_payload_fields(tiny_summary, select=select, source_command="summary")
     if not selected.get("missing"):
         selected["selection_cost"] = {
@@ -21994,6 +22002,14 @@ def _select_summary_payload(
             changed_paths=changed_paths,
             cli_invoke=cli_invoke,
         )
+        if _selector_requests(select, "fresh_session_digest"):
+            full_summary["fresh_session_digest"] = _fresh_session_digest_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=changed_paths,
+                summary=full_summary,
+                cli_invoke=cli_invoke,
+            )
     selected = _select_payload_fields(full_summary, select=select, source_command="summary")
     selected["selection_cost"] = {
         "profile_loaded": "full",
@@ -22001,6 +22017,100 @@ def _select_summary_payload(
         "rule": "One or more selected fields were outside the small summary, so broad detail was loaded.",
     }
     return selected
+
+
+def _fresh_session_digest_payload(
+    *,
+    target_root: Path,
+    task_text: str | None,
+    changed_paths: list[str],
+    summary: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    issue_refs = sorted(_issue_refs_from_text(task_text), key=lambda value: int(value.lstrip("#")) if value.lstrip("#").isdigit() else 0)
+    config = _load_workspace_config(target_root=target_root)
+    issue_scope = _issue_scope_evidence_payload(target_root=target_root, config=config, issue_refs=issue_refs)
+    branch_posture = _branch_workflow_posture_payload(target_root=target_root)
+    planning_record = _as_dict(summary.get("planning_record"))
+    todo = _as_dict(summary.get("todo"))
+    normalized_changed = _normalize_changed_paths(changed_paths)
+    issue_titles = [
+        {"id": item.get("id", ""), "status": item.get("status", ""), "title": item.get("title", "")}
+        for item in _list_payload(issue_scope.get("evidence"))
+        if isinstance(item, dict)
+    ]
+    active_refs = [*issue_refs]
+    active_execplan = str(planning_record.get("path") or planning_record.get("source") or "").strip()
+    if active_execplan:
+        active_refs.append(active_execplan)
+    facts = [
+        f"task_refs={','.join(issue_refs)}" if issue_refs else "task_refs=none",
+        f"branch={branch_posture.get('current_branch', '') or branch_posture.get('status', 'unknown')}",
+        f"changed_path_count={len(normalized_changed)}",
+        f"planning_status={planning_record.get('status', summary.get('planning_status', 'unavailable'))}",
+    ]
+    assumptions = [
+        "Digest is a startup handoff aid, not a source of closure authority.",
+        "Issue titles/statuses come from cached external-intent evidence when available.",
+    ]
+    open_questions: list[str] = []
+    if issue_scope.get("status") in {"unknown", "partial"}:
+        open_questions.append("Refresh external intent evidence before relying on missing issue details.")
+    if not active_execplan and int(todo.get("active_count", 0) or 0) == 0:
+        open_questions.append("No active Planning record is present; agent must choose the bounded next slice.")
+    return {
+        "kind": "agentic-workspace/fresh-session-digest/v1",
+        "status": "ready",
+        "goal": str(task_text or "").strip(),
+        "active_refs": active_refs,
+        "issue_refs": issue_refs,
+        "issue_evidence": {
+            "status": issue_scope.get("status", "not-applicable"),
+            "source_path": issue_scope.get("source_path", ""),
+            "items": issue_titles[:5],
+        },
+        "current_branch_or_state": {
+            "status": branch_posture.get("status", "unknown"),
+            "current_branch": branch_posture.get("current_branch", ""),
+            "risk": branch_posture.get("risk", "unknown"),
+        },
+        "changed_paths": normalized_changed[:12],
+        "closure_boundary": {
+            "may_claim_parent_closure": False,
+            "rule": "This digest cannot close issues, PRs, lanes, or parent goals; use proof and closeout surfaces for closure claims.",
+        },
+        "facts": facts,
+        "assumptions": assumptions,
+        "open_questions": open_questions,
+        "remaining_work": [
+            "Run start or implement for the next concrete task before editing.",
+            "Run proof selected for changed paths before claiming completion.",
+            "Update durable issue, PR, Planning, Memory, or review artifacts when the lane state changes.",
+        ],
+        "safe_next_command": _command_with_cli_invoke(
+            command='agentic-workspace start --target . --task "<next task>" --format json',
+            cli_invoke=cli_invoke,
+        ),
+        "source_artifacts": [
+            ".agentic-workspace/local/cache/external-intent-evidence.json",
+            "docs/reviews/aw-completion-cost-session-log-analysis-2026-06-23.md",
+            "GitHub issue refs listed in issue_refs",
+        ],
+        "detail_commands": {
+            "refresh_issue_evidence": _command_with_cli_invoke(
+                command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "summary": _command_with_cli_invoke(
+                command="agentic-workspace summary --target . --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "proof": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --current --format json",
+                cli_invoke=cli_invoke,
+            ),
+        },
+    }
 
 
 def _attach_summary_task_posture_packet(

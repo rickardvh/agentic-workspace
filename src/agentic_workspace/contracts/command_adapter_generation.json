@@ -5669,6 +5669,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "planning.summary.load",
+          "payload.assemble",
           "output.fields.select",
           "output.emit"
         ]
@@ -5722,6 +5723,7 @@
         "runtime_owns": [
           "target root resolution",
           "planning summary loading",
+          "fresh-session digest assembly",
           "memory consult augmentation",
           "output emission mechanics"
         ]
