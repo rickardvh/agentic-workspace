@@ -179,6 +179,22 @@ def test_external_agent_lane_completion_cost_observations_classify_representativ
     }
 
 
+def test_external_agent_lane_surface_decisions_record_selector_first_start_reduction() -> None:
+    decisions = {decision["id"]: decision for decision in _read_json("surface-decisions.sample.json")["decisions"]}
+
+    memory_decision = decisions["startup-memory-decision-packet-selector-only"]
+    installed_state_decision = decisions["startup-installed-state-compatibility-selector-only"]
+
+    assert memory_decision["surface"] == "start.memory_decision_packet"
+    assert memory_decision["decision"] == "route"
+    assert "sample-memory-routing-regression" in memory_decision["evidence_refs"]
+    assert memory_decision["rollback_condition"]
+    assert installed_state_decision["surface"] == "start.installed_state_compatibility"
+    assert installed_state_decision["decision"] == "route"
+    assert "sample-startup-codex-spark" in installed_state_decision["evidence_refs"]
+    assert installed_state_decision["expected_cost_change"]
+
+
 def test_external_agent_lane_rejects_invalid_completion_cost_observation() -> None:
     module = _load_module()
     pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))

@@ -31,6 +31,26 @@
       "decision": "generate",
       "expected_cost_change": "less drift",
       "rollback_condition": "generated output hides package/host authority"
+    },
+    {
+      "id": "startup-memory-decision-packet-selector-only",
+      "surface": "start.memory_decision_packet",
+      "owner": "cli_output",
+      "evidence_refs": ["sample-memory-routing-regression", "stale-memory-active-planning-handoff"],
+      "current_role": "authority detail",
+      "decision": "route",
+      "expected_cost_change": "fewer default bytes and fewer rereads of Memory detail when no matched route exists",
+      "rollback_condition": "agents miss a required Memory pull/capture decision because selectors or action signals no longer surface it"
+    },
+    {
+      "id": "startup-installed-state-compatibility-selector-only",
+      "surface": "start.installed_state_compatibility",
+      "owner": "cli_output",
+      "evidence_refs": ["artifact-backed-host-startup", "sample-startup-codex-spark"],
+      "current_role": "compatibility diagnostic",
+      "decision": "route",
+      "expected_cost_change": "fewer default bytes while preserving install/payload compatibility evidence by selector",
+      "rollback_condition": "agents fail to discover payload or artifact compatibility problems during startup recovery"
     }
   ]
 }

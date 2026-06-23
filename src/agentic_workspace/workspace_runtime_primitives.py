@@ -22460,7 +22460,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
         ),
         "next_safe_action": next_safe_action,
-        "memory_decision_packet": payload.get("memory_decision_packet", {}),
         "skills": _startup_skills_projection(
             payload=payload,
             next_safe_action=next_safe_action,
@@ -22512,8 +22511,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "warning-drift",
     }:
         selected["cli_compatibility"] = cli_compatibility
-    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
-        selected["installed_state_compatibility"] = installed_state
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
         selected["sibling_repo_aw_freshness"] = sibling_freshness
     durable_intent = payload.get("durable_intent", {})

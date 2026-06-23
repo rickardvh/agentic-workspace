@@ -273,7 +273,7 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     ]
 
 
-def test_start_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
+def test_start_default_routes_memory_and_installed_state_detail_behind_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -293,7 +293,37 @@ def test_start_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    packet = payload["memory_decision_packet"]
+
+    assert "memory_decision_packet" not in payload
+    assert "installed_state_compatibility" not in payload
+    assert "memory_decision_packet" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "memory_decision_packet" in payload["drill_down"]["available_selectors"]
+    assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
+
+
+def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--select",
+                "memory_decision_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["values"]["memory_decision_packet"]
 
     assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
     assert packet["stage"] == "startup"
@@ -302,6 +332,36 @@ def test_start_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
     assert "--stage startup" in packet["pull"]["recommended_command"]
     assert packet["authority_boundary"]["agent_owns"]
     assert "No keyword-triggered Memory requirement." in packet["limits"]
+
+
+def test_start_select_surfaces_installed_state_compatibility(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    compatibility = payload["values"]["installed_state_compatibility"]
+
+    assert compatibility["kind"] == "agentic-workspace/installed-state-compatibility/v1"
+    assert compatibility["authority"] == "repo-state-authoritative"
+    assert compatibility["executable"]["classification"]
+    assert compatibility["payload"]["status"]
 
 
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
