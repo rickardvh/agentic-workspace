@@ -1644,6 +1644,7 @@ def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, c
         "activation trigger": "next lane slice",
     }
     installer_mod._write_execplan_record(record_path=record_path, record=record)
+    before = json.loads(record_path.read_text(encoding="utf-8"))
 
     assert (
         planning_cli.main(
@@ -1663,10 +1664,13 @@ def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, c
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
+    after = json.loads(record_path.read_text(encoding="utf-8"))
 
-    assert any(warning["warning_class"] == "archive_larger_intent_proxy_closeout_blocked" for warning in payload["warnings"])
+    assert any(warning["warning_class"] == "closeout_continuation_preflight_blocked" for warning in payload["warnings"])
     assert any(action["kind"] == "manual review" for action in payload["actions"])
+    assert any(action["kind"] == "next safe action" and "--intent-status partial" in action["detail"] for action in payload["actions"])
     assert record_path.exists()
+    assert after == before
 
 
 def test_planning_closeout_records_explicit_proof_and_issue_residue(tmp_path: Path, capsys) -> None:

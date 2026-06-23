@@ -10536,12 +10536,17 @@ def promote_todo_item_to_execplan(
             or item.fields.get("promotion signal", "").strip()
         )
         done_when = item.fields.get("done when", "").strip() or item.fields.get("outcome", "").strip()
-        why_now = item.fields.get("why now", "").strip() or item.fields.get("reason", "").strip()
+        title = item.fields.get("title", "").strip() or _title_from_slug(slug)
+        why_now = (
+            item.fields.get("why now", "").strip()
+            or _promoted_item_identity_intent(title=title, item_id=item_id, source_fields=item.fields)
+            or item.fields.get("reason", "").strip()
+        )
         status = _normalize_status(item.fields.get("status", "planned"))
         if status == "planned":
             status = "in-progress"
         plan_record = _build_execplan_record_from_todo_item(
-            title=_title_from_slug(slug),
+            title=title,
             item_id=item_id,
             status=status,
             why_now=why_now,
@@ -10592,12 +10597,17 @@ def promote_todo_item_to_execplan(
         or item.fields.get("promotion signal", "").strip()
     )
     done_when = item.fields.get("done when", "").strip() or item.fields.get("outcome", "").strip()
-    why_now = item.fields.get("why now", "").strip() or item.fields.get("reason", "").strip()
+    title = item.fields.get("title", "").strip() or _title_from_slug(slug)
+    why_now = (
+        item.fields.get("why now", "").strip()
+        or _promoted_item_identity_intent(title=title, item_id=item_id, source_fields=item.fields)
+        or item.fields.get("reason", "").strip()
+    )
     status = _normalize_status(item.fields.get("status", "planned"))
     if status == "planned":
         status = "in-progress"
     plan_record = _build_execplan_record_from_todo_item(
-        title=_title_from_slug(slug),
+        title=title,
         item_id=item_id,
         status=status,
         why_now=why_now,
@@ -12765,6 +12775,36 @@ def _read_closeout_proof_file(*, target_root: Path, proof_file: str) -> tuple[st
     return proof, relative_path, ""
 
 
+def _closeout_continuation_conflict(
+    *,
+    record: dict[str, Any],
+    normalized_claim: str,
+    normalized_intent: str,
+    normalized_residue: str,
+    residue_owner: str | None,
+) -> dict[str, str] | None:
+    required_continuation = _record_section_dict(record, "required_continuation") or {}
+    intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
+    required_follow_on = str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower()
+    continuation_owner = str(required_continuation.get("owner surface", "")).strip()
+    unsolved_owner = str(intent_satisfaction.get("unsolved intent passed to", "")).strip()
+    live_unsolved_owner = unsolved_owner if unsolved_owner.lower() not in {"", "none", "n/a", "none yet"} else ""
+    owner = continuation_owner if continuation_owner.lower() not in {"", "none", "n/a"} else live_unsolved_owner
+    if required_follow_on != "yes" and not live_unsolved_owner:
+        return None
+    if normalized_intent != "satisfied":
+        return None
+    if normalized_residue not in {"none", "dismissed"} and (residue_owner or "").strip():
+        return None
+    if normalized_claim == "slice" and normalized_residue not in {"none", "dismissed"}:
+        return None
+    return {
+        "owner": owner or PLANNING_STATE_PATH.as_posix(),
+        "required_follow_on": required_follow_on or ("yes" if live_unsolved_owner else ""),
+        "unsolved_owner": live_unsolved_owner,
+    }
+
+
 def closeout_execplan(
     plan: str,
     *,
@@ -12819,6 +12859,38 @@ def closeout_execplan(
     record = _load_execplan_record(plan_path)
     if record is None:
         result.add("manual review", record_path, "planning closeout requires a canonical .plan.json record")
+        return result
+
+    continuation_conflict = _closeout_continuation_conflict(
+        record=record,
+        normalized_claim=normalized_claim,
+        normalized_intent=normalized_intent,
+        normalized_residue=normalized_residue,
+        residue_owner=residue_owner,
+    )
+    if continuation_conflict is not None:
+        owner = continuation_conflict["owner"]
+        result.warnings.append(
+            {
+                "warning_class": "closeout_continuation_preflight_blocked",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": ("planning closeout cannot archive-and-close before resolving the existing structured continuation owner."),
+                "suggested_fix": (
+                    "Rerun closeout with --intent-status partial or deferred-with-owner and --residue planning "
+                    f"--residue-owner {owner!r}, or close the continuation before claiming full intent satisfaction."
+                ),
+            }
+        )
+        result.add(
+            "manual review",
+            record_path,
+            "closeout preflight found existing required_continuation or unsolved intent incompatible with archive-and-close",
+        )
+        result.add(
+            "next safe action",
+            record_path,
+            f"rerun planning closeout with --intent-status partial --residue planning --residue-owner {owner!r}",
+        )
         return result
 
     continuation_owner = residue_owner or ""
@@ -15353,13 +15425,13 @@ def _compact_todo_item_from_state(state: dict[str, Any] | None, item_id: str) ->
             if not isinstance(raw_items, list):
                 continue
             for raw in raw_items:
-                item = _todo_item_from_compact_record(raw, item_id)
+                item = _todo_item_from_compact_record(raw, item_id, source_bucket=f"roadmap.{bucket}")
                 if item is not None:
                     return item
     return None
 
 
-def _todo_item_from_compact_record(raw: Any, item_id: str) -> TodoItem | None:
+def _todo_item_from_compact_record(raw: Any, item_id: str, *, source_bucket: str = "") -> TodoItem | None:
     if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
         return None
     fields: dict[str, str] = {}
@@ -15374,6 +15446,9 @@ def _todo_item_from_compact_record(raw: Any, item_id: str) -> TodoItem | None:
     if "surface" not in fields and "path" in fields:
         fields["surface"] = fields["path"]
         field_order.append("surface")
+    if source_bucket:
+        fields["source bucket"] = source_bucket
+        field_order.append("source bucket")
     return TodoItem(fields=fields, field_order=field_order, start=-1, end=-1)
 
 
@@ -15545,6 +15620,28 @@ def _normalize_status(status: str) -> str:
     if lowered in {"complete", "done", "completed", "closed"}:
         return "completed"
     return "planned"
+
+
+def _todo_identity_ref(source_fields: Mapping[str, Any] | None) -> str:
+    if not source_fields:
+        return ""
+    refs_value = source_fields.get("refs", "")
+    refs: list[str] = []
+    if isinstance(refs_value, list):
+        refs = [str(item).strip() for item in refs_value if str(item).strip()]
+    elif str(refs_value).strip():
+        refs = [part.strip() for part in re.split(r"[, ]+", str(refs_value)) if part.strip()]
+    return refs[0] if refs else str(source_fields.get("id") or "").strip()
+
+
+def _promoted_item_identity_intent(*, title: str, item_id: str, source_fields: Mapping[str, Any] | None) -> str:
+    if not source_fields or str(source_fields.get("source bucket", "")).strip() != "roadmap.candidates":
+        return ""
+    ref = _todo_identity_ref(source_fields) or item_id
+    title_text = title.strip() or _title_from_slug(item_id)
+    if ref and ref != item_id and title_text:
+        return f"Resolve {ref}: {title_text}."
+    return ""
 
 
 def _execplan_profile_record(*, task_shape: str) -> dict[str, Any]:

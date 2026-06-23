@@ -38253,6 +38253,71 @@ def _tiny_surface_compatibility_review(changed_paths: list[str]) -> dict[str, An
     }
 
 
+def _missing_repo_path_references_in_command(*, command: str, target_root: Path | None) -> list[str]:
+    if target_root is None:
+        return []
+    try:
+        tokens = shlex.split(command, posix=os.name != "nt")
+    except ValueError:
+        tokens = command.split()
+    missing: list[str] = []
+    path_suffixes = {
+        ".json",
+        ".md",
+        ".py",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".yml",
+        ".yaml",
+    }
+    option_values_to_ignore = {
+        "--config",
+        "--cwd",
+        "--format",
+        "--modules",
+        "--proof-file",
+        "--section",
+        "--select",
+        "--target",
+    }
+    skip_next = False
+    for token in tokens[1:]:
+        if skip_next:
+            skip_next = False
+            continue
+        candidate = token.strip().strip("'\"")
+        if not candidate or candidate.startswith("-"):
+            if candidate in option_values_to_ignore:
+                skip_next = True
+            continue
+        if candidate.startswith(("http://", "https://")) or "=" in candidate:
+            continue
+        path_like = "/" in candidate or "\\" in candidate or any(candidate.endswith(suffix) for suffix in path_suffixes)
+        if not path_like:
+            continue
+        if any(char in candidate for char in "*?[]{}()|^$"):
+            continue
+        path_candidate = candidate.split("::", 1)[0]
+        path = Path(path_candidate)
+        resolved = path if path.is_absolute() else target_root / path
+        try:
+            resolved.relative_to(target_root)
+        except ValueError:
+            continue
+        if not resolved.exists() and path_candidate not in missing:
+            missing.append(candidate)
+    return missing
+
+
+def _proof_command_is_search_sweep(command: str) -> bool:
+    try:
+        tokens = shlex.split(command, posix=os.name != "nt")
+    except ValueError:
+        tokens = command.split()
+    return any(Path(str(token).strip().strip("'\"")).name.lower() in {"rg", "grep", "git-grep"} for token in tokens[:3])
+
+
 def _proof_selection_for_changed_paths(
     *,
     changed_paths: list[str],
@@ -38591,6 +38656,21 @@ def _proof_selection_for_changed_paths(
                     proof_command_adjustments.append(adjustment)
             if adapted_command is None:
                 continue
+            missing_path_refs = (
+                _missing_repo_path_references_in_command(command=adapted_command, target_root=target_root)
+                if lane.get("subsystem") and _proof_command_is_search_sweep(adapted_command)
+                else []
+            )
+            if missing_path_refs:
+                unavailable_proof_commands.append(
+                    {
+                        "lane": str(lane.get("id", "")),
+                        "command": adapted_command,
+                        "reason": "selected proof command references path-like arguments absent from the target repo",
+                        "missing_paths": ", ".join(missing_path_refs),
+                    }
+                )
+                continue
             resolved_command = str(
                 _command_with_cli_invoke(
                     command=_proof_command_for_target(command=adapted_command, target_root=target_root), cli_invoke=cli_invoke
@@ -38653,6 +38733,7 @@ def _proof_selection_for_changed_paths(
             "lane": str(command.get("lane", "")),
             "reason": str(command.get("reason", "")),
             **({"replacement": command["replacement"]} if command.get("replacement") else {}),
+            **({"missing_paths": str(command["missing_paths"])} if command.get("missing_paths") else {}),
         }
         for command in unavailable_proof_commands
     ]

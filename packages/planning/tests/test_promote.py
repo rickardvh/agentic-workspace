@@ -1252,6 +1252,53 @@ candidates = [
     )
 
 
+def test_promote_to_plan_replaces_generic_external_intent_with_issue_specific_outcome(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1687-specific-plan-intent", maturity = "candidate", status = "deferred", priority = "P1", refs = ["#1687"], title = "Promote external-intent candidates with issue-specific plan intent", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open prioritized upstream issue from refreshed external intent evidence.", promotion_signal = "Ready after issue review.", suggested_first_slice = "Implement the promotion-specific fallback." },
+]
+""",
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "promote-to-plan",
+                "github-1687-specific-plan-intent",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    record = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "github-1687-specific-plan-intent.plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert record["canonical_core"]["requested_outcome"] == (
+        "Resolve #1687: Promote external-intent candidates with issue-specific plan intent."
+    )
+    assert "Open prioritized upstream issue" not in record["canonical_core"]["requested_outcome"]
+    assert record["machine_readable_contract"]["intent"]["outcome"] == record["canonical_core"]["requested_outcome"]
+
+
 def test_planning_summary_continuation_view_prefers_fresh_execplan_over_stale_todo(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/resume-lane.plan.json"
