@@ -1,0 +1,134 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "checkpoint.write",
+  "command_surface": {
+    "command": "checkpoint",
+    "subcommand": "write",
+    "format_option": "format"
+  },
+  "summary": "Write or refresh the ignored local chat checkpoint.",
+  "classification": "local-record-append",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "task",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "issue",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "pr",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "durable_source",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "last_proof",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "next_safe_command",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "open_blocker",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "dirty_state_summary",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "replace",
+      "source": "cli-option",
+      "command_visibility": "runtime-only",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/local_chat_checkpoint_write_result.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": true,
+      "when": "write or refresh the local checkpoint"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "write_checkpoint",
+      "uses": "workspace.local-chat-checkpoint.write",
+      "description": "Write or refresh the ignored local checkpoint file."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the checkpoint write result."
+    }
+  ],
+  "guards": [
+    "Write only under .agentic-workspace/local/.",
+    "Do not store secrets, auth tokens, raw chat transcripts, or durable policy.",
+    "Do not treat local checkpoint records as closure evidence."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "local checkpoint write tests validate stdout against local_chat_checkpoint_write_result.schema.json and created records against local_chat_checkpoint.schema.json",
+    "startup projection tests cover absent, present, stale, and unreadable checkpoints"
+  ],
+  "migration_status": "draft-contract-only"
+}

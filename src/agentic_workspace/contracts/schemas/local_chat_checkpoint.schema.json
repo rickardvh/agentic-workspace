@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/local_chat_checkpoint.schema.json",
+  "title": "Agentic Workspace local chat checkpoint",
+  "description": "Ignored local-only continuity checkpoint used to rehydrate a chat after compaction or resume without treating local notes as closure evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "created_at",
+    "updated_at",
+    "task",
+    "branch",
+    "current_issue_refs",
+    "durable_sources",
+    "resume_rule",
+    "last_proof",
+    "open_blockers",
+    "dirty_state_summary",
+    "next_safe_command",
+    "limits"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/local-chat-checkpoint/v1",
+      "description": "Stable checkpoint record discriminator."
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-like UTC timestamp for the first checkpoint write."
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO-like UTC timestamp for the most recent checkpoint write."
+    },
+    "task": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Short current task summary suitable for startup projection."
+    },
+    "branch": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Current git branch at checkpoint write time."
+    },
+    "current_pr": {
+      "type": ["string", "integer"],
+      "description": "Current pull request number or URL when known."
+    },
+    "current_issue_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 120,
+        "description": "One issue reference associated with the current task."
+      },
+      "description": "Issue references associated with the current task."
+    },
+    "durable_sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "One durable source to reread before trusting local checkpoint state."
+      },
+      "description": "Durable sources that should be reread on resume."
+    },
+    "resume_rule": {
+      "type": "string",
+      "pattern": "advisory|durable_sources|durable sources|Re-read|re-read",
+      "description": "Human-readable rule reminding agents that local checkpoints are advisory and durable sources remain authoritative."
+    },
+    "last_proof": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "One recently run proof command or receipt summary."
+      },
+      "description": "Recently run proof commands or receipt summaries."
+    },
+    "open_blockers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "One unresolved blocker to re-check after resume."
+      },
+      "description": "Unresolved blockers to re-check after resume."
+    },
+    "dirty_state_summary": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Short summary of local dirty state at checkpoint write time."
+    },
+    "next_safe_command": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Next safe command to run after resume."
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Invariant flags that make the local-only and non-evidence limits explicit.",
+      "required": [
+        "local_only",
+        "gitignored",
+        "not_closure_evidence",
+        "no_raw_transcripts",
+        "no_secrets",
+        "durable_decisions_require_durable_source"
+      ],
+      "properties": {
+        "local_only": {
+          "const": true,
+          "description": "Checkpoint is only for the local workspace."
+        },
+        "gitignored": {
+          "const": true,
+          "description": "Checkpoint must remain in an ignored local path."
+        },
+        "not_closure_evidence": {
+          "const": true,
+          "description": "Checkpoint cannot prove issue or pull request closure."
+        },
+        "no_raw_transcripts": {
+          "const": true,
+          "description": "Checkpoint must not store raw chat transcript content."
+        },
+        "no_secrets": {
+          "const": true,
+          "description": "Checkpoint must not store secrets or authentication material."
+        },
+        "durable_decisions_require_durable_source": {
+          "const": true,
+          "description": "Durable decisions must be backed by durable sources outside this checkpoint."
+        }
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

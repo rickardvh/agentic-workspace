@@ -76,6 +76,7 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_refresh_workspace_operation_system_intent_metadata|agentic_workspace.workspace_runtime_primitives|_refresh_workspace_operation_system_intent_metadata",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_render_workspace_operation_prompt|agentic_workspace.workspace_runtime_primitives|_render_workspace_operation_prompt",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_resolve_workspace_operation_selection|agentic_workspace.workspace_runtime_primitives|_resolve_workspace_operation_selection",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_checkpoint_write_adapter|agentic_workspace.workspace_runtime_primitives|_run_checkpoint_write_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_external_intent_refresh_github_adapter|agentic_workspace.workspace_runtime_primitives|_run_external_intent_refresh_github_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_implement_context_adapter|agentic_workspace.workspace_runtime_primitives|_run_implement_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_init_lifecycle_adapter|agentic_workspace.workspace_runtime_primitives|_run_init_lifecycle_adapter",
@@ -1868,6 +1869,34 @@
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_checkpoint_write_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_checkpoint_write_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "checkpoint.write"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:checkpoint.write"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific local checkpoint merge/write policy, ignored-local path limits, and non-evidence semantics rather than generic deterministic target-executor logic.",
+        "conformance_ref": "checkpoint.write.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated parser and facade wiring own command projection while the package runtime boundary owns local checkpoint continuity semantics, local-only limits, and non-evidence policy.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when local checkpoint merge/write behavior can be represented as stable declarative dataflow with equivalent local-only and non-evidence safeguards.",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"

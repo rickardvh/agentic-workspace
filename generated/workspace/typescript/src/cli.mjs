@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade"]);
-const nativeOperationIds = new Set(["config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle"]);
+const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade"]);
+const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -1999,6 +1999,143 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "memory.front-door",
       "path": "operations/memory.front-door.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Create or update ignored local chat continuity checkpoints.",
+      "name": "checkpoint",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ],
+      "subcommand_dest": "checkpoint_command",
+      "subcommands": [
+        {
+          "help": "Write or refresh .agentic-workspace/local/chat-checkpoint.json.",
+          "name": "write",
+          "operation_ref": {
+            "id": "checkpoint.write",
+            "path": "operations/checkpoint.write.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--task"
+              ],
+              "help": "Short current task summary.",
+              "name": "task"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--issue"
+              ],
+              "help": "Current issue reference, such as #1680. May be repeated.",
+              "name": "issue"
+            },
+            {
+              "flags": [
+                "--pr"
+              ],
+              "help": "Current pull request number or URL.",
+              "name": "pr"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--durable-source"
+              ],
+              "help": "Durable source to reread on resume. May be repeated.",
+              "name": "durable_source"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--last-proof"
+              ],
+              "help": "Proof command or receipt summary. May be repeated.",
+              "name": "last_proof"
+            },
+            {
+              "flags": [
+                "--next-safe-command"
+              ],
+              "help": "Next safe command to run after resume.",
+              "name": "next_safe_command"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--open-blocker"
+              ],
+              "help": "Short blocker summary. May be repeated.",
+              "name": "open_blocker"
+            },
+            {
+              "flags": [
+                "--dirty-state-summary"
+              ],
+              "help": "Short local dirty-state summary.",
+              "name": "dirty_state_summary"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--replace"
+              ],
+              "help": "Replace mergeable list values instead of preserving existing checkpoint values.",
+              "name": "replace"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "name": "checkpoint",
+    "operation_ref": {
+      "id": "checkpoint.write",
+      "path": "operations/checkpoint.write.json"
     }
   },
   {

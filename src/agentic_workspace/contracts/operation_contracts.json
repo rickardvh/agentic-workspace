@@ -5,6 +5,12 @@
   "schema": "schemas/operation.schema.json",
   "operations": [
     {
+      "id": "checkpoint.write",
+      "path": "operations/checkpoint.write.json",
+      "command": "checkpoint",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "config.report",
       "path": "operations/config.report.json",
       "command": "config",

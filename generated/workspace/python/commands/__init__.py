@@ -11,6 +11,7 @@ from __future__ import annotations
 # Command module changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
+from . import checkpoint_write as _command_checkpoint_write
 from . import config_report as _command_config_report
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
@@ -41,6 +42,7 @@ from . import upgrade_lifecycle as _command_upgrade_lifecycle
 
 
 GENERATED_COMMAND_HANDLERS = {
+    'checkpoint.write': _command_checkpoint_write.run,
     'config.report': _command_config_report.run,
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,

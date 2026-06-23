@@ -5485,6 +5485,91 @@
       ]
     },
     {
+      "id": "checkpoint.write.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "checkpoint",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json",
+        "subcommands": [
+          "write"
+        ]
+      },
+      "operation_ref": {
+        "id": "checkpoint.write",
+        "registry": "operation_contracts.json",
+        "path": "operations/checkpoint.write.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_chat_checkpoint_write_result.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "local-only checkpoint write",
+          "target root validation",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "checkpoint.write.process"
+      ]
+    },
+    {
       "id": "start.context.cli",
       "status": "generated",
       "command": {

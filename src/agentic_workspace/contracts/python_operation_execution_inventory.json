@@ -34,6 +34,25 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, payload.project owns exact selector projection, and generated output owns selected-output text. Domain primitive refs (workspace.target-root.resolve, workspace.config.load, workspace.config.emit) remain explicit package-boundary calls for config loading and tiny/full text; workspace.config.emit now delegates compatibility text to _emit_workspace_config_compat_output rather than hiding it inside a broad output dispatcher. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
+      "operation_id": "checkpoint.write",
+      "program": "agentic-workspace",
+      "command": "checkpoint",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/checkpoint.write.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "workspace.local-chat-checkpoint.write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "checkpoint.write.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Local chat checkpoint writes apply package-specific continuity limits, gitignored local path policy, and non-evidence semantics.",
+      "what_would_make_portable_later": "Represent local checkpoint merge/write behavior as schema-backed IR steps once local-only ignored-record policy can be expressed without package-specific runtime judgment.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime primitives own local checkpoint merge/write semantics, local-only limits, and non-evidence policy."
+    },
+    {
       "operation_id": "defaults.report",
       "program": "agentic-workspace",
       "command": "defaults",
