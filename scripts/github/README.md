@@ -40,3 +40,5 @@ uv run python scripts/github/pr_comment_delta.py `
 ```
 
 The helper does not write to GitHub. Do not reply to comments, resolve review threads, or submit reviews from the packet unless the human explicitly approves that write.
+
+Live GitHub reads include `pagination.truncated`, `pagination.truncated_surfaces`, and GraphQL page limits. When `pagination.truncated` is `true`, treat the packet as incomplete and fetch complete paginated comments before deciding there are no actionable review obligations.
