@@ -56,6 +56,14 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "scripts/run_agentic_workspace.py",
 )
 SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
+FINAL_ANSWER_PATH_RULE = (
+    "Final answer path rule: cite changed files and evidence using repo-relative paths only. "
+    "Before writing the final answer, convert any absolute cwd, fixture, run_root, session, prompt-file, "
+    "or .agentic-workspace/local/scratch path to a repo-relative path when it is inside the copied repository. "
+    "Markdown link targets count as reported paths: use `[README.md](README.md)` or plain `README.md`, "
+    "never a local absolute link target. If an artifact is outside the copied repository, describe it by role "
+    "instead of printing the local absolute path."
+)
 
 
 @dataclass(frozen=True)
@@ -278,7 +286,8 @@ def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
         "Use the repository startup instruction below as the startup authority for this fixture. "
         "Do not use caller/source-checkout commands such as `uv run python scripts/run_agentic_workspace.py ...` "
         "unless that exact command appears in the copied repository startup instruction below. "
-        "When reporting files, use repo-relative paths only, never local absolute scratch paths.\n\n"
+        "When reporting files, use repo-relative paths only, never local absolute scratch paths. "
+        f"{FINAL_ANSWER_PATH_RULE}\n\n"
         f"Repository startup instruction from {startup_file or DEFAULT_AGENT_INSTRUCTIONS_FILE} to apply before non-trivial requests: "
         f"{compact_startup}\n"
     )
