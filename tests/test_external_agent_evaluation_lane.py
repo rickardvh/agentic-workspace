@@ -111,6 +111,7 @@ def test_external_agent_lane_rejects_missing_harness_authority_boundary() -> Non
 
 def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
     probes = _read_json("scenario-probes.json")["probes"]
+    observation_contract = _read_json("scenario-probes.json")["completion_cost_observation_contract"]
     covered_dimensions = {dimension for probe in probes for dimension in probe["expected_dimensions"]}
     probe_ids = {probe["id"] for probe in probes}
 
@@ -140,6 +141,52 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
     assert any(probe.get("artifact_backed") for probe in probes)
     artifact_probe = next(probe for probe in probes if probe["id"] == "artifact-backed-host-startup")
     assert {"artifact_source", "artifact_checksum", "installed_entrypoint"} <= set(artifact_probe["artifact_evidence"]["required_fields"])
+    assert observation_contract["applies_to"] == "all_probes"
+    assert {
+        "aw_command_count",
+        "proof_command_count",
+        "reread_events",
+        "proof_churn_events",
+        "over_planning_events",
+        "review_repair_loop_count",
+        "handoff_recovery_status",
+        "unsafe_closure_claims",
+        "aw_sections_used",
+        "cost_drivers",
+    } <= set(observation_contract["required_fields"])
+
+
+def test_external_agent_lane_completion_cost_observations_classify_representative_outcomes() -> None:
+    records = _read_json("result-records.sample.json")["records"]
+    observations = {
+        record["scenario_id"]: record["completion_cost_observations"] for record in records if "completion_cost_observations" in record
+    }
+
+    assert observations["clean-host-startup"]["aw_command_count"] == 1
+    assert observations["clean-host-startup"]["cost_drivers"][0]["classification"] == "startup_routing"
+    assert observations["stale-memory-active-planning-handoff"]["reread_events"] >= 1
+    assert {driver["classification"] for driver in observations["stale-memory-active-planning-handoff"]["cost_drivers"]} >= {
+        "memory_reread",
+        "review_repair",
+    }
+    assert observations["operational-decision-trace-required"]["unsafe_closure_claims"] == 1
+    assert {driver["classification"] for driver in observations["operational-decision-trace-required"]["cost_drivers"]} >= {
+        "proof_churn",
+        "unsafe_closure",
+    }
+
+
+def test_external_agent_lane_rejects_invalid_completion_cost_observation() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    record = next(item for item in pack["results"]["records"] if item["scenario_id"] == "stale-memory-active-planning-handoff")
+    record["completion_cost_observations"]["reread_events"] = -1
+    record["completion_cost_observations"]["cost_drivers"][0]["classification"] = "expensive"
+
+    errors = module.validate_pack(pack)
+
+    assert any("reread_events must be a non-negative integer" in error for error in errors)
+    assert any("classification is invalid" in error for error in errors)
 
 
 def test_external_agent_lane_historical_fixtures_map_to_result_records() -> None:
@@ -242,6 +289,8 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["acceptance"]["operating_loop_observable"] is True
+    assert report["acceptance"]["completion_cost_observation_contract_exists"] is True
+    assert report["acceptance"]["completion_cost_observations_exist"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
     assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
@@ -253,6 +302,12 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert loop["record_count"] >= 1
     assert loop["safe_claim_counts"]["blocked"] >= 1
     assert loop["residue_owner_counts"]["issue"] >= 1
+    cost = report["completion_cost_observability"]
+    assert cost["kind"] == "agentic-workspace/external-agent-completion-cost-observability/v1"
+    assert cost["record_count"] >= 3
+    assert cost["driver_classification_counts"]["memory_reread"] >= 1
+    assert cost["driver_classification_counts"]["unsafe_closure"] >= 1
+    assert cost["totals"]["proof_command_count"] >= 2
 
 
 def test_operational_decision_trace_avoids_chain_of_thought_requirement() -> None:

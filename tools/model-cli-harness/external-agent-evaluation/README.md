@@ -38,6 +38,8 @@ Scenarios that require an operational decision trace do not ask for private chai
 
 Trace-required result records must also include the normalized `agentic-workspace/operating-loop-decision/v1` packet. The older `decisions` object remains a compact human-readable trace, while `operating_loop` is the enum-backed evaluation evidence for Memory, Planning, Verification/proof, residue owner, and safe claim state.
 
+For #1680 completion-cost work, each probe can also emit `agentic-workspace/external-agent-completion-cost-observations/v1`. The observation packet is maintainer-evaluation evidence only, and records compact behavior-cost signals such as AW command count, proof command count, reread events, proof churn, over-planning, review/repair loops, handoff recovery status, unsafe closure claims, used AW output sections, and classified cost drivers.
+
 Run a real external-agent scenario only when maintainer evidence is needed. The Codex adapter defaults to GPT-5.3 Codex Spark:
 
 ```powershell
@@ -75,3 +77,4 @@ The lane is ready for parent closure only when the generated report can show:
 - surface simplification has evidence-backed decisions;
 - safe claim boundaries and closeout residue are represented.
 - partial slice progress is not reported as full parent-lane closure without explicit evidence.
+- completion-cost observations can distinguish static/schema suspicion from behavior-cost evidence.

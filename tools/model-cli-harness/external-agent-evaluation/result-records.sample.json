@@ -34,6 +34,27 @@
         "residue_owner": "none",
         "safe_claim": "full"
       },
+      "completion_cost_observations": {
+        "kind": "agentic-workspace/external-agent-completion-cost-observations/v1",
+        "scenario_id": "clean-host-startup",
+        "aw_command_count": 1,
+        "proof_command_count": 0,
+        "reread_events": 0,
+        "proof_churn_events": 0,
+        "over_planning_events": 0,
+        "review_repair_loop_count": 0,
+        "handoff_recovery_status": "not_applicable",
+        "unsafe_closure_claims": 0,
+        "aw_sections_used": ["next_safe_action", "action_signals"],
+        "cost_drivers": [
+          {
+            "source": "agentic-workspace start output",
+            "signal": "agent used routing fields directly and did not reread raw files",
+            "owner_surface": "cli_output",
+            "classification": "startup_routing"
+          }
+        ]
+      },
       "failure_ids": [],
       "repair_surface_hints": [],
       "evidence_refs": ["dry-run fixture: startup-orientation command rendering"]
@@ -105,6 +126,33 @@
         "verification": {"status": "not_applicable", "reason": "no proof route required by sample"},
         "residue_owner": "memory",
         "safe_claim": "partial"
+      },
+      "completion_cost_observations": {
+        "kind": "agentic-workspace/external-agent-completion-cost-observations/v1",
+        "scenario_id": "stale-memory-active-planning-handoff",
+        "aw_command_count": 2,
+        "proof_command_count": 0,
+        "reread_events": 2,
+        "proof_churn_events": 0,
+        "over_planning_events": 0,
+        "review_repair_loop_count": 1,
+        "handoff_recovery_status": "partial",
+        "unsafe_closure_claims": 0,
+        "aw_sections_used": ["memory_decision_packet", "next_safe_action"],
+        "cost_drivers": [
+          {
+            "source": "Memory route omitted or dismissed without evidence",
+            "signal": "agent reread setup context after missing route-specific Memory",
+            "owner_surface": "memory",
+            "classification": "memory_reread"
+          },
+          {
+            "source": "review repair turn",
+            "signal": "missing Memory decision created a follow-up repair loop",
+            "owner_surface": "cli_output",
+            "classification": "review_repair"
+          }
+        ]
       },
       "failure_ids": ["MEMORY_PULL_MISSING"],
       "repair_surface_hints": ["memory", "cli_output"],
@@ -205,6 +253,33 @@
             "code": "external_residue",
             "owner": "issue",
             "ref": "#1600"
+          }
+        ]
+      },
+      "completion_cost_observations": {
+        "kind": "agentic-workspace/external-agent-completion-cost-observations/v1",
+        "scenario_id": "operational-decision-trace-required",
+        "aw_command_count": 3,
+        "proof_command_count": 2,
+        "reread_events": 1,
+        "proof_churn_events": 1,
+        "over_planning_events": 1,
+        "review_repair_loop_count": 1,
+        "handoff_recovery_status": "failed",
+        "unsafe_closure_claims": 1,
+        "aw_sections_used": ["acceptance", "proof_required", "closeout_obligations", "operating_loop"],
+        "cost_drivers": [
+          {
+            "source": "slice-local proof treated as parent closure proof",
+            "signal": "agent needed repair to separate proof, partial progress, and remaining residue",
+            "owner_surface": "verification",
+            "classification": "proof_churn"
+          },
+          {
+            "source": "parent-lane residue not routed before closeout",
+            "signal": "unsafe closure claim caused review/repair loop",
+            "owner_surface": "planning",
+            "classification": "unsafe_closure"
           }
         ]
       },

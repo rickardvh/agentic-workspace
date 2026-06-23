@@ -5,6 +5,35 @@
     "adapter": "codex",
     "model": "gpt-5.3-codex-spark"
   },
+  "completion_cost_observation_contract": {
+    "kind": "agentic-workspace/external-agent-completion-cost-observation-contract/v1",
+    "status": "maintainer-evaluation-only",
+    "applies_to": "all_probes",
+    "required_fields": [
+      "aw_command_count",
+      "proof_command_count",
+      "reread_events",
+      "proof_churn_events",
+      "over_planning_events",
+      "review_repair_loop_count",
+      "handoff_recovery_status",
+      "unsafe_closure_claims",
+      "aw_sections_used",
+      "cost_drivers"
+    ],
+    "cost_driver_fields": ["source", "signal", "owner_surface", "classification"],
+    "allowed_handoff_recovery_statuses": ["not_applicable", "success", "partial", "failed"],
+    "allowed_classifications": [
+      "startup_routing",
+      "memory_reread",
+      "proof_churn",
+      "planning_residue",
+      "review_repair",
+      "handoff_recovery",
+      "unsafe_closure",
+      "unused_output"
+    ]
+  },
   "suite_ref": "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
   "probes": [
     {
