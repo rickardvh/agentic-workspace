@@ -10,7 +10,15 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LANE_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "lanes" / "github-1680-reduce-aw-induced-completion-cost.lane.json"
+LIVE_LANE_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "lanes" / "github-1680-reduce-aw-induced-completion-cost.lane.json"
+ARCHIVED_LANE_PATH = (
+    REPO_ROOT
+    / ".agentic-workspace"
+    / "planning"
+    / "lanes"
+    / "archive"
+    / "github-1680-reduce-aw-induced-completion-cost.lane.json"
+)
 STATIC_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evidence" / "github-1680-static-schema-cost-analysis.closeout.json"
 CORPUS_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evidence" / "github-1680-json-corpus-cost-ranking.closeout.json"
 EXTERNAL_LANE_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
@@ -35,6 +43,12 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{_repo_relative(path)} must contain a JSON object")
     return payload
+
+
+def _lane_path() -> Path:
+    if LIVE_LANE_PATH.exists():
+        return LIVE_LANE_PATH
+    return ARCHIVED_LANE_PATH
 
 
 def _load_external_lane_module():
@@ -107,6 +121,7 @@ def _before_after_closeout_summary(closeout: dict[str, Any] | None) -> dict[str,
     measured_count = int(str(closure_check.get("measured_improvement_count", "0") or "0"))
     satisfied_count = int(str(closure_check.get("satisfied_pending_close_count", "0") or "0"))
     remaining_count = int(str(closure_check.get("remaining_cost_source_count", "0") or "0"))
+    routed_follow_up_count = int(str(closure_check.get("routed_follow_up_count", "0") or "0"))
     recorded = closure_check.get("before_after_evidence_status") == "recorded"
 
     return {
@@ -117,6 +132,8 @@ def _before_after_closeout_summary(closeout: dict[str, Any] | None) -> dict[str,
             "status": closure_check.get("child_issue_reconciliation_status", ""),
             "satisfied_pending_close_count": satisfied_count,
             "remaining_cost_source_count": remaining_count,
+            "routed_follow_up_count": routed_follow_up_count,
+            "routed_follow_up_cost_sources": closure_check.get("routed_follow_up_cost_sources", ""),
         },
         "parent_close_permission": closure_check.get("parent_close_permission", ""),
         "closure_decision": closure_check.get("closure decision", ""),
@@ -125,7 +142,8 @@ def _before_after_closeout_summary(closeout: dict[str, Any] | None) -> dict[str,
 
 
 def build_lane_evidence_report() -> dict[str, Any]:
-    lane = _load_json(LANE_PATH)
+    lane_path = _lane_path()
+    lane = _load_json(lane_path)
     external = _load_external_lane_module()
     external_report = external.build_closure_report(external.load_pack(repo_root=REPO_ROOT))
     live_behavior_proof = _load_live_behavior_proof_module().build_live_behavior_proof_report()
@@ -198,7 +216,7 @@ def build_lane_evidence_report() -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/completion-cost-lane-evidence/v1",
         "lane": "#1680",
-        "lane_file": _repo_relative(LANE_PATH),
+        "lane_file": _repo_relative(lane_path),
         "status": "partial-closure-evidence" if blockers else "ready-for-closeout-review",
         "current_slice": lane.get("current_slice", ""),
         "completed_slice_ids": completed_slices,
