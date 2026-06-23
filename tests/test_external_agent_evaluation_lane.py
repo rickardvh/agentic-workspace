@@ -387,6 +387,28 @@ def test_model_cli_harness_scores_source_checkout_aw_invocation_as_package_cli()
     assert module._command_requirement_satisfied(required="uv run agentic-workspace start", executed_command_text=executed)
 
 
+def test_model_cli_harness_startup_prompt_has_final_answer_path_hygiene(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        "# Agent Instructions\n"
+        "<!-- agentic-workspace:workflow:start -->\n"
+        "Report repo-relative paths, not local absolute paths.\n"
+        "<!-- agentic-workspace:workflow:end -->\n",
+        encoding="utf-8",
+    )
+
+    prompt = module._startup_instruction_prompt(repo_path=repo, prompt="Update README.md.")
+
+    assert "Final answer path rule" in prompt
+    assert "convert any absolute cwd, fixture, run_root, session, prompt-file" in prompt
+    assert "repo-relative path when it is inside the copied repository" in prompt
+    assert "Markdown link targets count as reported paths" in prompt
+    assert "[README.md](README.md)" in prompt
+    assert "describe it by role instead of printing the local absolute path" in prompt
+
+
 def test_model_cli_harness_scores_local_absolute_path_leak_with_owner(tmp_path: Path) -> None:
     module = _load_harness_module()
     repo = tmp_path / "repo"

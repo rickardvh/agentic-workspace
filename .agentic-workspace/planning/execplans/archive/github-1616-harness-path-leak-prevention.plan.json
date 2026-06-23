@@ -1,0 +1,392 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Prevent harness local path leaks",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Strengthen #1616 prevention by making model CLI harness prompts give explicit final-closeout path hygiene, while keeping existing leak detection and owner routing intact.",
+    "hard_constraints": "Keep scope bounded to harness prompt guidance, focused tests, and planning closeout; do not broaden into generic output sanitization or live-result rewriting.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Patch startup/isolation prompt guidance and add a focused regression for final-answer path hygiene.",
+    "proof_expectations": [
+      "uv run pytest tests/test_external_agent_evaluation_lane.py -q",
+      "uv run python scripts/model_cli_harness/run_model_cli_harness.py --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json --adapter codex --model gpt-5.4-mini --scenario memory-consult-before-edit --prompt-variant packaging-note --output-root .agentic-workspace/local/scratch/model-cli-harness-path-leak-prevention --format json"
+    ],
+    "touched_scope": [
+      "scripts/model_cli_harness/run_model_cli_harness.py",
+      "tests/test_external_agent_evaluation_lane.py",
+      ".agentic-workspace/planning/execplans/github-1616-harness-path-leak-prevention.plan.json"
+    ],
+    "completion_criteria": [
+      "Harness prompts explicitly instruct final answers to convert local absolute fixture/scratch/session paths to repo-relative evidence or artifact roles.",
+      "Existing LOCAL_ABSOLUTE_PATH_LEAK scoring and #1616 owner routing remain intact.",
+      "Focused tests and an allowed-model dry-run pass."
+    ],
+    "continuation_owner": "#1616",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Prevent harness local path leaks."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Strengthen #1616 prevention by making model CLI harness prompts give explicit final-closeout path hygiene, while keeping existing leak detection and owner routing intact.",
+      "constraints": "Keep scope bounded to harness prompt guidance, focused tests, and planning closeout; do not broaden into generic output sanitization or live-result rewriting.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "github-1616-harness-path-leak-prevention",
+      "status": "completed",
+      "next_step": "Continue via #1616.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "scripts/model_cli_harness/run_model_cli_harness.py",
+        "tests/test_external_agent_evaluation_lane.py",
+        ".agentic-workspace/planning/execplans/github-1616-harness-path-leak-prevention.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1680 live proof can stop failing on local path/ownership leakage, with #1616 either prevented or detected and routed.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#1616"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#1616",
+    "activation trigger": "Run or review allowed-model live evaluation after prompt-guidance and fixture-dependency fixes are merged."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via #1616."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue working toward #1680 and address the remaining live path-leak blocker.",
+    "inferred intended outcome": "Make #1616 more true by preventing, not merely detecting, local absolute scratch paths in harness final answers.",
+    "chosen concrete what": "Add explicit final-closeout path hygiene to the harness isolation prompt and prove it with a focused regression.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "scripts/model_cli_harness/run_model_cli_harness.py; tests/test_external_agent_evaluation_lane.py; .agentic-workspace/planning/execplans/github-1616-harness-path-leak-prevention.plan.json",
+    "max changed files": "4 including archived closeout if this slice closes.",
+    "required validation commands": "uv run pytest tests/test_external_agent_evaluation_lane.py -q; allowed-model harness dry-run for memory-consult-before-edit.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #1616 issue text, run_model_cli_harness.py prompt/scoring helpers, and focused harness tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Patch harness isolation prompt final-answer path guidance; preserve scoring for LOCAL_ABSOLUTE_PATH_LEAK.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Strengthen #1616 prevention by making model CLI harness prompts give explicit final-closeout path hygiene, while keeping existing leak detection and owner routing intact.",
+    "hard constraints": "Keep scope bounded to harness prompt guidance, focused tests, and planning closeout; do not broaden into generic output sanitization or live-result rewriting.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1616-harness-path-leak-prevention",
+    "status": "completed",
+    "scope": "Harness final-answer path guidance and focused regression coverage for #1616.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch startup/isolation prompt guidance and add a focused regression for final-answer path hygiene."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/model_cli_harness/run_model_cli_harness.py",
+    "tests/test_external_agent_evaluation_lane.py",
+    ".agentic-workspace/planning/execplans/github-1616-harness-path-leak-prevention.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_external_agent_evaluation_lane.py -q",
+    "uv run python scripts/model_cli_harness/run_model_cli_harness.py --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json --adapter codex --model gpt-5.4-mini --scenario memory-consult-before-edit --prompt-variant packaging-note --output-root .agentic-workspace/local/scratch/model-cli-harness-path-leak-prevention --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Harness prompts explicitly instruct final answers to convert local absolute fixture/scratch/session paths to repo-relative evidence or artifact roles.",
+    "Existing LOCAL_ABSOLUTE_PATH_LEAK scoring and #1616 owner routing remain intact.",
+    "Focused tests and an allowed-model dry-run pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Strengthened #1616 prevention guidance in the model CLI harness by adding explicit final-answer path hygiene, including a Markdown link target rule, while preserving existing LOCAL_ABSOLUTE_PATH_LEAK detection and owner routing.",
+    "scope touched": "scripts/model_cli_harness/run_model_cli_harness.py; tests/test_external_agent_evaluation_lane.py",
+    "changed surfaces": "Harness startup/isolation prompt and focused external-agent lane regression coverage.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from #1616",
+    "next step": "promote the next bounded slice from #1616"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The live gpt-5.4-mini checks still leaked absolute scratch paths in Markdown link targets, so this slice improves prompt prevention and test coverage but does not close #1616 or the #1680 live behavior blocker.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1616"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_external_agent_evaluation_lane.py -q => 30 passed; dry-run with codex/gpt-5.4-mini memory-consult-before-edit => prompt includes final-answer path rule and Markdown link-target rule; live execute with codex/gpt-5.4-mini after generic path rule => still detected LOCAL_ABSOLUTE_PATH_LEAK; live execute after Markdown link-target rule => still detected LOCAL_ABSOLUTE_PATH_LEAK, proving prompt-resistant residue remains routed to #1616; make test-workspace => pass; make lint-workspace => pass; uv run python scripts/run_agentic_workspace.py summary --target . --format json => warning_count 0 with active plan present; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json => health healthy, warnings 0; uv run pytest --collect-only -q tests packages => 1311 tests collected; memory route/read => required repo memory index read",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Prevent harness local path leaks.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "#1616"
+  },
+  "execution_summary": {
+    "outcome delivered": "Partial #1680/#1616 progress: prevention guidance is stronger and detection remains active; prompt-resistant path leakage remains routed to #1616 for a stronger remediation such as adapter-level correction or completion-loop repair.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "#1616",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "#1616",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #1616.",
+    "motivation worth preserving": "Future agents should continue from #1616 rather than rediscover this closeout residue.",
+    "canonical owner now": "#1616",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "#1616",
+    "proposed durable intent": "Future agents should continue from #1616 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "#1616"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when #1616 activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to #1616.",
+        "owner": "#1616",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to #1616.",
+        "owner": "#1616",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1616",
+          "owner": "#1616",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-23: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "#1616",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "#1616",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "#1616"
+    },
+    "continuation": {
+      "owner_surface": "#1616",
+      "created_or_required": true,
+      "reason": "#1616"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Prevent harness local path leaks.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest tests/test_external_agent_evaluation_lane.py -q => 30 passed; dry-run with codex/gpt-5.4-mini memory-consult-before-edit => prompt includes final-answer path rule and Markdown link-target rule; live execute with codex/gpt-5.4-mini after generic path rule => still detected LOCAL_ABSOLUTE_PATH_LEAK; live execute after Markdown link-target rule => still detected LOCAL_ABSOLUTE_PATH_LEAK, proving prompt-resistant residue remains routed to #1616; make test-workspace => pass; make lint-workspace => pass; uv run python scripts/run_agentic_workspace.py summary --target . --format json => warning_count 0 with active plan present; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json => health healthy, warnings 0; uv run pytest --collect-only -q tests packages => 1311 tests collected; memory route/read => required repo memory index read\nChanged surfaces: Harness startup/isolation prompt and focused external-agent lane regression coverage.\nDurable residue: planning (#1616)\nMemory learning: route_to_planning\nFollow-up: #1616\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+  }
+}
