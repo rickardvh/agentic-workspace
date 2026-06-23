@@ -35,13 +35,13 @@
     {
       "id": "json-corpus-cost-ranking",
       "title": "Actual JSON completion-cost corpus for ordinary AW outputs",
-      "status": "planned",
-      "execplan_ref": "",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/closeout-evidence/github-1680-json-corpus-cost-ranking.closeout.json",
       "depends_on": [
         "static-schema-cost-analysis"
       ],
       "purpose_for_lane": "Use #1691 to measure byte size, top fields, empty/default ratios, repeated strings, prose-vs-structured bytes, duplicate concepts, actionability density, and selector escape hatches.",
-      "proof": "Corpus report separates real ordinary-output cost from static suspicion and supplies ranked reduction candidates.",
+      "proof": "Actual JSON corpus analyzer landed: uv run pytest tests/test_completion_cost_json_corpus.py; uv run python scripts/check/check_completion_cost_json_corpus.py --format text --timeout-seconds 60; ruff. Live run measured 4 ordinary samples and emitted ranked observations.",
       "residual_after_slice": "Long-horizon evaluation must connect ranked surfaces to completion behavior."
     },
     {
@@ -81,21 +81,22 @@
       "residual_after_slice": "Close #1680 only if the strict completion rule is satisfied; otherwise route residual owner surfaces."
     }
   ],
-  "current_slice": "json-corpus-cost-ranking",
+  "current_slice": "long-horizon-behavior-proof",
   "acceptance_boundary": "This lane is complete only when the evidence loop has found, ranked, reduced, and re-measured meaningful AW-induced cost across representative bounded work. Closure must distinguish landed reductions, the intent served, unresolved cost sources, and whether small bounded work is actually cheaper, without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "proof_strategy": "Aggregate proof from the five lane slices: static schema suspect inventory, actual JSON corpus ranking, long-horizon behavior evidence, at least one landed reduction, and before/after measurement. A useful one-off fix or cost report is partial evidence, not lane completion.",
   "proof_aggregation": {
     "status": "partial",
     "evidence": [
       ".agentic-workspace/planning/closeout-evidence/github-1680-static-schema-cost-analysis.closeout.json",
-      "scripts/check/check_completion_cost_schema_analysis.py emits structured static suspects for start, implement, and report ordinary surfaces."
+      "scripts/check/check_completion_cost_schema_analysis.py emits structured static suspects for start, implement, and report ordinary surfaces.",
+      ".agentic-workspace/planning/closeout-evidence/github-1680-json-corpus-cost-ranking.closeout.json",
+      "scripts/check/check_completion_cost_json_corpus.py captures and ranks actual ordinary JSON outputs for start, summary, implement, and doctor samples."
     ],
     "known_gaps": [
-      "Actual JSON corpus analysis (#1691) has not yet ranked runtime byte share, empty/default ratios, repeated strings, or actionability density.",
       "Long-horizon behavior evidence and measured reductions remain open before #1680 can close."
     ]
   },
-  "residual_lane_work": "Open: actual JSON corpus analysis (#1691), long-horizon behavior proof through #1602, reduction work through #1608 and selected child issues, and before/after closure evidence.",
+  "residual_lane_work": "Open: long-horizon behavior proof through #1602 using Codex GPT 5.3 Spark or GPT 5.4 Mini for evaluations, reduction work through #1608 and selected child issues, and before/after closure evidence.",
   "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
   "parent_close_permission": "not-evaluated",
   "closeout_state": {
@@ -170,7 +171,13 @@
       "target": "https://github.com/rickardvh/agentic-workspace/issues/1700 https://github.com/rickardvh/agentic-workspace/issues/1701 https://github.com/rickardvh/agentic-workspace/issues/1702 https://github.com/rickardvh/agentic-workspace/issues/1703 https://github.com/rickardvh/agentic-workspace/issues/1704",
       "label": "GitHub #1700-#1704",
       "role": "local checkpoint experiment related to lane/session continuity"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1706",
+      "label": "GitHub #1706",
+      "role": "dogfooding friction discovered during #1691 active-plan ownership repair"
     }
   ],
-  "notes": "Ingested from GitHub #1680 on 2026-06-23. Static schema analysis (#1690) landed as the first slice; promote json-corpus-cost-ranking (#1691) into an accurate bounded implementation plan before starting that work. Do not close this lane after one useful fix; a small dogfooding batch is partial progress unless the full evidence loop is satisfied."
+  "notes": "Ingested from GitHub #1680 on 2026-06-23. Static schema analysis (#1690) and actual JSON corpus ranking (#1691) landed as the first measurement slices; promote long-horizon behavior proof next and use Codex GPT 5.3 Spark or GPT 5.4 Mini when running evaluations. Do not close this lane after one useful fix; a small dogfooding batch is partial progress unless the full evidence loop is satisfied."
 }
