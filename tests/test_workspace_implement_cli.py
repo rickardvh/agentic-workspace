@@ -2941,8 +2941,34 @@ candidates = [
     assert gate["implementation_allowed"] is True
     pressure = gate["candidate_pressure"]
     assert pressure["status"] == "observed"
-    assert pressure["candidate_ids"] == []
-    assert pressure["advisory_backlog"]["unmatched_candidate_ids"] == [
+    assert "candidate_ids" not in pressure
+    assert "relevance" not in pressure
+    assert "advisory_backlog" not in pressure
+    assert pressure["unmatched_roadmap_candidate_count"] == 2
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
+    assert len(json.dumps(pressure, separators=(",", ":")).encode()) < 400
+
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement #1556 #1559 #1560 requirement grounded delegation support",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    verbose_payload = json.loads(capsys.readouterr().out)
+    verbose_pressure = verbose_payload["planning_safety_gate"]["candidate_pressure"]
+    assert verbose_pressure["advisory_backlog"]["unmatched_candidate_ids"] == [
         "github-1522-packaging-tests",
         "github-1523-generated-proof-tests",
     ]
@@ -2988,9 +3014,9 @@ candidates = [
 
     pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
     assert pressure["status"] == "observed"
-    assert pressure["candidate_ids"] == []
-    assert pressure["relevance"]["roadmap"][0]["evidence"] == []
-    assert "weak_lexical_hints" in pressure["relevance"]["roadmap"][0]
+    assert "candidate_ids" not in pressure
+    assert "relevance" not in pressure
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_implement_keeps_generic_ci_refresh_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
@@ -3033,9 +3059,10 @@ candidates = [
 
     pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
     assert pressure["status"] == "observed"
-    assert pressure["candidate_ids"] == []
     assert pressure["matched_roadmap_candidate_count"] == 0
-    assert all(item["evidence"] == [] for item in pressure["relevance"]["roadmap"])
+    assert "candidate_ids" not in pressure
+    assert "relevance" not in pressure
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:
@@ -3091,7 +3118,8 @@ candidates = [
     pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
     assert pressure["status"] == "observed"
     assert pressure["stale_or_closed_roadmap_candidate_count"] == 2
-    assert pressure["advisory_backlog"]["stale_or_closed_candidate_ids"] == ["github-1201-old", "github-1202-old"]
+    assert "advisory_backlog" not in pressure
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:

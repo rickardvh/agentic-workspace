@@ -22270,7 +22270,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         compact["repair_route"] = repair_route
     candidate_pressure = gate.get("candidate_pressure")
     if isinstance(candidate_pressure, dict) and candidate_pressure.get("status") in {"promotion-required", "observed"}:
-        compact["candidate_pressure"] = {
+        pressure_summary = {
             key: candidate_pressure.get(key)
             for key in (
                 "kind",
@@ -22283,14 +22283,20 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "stale_or_closed_roadmap_candidate_count",
                 "matched_decomposition_candidate_count",
                 "candidate_ids",
-                "relevance",
-                "advisory_backlog",
                 "reasons",
                 "required_before_implementation",
                 "route_options",
             )
             if key in candidate_pressure
         }
+        if candidate_pressure.get("status") == "observed":
+            pressure_summary.pop("reasons", None)
+            pressure_summary.pop("required_before_implementation", None)
+            pressure_summary.pop("route_options", None)
+            if not pressure_summary.get("candidate_ids"):
+                pressure_summary.pop("candidate_ids", None)
+            pressure_summary["detail_visibility"] = "relevance and advisory backlog stay behind verbose implement context"
+        compact["candidate_pressure"] = pressure_summary
     issue_scope_evidence = gate.get("issue_scope_evidence")
     if isinstance(issue_scope_evidence, dict) and issue_scope_evidence.get("status") in {"unknown", "partial"}:
         compact["issue_scope_evidence"] = {
