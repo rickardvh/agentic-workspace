@@ -68,6 +68,39 @@ OPERATING_LOOP_REASON_CODES = {
     "memory_capture_required",
     "external_residue",
 }
+COMPLETION_COST_OBSERVATION_KIND = "agentic-workspace/external-agent-completion-cost-observations/v1"
+COMPLETION_COST_REQUIRED_FIELDS = {
+    "aw_command_count",
+    "proof_command_count",
+    "reread_events",
+    "proof_churn_events",
+    "over_planning_events",
+    "review_repair_loop_count",
+    "handoff_recovery_status",
+    "unsafe_closure_claims",
+    "aw_sections_used",
+    "cost_drivers",
+}
+COMPLETION_COST_NUMERIC_FIELDS = {
+    "aw_command_count",
+    "proof_command_count",
+    "reread_events",
+    "proof_churn_events",
+    "over_planning_events",
+    "review_repair_loop_count",
+    "unsafe_closure_claims",
+}
+COMPLETION_COST_HANDOFF_STATUSES = {"not_applicable", "success", "partial", "failed"}
+COMPLETION_COST_DRIVER_CLASSIFICATIONS = {
+    "startup_routing",
+    "memory_reread",
+    "proof_churn",
+    "planning_residue",
+    "review_repair",
+    "handoff_recovery",
+    "unsafe_closure",
+    "unused_output",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -145,6 +178,46 @@ def _validate_operating_loop_packet(
             _require(reason.get("owner") in OPERATING_LOOP_RESIDUE_OWNERS, f"{prefix} operating_loop reason owner is invalid", errors)
 
 
+def _validate_completion_cost_observations(
+    observations: Any,
+    *,
+    prefix: str,
+    scenario_id: str,
+    owner_surfaces: set[str],
+    errors: list[str],
+) -> None:
+    _require(isinstance(observations, dict), f"{prefix} completion_cost_observations must be an object", errors)
+    if not isinstance(observations, dict):
+        return
+    _require(observations.get("kind") == COMPLETION_COST_OBSERVATION_KIND, f"{prefix} completion_cost_observations kind is invalid", errors)
+    _require(observations.get("scenario_id") == scenario_id, f"{prefix} completion_cost_observations scenario_id must match record", errors)
+    missing_fields = COMPLETION_COST_REQUIRED_FIELDS.difference(observations)
+    _require(not missing_fields, f"{prefix} completion_cost_observations missing fields: {', '.join(sorted(missing_fields))}", errors)
+    for field in COMPLETION_COST_NUMERIC_FIELDS:
+        value = observations.get(field)
+        _require(isinstance(value, int) and value >= 0, f"{prefix} completion_cost_observations {field} must be a non-negative integer", errors)
+    _require(
+        observations.get("handoff_recovery_status") in COMPLETION_COST_HANDOFF_STATUSES,
+        f"{prefix} completion_cost_observations handoff_recovery_status is invalid",
+        errors,
+    )
+    sections = observations.get("aw_sections_used", [])
+    _require(isinstance(sections, list), f"{prefix} completion_cost_observations aw_sections_used must be a list", errors)
+    for section in (sections if isinstance(sections, list) else []):
+        _require(isinstance(section, str) and bool(section.strip()), f"{prefix} completion_cost_observations aw_sections_used entry is invalid", errors)
+    drivers = observations.get("cost_drivers", [])
+    _require(isinstance(drivers, list), f"{prefix} completion_cost_observations cost_drivers must be a list", errors)
+    for index, driver in enumerate(drivers if isinstance(drivers, list) else []):
+        driver_prefix = f"{prefix} completion_cost_observations cost_drivers[{index}]"
+        _require(isinstance(driver, dict), f"{driver_prefix} must be an object", errors)
+        if not isinstance(driver, dict):
+            continue
+        for field in ("source", "signal", "owner_surface", "classification"):
+            _require(bool(str(driver.get(field) or "").strip()), f"{driver_prefix} must include {field}", errors)
+        _require(driver.get("owner_surface") in owner_surfaces, f"{driver_prefix} owner_surface is invalid", errors)
+        _require(driver.get("classification") in COMPLETION_COST_DRIVER_CLASSIFICATIONS, f"{driver_prefix} classification is invalid", errors)
+
+
 def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     errors: list[str] = []
     scorecard = pack["scorecard"]
@@ -179,6 +252,38 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         _require(
             bool(str(boundary.get("agent_decision") or "").strip()),
             "scorecard authority_boundary must name agent_decision",
+            errors,
+        )
+
+    observation_contract = pack["scenarios"].get("completion_cost_observation_contract")
+    minimum_observed_records = 1
+    _require(isinstance(observation_contract, dict), "scenarios must define completion_cost_observation_contract", errors)
+    if isinstance(observation_contract, dict):
+        _require(
+            observation_contract.get("kind") == "agentic-workspace/external-agent-completion-cost-observation-contract/v1",
+            "completion_cost_observation_contract kind is invalid",
+            errors,
+        )
+        _require(
+            observation_contract.get("status") == "maintainer-evaluation-only",
+            "completion_cost_observation_contract status must be maintainer-evaluation-only",
+            errors,
+        )
+        _require(
+            observation_contract.get("applies_to") == "representative_evidence_records",
+            "completion_cost_observation_contract must apply to representative_evidence_records",
+            errors,
+        )
+        _require(
+            int(observation_contract.get("minimum_observed_records", 0) or 0) >= 1,
+            "completion_cost_observation_contract must define minimum_observed_records",
+            errors,
+        )
+        minimum_observed_records = int(observation_contract.get("minimum_observed_records", 0) or 0)
+        required_fields = {str(item) for item in observation_contract.get("required_fields", [])}
+        _require(
+            COMPLETION_COST_REQUIRED_FIELDS.issubset(required_fields),
+            "completion_cost_observation_contract is missing required fields",
             errors,
         )
 
@@ -232,6 +337,14 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             _require(failure_id in failure_ids, f"record {record.get('id')} references unknown failure id {failure_id}", errors)
         for owner in record.get("repair_surface_hints", []):
             _require(owner in owner_surfaces, f"record {record.get('id')} references unknown owner surface {owner}", errors)
+        if "completion_cost_observations" in record:
+            _validate_completion_cost_observations(
+                record.get("completion_cost_observations"),
+                prefix=f"record {record.get('id')}",
+                scenario_id=scenario_id,
+                owner_surfaces=owner_surfaces,
+                errors=errors,
+            )
         decisions = record.get("decisions", {})
         if scenario_id in trace_required_scenarios:
             _require(
@@ -268,6 +381,14 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             )
         for failure_id in record.get("failure_ids", []):
             _require(failure_id in failure_ids, f"live run {record.get('id')} references unknown failure id {failure_id}", errors)
+        if "completion_cost_observations" in record:
+            _validate_completion_cost_observations(
+                record.get("completion_cost_observations"),
+                prefix=f"live run {record.get('id')}",
+                scenario_id=str(record.get("scenario_id") or ""),
+                owner_surfaces=owner_surfaces,
+                errors=errors,
+            )
 
     allowed_fixture_statuses = {"active_regression_guard", "historical_calibration", "retired"}
     for fixture in pack["historical"].get("fixtures", []):
@@ -329,7 +450,44 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
 
     _require("PROOF_MISSING_BEFORE_CLAIM" in failure_ids_seen, "sample records must include proof claim-safety failure evidence", errors)
     _require("MEMORY_PULL_MISSING" in failure_ids_seen, "sample records must include Memory routing failure evidence", errors)
+    observed_record_count = sum(
+        1 for record in pack["results"].get("records", []) if isinstance(record.get("completion_cost_observations"), dict)
+    )
+    _require(
+        observed_record_count >= minimum_observed_records,
+        "sample records must include representative completion-cost observation evidence",
+        errors,
+    )
     return errors
+
+
+def _completion_cost_observability(records: list[dict[str, Any]]) -> dict[str, Any]:
+    observed = [record["completion_cost_observations"] for record in records if isinstance(record.get("completion_cost_observations"), dict)]
+    totals = {field: sum(int(item.get(field, 0) or 0) for item in observed) for field in sorted(COMPLETION_COST_NUMERIC_FIELDS)}
+    driver_counts = Counter(
+        driver.get("classification")
+        for item in observed
+        for driver in item.get("cost_drivers", [])
+        if isinstance(driver, dict) and driver.get("classification")
+    )
+    owner_counts = Counter(
+        driver.get("owner_surface")
+        for item in observed
+        for driver in item.get("cost_drivers", [])
+        if isinstance(driver, dict) and driver.get("owner_surface")
+    )
+    section_counts = Counter(section for item in observed for section in item.get("aw_sections_used", []) if isinstance(section, str))
+    handoff_counts = Counter(item.get("handoff_recovery_status") for item in observed if item.get("handoff_recovery_status"))
+    return {
+        "kind": "agentic-workspace/external-agent-completion-cost-observability/v1",
+        "record_count": len(observed),
+        "scenario_ids": sorted({str(item.get("scenario_id")) for item in observed if item.get("scenario_id")}),
+        "totals": totals,
+        "driver_classification_counts": dict(sorted(driver_counts.items())),
+        "owner_surface_counts": dict(sorted(owner_counts.items())),
+        "aw_sections_used_counts": dict(sorted(section_counts.items())),
+        "handoff_recovery_status_counts": dict(sorted(handoff_counts.items())),
+    }
 
 
 def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -367,6 +525,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
     operating_loop_closeout_states = Counter(record["operating_loop"].get("closeout_state") for record in operating_loop_records)
     operating_loop_safe_claims = Counter(record["operating_loop"].get("safe_claim") for record in operating_loop_records)
     operating_loop_residue_owners = Counter(record["operating_loop"].get("residue_owner") for record in operating_loop_records)
+    completion_cost_observability = _completion_cost_observability([*records, *live_runs])
 
     operating_loop_observability = {
         "kind": "agentic-workspace/external-agent-operating-loop-observability/v1",
@@ -388,6 +547,8 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "surface_simplification_decisions_exist": bool(pack["surfaces"]["decisions"]),
         "operational_trace_protocol_exists": (LANE_DIR / "operational-decision-trace.md").exists(),
         "operating_loop_observable": operating_loop_observability["record_count"] > 0,
+        "completion_cost_observation_contract_exists": isinstance(pack["scenarios"].get("completion_cost_observation_contract"), dict),
+        "completion_cost_observations_exist": completion_cost_observability["record_count"] > 0,
     }
     fixture_closure_state = "ready_for_fixture_closure" if all(acceptance.values()) else "continued_work"
     live_status = "not-run"
@@ -421,6 +582,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "dismissal_count": len(dismissed),
         "surface_decision_counts": dict(sorted(surface_decisions.items())),
         "operating_loop_observability": operating_loop_observability,
+        "completion_cost_observability": completion_cost_observability,
         "acceptance": acceptance,
         "fixture_closure_state": fixture_closure_state,
         "closure_state": closure_state,
