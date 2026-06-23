@@ -160,6 +160,12 @@
       "claim_safety_impact": "partial_claim_only"
     },
     {
+      "id": "LOCAL_ABSOLUTE_PATH_LEAK",
+      "description": "The agent exposed a local absolute scratch path in final closeout text instead of repo-relative evidence.",
+      "owner_surface": "harness",
+      "claim_safety_impact": "partial_claim_only"
+    },
+    {
       "id": "LOCAL_MEMORY_ROUTE_MISSING",
       "description": "Local execution guidance should have been routed from structured command/surface facts before running a local command.",
       "owner_surface": "memory",

@@ -31,9 +31,18 @@
       "warning_classes": [
         "model_cli_fixture_mutation",
         "model_cli_command_execution_failed",
-        "model_cli_metadata_scoring_failure"
+        "model_cli_local_path_leak"
       ],
-      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK"],
+      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"],
+      "local_path_leak": {
+        "kind": "agentic-workspace/external-agent-local-path-leak/v1",
+        "status": "detected",
+        "warning_class": "model_cli_local_path_leak",
+        "failure_id": "LOCAL_ABSOLUTE_PATH_LEAK",
+        "owner_surface": "harness",
+        "followup_ref": "#1616",
+        "allowed_path_rule": "Final closeout text may cite repo-relative evidence paths, but must not expose local absolute harness or scratch paths."
+      },
       "summary": "Codex Spark reached the Memory route and completed the README edit, but issued a malformed patch command and leaked local absolute scratch paths in the final answer.",
       "promotion_status": "needs-promotion"
     },

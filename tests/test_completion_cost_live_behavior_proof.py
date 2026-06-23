@@ -32,6 +32,7 @@ def test_live_behavior_proof_reports_checked_in_codex_spark_gate() -> None:
     assert payload["live_evaluation"]["run_count"] >= 4
     assert payload["live_evaluation"]["clean_run_count"] >= 3
     assert payload["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
+    assert payload["live_evaluation"]["failure_counts"]["LOCAL_ABSOLUTE_PATH_LEAK"] == 1
     assert payload["closure_boundary"]["may_complete_long_horizon_behavior_proof"] is False
     assert payload["closure_boundary"]["missing_live_failure_routes"] == []
     assert any("unresolved failures" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
@@ -44,7 +45,7 @@ def test_live_behavior_proof_keeps_actionable_failure_route_visible() -> None:
     routes = payload["live_failure_routes"]
 
     assert routes
-    assert routes[0]["failure_ids"] == ["OWNERSHIP_BOUNDARY_LEAK"]
+    assert set(routes[0]["failure_ids"]) == {"OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"}
     assert routes[0]["followup_ref"] == "#1616"
     assert routes[0]["remediation_kind"] == "actionable-issue"
     assert routes[0]["closure_effect"] == "routed"

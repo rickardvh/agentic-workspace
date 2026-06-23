@@ -101,6 +101,29 @@ COMPLETION_COST_DRIVER_CLASSIFICATIONS = {
     "unsafe_closure",
     "unused_output",
 }
+LOCAL_PATH_LEAK_KIND = "agentic-workspace/external-agent-local-path-leak/v1"
+
+
+def _validate_local_path_leak_packet(
+    packet: Any,
+    *,
+    prefix: str,
+    errors: list[str],
+) -> None:
+    _require(isinstance(packet, dict), f"{prefix} local_path_leak must be an object", errors)
+    if not isinstance(packet, dict):
+        return
+    _require(packet.get("kind") == LOCAL_PATH_LEAK_KIND, f"{prefix} local_path_leak kind is invalid", errors)
+    _require(packet.get("status") == "detected", f"{prefix} local_path_leak status is invalid", errors)
+    _require(packet.get("warning_class") == "model_cli_local_path_leak", f"{prefix} local_path_leak warning_class is invalid", errors)
+    _require(packet.get("failure_id") == "LOCAL_ABSOLUTE_PATH_LEAK", f"{prefix} local_path_leak failure_id is invalid", errors)
+    _require(packet.get("owner_surface") == "harness", f"{prefix} local_path_leak owner_surface must be harness", errors)
+    _require(bool(str(packet.get("followup_ref") or "").strip()), f"{prefix} local_path_leak must route to a followup_ref", errors)
+    _require(
+        "repo-relative" in str(packet.get("allowed_path_rule") or ""),
+        f"{prefix} local_path_leak allowed_path_rule must preserve repo-relative evidence",
+        errors,
+    )
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -337,6 +360,12 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             _require(failure_id in failure_ids, f"record {record.get('id')} references unknown failure id {failure_id}", errors)
         for owner in record.get("repair_surface_hints", []):
             _require(owner in owner_surfaces, f"record {record.get('id')} references unknown owner surface {owner}", errors)
+        if "LOCAL_ABSOLUTE_PATH_LEAK" in record.get("failure_ids", []):
+            _validate_local_path_leak_packet(
+                record.get("local_path_leak"),
+                prefix=f"record {record.get('id')}",
+                errors=errors,
+            )
         if "completion_cost_observations" in record:
             _validate_completion_cost_observations(
                 record.get("completion_cost_observations"),
@@ -381,6 +410,12 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             )
         for failure_id in record.get("failure_ids", []):
             _require(failure_id in failure_ids, f"live run {record.get('id')} references unknown failure id {failure_id}", errors)
+        if "LOCAL_ABSOLUTE_PATH_LEAK" in record.get("failure_ids", []):
+            _validate_local_path_leak_packet(
+                record.get("local_path_leak"),
+                prefix=f"live run {record.get('id')}",
+                errors=errors,
+            )
         if "completion_cost_observations" in record:
             _validate_completion_cost_observations(
                 record.get("completion_cost_observations"),
