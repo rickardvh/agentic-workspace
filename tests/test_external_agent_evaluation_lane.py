@@ -464,6 +464,26 @@ def test_model_cli_harness_source_checkout_config_uses_local_schema(tmp_path: Pa
     assert 'cli_invoke = "uv run agentic-workspace"' in local_config
 
 
+def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(tmp_path: Path) -> None:
+    module = _load_harness_module()
+
+    payload = module.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="codex",
+        model="gpt-5.4-mini",
+        scenario_filter="memory-consult-before-edit",
+        prompt_variant="packaging-note",
+        execute=False,
+        output_root=tmp_path / "runs",
+        timeout_seconds=None,
+    )
+
+    pyproject_text = (Path(payload["results"][0]["repo_path"]) / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"agentic-workspace",' in pyproject_text
+    assert "[tool.uv.sources]" in pyproject_text
+    assert f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}' in pyproject_text
+
+
 def test_model_cli_harness_preflight_resolves_adapter_executable_candidates(tmp_path: Path) -> None:
     module = _load_harness_module()
     tool_dir = tmp_path / "tools"
