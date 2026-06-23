@@ -326,6 +326,7 @@ def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Pa
 
     assert skills["kind"] == "agentic-workspace/startup-skills-projection/v1"
     assert catalog["available"] is True
+    assert catalog["catalog_command_available"] is True
     assert isinstance(catalog["total_count"], int)
     assert isinstance(catalog["warning_count"], int)
     assert "agentic-workspace skills" in catalog["command"]
@@ -333,6 +334,15 @@ def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Pa
     assert "counts_by_source_kind" not in catalog
     assert "counts_by_owner" not in catalog
     assert "sources" not in catalog
+
+
+def test_compact_skill_catalog_marks_malformed_payload_unavailable() -> None:
+    catalog = workspace_runtime_primitives._compact_startup_skill_catalog_summary({"skills": "bad", "warnings": "bad"})
+
+    assert catalog["available"] is False
+    assert catalog["catalog_command_available"] is True
+    assert catalog["total_count"] == 0
+    assert catalog["warning_count"] == 0
 
 
 def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path, capsys) -> None:
