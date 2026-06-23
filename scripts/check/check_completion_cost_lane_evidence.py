@@ -15,6 +15,13 @@ STATIC_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evid
 CORPUS_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evidence" / "github-1680-json-corpus-cost-ranking.closeout.json"
 EXTERNAL_LANE_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
 SURFACE_DECISIONS = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "surface-decisions.sample.json"
+BEFORE_AFTER_CLOSEOUT = (
+    REPO_ROOT
+    / ".agentic-workspace"
+    / "planning"
+    / "closeout-evidence"
+    / "github-1680-before-after-closure-evidence.closeout.json"
+)
 
 
 def _repo_relative(path: Path) -> str:
@@ -77,6 +84,35 @@ def _surface_decision_summary(decisions_payload: dict[str, Any]) -> dict[str, An
     }
 
 
+def _before_after_closeout_summary(closeout: dict[str, Any] | None) -> dict[str, Any]:
+    if closeout is None:
+        return {
+            "status": "missing",
+            "evidence_ref": _repo_relative(BEFORE_AFTER_CLOSEOUT),
+            "rule": "Before/after signals exist for landed reductions, but retained closeout evidence is not present.",
+        }
+
+    closure_check = closeout.get("closure_check", {})
+    measured_count = int(str(closure_check.get("measured_improvement_count", "0") or "0"))
+    satisfied_count = int(str(closure_check.get("satisfied_pending_close_count", "0") or "0"))
+    remaining_count = int(str(closure_check.get("remaining_cost_source_count", "0") or "0"))
+    recorded = closure_check.get("before_after_evidence_status") == "recorded"
+
+    return {
+        "status": "present" if recorded else "partial",
+        "evidence_ref": _repo_relative(BEFORE_AFTER_CLOSEOUT),
+        "measured_improvement_count": measured_count,
+        "child_issue_reconciliation": {
+            "status": closure_check.get("child_issue_reconciliation_status", ""),
+            "satisfied_pending_close_count": satisfied_count,
+            "remaining_cost_source_count": remaining_count,
+        },
+        "parent_close_permission": closure_check.get("parent_close_permission", ""),
+        "closure_decision": closure_check.get("closure decision", ""),
+        "rule": "Retained before/after closeout evidence is present; parent closure still depends on explicit close permission and remaining-cost routing.",
+    }
+
+
 def build_lane_evidence_report() -> dict[str, Any]:
     lane = _load_json(LANE_PATH)
     external = _load_external_lane_module()
@@ -84,6 +120,8 @@ def build_lane_evidence_report() -> dict[str, Any]:
     static_closeout = _load_json(STATIC_CLOSEOUT)
     corpus_closeout = _load_json(CORPUS_CLOSEOUT)
     surface_summary = _surface_decision_summary(_load_json(SURFACE_DECISIONS))
+    before_after_closeout = _load_json(BEFORE_AFTER_CLOSEOUT) if BEFORE_AFTER_CLOSEOUT.exists() else None
+    before_after_summary = _before_after_closeout_summary(before_after_closeout)
 
     completion_cost = external_report["completion_cost_observability"]
     completed_slices = _completed_slice_ids(lane)
@@ -122,10 +160,7 @@ def build_lane_evidence_report() -> dict[str, Any]:
             "source": _repo_relative(SURFACE_DECISIONS),
             "summary": surface_summary,
         },
-        "before_after_closure_evidence": {
-            "status": "partial" if reductions_present and measurement_present else "missing",
-            "rule": "Before/after signals exist for landed reductions, but full lane closure still requires explicit remaining-cost routing and a final closure decision.",
-        },
+        "before_after_closure_evidence": before_after_summary,
     }
     blockers = []
     if not measurement_present:
@@ -138,6 +173,10 @@ def build_lane_evidence_report() -> dict[str, Any]:
         blockers.append("at least one landed reduction must have before/after evidence")
     if stages["before_after_closure_evidence"]["status"] != "present":
         blockers.append("full before/after closure evidence and remaining-cost routing are not complete")
+    elif stages["before_after_closure_evidence"]["parent_close_permission"] != "granted":
+        blockers.append("parent close permission is not granted")
+        if stages["before_after_closure_evidence"]["child_issue_reconciliation"]["remaining_cost_source_count"]:
+            blockers.append("remaining cost sources are not fully reconciled")
 
     return {
         "kind": "agentic-workspace/completion-cost-lane-evidence/v1",

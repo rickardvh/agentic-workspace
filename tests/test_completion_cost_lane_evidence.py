@@ -33,10 +33,18 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
     assert payload["stages"]["long_horizon_behavior_evidence"]["proof_status"] == "active"
     assert payload["stages"]["long_horizon_behavior_evidence"]["actual_long_horizon_proof_complete"] is False
     assert payload["stages"]["landed_reductions"]["status"] == "present"
-    assert payload["stages"]["before_after_closure_evidence"]["status"] == "partial"
+    before_after = payload["stages"]["before_after_closure_evidence"]
+    assert before_after["status"] == "present"
+    assert (
+        before_after["evidence_ref"]
+        == ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json"
+    )
+    assert before_after["measured_improvement_count"] >= 3
+    assert before_after["child_issue_reconciliation"]["status"] == "partial"
+    assert before_after["child_issue_reconciliation"]["remaining_cost_source_count"] >= 1
     assert payload["closure_boundary"]["may_close_parent_issue"] is False
     assert any("actual long-horizon behavior proof" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
-    assert any("full before/after closure evidence" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
+    assert any("parent close permission is not granted" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
 
 
 def test_completion_cost_lane_evidence_keeps_reduction_guardrails_visible() -> None:
