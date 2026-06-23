@@ -32,6 +32,11 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
     assert payload["stages"]["long_horizon_behavior_evidence"]["observation_support_status"] == "present"
     assert payload["stages"]["long_horizon_behavior_evidence"]["proof_status"] == "active"
     assert payload["stages"]["long_horizon_behavior_evidence"]["actual_long_horizon_proof_complete"] is False
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_behavior_proof_status"] == "blocked"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_run_count"] >= 4
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_clean_run_count"] >= 3
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_routes"][0]["followup_ref"] == "#1616"
     assert payload["stages"]["landed_reductions"]["status"] == "present"
     before_after = payload["stages"]["before_after_closure_evidence"]
     assert before_after["status"] == "present"
@@ -43,7 +48,7 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
     assert before_after["child_issue_reconciliation"]["status"] == "partial"
     assert before_after["child_issue_reconciliation"]["remaining_cost_source_count"] >= 1
     assert payload["closure_boundary"]["may_close_parent_issue"] is False
-    assert any("actual long-horizon behavior proof" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
+    assert any("unresolved failures" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
     assert any("parent close permission is not granted" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
 
 

@@ -1,0 +1,116 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Gate #1680 live behavior proof",
+  "plan_id": "github-1680-live-behavior-proof-gate",
+  "created_at": "2026-06-23T14:07:18.431753+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1680-live-behavior-proof-gate.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1680-live-behavior-proof-gate.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1680-live-behavior-proof-gate",
+    "status": "completed",
+    "scope": "Gate #1680 live behavior proof from checked-in Codex Spark live results without claiming parent closure.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make #1680 actual long-horizon live behavior proof explicit and checkable without claiming parent closure.",
+    "hard constraints": "Use the checked-in Codex GPT 5.3 Spark live results as evidence; do not mark #1680 closed while live failures remain unresolved.",
+    "agent may decide locally": "Exact report field names, test assertions, and lane wording that make the live-proof gate actionable.",
+    "escalate when": "A correct fix requires running new paid/external model evaluations, changing harness semantics broadly, or closing/removing the promoted live failure."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added a #1680 live behavior proof gate over checked-in Codex GPT 5.3 Spark live results and wired it into the lane evidence checker.",
+    "scope touched": "live-proof checker, focused tests, #1680 aggregate checker, #1680 lane record, retained closeout evidence, and planning metadata.",
+    "changed surfaces": "scripts/check/check_completion_cost_live_behavior_proof.py; tests/test_completion_cost_live_behavior_proof.py; scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/closeout-evidence/github-1680-live-behavior-proof-gate.closeout.json; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; planning closeout metadata.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected; live proof evidence is present, allowed model is Codex GPT 5.3 Spark, proof remains blocked by routed OWNERSHIP_BOUNDARY_LEAK #1616, and no parent closure is claimed.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_completion_cost_live_behavior_proof.py tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_live_behavior_proof.py --format json; uv run python scripts/check/check_completion_cost_lane_evidence.py --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py summary --target . --format json; make test-workspace; make lint-workspace",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make #1680 actual long-horizon live behavior proof explicit and checkable without claiming parent closure.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Slice satisfied: the live behavior proof gate reports evidence_present=true, proof_complete=false, and the routed live failure with followup #1616. Parent #1680 remains open.",
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "live_behavior_proof_status": "blocked",
+    "live_model": "gpt-5.3-codex-spark",
+    "live_run_count": "4",
+    "live_clean_run_count": "3",
+    "live_failure_count": "1",
+    "live_failure_ids": "OWNERSHIP_BOUNDARY_LEAK",
+    "live_failure_route": "#1616",
+    "parent_close_permission": "not-granted",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "scripts/check/check_completion_cost_live_behavior_proof.py and scripts/check/check_completion_cost_lane_evidence.py",
+    "reopen trigger": "Reopen when live results change, #1616 is fixed or accepted as non-blocking, or #1680 closeout attempts to treat routed live failures as proof completion."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Live behavior proof must distinguish present Codex Spark evidence from clean completion status.",
+    "motivation worth preserving": "Future #1680 closeout should use the live-proof gate instead of reading raw live result records.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1680 live long-horizon behavior proof is now explicit and checkable, but blocked until the routed live failure is resolved or accepted as non-blocking.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+          "owner": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
