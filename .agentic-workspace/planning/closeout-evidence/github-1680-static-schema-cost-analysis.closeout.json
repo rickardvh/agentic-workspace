@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Static completion-cost analysis for ordinary output schemas",
+  "plan_id": "github-1680-static-schema-cost-analysis",
+  "created_at": "2026-06-23T08:44:58.954731+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1680-static-schema-cost-analysis.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1680-static-schema-cost-analysis.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1680-static-schema-cost-analysis",
+    "status": "completed",
+    "scope": "Implement static schema completion-cost analysis for ordinary output surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Static completion-cost analysis for ordinary AW output schemas.",
+    "hard constraints": "Do not create ordinary-loop output or delete fields based on static analysis.",
+    "agent may decide locally": "Checker heuristics, fixture shape, and focused proof.",
+    "escalate when": "Scope moves into runtime corpus analysis, field removal, or ordinary output behavior changes."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added maintainer-facing static completion-cost schema analyzer and focused tests for #1690.",
+    "scope touched": "scripts/check checker, focused tests, and #1680/#1690 planning records",
+    "changed surfaces": "scripts/check/check_completion_cost_schema_analysis.py; tests/test_completion_cost_schema_analysis.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; .agentic-workspace/planning/execplans/github-1680-static-schema-cost-analysis.plan.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed maintainer/evaluation-facing; no ordinary command output behavior changed; #1680 remains open for #1691 corpus and later reductions.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_completion_cost_schema_analysis.py; uv run python scripts/check/check_completion_cost_schema_analysis.py --format json --max-findings-per-surface 3; uv run ruff check scripts/check/check_completion_cost_schema_analysis.py tests/test_completion_cost_schema_analysis.py; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1690 static completion-cost analysis for ordinary output schemas.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The #1690 static analyzer and tests landed; see proof_report.validation proof.",
+    "unsolved intent passed to": "#1690 has no unsolved slice intent; the #1680 parent lane remains open via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json, with #1691 as the next unpromoted lane slice."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691 activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691 rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Static analyzer emits structured suspects for start, implement, and report ordinary surfaces and routes findings to #1680/#1691 measurement.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+          "owner": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; next slice #1691",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
