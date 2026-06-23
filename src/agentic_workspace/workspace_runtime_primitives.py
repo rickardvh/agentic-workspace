@@ -22043,6 +22043,17 @@ def _fresh_session_digest_payload(
     active_execplan = str(planning_record.get("path") or planning_record.get("source") or "").strip()
     if active_execplan:
         active_refs.append(active_execplan)
+    source_artifacts = []
+    issue_source_path = str(issue_scope.get("source_path") or "").strip()
+    if issue_source_path:
+        source_artifacts.append(issue_source_path)
+    if active_execplan:
+        source_artifacts.append(active_execplan)
+    for changed_path in normalized_changed[:5]:
+        if changed_path not in source_artifacts:
+            source_artifacts.append(changed_path)
+    if issue_refs:
+        source_artifacts.append("GitHub issue refs listed in issue_refs")
     facts = [
         f"task_refs={','.join(issue_refs)}" if issue_refs else "task_refs=none",
         f"branch={branch_posture.get('current_branch', '') or branch_posture.get('status', 'unknown')}",
@@ -22091,11 +22102,7 @@ def _fresh_session_digest_payload(
             command='agentic-workspace start --target . --task "<next task>" --format json',
             cli_invoke=cli_invoke,
         ),
-        "source_artifacts": [
-            ".agentic-workspace/local/cache/external-intent-evidence.json",
-            "docs/reviews/aw-completion-cost-session-log-analysis-2026-06-23.md",
-            "GitHub issue refs listed in issue_refs",
-        ],
+        "source_artifacts": source_artifacts,
         "detail_commands": {
             "refresh_issue_evidence": _command_with_cli_invoke(
                 command="agentic-workspace external-intent refresh-github --target . --state all --format json",
@@ -28331,6 +28338,44 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
         compact_gate.pop("work_shape_guidance", None)
+        if compact_gate.get("status") in {"clear", "satisfied"}:
+            active_plan_reliance = _as_dict(compact_gate.get("active_plan_reliance"))
+            keep_active_plan_reliance = active_plan_reliance.get("permission_claim") != "direct-work-no-active-plan"
+            candidate_pressure = _as_dict(compact_gate.get("candidate_pressure"))
+            issue_scope_evidence = _as_dict(compact_gate.get("issue_scope_evidence"))
+            changed_path_facts = _as_dict(compact_gate.get("changed_path_facts"))
+            compact_changed_path_facts = {
+                key: changed_path_facts.get(key)
+                for key in (
+                    "dirty_shape",
+                    "surface_roots",
+                    "surface_root_count",
+                    "scope_growth_detected",
+                    "scope_growth_reasons",
+                )
+                if key in changed_path_facts
+            }
+            compact_gate = {
+                key: compact_gate.get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "gate_result",
+                    "workflow_sufficient",
+                    "required_next_action",
+                    "implementation_allowed",
+                    "delegation_decision_required",
+                )
+                if key in compact_gate
+            }
+            if compact_changed_path_facts:
+                compact_gate["changed_path_facts"] = compact_changed_path_facts
+            if candidate_pressure.get("status") == "observed":
+                compact_gate["candidate_pressure"] = candidate_pressure
+                if issue_scope_evidence:
+                    compact_gate["issue_scope_evidence"] = issue_scope_evidence
+            if keep_active_plan_reliance:
+                compact_gate["active_plan_reliance"] = active_plan_reliance
         if (
             compact_gate.get("status") in {"clear", "satisfied"}
             and _as_dict(compact_gate.get("candidate_pressure")).get("status") != "observed"

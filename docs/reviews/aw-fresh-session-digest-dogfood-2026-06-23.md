@@ -23,7 +23,7 @@ uv run python scripts/run_agentic_workspace.py summary `
 - `issue_refs`: contains `#1680`
 - `current_branch_or_state`: reports the current git branch/state
 - `closure_boundary.may_claim_parent_closure`: `false`
-- `source_artifacts`: points to cached external intent evidence and compact review artifacts
+- `source_artifacts`: points to cached external intent evidence, relevant changed paths, and issue refs when available
 - `detail_commands.refresh_issue_evidence`: keeps issue refresh explicit instead of embedding issue bodies
 
 ## Boundary
