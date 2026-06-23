@@ -1,0 +1,77 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Actual JSON completion-cost corpus for ordinary AW outputs",
+  "plan_id": "github-1680-json-corpus-cost-ranking",
+  "created_at": "2026-06-23T10:05:00+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1680-json-corpus-cost-ranking.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1680-json-corpus-cost-ranking.plan.json",
+  "retention": {
+    "state": "evidence-retained",
+    "reason": "retained closeout evidence summarizes the #1691 slice for #1680 continuation",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface for #1691 without replaying the full branch conversation.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts for completed lane slices."
+  },
+  "active_milestone": {
+    "id": "github-1680-json-corpus-cost-ranking",
+    "status": "completed",
+    "scope": "Implement repeatable actual JSON completion-cost corpus analysis for ordinary AW outputs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Representative actual-JSON corpus and analyzer for ordinary AW output completion-cost ranking.",
+    "hard constraints": "Do not add a new ordinary-loop surface; do not optimize for bytes alone; keep reductions as candidates until behavior and safety proof exists.",
+    "agent may decide locally": "Corpus command set, measurement heuristics, fixture shape, and focused proof.",
+    "escalate when": "Work changes into long-horizon evaluation, ordinary output behavior changes, or field removal."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agent",
+    "what happened": "Added maintainer-facing actual JSON corpus analyzer with live ordinary AW command capture and deterministic fixture tests.",
+    "scope touched": "scripts/check checker, focused tests, and #1680/#1691 planning records",
+    "changed surfaces": "scripts/check/check_completion_cost_json_corpus.py; tests/test_completion_cost_json_corpus.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; .agentic-workspace/planning/closeout-evidence/github-1680-json-corpus-cost-ranking.closeout.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from #1680 lane; next slice is long-horizon behavior evidence through #1602, using Codex GPT 5.3 Spark or GPT 5.4 Mini for evaluations.",
+    "next step": "Promote long-horizon behavior evidence or a selected #1602 evaluation slice before running evaluations."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed maintainer/evaluation-facing; no ordinary command output behavior changed; #1680 remains open for behavior proof, reductions, and before/after evidence.",
+    "proof status": "passed",
+    "intent served": "yes for #1691; parent #1680 remains open",
+    "config compliance": "used existing scripts/check maintainer path and focused tests",
+    "misinterpretation risk": "medium",
+    "follow-on decision": "Use corpus ranked observations to choose behavior probes and reduction candidates."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_completion_cost_json_corpus.py; uv run python scripts/check/check_completion_cost_json_corpus.py --format text --timeout-seconds 60; uv run ruff check scripts/check/check_completion_cost_json_corpus.py tests/test_completion_cost_json_corpus.py; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make test-workspace; make lint-workspace",
+    "proof achieved now": "yes; live corpus captured and analyzed four ordinary JSON samples.",
+    "evidence for \"proof achieved\" state": "Live analyzer output reported 4 analyzed samples and ranked observations including implement context, start context, summary/continuation or residue governance, and doctor installed-state compatibility."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1691 actual JSON completion-cost corpus for ordinary AW outputs.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The corpus analyzer defines representative ordinary JSON commands, records field-size rankings, empty/default ratios, repeated strings, prose/share, actionability and selector signals, duplicate concepts, cost type, owner surface, and candidate measurement/reduction.",
+    "unsolved intent passed to": "#1691 has no unsolved slice intent; #1680 parent remains open for behavior proof, reductions, and before/after evidence."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#1691 measurement support is present, but #1680 still needs long-horizon behavior evidence, at least one reduction, and before/after proof.",
+    "evidence carried forward": "scripts/check/check_completion_cost_json_corpus.py and its live run output",
+    "reopen trigger": "Reopen #1691 if the corpus cannot be rerun before/after a reduction or stops producing ranked actual-output candidates."
+  },
+  "durable_residue": {
+    "status": "present",
+    "learned constraint": "Actual JSON measurements can expose runtime-heavy surfaces that static schema analysis cannot rank by itself.",
+    "motivation worth preserving": "Use measured samples to pick behavior probes and reductions rather than optimizing static suspects blindly.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "promotion trigger": "When selecting the next reduction or behavior-proof slice, inspect the corpus ranked observations first. Dogfooding friction routed to https://github.com/rickardvh/agentic-workspace/issues/1706.",
+    "retention after promotion": "retain"
+  }
+}
