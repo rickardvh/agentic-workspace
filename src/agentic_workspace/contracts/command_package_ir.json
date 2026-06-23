@@ -1151,6 +1151,12 @@
                 "default": ""
               },
               {
+                "name": "receipt_log",
+                "kind": "attr",
+                "attr": "receipt_log",
+                "default": ""
+              },
+              {
                 "name": "dry_run",
                 "kind": "bool_attr",
                 "attr": "dry_run"
@@ -3933,6 +3939,14 @@
                 ],
                 "default": "",
                 "help": "Optional planning id that the proof receipt applies to."
+              },
+              {
+                "name": "receipt_log",
+                "flags": [
+                  "--receipt-log"
+                ],
+                "default": "",
+                "help": "Optional repo-local log path or short excerpt used to attach a compact failed-proof summary."
               },
               {
                 "name": "dry_run",

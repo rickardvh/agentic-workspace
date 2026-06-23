@@ -34691,6 +34691,146 @@ def _proof_receipt_focused_commands(changed_paths: list[str]) -> list[str]:
     return [f"uv run pytest {' '.join(test_paths)} -q"]
 
 
+def _proof_receipt_log_source(*, target_root: Path, receipt_log: str) -> tuple[str, dict[str, Any]] | None:
+    raw = str(receipt_log or "").strip()
+    if not raw:
+        return None
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = target_root / candidate
+    try:
+        resolved = candidate.resolve()
+        target_resolved = target_root.resolve()
+        relative = resolved.relative_to(target_resolved).as_posix()
+    except (OSError, ValueError):
+        resolved = None
+        relative = ""
+    if resolved is not None and resolved.is_file():
+        text = resolved.read_text(encoding="utf-8", errors="replace")
+        return text[:200_000], {
+            "kind": "repo-local-path",
+            "path": relative,
+            "truncated": len(text) > 200_000,
+            "rule": "Full logs remain accessible at the referenced path; this payload stores only a compact summary.",
+        }
+    return raw[:200_000], {
+        "kind": "caller-supplied-excerpt",
+        "truncated": len(raw) > 200_000,
+        "rule": "Caller supplied an excerpt; retain the original terminal or log artifact for audit.",
+    }
+
+
+def _pytest_failure_cluster_from_line(line: str) -> dict[str, str] | None:
+    stripped = line.strip()
+    match = re.search(r"\bFAILED\s+([^\s]+?)(?:\s+-|\s*$)", stripped)
+    if not match:
+        return None
+    node_id = match.group(1)
+    path = node_id.split("::", 1)[0]
+    test_name = node_id.split("::")[-1] if "::" in node_id else ""
+    return {
+        "cluster_key": path,
+        "likely_root": path,
+        "representative": stripped,
+        "node_id": node_id,
+        "test_name": test_name,
+        "focused_command": f"uv run pytest {node_id} -q",
+    }
+
+
+def _traceback_failure_cluster_from_lines(lines: list[str]) -> dict[str, str] | None:
+    for line in lines:
+        match = re.search(r'File "([^"]+)", line \d+', line)
+        if not match:
+            continue
+        path = Path(match.group(1)).as_posix()
+        if "/site-packages/" in path or "\\site-packages\\" in path:
+            continue
+        return {
+            "cluster_key": path,
+            "likely_root": path,
+            "representative": line.strip(),
+            "node_id": "",
+            "test_name": "",
+            "focused_command": "",
+        }
+    return None
+
+
+def _proof_failure_summary(
+    *,
+    command: str,
+    result: str,
+    changed_paths: list[str],
+    log_text: str,
+    log_source: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not _proof_receipt_result_failed(result) or not log_text.strip():
+        return None
+    lines = log_text.splitlines()
+    clusters: dict[str, dict[str, Any]] = {}
+    for line in lines:
+        cluster = _pytest_failure_cluster_from_line(line)
+        if cluster is None:
+            continue
+        key = cluster["cluster_key"]
+        entry = clusters.setdefault(
+            key,
+            {
+                "likely_root": cluster["likely_root"],
+                "representative": cluster["representative"],
+                "node_ids": [],
+                "focused_commands": [],
+                "occurrences": 0,
+            },
+        )
+        entry["occurrences"] += 1
+        if cluster["node_id"] and cluster["node_id"] not in entry["node_ids"]:
+            entry["node_ids"].append(cluster["node_id"])
+        if cluster["focused_command"] and cluster["focused_command"] not in entry["focused_commands"]:
+            entry["focused_commands"].append(cluster["focused_command"])
+    if not clusters:
+        cluster = _traceback_failure_cluster_from_lines(lines)
+        if cluster is not None:
+            clusters[cluster["cluster_key"]] = {
+                "likely_root": cluster["likely_root"],
+                "representative": cluster["representative"],
+                "node_ids": [],
+                "focused_commands": [],
+                "occurrences": 1,
+            }
+    top_clusters = sorted(
+        clusters.values(),
+        key=lambda item: (-int(item.get("occurrences", 0)), str(item.get("likely_root", ""))),
+    )[:5]
+    focused_commands: list[str] = []
+    for cluster in top_clusters:
+        for focused in cluster.get("focused_commands", []):
+            if focused not in focused_commands:
+                focused_commands.append(str(focused))
+    if not focused_commands:
+        focused_commands = _proof_receipt_focused_commands(changed_paths)
+    failure_lines = [line.strip() for line in lines if re.search(r"\b(FAILED|ERROR|FAILURES?|Traceback)\b", line)]
+    return {
+        "kind": "agentic-workspace/proof-failure-summary/v1",
+        "status": "available" if top_clusters else "unclustered",
+        "failed_command": command,
+        "result": result,
+        "log_source": log_source,
+        "failure_line_count": len(failure_lines),
+        "cluster_count": len(top_clusters),
+        "top_root_cause_clusters": top_clusters,
+        "focused_rerun_commands": focused_commands,
+        "full_suite_rerun_premature": bool(focused_commands),
+        "full_log_access": log_source,
+        "guardrails": [
+            "Do not infer semantic correctness from log text.",
+            "Use the referenced full log or original terminal output for audit.",
+            "Run full selected proof before completion even when focused reruns pass.",
+        ],
+    }
+
+
 def _proof_receipt_retry_ladder(*, command: str, result: str, changed_paths: list[str]) -> dict[str, Any] | None:
     if not _proof_receipt_result_failed(result):
         return None
@@ -34740,6 +34880,7 @@ def _record_proof_receipt_payload(
     result: str,
     changed_paths: list[str],
     plan_id: str = "",
+    receipt_log: str = "",
     dry_run: bool = False,
 ) -> dict[str, Any]:
     command = str(command or "").strip()
@@ -34761,6 +34902,19 @@ def _record_proof_receipt_payload(
     repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
     if repair_retry_ladder is not None:
         receipt["repair_retry_ladder"] = repair_retry_ladder
+    log_source = _proof_receipt_log_source(target_root=target_root, receipt_log=receipt_log)
+    failure_summary = None
+    if log_source is not None:
+        log_text, log_source_payload = log_source
+        failure_summary = _proof_failure_summary(
+            command=command,
+            result=result,
+            changed_paths=changed_paths,
+            log_text=log_text,
+            log_source=log_source_payload,
+        )
+    if failure_summary is not None:
+        receipt["failure_summary"] = failure_summary
     if not dry_run:
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -34773,6 +34927,8 @@ def _record_proof_receipt_payload(
     }
     if repair_retry_ladder is not None:
         payload["repair_retry_ladder"] = repair_retry_ladder
+    if failure_summary is not None:
+        payload["failure_summary"] = failure_summary
     return payload
 
 
@@ -34790,6 +34946,7 @@ def _emit_proof(
     receipt_command: str = "",
     receipt_result: str = "",
     receipt_plan: str = "",
+    receipt_log: str = "",
     dry_run: bool = False,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
@@ -34801,6 +34958,7 @@ def _emit_proof(
             result=receipt_result,
             changed_paths=normalized_paths,
             plan_id=receipt_plan,
+            receipt_log=receipt_log,
             dry_run=dry_run,
         )
         if select:
