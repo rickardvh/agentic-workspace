@@ -14097,6 +14097,41 @@ def _memory_decision_packet_payload(
     }
 
 
+def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
+    full = _as_dict(packet)
+    pull = _as_dict(full.get("pull"))
+    capture = _as_dict(full.get("capture"))
+    candidate_routes = _list_payload(pull.get("candidate_routes"))
+    relevant_routes = [
+        item for item in candidate_routes if isinstance(item, dict) and str(item.get("match_source") or "").strip() != "routing-baseline"
+    ]
+    compact_pull: dict[str, Any] = {
+        "status": pull.get("status"),
+        "recommended_command": pull.get("recommended_command"),
+        "route_count": len(candidate_routes),
+        "relevant_route_count": len(relevant_routes),
+        "read_budget": pull.get("read_budget"),
+        "agent_decision_required": pull.get("agent_decision_required"),
+    }
+    if relevant_routes:
+        compact_pull["candidate_routes"] = relevant_routes
+    compact_capture: dict[str, Any] = {
+        "status": capture.get("status"),
+        "recommended_commands": capture.get("recommended_commands", []),
+        "candidate_owner_surface_count": len(_list_payload(capture.get("candidate_owner_surfaces"))),
+        "agent_decision_required": capture.get("agent_decision_required"),
+    }
+    return {
+        "kind": full.get("kind"),
+        "stage": full.get("stage"),
+        "force": full.get("force"),
+        "why_visible": "Explicit agent-owned Memory pull/capture decision.",
+        "pull": {key: value for key, value in compact_pull.items() if value is not None},
+        "capture": {key: value for key, value in compact_capture.items() if value is not None},
+        "detail_visibility": "full authority, limits, owner, and candidate detail stay behind verbose implement context",
+    }
+
+
 def _memory_consult_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     memory_consult = payload.get("memory_consult", {})
     return memory_consult if isinstance(memory_consult, dict) else {}
@@ -27926,7 +27961,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("task_posture_packet"), dict)
             else {}
         ),
-        "memory_decision_packet": payload.get("memory_decision_packet", {}),
+        "memory_decision_packet": _compact_memory_decision_packet(payload.get("memory_decision_packet", {})),
         "operating_loop": payload.get("operating_loop", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
