@@ -193,6 +193,7 @@
         "primitive_refs": [
           "workspace.target-root.resolve",
           "planning.summary.load",
+          "payload.assemble",
           "output.fields.select",
           "output.emit"
         ]

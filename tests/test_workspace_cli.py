@@ -235,6 +235,62 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
     assert "missing" not in config
 
 
+def test_summary_fresh_session_digest_is_selector_backed(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    evidence_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "id": "#1680",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "issue",
+                        "title": "[Workspace]: Reduce AW-induced completion cost",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #1680 lane",
+                "--changed",
+                "docs/reviews/example.md",
+                "--select",
+                "fresh_session_digest",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    digest = payload["values"]["fresh_session_digest"]
+
+    assert payload["selection_cost"]["profile_loaded"] == "tiny"
+    assert digest["kind"] == "agentic-workspace/fresh-session-digest/v1"
+    assert digest["issue_refs"] == ["#1680"]
+    assert digest["issue_evidence"]["status"] == "available"
+    assert digest["issue_evidence"]["items"][0]["title"] == "[Workspace]: Reduce AW-induced completion cost"
+    assert digest["changed_paths"] == ["docs/reviews/example.md"]
+    assert digest["closure_boundary"]["may_claim_parent_closure"] is False
+    assert "cannot close issues" in digest["closure_boundary"]["rule"]
+    assert digest["safe_next_command"].endswith('start --target . --task "<next task>" --format json')
+    assert "refresh_issue_evidence" in digest["detail_commands"]
+
+
 def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
