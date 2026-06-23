@@ -93,20 +93,21 @@
       "scripts/check/check_completion_cost_json_corpus.py captures and ranks actual ordinary JSON outputs for start, summary, implement, and doctor samples.",
       "tools/model-cli-harness/external-agent-evaluation/result-records.sample.json records representative completion-cost observations for Codex GPT 5.3 Spark scenarios.",
       "tools/model-cli-harness/external-agent-evaluation/surface-decisions.sample.json records before/after cost signals and rollback conditions for landed reduction slices.",
+      ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json records compact before/after evidence, child issue reconciliation, remaining cost sources, and the blocked parent close permission.",
       "scripts/check/check_completion_cost_lane_evidence.py aggregates the #1680 evidence loop and keeps parent closure blocked until remaining before/after evidence is explicit."
     ],
     "known_gaps": [
       "Representative behavior observations are present, but completed live long-horizon behavior proof remains open before #1680 can close.",
-      "Full before/after closure evidence and remaining-cost routing remain open before #1680 can close."
+      "Child issue reconciliation and remaining-cost owner decisions remain open before #1680 can close."
     ]
   },
-  "residual_lane_work": "Open: complete actual long-horizon behavior proof, aggregate before/after closure evidence, explicitly route remaining cost sources, reconcile completed child issues, and close #1680 only if the evidence proves representative bounded work is cheaper or cheaper to continue.",
+  "residual_lane_work": "Open: complete actual long-horizon behavior proof, reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and close #1680 only if evidence proves representative bounded work is cheaper or cheaper to continue without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
   "parent_close_permission": "not-evaluated",
   "closeout_state": {
     "status": "open",
-    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, and first-tranche reduction signals have landed; parent closure remains blocked on completed long-horizon behavior proof, final before/after evidence, and remaining-cost routing.",
-    "residual_work": "Complete actual long-horizon behavior proof, run and preserve the #1680 lane evidence aggregation, decide which child issues are satisfied by merged reductions, and record explicit remaining cost owners before any parent closeout claim.",
+    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, first-tranche reduction signals, and compact before/after closeout evidence have landed; parent closure remains blocked on completed long-horizon behavior proof, child issue reconciliation, and remaining-cost owner decisions.",
+    "residual_work": "Complete actual long-horizon behavior proof, reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and require explicit parent close permission before any #1680 closeout claim.",
     "next_owner": "long-horizon-behavior-proof"
   },
   "references": [
