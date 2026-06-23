@@ -478,6 +478,11 @@
             "function": "_run_lifecycle_report_adapter"
           },
           {
+            "operation_id": "checkpoint.write",
+            "import_module": "agentic_workspace.workspace_runtime_primitives",
+            "function": "_run_checkpoint_write_adapter"
+          },
+          {
             "operation_id": "external-intent.refresh-github",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
             "function": "_run_external_intent_refresh_github_adapter"
@@ -3520,6 +3525,192 @@
             "runtime_owned": [
               "memory module policy",
               "module runtime execution",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "checkpoint.write.cli",
+          "status": "generated",
+          "command": {
+            "name": "checkpoint",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "checkpoint",
+            "help": "Create or update ignored local chat continuity checkpoints.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "checkpoint_command",
+            "subcommands_required": true,
+            "subcommands": [
+              {
+                "name": "write",
+                "help": "Write or refresh .agentic-workspace/local/chat-checkpoint.json.",
+                "operation_ref": {
+                  "id": "checkpoint.write",
+                  "path": "operations/checkpoint.write.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "task",
+                    "flags": [
+                      "--task"
+                    ],
+                    "help": "Short current task summary."
+                  },
+                  {
+                    "name": "issue",
+                    "flags": [
+                      "--issue"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Current issue reference, such as #1680. May be repeated."
+                  },
+                  {
+                    "name": "pr",
+                    "flags": [
+                      "--pr"
+                    ],
+                    "help": "Current pull request number or URL."
+                  },
+                  {
+                    "name": "durable_source",
+                    "flags": [
+                      "--durable-source"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Durable source to reread on resume. May be repeated."
+                  },
+                  {
+                    "name": "last_proof",
+                    "flags": [
+                      "--last-proof"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Proof command or receipt summary. May be repeated."
+                  },
+                  {
+                    "name": "next_safe_command",
+                    "flags": [
+                      "--next-safe-command"
+                    ],
+                    "help": "Next safe command to run after resume."
+                  },
+                  {
+                    "name": "open_blocker",
+                    "flags": [
+                      "--open-blocker"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Short blocker summary. May be repeated."
+                  },
+                  {
+                    "name": "dirty_state_summary",
+                    "flags": [
+                      "--dirty-state-summary"
+                    ],
+                    "help": "Short local dirty-state summary."
+                  },
+                  {
+                    "name": "replace",
+                    "flags": [
+                      "--replace"
+                    ],
+                    "action": "store_true",
+                    "help": "Replace mergeable list values instead of preserving existing checkpoint values."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "checkpoint.write",
+            "path": "operations/checkpoint.write.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.target-root.resolve",
+              "workspace.local-chat-checkpoint.write",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "local_chat_checkpoint_write_result.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "checkpoint.write.process"
+          ],
+      "projection_boundary": {
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "conformance refs",
+          "effect hints"
+        ],
+        "target_specific": [
+          "parser library",
+          "help text layout",
+          "package entrypoint wiring"
+        ],
+            "runtime_owned": [
+              "local-only checkpoint write",
+              "target root validation",
               "output emission"
             ]
           }

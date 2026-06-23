@@ -1,0 +1,78 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "checkpoint.write.process",
+  "operation_id": "checkpoint.write",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "checkpoint",
+      "write",
+      "--target",
+      ".",
+      "--task",
+      "Example local checkpoint",
+      "--durable-source",
+      "docs/reference/local-chat-checkpoints.md",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/local-chat-checkpoint-write/v1"
+        },
+        {
+          "path": [
+            "status"
+          ],
+          "equals": "written"
+        },
+        {
+          "path": [
+            "path"
+          ],
+          "equals": ".agentic-workspace/local/chat-checkpoint.json"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/chat-checkpoint.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

@@ -75,6 +75,21 @@ def test_documented_proof_command_inventory_accepts_runnable_source_ref(tmp_path
     assert module._validate_documented_proof_command_inventory(repo_root=tmp_path, inventory_path=inventory) == []
 
 
+def test_command_surface_refresh_guidance_names_single_ordered_ladder() -> None:
+    module = _load_module()
+
+    assert module.COMMAND_SURFACE_REFRESH_COMMAND == "uv run python scripts/generate/refresh_command_surfaces.py"
+    assert module.COMMAND_SURFACE_REFRESH_SEQUENCE == (
+        "uv run python scripts/generate/generate_command_packages.py",
+        "uv run python scripts/generate/generate_command_adapters.py",
+        "uv run python scripts/generate/generate_command_packages.py",
+    )
+    guidance = module.COMMAND_SURFACE_REFRESH_GUIDANCE
+    assert "refresh_command_surfaces.py" in guidance
+    assert guidance.count("generate_command_packages.py") == 2
+    assert "generate_command_adapters.py" in guidance
+
+
 def test_non_enum_keyword_routing_audit_rejects_unclassified_candidate(tmp_path: Path) -> None:
     module = _load_module()
     source = tmp_path / "src" / "sample.py"

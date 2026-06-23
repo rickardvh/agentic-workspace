@@ -1393,6 +1393,18 @@
       "conformance_ref": "workspace tests plus generated command package checks",
       "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
+    },
+    {
+      "id": "workspace.local-chat-checkpoint.write",
+      "summary": "Write the ignored local chat checkpoint under .agentic-workspace/local/.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Local checkpoint writes enforce AW-specific local-only safety and continuity semantics.",
+      "conformance_ref": "checkpoint.write.process plus workspace checkpoint tests",
+      "migration_path": "Keep as workspace runtime until local-only continuity semantics are stable enough for portable file-write primitives.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; local-only policy and checkpoint schema remain AW-owned."
     }
   ],
   "primitive_taxonomy": {

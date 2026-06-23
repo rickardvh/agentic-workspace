@@ -4,6 +4,12 @@
   "schema": "schemas/conformance.schema.json",
   "contracts": [
     {
+      "id": "checkpoint.write.process",
+      "operation_id": "checkpoint.write",
+      "path": "conformance/checkpoint.write.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",

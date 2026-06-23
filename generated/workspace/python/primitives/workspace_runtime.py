@@ -265,6 +265,12 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
     return target_root
 
 
+def _run_checkpoint_write_adapter(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_primitives import _run_checkpoint_write_adapter as source_function
+
+    return source_function(*args, **kwargs)
+
+
 def _run_external_intent_refresh_github_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _run_external_intent_refresh_github_adapter as source_function
 
@@ -349,6 +355,7 @@ __all__ = [
     '_render_workspace_operation_prompt',
     '_resolve_workspace_operation_selection',
     '_resolve_workspace_operation_target_root',
+    '_run_checkpoint_write_adapter',
     '_run_external_intent_refresh_github_adapter',
     '_run_implement_context_adapter',
     '_run_init_lifecycle_adapter',

@@ -214,6 +214,8 @@ WORKSPACE_HANDOFF_SURFACES = tuple((Path(relative) for relative in _WORKSPACE_SU
 MODULE_UPGRADE_SOURCE_PATHS = {
     module_name: Path(relative) for module_name, relative in _WORKSPACE_SURFACES_MANIFEST["module_upgrade_source_paths"].items()
 }
+LOCAL_CHAT_CHECKPOINT_KIND = "agentic-workspace/local-chat-checkpoint/v1"
+LOCAL_CHAT_CHECKPOINT_PATH = Path(".agentic-workspace") / "local" / "chat-checkpoint.json"
 
 
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleDescriptor"] | None = None, **kwargs):
@@ -20529,6 +20531,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "read_first": payload.get("memory_consult", {}).get("read_first", []),
             "do_not_bulk_read": payload.get("memory_consult", {}).get("do_not_bulk_read", True),
         },
+        **(
+            {"local_chat_checkpoint": payload["local_chat_checkpoint"]}
+            if isinstance(payload.get("local_chat_checkpoint"), dict)
+            and payload["local_chat_checkpoint"].get("status") in {"present", "stale", "unreadable"}
+            else {}
+        ),
         "memory_decision_packet": payload.get("memory_decision_packet", {}),
         **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
         **(
@@ -21439,6 +21447,7 @@ def _start_payload(
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
+        "local_chat_checkpoint": _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke),
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
@@ -21919,6 +21928,17 @@ def _hydrate_selected_start_advisory_payloads(
         )
     if _selector_requests(select, "repo_posture"):
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
+    if _selector_requests(select, "planning_safety_gate"):
+        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        payload["planning_safety_gate"] = _planning_safety_gate_payload(
+            target_root=target_root,
+            config=config,
+            changed_paths=[],
+            task_text=task_text,
+            execution_posture=execution_posture,
+        )
+    if _selector_requests(select, "local_chat_checkpoint"):
+        payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
     if _selector_requests(select, "installed_state_compatibility"):
         installed_modules = _fast_installed_modules(target_root=target_root)
         selected_modules = list(config.enabled_modules)
@@ -22235,6 +22255,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "routine_work_context",
+        "local_chat_checkpoint",
         "continuation_view",
         "continuation_reorientation",
         "read_only_response",
@@ -22541,6 +22562,23 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         },
         "memory": payload.get("memory_consult", {}),
     }
+    local_checkpoint = payload.get("local_chat_checkpoint", {})
+    if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
+        context["local_chat_checkpoint"] = {
+            key: local_checkpoint.get(key)
+            for key in (
+                "status",
+                "path",
+                "task",
+                "durable_source_count",
+                "durable_sources",
+                "resume_rule",
+                "next_safe_command",
+                "detail_command",
+                "authority",
+            )
+            if key in local_checkpoint
+        }
     if isinstance(payload.get("parent_intent_status"), dict):
         context["parent_intent_status"] = {
             key: payload["parent_intent_status"].get(key)
@@ -22630,6 +22668,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         startup_changed_signals.append(f"installed_state_compatibility={installed_state.get('status')}")
+    if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
+        startup_changed_signals.append(f"local_chat_checkpoint={local_checkpoint.get('status')}")
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") == "attention":
         startup_changed_signals.append("sibling_repo_aw_freshness=attention")
@@ -22650,6 +22690,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     ]
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         advisory_selectors.append("installed_state_compatibility")
+    if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
+        advisory_selectors.append("local_chat_checkpoint")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -22876,6 +22918,7 @@ def _start_tiny_payload_fast(
             ),
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
+        "local_chat_checkpoint": _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke),
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
@@ -23901,6 +23944,34 @@ def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig,
     }
 
 
+def _pr_context_refs_from_task(task_text: str | None) -> list[str]:
+    text = " ".join(str(task_text or "").lower().split())
+    if not text:
+        return []
+    refs = sorted(set(re.findall(r"#\d+\b", text)), key=lambda value: int(value.lstrip("#")))
+    if not refs:
+        return []
+    pr_terms = (
+        " pr ",
+        " pull request",
+        "review",
+        "reviews",
+        "reviewed",
+        "merge conflict",
+        "merge conflicts",
+        "conflict in",
+        "conflicts in",
+        "update pr",
+        "address reviews",
+        "address the reviews",
+        "fix merge",
+    )
+    padded = f" {text} "
+    if any(term in padded for term in pr_terms):
+        return refs
+    return []
+
+
 def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
     if not isinstance(issue_scope_evidence, dict):
         return {"kind": "agentic-workspace/issue-reference-intent/v1", "status": "not-applicable", "issue_refs": []}
@@ -24128,6 +24199,49 @@ def _extract_requested_outcomes(task_text: str | None) -> list[str]:
     for match in re.finditer("\\b[A-Za-z][A-Za-z0-9]*[.][A-Za-z_][A-Za-z0-9_]*\\b", text):
         add(match.group(0))
     return outcomes[:12]
+
+
+def _replacement_or_removal_intent(task_text: str | None) -> dict[str, dict[str, Any]]:
+    text = " ".join(str(task_text or "").split())
+    retired: dict[str, dict[str, Any]] = {}
+
+    def add(source: str, replacement: str, phrase: str) -> None:
+        source = source.strip().strip("`'\".,:;()[]{}")
+        replacement = replacement.strip().strip("`'\".,:;()[]{}")
+        if not source:
+            return
+        retired[source.lower()] = {
+            "outcome": source,
+            "replacement": replacement,
+            "phrase": phrase,
+            "classification": "replaced" if replacement else "removed",
+        }
+
+    patterns = [
+        (r"\breplace\s+`([^`]+)`\s+with\s+`([^`]+)`", "replace-with"),
+        (r"\buse\s+`([^`]+)`\s+instead\s+of\s+`([^`]+)`", "use-instead-of"),
+        (r"\brename\s+`([^`]+)`\s+to\s+`([^`]+)`", "rename-to"),
+        (r"\bremove\s+`([^`]+)`", "remove"),
+    ]
+    for pattern, phrase in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            if phrase == "use-instead-of":
+                add(match.group(2), match.group(1), phrase)
+            elif phrase == "remove":
+                add(match.group(1), "", phrase)
+            else:
+                add(match.group(1), match.group(2), phrase)
+    return retired
+
+
+def _requested_outcome_present(searchable: str, outcome: str) -> bool:
+    lowered = outcome.lower()
+    if lowered in searchable:
+        return True
+    if "=" in lowered:
+        left, right = [part.strip() for part in lowered.split("=", 1)]
+        return bool(left and right and left in searchable and right in searchable)
+    return False
 
 
 def _task_excerpt(text: str, *, limit: int = 140) -> str:
@@ -25347,6 +25461,195 @@ def _read_task_text_from_file(*, target_root: Path, task_file: str | None) -> st
     return resolved.read_text(encoding="utf-8").strip()
 
 
+def _local_chat_checkpoint_path(target_root: Path) -> Path:
+    return target_root / LOCAL_CHAT_CHECKPOINT_PATH
+
+
+def _compact_checkpoint_refs(values: list[Any], *, limit: int = 3) -> list[str]:
+    refs: list[str] = []
+    for item in values:
+        text = str(item).strip()
+        if text and text not in refs:
+            refs.append(text)
+        if len(refs) >= limit:
+            break
+    return refs
+
+
+def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    path = _local_chat_checkpoint_path(target_root)
+    relative_path = LOCAL_CHAT_CHECKPOINT_PATH.as_posix()
+    detail_command = _command_with_cli_invoke(
+        command="agentic-workspace start --target . --select local_chat_checkpoint --format json",
+        cli_invoke=cli_invoke,
+    )
+    base = {
+        "kind": "agentic-workspace/local-chat-checkpoint-projection/v1",
+        "path": relative_path,
+        "detail_command": detail_command,
+        "authority": "local-advisory-only",
+        "local_only": True,
+    }
+    if not path.exists():
+        return {**base, "status": "absent"}
+    try:
+        checkpoint = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            **base,
+            "status": "unreadable",
+            "reason": exc.__class__.__name__,
+            "resume_rule": "Ignore this local checkpoint until it is repaired; use durable AW sources instead.",
+        }
+    if not isinstance(checkpoint, dict):
+        return {
+            **base,
+            "status": "unreadable",
+            "reason": "checkpoint root is not a JSON object",
+            "resume_rule": "Ignore this local checkpoint until it is repaired; use durable AW sources instead.",
+        }
+    durable_sources = _list_payload(checkpoint.get("durable_sources"))
+    status = "present" if checkpoint.get("kind") == LOCAL_CHAT_CHECKPOINT_KIND else "stale"
+    return {
+        **base,
+        "status": status,
+        "checkpoint_kind": str(checkpoint.get("kind", "")).strip(),
+        "task": str(checkpoint.get("task", "")).strip(),
+        "branch": str(checkpoint.get("branch", "")).strip(),
+        "current_pr": checkpoint.get("current_pr"),
+        "current_issue_refs": _compact_checkpoint_refs(_list_payload(checkpoint.get("current_issue_refs")), limit=5),
+        "durable_source_count": len(durable_sources),
+        "durable_sources": _compact_checkpoint_refs(durable_sources),
+        "resume_rule": str(
+            checkpoint.get(
+                "resume_rule",
+                "Treat chat before this checkpoint as advisory. Re-read durable_sources before making claims.",
+            )
+        ).strip(),
+        "next_safe_command": str(checkpoint.get("next_safe_command", "")).strip(),
+        "last_proof_count": len(_list_payload(checkpoint.get("last_proof"))),
+        "open_blocker_count": len(_list_payload(checkpoint.get("open_blockers"))),
+        "limits": _as_dict(checkpoint.get("limits")),
+        "rule": "Local checkpoints are ignored, advisory continuity hints; durable sources remain authoritative.",
+    }
+
+
+def _local_chat_checkpoint_record(
+    *,
+    target_root: Path,
+    task: str | None,
+    issue_refs: list[str],
+    pr: str | None,
+    durable_sources: list[str],
+    last_proof: list[str],
+    next_safe_command: str | None,
+    open_blockers: list[str],
+    dirty_state_summary: str | None,
+    preserve_existing: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    path = _local_chat_checkpoint_path(target_root)
+    existing: dict[str, Any] = {}
+    if preserve_existing and path.exists():
+        try:
+            raw_existing = json.loads(path.read_text(encoding="utf-8-sig"))
+            if isinstance(raw_existing, dict):
+                existing = raw_existing
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            existing = {}
+    now = datetime.now(timezone.utc).isoformat()
+
+    def kept_list(field: str, incoming: list[str]) -> list[str]:
+        merged = [str(item).strip() for item in (existing.get(field, []) if preserve_existing else []) if str(item).strip()]
+        for item in incoming:
+            text = str(item).strip()
+            if text and text not in merged:
+                merged.append(text)
+        return merged
+
+    durable_source_values = kept_list("durable_sources", durable_sources)
+    warnings: list[str] = []
+    if not durable_source_values:
+        warnings.append("no-durable-source: checkpoint is local only and cannot support closure claims without durable sources")
+    branch_posture = _branch_workflow_posture_payload(target_root=target_root)
+    record: dict[str, Any] = {
+        "kind": LOCAL_CHAT_CHECKPOINT_KIND,
+        "created_at": str(existing.get("created_at") or now),
+        "updated_at": now,
+        "task": (task if task is not None else str(existing.get("task", ""))).strip(),
+        "branch": str(branch_posture.get("current_branch") or existing.get("branch", "")).strip(),
+        "current_pr": pr if pr not in {None, ""} else existing.get("current_pr"),
+        "current_issue_refs": kept_list("current_issue_refs", issue_refs),
+        "durable_sources": durable_source_values,
+        "resume_rule": "Treat chat before this checkpoint as advisory. Re-read durable_sources before making claims.",
+        "last_proof": kept_list("last_proof", last_proof),
+        "open_blockers": kept_list("open_blockers", open_blockers),
+        "dirty_state_summary": (
+            dirty_state_summary if dirty_state_summary is not None else str(existing.get("dirty_state_summary", ""))
+        ).strip(),
+        "next_safe_command": (next_safe_command if next_safe_command is not None else str(existing.get("next_safe_command", "")).strip()),
+        "limits": {
+            "local_only": True,
+            "gitignored": True,
+            "not_closure_evidence": True,
+            "no_raw_transcripts": True,
+            "no_secrets": True,
+            "durable_decisions_require_durable_source": True,
+        },
+    }
+    if record["current_pr"] in {None, ""}:
+        record.pop("current_pr", None)
+    return record, warnings
+
+
+def _write_local_chat_checkpoint(
+    *,
+    target_root: Path,
+    task: str | None,
+    issue_refs: list[str],
+    pr: str | None,
+    durable_sources: list[str],
+    last_proof: list[str],
+    next_safe_command: str | None,
+    open_blockers: list[str],
+    dirty_state_summary: str | None,
+    preserve_existing: bool,
+) -> dict[str, Any]:
+    path = _local_chat_checkpoint_path(target_root)
+    try:
+        path.resolve().relative_to(target_root.resolve())
+    except ValueError as exc:
+        raise WorkspaceUsageError("Checkpoint path must stay inside the target repository.") from exc
+    relative_parts = LOCAL_CHAT_CHECKPOINT_PATH.parts
+    if relative_parts[:2] != (".agentic-workspace", "local"):
+        raise WorkspaceUsageError("Checkpoint writes must stay under .agentic-workspace/local/.")
+    record, warnings = _local_chat_checkpoint_record(
+        target_root=target_root,
+        task=task,
+        issue_refs=issue_refs,
+        pr=pr,
+        durable_sources=durable_sources,
+        last_proof=last_proof,
+        next_safe_command=next_safe_command,
+        open_blockers=open_blockers,
+        dirty_state_summary=dirty_state_summary,
+        preserve_existing=preserve_existing,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/local-chat-checkpoint-write/v1",
+        "status": "written",
+        "path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
+        "local_only": True,
+        "durable_sources": record.get("durable_sources", []),
+        "durable_source_count": len(record.get("durable_sources", [])),
+        "current_issue_refs": record.get("current_issue_refs", []),
+        "warnings": warnings,
+        "resume_rule": record["resume_rule"],
+        "rule": "This command writes only ignored local continuity state; durable claims still require durable AW sources.",
+    }
+
+
 def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], max_bytes: int = 200000) -> str:
     chunks: list[str] = []
     remaining = max_bytes
@@ -25393,14 +25696,40 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         }
     surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
     searchable = surface_text.lower()
+    replacement_intent = _replacement_or_removal_intent(task_text)
     removed_or_retired: list[str] = []
-    missing = [item for item in requested_outcomes if item.lower() not in searchable]
+    replacement_checks: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for item in requested_outcomes:
+        lowered = item.lower()
+        intent = replacement_intent.get(lowered)
+        if intent:
+            replacement = str(intent.get("replacement", "")).strip()
+            replacement_present = _requested_outcome_present(searchable, replacement) if replacement else bool(searchable.strip())
+            replacement_checks.append(
+                {
+                    "retired_outcome": item,
+                    "classification": intent.get("classification", "removed"),
+                    "replacement": replacement,
+                    "replacement_present": replacement_present,
+                    "phrase": intent.get("phrase", ""),
+                }
+            )
+            if replacement_present:
+                removed_or_retired.append(item)
+                continue
+            if replacement:
+                missing.append(replacement)
+                continue
+        if not _requested_outcome_present(searchable, item):
+            missing.append(item)
     status = "warning" if missing and changed_paths else "clear"
     return {
         "kind": "agentic-workspace/objective-drift/v1",
         "status": status,
         "requested_outcomes": requested_outcomes,
         "removed_or_retired_outcomes": removed_or_retired,
+        "replacement_checks": replacement_checks,
         "acceptance_item_count": len(acceptance.get("items", [])),
         "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
         "missing_from_changed_surface": missing,
@@ -25408,7 +25737,11 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         "recommended_next_action": "Inspect changed files, exports, docs, and tests for the missing requested outcomes before closeout."
         if status == "warning"
         else "Use acceptance reconciliation before closeout.",
-        "heuristic": "identifier and backtick-term overlap between task text and changed file contents; AW does not infer removal or retirement intent from prompt keywords",
+        "heuristic": (
+            "identifier and backtick-term overlap between task text and changed file contents; AW does not infer removal or "
+            "retirement intent from prompt keywords unless explicit replacement/removal phrasing is paired with replacement "
+            "or changed-surface evidence"
+        ),
         "agent_owned_decisions": [
             "whether a missing requested outcome was intentionally removed, retired, replaced, or out of scope",
             "whether proof and acceptance reconciliation justify marking the missing outcome satisfied",
@@ -28569,6 +28902,7 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
         "status": value.get("status", "unknown"),
         "requested_outcomes": value.get("requested_outcomes", []),
         "removed_or_retired_outcomes": value.get("removed_or_retired_outcomes", []),
+        "replacement_checks": value.get("replacement_checks", []),
         "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
         "heuristic": value.get("heuristic", ""),
@@ -29447,7 +29781,9 @@ def _planning_safety_gate_payload(
     decomposition_delegation = execution_posture.get("decomposition_delegation", {}) if isinstance(execution_posture, dict) else {}
     decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
     path_classification = _planning_safety_path_classification(changed_paths)
-    issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+    numeric_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+    pr_context_refs = _pr_context_refs_from_task(task_text)
+    issue_refs = [ref for ref in numeric_refs if ref not in set(pr_context_refs)]
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
     path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
     path_classification = _allow_completed_archive_publication_residue(path_classification, target_root=target_root)
@@ -29625,16 +29961,57 @@ def _planning_safety_gate_payload(
         "active_plan_reliance": active_plan_reliance,
         "active_state_summary": active_summary,
         "issue_refs": issue_refs,
+        "pr_context": {
+            "status": "pr-context-detected" if pr_context_refs else "not-detected",
+            "refs": pr_context_refs,
+            "rule": "PR/review/merge-conflict wording is provider context, not unknown issue scope. Fetch PR/review state when needed.",
+            "provider_requirement": "provider-aware; GitHub is one possible source, not assumed as the only provider.",
+        },
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
         "hierarchy_owner_requirement": hierarchy_owner_requirement,
         "repair_route": {
-            "status": "retired",
+            "status": "available" if decision == "implementation-owner-missing" else "retired",
+            "route": "retrofit-active-owner-then-closeout" if decision == "implementation-owner-missing" else "work-shape-guidance-only",
             "fit_criteria": [
+                "mixed Planning and implementation paths already exist",
+                "the slice is bounded and can be honestly described from the current diff",
+                "active Planning ownership is missing but required before completion claims",
+            ]
+            if decision == "implementation-owner-missing"
+            else [
                 "use work_shape_guidance instead of prompt phrase exceptions",
                 "agent decides whether a repair is small enough when hard_blockers is empty",
             ],
-            "rule": "Narrow repair is no longer a prompt-text gate; work-shape guidance reports hard blockers, factors, proof, and stop conditions.",
+            "claim_current_slice_command": _command_with_expected_planning_revision(
+                _command_with_cli_invoke(
+                    command='agentic-workspace planning new-plan --id <slice-id> --title "<bounded slice title>" --source "current diff retrofit" --target . --activate --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                planning_revision=planning_revision,
+            )
+            if decision == "implementation-owner-missing"
+            else "",
+            "after_claim_command": _command_with_cli_invoke(
+                command="agentic-workspace summary --target . --format json",
+                cli_invoke=config.cli_invoke,
+            )
+            if decision == "implementation-owner-missing"
+            else "",
+            "closeout_command": _command_with_expected_planning_revision(
+                _command_with_cli_invoke(
+                    command="agentic-workspace planning closeout --target . --proof-from last --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                planning_revision=planning_revision,
+            )
+            if decision == "implementation-owner-missing"
+            else "",
+            "cleanup_rule": "After proof and closeout evidence are recorded, archive or remove active residue before publishing a slice-closing PR."
+            if decision == "implementation-owner-missing"
+            else "",
+            "safety_rule": "Mixed planning plus implementation changes still need an owner before broad completion claims.",
+            "rule": "Use the compact retrofit path for already-started bounded work; otherwise work-shape guidance reports blockers, factors, proof, and stop conditions.",
         },
         "work_shape_guidance": _work_shape_guidance_payload(
             path_classification=path_classification,
@@ -29668,7 +30045,9 @@ def _planning_safety_gate_payload(
             cli_invoke=config.cli_invoke,
         ),
         "recovery_guidance": [
-            "If implementation WIP exists without active planning ownership, stop and checkpoint planning before continuing.",
+            "If implementation WIP exists without active planning ownership, use repair_route.claim_current_slice_command to retrofit an active owner before continuing.",
+            "For continuation or review repair, prefer retrofit-active-owner-then-closeout over hand-editing a generic prep-only scaffold.",
+            "After proof, use repair_route.closeout_command and remove active residue before publishing a PR that closes the slice.",
             "If a decomposition lane already exists, promote that lane instead of reconstructing the slice by hand.",
             "If direct work has grown across boundaries, create or promote an execplan from the discovered scope before further edits.",
         ],
@@ -35422,6 +35801,28 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_checkpoint_write_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="checkpoint", target_root=target_root)
+    checkpoint_command = getattr(args, "checkpoint_command", None)
+    if checkpoint_command != "write":
+        raise WorkspaceUsageError(f"Unsupported checkpoint command: {checkpoint_command}")
+    payload = _write_local_chat_checkpoint(
+        target_root=target_root,
+        task=getattr(args, "task", None),
+        issue_refs=list(getattr(args, "issue", []) or []),
+        pr=getattr(args, "pr", None),
+        durable_sources=list(getattr(args, "durable_source", []) or []),
+        last_proof=list(getattr(args, "last_proof", []) or []),
+        next_safe_command=getattr(args, "next_safe_command", None),
+        open_blockers=list(getattr(args, "open_blocker", []) or []),
+        dirty_state_summary=getattr(args, "dirty_state_summary", None),
+        preserve_existing=not bool(getattr(args, "replace", False)),
+    )
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0
 
 

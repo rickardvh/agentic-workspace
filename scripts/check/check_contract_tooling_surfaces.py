@@ -73,6 +73,16 @@ RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = {
     "output.emit.install-result",
     "output.emit.current-memory",
 }
+COMMAND_SURFACE_REFRESH_COMMAND = "uv run python scripts/generate/refresh_command_surfaces.py"
+COMMAND_SURFACE_REFRESH_SEQUENCE = (
+    "uv run python scripts/generate/generate_command_packages.py",
+    "uv run python scripts/generate/generate_command_adapters.py",
+    "uv run python scripts/generate/generate_command_packages.py",
+)
+COMMAND_SURFACE_REFRESH_GUIDANCE = (
+    f"run {COMMAND_SURFACE_REFRESH_COMMAND} "
+    f"(ordered sequence: {'; '.join(COMMAND_SURFACE_REFRESH_SEQUENCE)})"
+)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -1585,7 +1595,8 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
                 "status": "current" if is_current else "stale",
                 "direct_edit_detected": not is_current,
                 "source_contract": "src/agentic_workspace/contracts/command_adapter_generation.json",
-                "regenerate": "uv run python scripts/generate/generate_command_adapters.py",
+                "regenerate": COMMAND_SURFACE_REFRESH_COMMAND,
+                "ordered_sequence": list(COMMAND_SURFACE_REFRESH_SEQUENCE),
                 "command_surfaces": [
                     str(adapter.get("command", {}).get("name", "")) for adapter in output_adapters
                 ],
@@ -1598,7 +1609,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
         if not is_current:
             errors.append(
                 f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is stale; "
-                "run uv run python scripts/generate/generate_command_adapters.py"
+                + COMMAND_SURFACE_REFRESH_GUIDANCE
             )
 
         expected_by_command = {
@@ -1657,7 +1668,7 @@ def _validate_generated_command_package_output() -> list[str]:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if current != rendered:
             stale_outputs.append(output_path.relative_to(repo_root).as_posix())
-    return [f"generated package layer: {output} is stale; run uv run python scripts/generate/generate_command_packages.py" for output in stale_outputs]
+    return [f"generated package layer: {output} is stale; {COMMAND_SURFACE_REFRESH_GUIDANCE}" for output in stale_outputs]
 
 
 def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> list[str]:

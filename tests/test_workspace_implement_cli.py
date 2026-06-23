@@ -2433,6 +2433,89 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     assert {"normalize_whitespace", "sentence_summary"} <= set(intent_proof["intended_behavior"])
 
 
+def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "api.py", "params = {'embed': 'children'}\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/api.py",
+                "--task",
+                "Use `embed=children` instead of `include_children=true`. Remove `include_children`.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    assert drift["status"] == "clear"
+    assert "include_children=true" not in drift["missing_from_changed_surface"]
+    assert "include_children=true" in drift["removed_or_retired_outcomes"]
+    assert drift["replacement_checks"][0]["replacement"] == "embed=children"
+    assert drift["replacement_checks"][0]["replacement_present"] is True
+
+
+def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "api.py", "params = {}\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/api.py",
+                "--task",
+                "Replace `include_children=true` with `embed=children`.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    assert drift["status"] == "warning"
+    assert "include_children=true" not in drift["missing_from_changed_surface"]
+    assert "embed=children" in drift["missing_from_changed_surface"]
+    assert drift["replacement_checks"][0]["replacement_present"] is False
+
+
+def test_implement_objective_drift_handles_rename_and_ordinary_missing_terms(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "api.py", "def new_name():\n    return True\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/api.py",
+                "--task",
+                "Rename `old_name` to `new_name` and keep `audit_marker`.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    assert "old_name" in drift["removed_or_retired_outcomes"]
+    assert "audit_marker" in drift["missing_from_changed_surface"]
+
+
 def test_implement_task_text_does_not_route_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
     assert (
         cli.main(
@@ -2959,6 +3042,11 @@ def test_implement_keeps_planning_gate_for_unfinished_archived_plan_residue(tmp_
     assert gate["status"] == "violation"
     assert gate["gate_result"] == "implementation-owner-missing"
     assert gate["implementation_allowed"] is False
+    assert gate["repair_route"]["status"] == "available"
+    assert gate["repair_route"]["route"] == "retrofit-active-owner-then-closeout"
+    assert "planning new-plan" in gate["repair_route"]["claim_current_slice_command"]
+    assert "planning closeout" in gate["repair_route"]["closeout_command"]
+    assert "Mixed planning plus implementation changes still need an owner" in gate["repair_route"]["safety_rule"]
     facts = gate["changed_path_facts"]
     assert facts["dirty_shape"] == "planning-plus-implementation"
     assert facts["archived_planning_residue"]["status"] == "incomplete-or-stale"

@@ -500,6 +500,250 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
 
 
+def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement #1700 checkpoint slice",
+                "--issue",
+                "#1700",
+                "--pr",
+                "1705",
+                "--durable-source",
+                "docs/reference/local-chat-checkpoints.md",
+                "--last-proof",
+                "uv run pytest tests/test_workspace_cli.py",
+                "--next-safe-command",
+                "uv run python scripts/run_agentic_workspace.py start --target . --format json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    written = json.loads(capsys.readouterr().out)
+    assert written["status"] == "written"
+    assert written["path"] == ".agentic-workspace/local/chat-checkpoint.json"
+    assert written["durable_sources"] == ["docs/reference/local-chat-checkpoints.md"]
+    write_result_schema = json.loads(
+        Path("src/agentic_workspace/contracts/schemas/local_chat_checkpoint_write_result.schema.json").read_text(encoding="utf-8")
+    )
+    write_result_errors = sorted(Draft202012Validator(write_result_schema).iter_errors(written), key=lambda error: list(error.path))
+    assert [error.message for error in write_result_errors] == []
+
+    checkpoint_path = tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json"
+    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    schema = json.loads(Path("src/agentic_workspace/contracts/schemas/local_chat_checkpoint.schema.json").read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(checkpoint), key=lambda error: list(error.path))
+    assert [error.message for error in errors] == []
+    assert checkpoint["kind"] == "agentic-workspace/local-chat-checkpoint/v1"
+    assert checkpoint["limits"]["not_closure_evidence"] is True
+    assert "durable_sources" in checkpoint["resume_rule"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Resume checkpoint slice",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    startup = json.loads(capsys.readouterr().out)
+    packet = startup["context"]["local_chat_checkpoint"]
+    assert packet["status"] == "present"
+    assert packet["durable_source_count"] == 1
+    assert packet["durable_sources"] == ["docs/reference/local-chat-checkpoints.md"]
+    assert "local_chat_checkpoint" in startup["drill_down"]["available_selectors"]
+    assert "local_chat_checkpoint=present" in startup["action_signals"]["changed_signals"]
+
+
+def test_local_chat_checkpoint_write_preserves_and_replaces_values(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "First",
+                "--durable-source",
+                "docs/first.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Second",
+                "--durable-source",
+                "docs/second.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    checkpoint_path = tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json"
+    preserved = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    assert preserved["durable_sources"] == ["docs/first.md", "docs/second.md"]
+    assert preserved["task"] == "Second"
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Replacement",
+                "--durable-source",
+                "docs/replacement.md",
+                "--replace",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    replaced = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    assert replaced["durable_sources"] == ["docs/replacement.md"]
+    assert replaced["task"] == "Replacement"
+
+
+def test_local_chat_checkpoint_startup_reports_absent_stale_and_unreadable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    absent = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert absent["status"] == "absent"
+
+    checkpoint_path = tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json"
+    checkpoint_path.write_text(json.dumps({"kind": "old-kind", "durable_sources": ["docs/source.md"]}), encoding="utf-8")
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    stale = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert stale["status"] == "stale"
+    assert stale["durable_sources"] == ["docs/source.md"]
+
+    checkpoint_path.write_text("{not json", encoding="utf-8")
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    unreadable = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert unreadable["status"] == "unreadable"
+
+
+def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Address the reviews on #103",
+                "--select",
+                "planning_safety_gate,issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+    assert gate["issue_refs"] == []
+    assert gate["pr_context"]["status"] == "pr-context-detected"
+    assert gate["pr_context"]["refs"] == ["#103"]
+    assert payload.get("missing") == ["issue_reference_intent"]
+
+
+def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #103",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["next_safe_action"] == "refresh-external-issue-intent"
+    assert payload["context"]["issue_reference_intent"]["issue_refs"] == ["#103"]
+
+
+def test_start_ambiguous_numeric_ref_stays_advisory_without_blocking_read_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Look at #103",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["read_only_allowed"] is True
+    assert payload["context"]["issue_reference_intent"]["status"] == "details-needed"
+    assert payload["context"]["planning"]["planning_safety_gate"]["workflow_sufficient"] is True
+
+
 def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

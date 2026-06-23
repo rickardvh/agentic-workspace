@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/local_chat_checkpoint_write_result.schema.json",
+  "title": "Agentic Workspace local chat checkpoint write result",
+  "description": "Stdout payload emitted after writing or refreshing the ignored local chat checkpoint record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "status",
+    "path",
+    "local_only",
+    "durable_sources",
+    "durable_source_count",
+    "current_issue_refs",
+    "warnings",
+    "resume_rule",
+    "rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/local-chat-checkpoint-write/v1",
+      "description": "Stable write-result payload discriminator."
+    },
+    "status": {
+      "const": "written",
+      "description": "Checkpoint write status."
+    },
+    "path": {
+      "const": ".agentic-workspace/local/chat-checkpoint.json",
+      "description": "Repo-relative ignored local checkpoint path that was written."
+    },
+    "local_only": {
+      "const": true,
+      "description": "Confirms the write result describes local-only state."
+    },
+    "durable_sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "One durable source recorded in the checkpoint."
+      },
+      "description": "Durable sources recorded in the checkpoint."
+    },
+    "durable_source_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of durable sources recorded in the checkpoint."
+    },
+    "current_issue_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 120,
+        "description": "One issue reference recorded in the checkpoint."
+      },
+      "description": "Issue references recorded in the checkpoint."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "One non-fatal warning about the checkpoint write."
+      },
+      "description": "Non-fatal warnings about the checkpoint write."
+    },
+    "resume_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rule for treating the checkpoint as advisory continuity state."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable local-only and non-evidence boundary for the write result."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

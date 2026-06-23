@@ -1626,6 +1626,122 @@
       "mutates_state": false
     },
     {
+      "name": "checkpoint",
+      "help": "Create or update ignored local chat continuity checkpoints.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path."
+        }
+      ],
+      "subcommand_dest": "checkpoint_command",
+      "subcommands_required": true,
+      "subcommands": [
+        {
+          "name": "write",
+          "help": "Write or refresh .agentic-workspace/local/chat-checkpoint.json.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "task",
+              "flags": [
+                "--task"
+              ],
+              "help": "Short current task summary."
+            },
+            {
+              "name": "issue",
+              "flags": [
+                "--issue"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Current issue reference, such as #1680. May be repeated."
+            },
+            {
+              "name": "pr",
+              "flags": [
+                "--pr"
+              ],
+              "help": "Current pull request number or URL."
+            },
+            {
+              "name": "durable_source",
+              "flags": [
+                "--durable-source"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Durable source to reread on resume. May be repeated."
+            },
+            {
+              "name": "last_proof",
+              "flags": [
+                "--last-proof"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Proof command or receipt summary. May be repeated."
+            },
+            {
+              "name": "next_safe_command",
+              "flags": [
+                "--next-safe-command"
+              ],
+              "help": "Next safe command to run after resume."
+            },
+            {
+              "name": "open_blocker",
+              "flags": [
+                "--open-blocker"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Short blocker summary. May be repeated."
+            },
+            {
+              "name": "dirty_state_summary",
+              "flags": [
+                "--dirty-state-summary"
+              ],
+              "help": "Short local dirty-state summary."
+            },
+            {
+              "name": "replace",
+              "flags": [
+                "--replace"
+              ],
+              "action": "store_true",
+              "help": "Replace mergeable list values instead of preserving existing checkpoint values."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "ignored local checkpoint writer; not durable closure evidence",
+          "mutates_state": true
+        }
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "local-only continuity helper for compressed or fresh sessions",
+      "mutates_state": true
+    },
+    {
       "name": "start",
       "help": "Return the minimum safe startup context for beginning work in a target repository.",
       "uses_option_groups": [

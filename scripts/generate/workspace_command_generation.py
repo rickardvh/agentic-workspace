@@ -281,6 +281,90 @@ def _normalize_releaseable_typescript_package_json(
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def _typescript_sample_command_path(manifest: dict[str, object]) -> tuple[list[str], bool]:
+    for package in manifest.get("packages", []):
+        if not isinstance(package, dict) or package.get("id") != "root-workspace":
+            continue
+        commands = [command for command in package.get("commands", []) if isinstance(command, dict)]
+        if not commands:
+            break
+        command = sorted(commands, key=lambda item: str(_as_dict(item.get("command")).get("name", "")))[0]
+        command_name = str(_as_dict(command.get("command")).get("name", "")).strip()
+        interface = _as_dict(command.get("interface"))
+        subcommands = [item for item in interface.get("subcommands", []) if isinstance(item, dict)]
+        subcommands_required = bool(subcommands and interface.get("subcommands_required") is not False)
+        if command_name and subcommands_required:
+            first_subcommand = sorted(subcommands, key=lambda item: str(item.get("name", "")))[0]
+            subcommand_name = str(first_subcommand.get("name", "")).strip()
+            if subcommand_name:
+                return [command_name, subcommand_name], True
+        if command_name:
+            return [command_name], False
+    return [], False
+
+
+def _as_dict(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _patch_workspace_typescript_sample_command_test(
+    output: GeneratedOutput,
+    *,
+    repo_root: Path,
+    manifest: dict[str, object],
+) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    if path.relative_to(repo_root).as_posix() != "generated/workspace/typescript/test/command-package.test.mjs":
+        return output
+    sample_path, subcommands_required = _typescript_sample_command_path(manifest)
+    if not sample_path:
+        return output
+    sample_command = sample_path[0]
+    rendered_sample_path = json.dumps(sample_path)
+    rendered_root_path = json.dumps([sample_command])
+    content = output.content
+    content = content.replace(
+        f'[{json.dumps(sample_command)}, "--format", "json"]',
+        f"[...{rendered_sample_path}, \"--format\", \"json\"]",
+    )
+    content = content.replace(
+        f'[{json.dumps(sample_command)}, "--target", "__SPACED_TARGET__"]',
+        f"[...{rendered_sample_path}, \"--target\", \"__SPACED_TARGET__\"]",
+    )
+    if not subcommands_required:
+        return GeneratedOutput(output.path, content)
+    anchor = (
+        "test('generated runnable adapter preserves spaced argv values during native execution', () => {\n"
+        "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+        "  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));\n"
+        "  mkdirSync(spacedTarget, { recursive: true });\n"
+        "  try {\n"
+        f"    const args = [...{rendered_sample_path}, \"--target\", \"__SPACED_TARGET__\"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);\n"
+        "    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });\n"
+        "    assert.equal(result.status, 0);\n"
+        "    assert.doesNotMatch(result.stderr, /runtime handoff/i);\n"
+        "  } finally {\n"
+        "    rmSync(spacedTarget, { recursive: true, force: true });\n"
+        "  }\n"
+        "});\n"
+    )
+    inserted = (
+        anchor
+        + "\n"
+        + "test('generated runnable adapter rejects command without required subcommand', () => {\n"
+        + "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+        + f"  const result = spawnSync(process.execPath, [cli, ...{rendered_root_path}, \"--format\", \"json\"], {{ encoding: 'utf8' }});\n"
+        + "  assert.equal(result.status, 2);\n"
+        + "  assert.equal(result.stdout, '');\n"
+        + f"  assert.match(result.stderr, /missing subcommand for {sample_command}/);\n"
+        + "  assert.doesNotMatch(result.stderr, /runtime handoff/i);\n"
+        + "});\n"
+    )
+    if anchor in content and "rejects command without required subcommand" not in content:
+        content = content.replace(anchor, inserted)
+    return GeneratedOutput(output.path, content)
+
+
 def render_workspace_command_package_outputs(
     manifest: dict[str, object] | None = None,
     *,
@@ -296,7 +380,11 @@ def render_workspace_command_package_outputs(
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     return [
-        _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root)
+        _patch_workspace_typescript_sample_command_test(
+            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+            repo_root=repo_root,
+            manifest=effective_manifest,
+        )
         for output in outputs
     ]
 
