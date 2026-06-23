@@ -51,6 +51,19 @@
       "decision": "route",
       "expected_cost_change": "fewer default bytes while preserving install/payload compatibility evidence by selector",
       "rollback_condition": "agents fail to discover payload or artifact compatibility problems during startup recovery"
+    },
+    {
+      "id": "startup-skill-catalog-breakdown-command-only",
+      "surface": "start.skills.catalog breakdown",
+      "owner": "cli_output",
+      "evidence_refs": ["clean-host-startup", "sample-startup-codex-spark"],
+      "observed_evidence": "default startup exposes source and owner skill breakdown even when the actionable required/recommended skill projection is compact",
+      "current_role": "catalogue",
+      "decision": "route",
+      "before_after_cost_signal": "before: catalog repeats source, owner, and source list detail in default startup; after: default keeps counts and catalog.command while full breakdown stays recoverable through the skills command",
+      "expected_cost_change": "fewer default bytes while preserving required skill projection and task-specific catalog search",
+      "authority_boundary_guardrail": "catalog.command must preserve package-owned skill metadata and must not present generated or host-local catalogues as package authority",
+      "rollback_condition": "agents miss a required skill because required/recommended projections no longer name it"
     }
   ]
 }

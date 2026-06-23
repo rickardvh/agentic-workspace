@@ -184,6 +184,7 @@ def test_external_agent_lane_surface_decisions_record_selector_first_start_reduc
 
     memory_decision = decisions["startup-memory-decision-packet-selector-only"]
     installed_state_decision = decisions["startup-installed-state-compatibility-selector-only"]
+    skill_catalog_decision = decisions["startup-skill-catalog-breakdown-command-only"]
 
     assert memory_decision["surface"] == "start.memory_decision_packet"
     assert memory_decision["decision"] == "route"
@@ -193,6 +194,13 @@ def test_external_agent_lane_surface_decisions_record_selector_first_start_reduc
     assert installed_state_decision["decision"] == "route"
     assert "sample-startup-codex-spark" in installed_state_decision["evidence_refs"]
     assert installed_state_decision["expected_cost_change"]
+    assert skill_catalog_decision["surface"] == "start.skills.catalog breakdown"
+    assert skill_catalog_decision["decision"] == "route"
+    assert "sample-startup-codex-spark" in skill_catalog_decision["evidence_refs"]
+    assert "before:" in skill_catalog_decision["before_after_cost_signal"]
+    assert "after:" in skill_catalog_decision["before_after_cost_signal"]
+    assert "package" in skill_catalog_decision["authority_boundary_guardrail"]
+    assert "required skill" in skill_catalog_decision["rollback_condition"]
 
 
 def test_external_agent_lane_rejects_invalid_completion_cost_observation() -> None:

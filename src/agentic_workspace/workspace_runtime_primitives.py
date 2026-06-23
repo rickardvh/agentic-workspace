@@ -22147,6 +22147,17 @@ def _skill_catalog_summary_from_payload(skills_payload: dict[str, Any]) -> dict[
     }
 
 
+def _compact_startup_skill_catalog_summary(skills_payload: dict[str, Any]) -> dict[str, Any]:
+    skills = skills_payload.get("skills", [])
+    warnings = skills_payload.get("warnings", [])
+    return {
+        "available": True,
+        "total_count": len(skills) if isinstance(skills, list) else 0,
+        "warning_count": len(warnings) if isinstance(warnings, list) else 0,
+        "detail_visibility": "source and owner breakdowns stay behind catalog.command",
+    }
+
+
 def _startup_skills_projection(
     *, payload: dict[str, Any], next_safe_action: dict[str, Any], target_root: Path | None, cli_invoke: str
 ) -> dict[str, Any]:
@@ -22183,7 +22194,7 @@ def _startup_skills_projection(
         "required": required,
         "recommended": recommended,
         "catalog": {
-            **_skill_catalog_summary_from_payload(skills_payload),
+            **_compact_startup_skill_catalog_summary(skills_payload),
             "command": catalog_command,
         },
     }
