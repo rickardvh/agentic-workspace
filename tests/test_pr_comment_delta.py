@@ -131,11 +131,13 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
                     "comments": {"nodes": []},
                     "reviews": {"nodes": []},
                     "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False},
                         "nodes": [
                             {
                                 "isResolved": False,
                                 "isOutdated": False,
                                 "comments": {
+                                    "pageInfo": {"hasNextPage": False},
                                     "nodes": [
                                         {
                                             "databaseId": 99,
@@ -147,10 +149,10 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
                                             "author": {"login": "reviewer"},
                                             "replyTo": None,
                                         }
-                                    ]
+                                    ],
                                 },
                             }
-                        ]
+                        ],
                     },
                 }
             }
@@ -165,6 +167,69 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
     assert item["category"] == "actionable_code_doc_body_change"
     assert item["path"] == "src/app.py"
     assert item["line"] == 12
+
+
+def test_pr_comment_delta_reports_graphql_truncation_boundaries() -> None:
+    module = _load_module()
+    payload = {
+        "repository": "rickardvh/agentic-workspace",
+        "pr_number": 43,
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "url": "https://github.com/rickardvh/agentic-workspace/pull/43",
+                    "comments": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": "issue-cursor"},
+                        "nodes": [],
+                    },
+                    "reviews": {
+                        "pageInfo": {"hasNextPage": False},
+                        "nodes": [],
+                    },
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": "thread-cursor"},
+                        "nodes": [
+                            {
+                                "isResolved": False,
+                                "isOutdated": False,
+                                "comments": {
+                                    "pageInfo": {"hasNextPage": True, "endCursor": "comment-cursor"},
+                                    "nodes": [
+                                        {
+                                            "databaseId": 100,
+                                            "url": "https://example.test/pr#thread",
+                                            "body": "Please update this branch.",
+                                            "createdAt": "2026-06-23T11:00:00Z",
+                                            "path": "src/app.py",
+                                            "line": 12,
+                                            "author": {"login": "reviewer"},
+                                            "replyTo": None,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    },
+                }
+            }
+        },
+    }
+
+    packet = module.build_packet(payload)
+
+    assert packet["pagination"]["truncated"] is True
+    assert packet["pagination"]["truncated_surfaces"] == [
+        "comments",
+        "reviewThreads",
+        "reviewThreads[0].comments",
+    ]
+    assert packet["pagination"]["limits"] == {
+        "comments_first": 100,
+        "reviews_first": 100,
+        "review_threads_first": 100,
+        "thread_comments_first": 20,
+    }
+    assert packet["smallest_next_action"] == "Fetch complete paginated PR comments before treating this packet as complete."
 
 
 def test_pr_comment_delta_cli_reads_fixture(tmp_path: Path) -> None:
@@ -201,4 +266,5 @@ def test_pr_comment_delta_readme_keeps_live_workflow_discoverable() -> None:
     assert "agentic-workspace/pr-comment-delta/v1" in text
     assert "uv run python scripts/github/pr_comment_delta.py" in text
     assert "--baseline-json" in text
+    assert "pagination.truncated" in text
     assert "does not write to GitHub" in text

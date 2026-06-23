@@ -16,6 +16,10 @@ from pathlib import Path
 from typing import Any
 
 PACKET_KIND = "agentic-workspace/pr-comment-delta/v1"
+ISSUE_COMMENT_LIMIT = 100
+REVIEW_LIMIT = 100
+REVIEW_THREAD_LIMIT = 100
+THREAD_COMMENT_LIMIT = 20
 CATEGORIES = (
     "actionable_code_doc_body_change",
     "pr_metadata_body_only_change",
@@ -75,6 +79,10 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
         pr = {}
 
     comments: list[dict[str, Any]] = []
+    truncated_surfaces: list[str] = []
+    page_info = _page_info(pr.get("comments"))
+    if page_info.get("hasNextPage") is True:
+        truncated_surfaces.append("comments")
     for node in pr.get("comments", {}).get("nodes", []) or []:
         if not isinstance(node, dict):
             continue
@@ -89,6 +97,9 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
                 "author": node.get("author"),
             }
         )
+    page_info = _page_info(pr.get("reviews"))
+    if page_info.get("hasNextPage") is True:
+        truncated_surfaces.append("reviews")
     for review in pr.get("reviews", {}).get("nodes", []) or []:
         if not isinstance(review, dict):
             continue
@@ -103,9 +114,15 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
                 "review_state": review.get("state"),
             }
         )
-    for thread in pr.get("reviewThreads", {}).get("nodes", []) or []:
+    page_info = _page_info(pr.get("reviewThreads"))
+    if page_info.get("hasNextPage") is True:
+        truncated_surfaces.append("reviewThreads")
+    for index, thread in enumerate(pr.get("reviewThreads", {}).get("nodes", []) or []):
         if not isinstance(thread, dict):
             continue
+        page_info = _page_info(thread.get("comments"))
+        if page_info.get("hasNextPage") is True:
+            truncated_surfaces.append(f"reviewThreads[{index}].comments")
         for comment in thread.get("comments", {}).get("nodes", []) or []:
             if not isinstance(comment, dict):
                 continue
@@ -131,7 +148,25 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
         "pr_number": payload.get("pr_number") or payload.get("number"),
         "pr_url": pr.get("url") or payload.get("pr_url"),
         "comments": comments if comments else payload.get("comments", []),
+        "pagination": {
+            "truncated": bool(truncated_surfaces),
+            "truncated_surfaces": truncated_surfaces,
+            "limits": {
+                "comments_first": ISSUE_COMMENT_LIMIT,
+                "reviews_first": REVIEW_LIMIT,
+                "review_threads_first": REVIEW_THREAD_LIMIT,
+                "thread_comments_first": THREAD_COMMENT_LIMIT,
+            },
+            "rule": "When truncated is true, do not treat this packet as a complete review-comment delta.",
+        },
     }
+
+
+def _page_info(connection: Any) -> dict[str, Any]:
+    if not isinstance(connection, dict):
+        return {}
+    page_info = connection.get("pageInfo")
+    return page_info if isinstance(page_info, dict) else {}
 
 
 def _baseline_seen_urls(path: Path | None) -> set[str]:
@@ -234,6 +269,7 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
     counts = {category: 0 for category in CATEGORIES}
     for item in items:
         counts[item["category"]] += 1
+    pagination = _as_pagination(normalized.get("pagination"))
     return {
         "kind": PACKET_KIND,
         "repository": normalized.get("repository") or "",
@@ -248,7 +284,8 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
         "new_comment_count": len(items),
         "category_counts": counts,
         "items": items,
-        "smallest_next_action": _smallest_next_action(counts),
+        "pagination": pagination,
+        "smallest_next_action": _smallest_next_action(counts, pagination=pagination),
         "write_safety": {
             "github_writes_performed": False,
             "rule": "Do not reply, resolve, or submit reviews from this packet without explicit user approval.",
@@ -256,7 +293,30 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
     }
 
 
-def _smallest_next_action(counts: dict[str, int]) -> str:
+def _as_pagination(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {
+            "truncated": False,
+            "truncated_surfaces": [],
+            "limits": {
+                "comments_first": ISSUE_COMMENT_LIMIT,
+                "reviews_first": REVIEW_LIMIT,
+                "review_threads_first": REVIEW_THREAD_LIMIT,
+                "thread_comments_first": THREAD_COMMENT_LIMIT,
+            },
+            "rule": "When truncated is true, do not treat this packet as a complete review-comment delta.",
+        }
+    return {
+        "truncated": bool(raw.get("truncated")),
+        "truncated_surfaces": [str(item) for item in raw.get("truncated_surfaces", []) if str(item)],
+        "limits": raw.get("limits") if isinstance(raw.get("limits"), dict) else {},
+        "rule": str(raw.get("rule") or "When truncated is true, do not treat this packet as a complete review-comment delta."),
+    }
+
+
+def _smallest_next_action(counts: dict[str, int], *, pagination: dict[str, Any] | None = None) -> str:
+    if pagination and pagination.get("truncated"):
+        return "Fetch complete paginated PR comments before treating this packet as complete."
     if counts["ambiguous_needs_human"]:
         return "Clarify ambiguous comments before editing or fetching broad patch context."
     if counts["actionable_code_doc_body_change"]:
@@ -277,13 +337,21 @@ query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       url
-      comments(first: 100) { nodes { databaseId url body createdAt updatedAt author { login } } }
-      reviews(first: 100) { nodes { databaseId url body state submittedAt author { login } } }
+      comments(first: 100) {
+        nodes { databaseId url body createdAt updatedAt author { login } }
+        pageInfo { hasNextPage endCursor }
+      }
+      reviews(first: 100) {
+        nodes { databaseId url body state submittedAt author { login } }
+        pageInfo { hasNextPage endCursor }
+      }
       reviewThreads(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           isResolved
           isOutdated
           comments(first: 20) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               databaseId
               url
