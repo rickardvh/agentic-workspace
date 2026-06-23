@@ -1510,6 +1510,72 @@ def _full_response_text(result: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+_LOCAL_ABSOLUTE_PATH_PATTERNS = (
+    re.compile(r"\b[A-Za-z]:[\\/][^\s)`>\"']+"),
+    re.compile(r"\b/(?:Users|home|tmp|var/tmp|private/tmp)/[^\s)`>\"']+"),
+)
+
+
+def _path_from_local_evidence(evidence: str) -> Path | None:
+    candidate = evidence.strip().rstrip(".,;:")
+    if not candidate:
+        return None
+    try:
+        return Path(candidate)
+    except (OSError, ValueError):
+        return None
+
+
+def _repair_local_absolute_paths_in_text(*, text: str, repo_path: Path, run_root: Path) -> dict[str, Any]:
+    repairs: list[dict[str, str]] = []
+
+    def replacement(match: re.Match[str]) -> str:
+        evidence = match.group(0)
+        path = _path_from_local_evidence(evidence)
+        if path is None:
+            return "<local path>"
+        replacement_text = "<local path>"
+        repair_kind = "local_path_redacted"
+        if _is_relative_to(path, repo_path):
+            replacement_text = path.resolve().relative_to(repo_path.resolve()).as_posix()
+            repair_kind = "repo_relative"
+        elif _is_relative_to(path, run_root):
+            replacement_text = "<harness artifact>"
+            repair_kind = "harness_artifact_role"
+        repairs.append({"kind": repair_kind, "replacement": replacement_text})
+        return replacement_text
+
+    repaired = text
+    for pattern in _LOCAL_ABSOLUTE_PATH_PATTERNS:
+        repaired = pattern.sub(replacement, repaired)
+    return {
+        "kind": "agentic-workspace/model-cli-final-message-local-path-repair/v1",
+        "status": "repaired" if repairs and repaired != text else "not-needed",
+        "repair_count": len(repairs),
+        "repairs": repairs,
+        "rule": "Raw model text remains the scoring source; exported final_message text must not expose local absolute paths.",
+        "text": repaired,
+    }
+
+
+def _repair_result_final_message_local_paths(*, result: dict[str, Any], repo_path: Path, run_root: Path, share_path: Path) -> dict[str, Any]:
+    final_message = result.get("final_message")
+    if not isinstance(final_message, str) or not final_message:
+        return {
+            "kind": "agentic-workspace/model-cli-final-message-local-path-repair/v1",
+            "status": "not-needed",
+            "repair_count": 0,
+            "repairs": [],
+            "rule": "Raw model text remains the scoring source; exported final_message text must not expose local absolute paths.",
+        }
+    repair = _repair_local_absolute_paths_in_text(text=final_message, repo_path=repo_path, run_root=run_root)
+    repaired_text = str(repair.pop("text"))
+    if repair["status"] == "repaired":
+        result["final_message"] = repaired_text
+        share_path.write_text(repaired_text, encoding="utf-8")
+    return repair
+
+
 def _last_copilot_transcript_answer(text: str) -> str:
     matches = list(re.finditer(r"^### .+ Copilot\s*$", text, flags=re.MULTILINE))
     if not matches:
@@ -1847,11 +1913,7 @@ def _metadata_workflow_warnings(
 def _local_absolute_path_evidence(text: str) -> str:
     if not text:
         return ""
-    patterns = (
-        re.compile(r"\b[A-Za-z]:[\\/][^\s)`>\"']+"),
-        re.compile(r"\b/(?:Users|home|tmp|var/tmp|private/tmp)/[^\s)`>\"']+"),
-    )
-    for pattern in patterns:
+    for pattern in _LOCAL_ABSOLUTE_PATH_PATTERNS:
         match = pattern.search(text)
         if match:
             evidence = match.group(0)
@@ -3348,6 +3410,12 @@ def run_suite(
                         result=result,
                         metrics=invocation["proportionality_metrics"],
                     )
+                )
+                invocation["final_message_repair"] = _repair_result_final_message_local_paths(
+                    result=result,
+                    repo_path=paths.repo_path,
+                    run_root=paths.run_root,
+                    share_path=paths.share_path,
                 )
                 if postmortem_feedback:
                     if adapter.get("postmortem_feedback_supported") is False:
