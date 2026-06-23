@@ -416,6 +416,59 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
+def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "installed_state_compatibility" not in payload
+    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "installed_state_compatibility" in payload["drill_down"]["available_selectors"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    full = selected["values"]["installed_state_compatibility"]
+    assert full["status"] == "payload-upgrade-required"
+    assert full["payload"]["provenance"]["status"] == "invalid"
+    assert full["adapter_contracts"]
+
+
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

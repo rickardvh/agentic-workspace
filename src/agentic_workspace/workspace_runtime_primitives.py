@@ -20603,7 +20603,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["cli_compatibility"] = cli_compatibility
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
-        projected["installed_state_compatibility"] = installed_state
+        projected["installed_state_compatibility"] = _compact_startup_installed_state_signal(installed_state)
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
         projected["sibling_repo_aw_freshness"] = sibling_freshness
@@ -20722,6 +20722,37 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
     )
     return projected
+
+
+def _compact_startup_installed_state_signal(installed_state: dict[str, Any]) -> dict[str, Any]:
+    executable = _as_dict(installed_state.get("executable"))
+    payload = _as_dict(installed_state.get("payload"))
+    generated_artifacts = _as_dict(installed_state.get("generated_artifacts"))
+    compact = {
+        "kind": installed_state.get("kind", "agentic-workspace/installed-state-compatibility/v1"),
+        "status": installed_state.get("status", ""),
+        "reason": installed_state.get("reason", ""),
+        "authority": installed_state.get("authority", "repo-state-authoritative"),
+        "executable": {
+            key: executable.get(key)
+            for key in ("compatibility_status", "classification", "failed_checks")
+            if executable.get(key) not in (None, "", [])
+        },
+        "payload": {
+            key: payload.get(key)
+            for key in ("status", "provenance_drift", "stale_generated_surfaces")
+            if payload.get(key) not in (None, "", [])
+        },
+        "generated_artifacts": {
+            key: generated_artifacts.get(key) for key in ("status", "stale_surfaces") if generated_artifacts.get(key) not in (None, "", [])
+        },
+        "selector": "installed_state_compatibility",
+        "detail_command": "agentic-workspace start --target . --select installed_state_compatibility --format json",
+        "detail_visibility": "full executable, payload provenance, generated-artifact, and adapter details stay behind selector",
+    }
+    if installed_state.get("next_action"):
+        compact["next_action"] = installed_state.get("next_action")
+    return compact
 
 
 def _attach_start_router_fields(payload: dict[str, Any]) -> None:
@@ -21429,6 +21460,8 @@ def _start_payload(
         changed_paths=changed_paths,
         task_text=task_text,
     )
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_compatibility"] = installed_state_compatibility
     if parent_intent_status.get("status") != "guidance-only":
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
@@ -21695,8 +21728,6 @@ def _start_payload(
     cli_compatibility = startup_cli_compatibility
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
-    if installed_state_compatibility["status"] != "compatible":
-        payload["installed_state_compatibility"] = installed_state_compatibility
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
         payload["sibling_repo_aw_freshness"] = sibling_freshness
@@ -22612,6 +22643,13 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             else len(available_selectors)
         )
         available_selectors.insert(insert_at, "acceptance")
+    advisory_selectors = [
+        "skill_routing",
+        "workflow_sufficiency",
+        "memory_decision_packet",
+    ]
+    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
+        advisory_selectors.append("installed_state_compatibility")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -22624,11 +22662,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             proof_required=bool(next_safe_action.get("proof_required")),
             proof_commands=startup_proof_commands,
             changed_signals=startup_changed_signals,
-            advisory_selectors=[
-                "skill_routing",
-                "workflow_sufficiency",
-                "memory_decision_packet",
-            ],
+            advisory_selectors=advisory_selectors,
             agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
         ),
         "next_safe_action": next_safe_action,
