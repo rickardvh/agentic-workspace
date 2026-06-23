@@ -91,6 +91,7 @@ def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> 
         "ARTIFACT_INSTALL_EVIDENCE_MISSING",
         "CLOSEOUT_RESIDUE_MISSING",
         "OWNERSHIP_BOUNDARY_LEAK",
+        "LOCAL_ABSOLUTE_PATH_LEAK",
         "HARNESS_SCENARIO_AMBIGUOUS",
     } <= failure_ids
     assert {"cli_output", "memory", "planning", "verification", "contracts", "harness", "no_change"} <= owner_surfaces
@@ -315,6 +316,17 @@ def test_external_agent_lane_rejects_promotions_without_actionable_remediation()
     assert any("promote-live-local-path-leak must route to an actionable remediation owner" in error for error in errors)
 
 
+def test_external_agent_lane_rejects_local_path_leak_without_owner_route() -> None:
+    module = _load_module()
+    pack = copy.deepcopy(module.load_pack(repo_root=REPO_ROOT))
+    live_run = next(item for item in pack["live_results"]["runs"] if item["id"] == "live-memory-consult-20260618T093207Z")
+    live_run.pop("local_path_leak", None)
+
+    errors = module.validate_pack(pack)
+
+    assert any("live-memory-consult-20260618T093207Z local_path_leak must be an object" in error for error in errors)
+
+
 def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None:
     module = _load_module()
     report = module.build_closure_report(module.load_pack(repo_root=REPO_ROOT))
@@ -333,8 +345,10 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
     assert report["live_evaluation"]["failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
-    assert report["live_evaluation"]["promoted_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
-    assert report["live_evaluation"]["actionable_remediation_failure_counts"]["OWNERSHIP_BOUNDARY_LEAK"] == 1
+    assert report["live_evaluation"]["failure_counts"]["LOCAL_ABSOLUTE_PATH_LEAK"] == 1
+    for failure_id in ("OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"):
+        assert report["live_evaluation"]["promoted_failure_counts"][failure_id] == 1
+        assert report["live_evaluation"]["actionable_remediation_failure_counts"][failure_id] == 1
     assert report["promotion_count"] >= 1
     loop = report["operating_loop_observability"]
     assert loop["kind"] == "agentic-workspace/external-agent-operating-loop-observability/v1"
@@ -371,6 +385,45 @@ def test_model_cli_harness_scores_source_checkout_aw_invocation_as_package_cli()
     executed = module._normalized_command_text("uv run python scripts/run_agentic_workspace.py start --target . --format json")
 
     assert module._command_requirement_satisfied(required="uv run agentic-workspace start", executed_command_text=executed)
+
+
+def test_model_cli_harness_scores_local_absolute_path_leak_with_owner(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    drive = "C:"
+    leaked_path = f"{drive}\\Users\\agent\\.agentic-workspace\\local\\scratch\\run.md"
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "memory-consult-before-edit"},
+        result={
+            "status": "success",
+            "final_message": f"Updated README.md and wrote notes at {leaked_path}",
+        },
+        mutation_summary={"created": [], "modified": ["README.md"], "deleted": []},
+        repo_path=repo,
+    )
+
+    leak = next(warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak")
+    assert leak["failure_id"] == "LOCAL_ABSOLUTE_PATH_LEAK"
+    assert leak["owner_surface"] == "harness"
+    assert leak["remediation_ref"] == "#1616"
+    assert leak["evidence"].startswith(f"{drive}\\Users\\agent")
+
+
+def test_model_cli_harness_allows_repo_relative_final_paths(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "memory-consult-before-edit"},
+        result={"status": "success", "final_message": "Updated README.md and cited .agentic-workspace/planning/state.toml."},
+        mutation_summary={"created": [], "modified": ["README.md"], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert not [warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak"]
 
 
 def test_model_cli_harness_prepares_fixture_git_repo_for_diff_commands(tmp_path: Path) -> None:

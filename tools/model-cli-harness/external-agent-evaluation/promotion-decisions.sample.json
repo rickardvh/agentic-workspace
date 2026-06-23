@@ -40,7 +40,7 @@
     },
     {
       "id": "promote-live-local-path-leak",
-      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK"],
+      "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"],
       "evidence_record_ids": ["live-memory-consult-20260618T093207Z"],
       "threshold": "live Codex Spark run leaked local absolute scratch paths in final answer",
       "decision": "promote",

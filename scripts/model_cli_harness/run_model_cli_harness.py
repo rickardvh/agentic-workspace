@@ -1798,9 +1798,15 @@ def _metadata_workflow_warnings(
             add("The agent reported a forbidden response phrase for this scenario.", evidence=forbidden)
     local_path_evidence = _local_absolute_path_evidence(_scored_agent_response_text(result))
     if local_path_evidence:
-        add(
-            "The agent exposed a local absolute path in the final response.",
-            evidence=local_path_evidence,
+        warnings.append(
+            {
+                "warning_class": "model_cli_local_path_leak",
+                "message": "The agent exposed a local absolute path in the final response.",
+                "evidence": local_path_evidence,
+                "owner_surface": "harness",
+                "failure_id": "LOCAL_ABSOLUTE_PATH_LEAK",
+                "remediation_ref": "#1616",
+            }
         )
     for pattern in _string_list(
         scenario.get("required_artifact_patterns"),
@@ -2821,7 +2827,7 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
 
 
 def _warning_key(warning: dict[str, Any]) -> str:
-    return "|".join(str(warning.get(key, "")) for key in ("warning_class", "message", "evidence", "paths"))
+    return "|".join(str(warning.get(key, "")) for key in ("warning_class", "message", "evidence", "paths", "owner_surface", "failure_id"))
 
 
 def _finding_base_classes(warning_key: str) -> list[str]:
@@ -2836,6 +2842,8 @@ def _finding_base_classes(warning_key: str) -> list[str]:
         "model_cli_permission_denied",
     }:
         return ["environment_or_provider"]
+    if warning_class == "model_cli_local_path_leak":
+        return ["ownership_boundary", "harness_owned"]
     return ["first_seen"]
 
 
@@ -2914,8 +2922,11 @@ def _capability_routing_evaluation(
     local_path_leaks = [
         warning
         for warning in warnings
-        if warning.get("warning_class") == "model_cli_metadata_scoring_failure"
-        and "local absolute path" in str(warning.get("message", "")).lower()
+        if warning.get("warning_class") == "model_cli_local_path_leak"
+        or (
+            warning.get("warning_class") == "model_cli_metadata_scoring_failure"
+            and "local absolute path" in str(warning.get("message", "")).lower()
+        )
     ]
     if semantic_failures or required_command_misses:
         status = "ignored-or-misread"
