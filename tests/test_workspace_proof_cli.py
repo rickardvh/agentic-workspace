@@ -1746,6 +1746,11 @@ def test_proof_failed_receipt_clusters_supplied_log(tmp_path: Path, capsys) -> N
     assert summary["kind"] == "agentic-workspace/proof-failure-summary/v1"
     assert summary["failed_command"] == "make test-workspace"
     assert summary["log_source"]["path"] == ".agentic-workspace/local/proof-logs/workspace-test.log"
+    assert summary["summary_trust"] == {
+        "level": "higher",
+        "source_kind": "repo-local-path",
+        "rule": "Repo-local log references preserve audit access.",
+    }
     assert summary["failure_line_count"] == 3
     assert summary["cluster_count"] == 2
     assert summary["top_root_cause_clusters"][0]["likely_root"] == "tests/test_workspace_proof_cli.py"
@@ -1755,6 +1760,44 @@ def test_proof_failed_receipt_clusters_supplied_log(tmp_path: Path, capsys) -> N
     )
     assert summary["full_suite_rerun_premature"] is True
     assert "Use the referenced full log" in summary["guardrails"][1]
+
+
+def test_proof_failed_receipt_marks_excerpt_failure_summary_lower_trust(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(target),
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--record-receipt",
+                "--receipt-command",
+                "uv run pytest tests/test_workspace_proof_cli.py -q",
+                "--receipt-result",
+                "failed",
+                "--receipt-log",
+                "FAILED tests/test_workspace_proof_cli.py::test_example - AssertionError",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    summary = json.loads(capsys.readouterr().out)["failure_summary"]
+    assert summary["log_source"]["kind"] == "caller-supplied-excerpt"
+    assert summary["summary_trust"] == {
+        "level": "lower",
+        "source_kind": "caller-supplied-excerpt",
+        "rule": "Caller-supplied excerpts are useful repair hints but lower trust than repo-local logs.",
+    }
 
 
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> None:

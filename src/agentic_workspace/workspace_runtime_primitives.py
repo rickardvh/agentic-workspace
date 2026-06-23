@@ -34811,12 +34811,23 @@ def _proof_failure_summary(
     if not focused_commands:
         focused_commands = _proof_receipt_focused_commands(changed_paths)
     failure_lines = [line.strip() for line in lines if re.search(r"\b(FAILED|ERROR|FAILURES?|Traceback)\b", line)]
+    log_source_kind = str(log_source.get("kind") or "")
+    summary_trust = {
+        "level": "higher" if log_source_kind == "repo-local-path" else "lower",
+        "source_kind": log_source_kind,
+        "rule": (
+            "Repo-local log references preserve audit access."
+            if log_source_kind == "repo-local-path"
+            else "Caller-supplied excerpts are useful repair hints but lower trust than repo-local logs."
+        ),
+    }
     return {
         "kind": "agentic-workspace/proof-failure-summary/v1",
         "status": "available" if top_clusters else "unclustered",
         "failed_command": command,
         "result": result,
         "log_source": log_source,
+        "summary_trust": summary_trust,
         "failure_line_count": len(failure_lines),
         "cluster_count": len(top_clusters),
         "top_root_cause_clusters": top_clusters,
