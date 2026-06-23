@@ -2945,7 +2945,7 @@ candidates = [
     assert "relevance" not in pressure
     assert "advisory_backlog" not in pressure
     assert pressure["unmatched_roadmap_candidate_count"] == 2
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind drill_down.detail_command"
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
     assert len(json.dumps(pressure, separators=(",", ":")).encode()) < 400
 
     capsys.readouterr()
@@ -3016,7 +3016,7 @@ candidates = [
     assert pressure["status"] == "observed"
     assert "candidate_ids" not in pressure
     assert "relevance" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind drill_down.detail_command"
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_implement_keeps_generic_ci_refresh_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
@@ -3062,7 +3062,7 @@ candidates = [
     assert pressure["matched_roadmap_candidate_count"] == 0
     assert "candidate_ids" not in pressure
     assert "relevance" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind drill_down.detail_command"
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:
@@ -3119,7 +3119,7 @@ candidates = [
     assert pressure["status"] == "observed"
     assert pressure["stale_or_closed_roadmap_candidate_count"] == 2
     assert "advisory_backlog" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind drill_down.detail_command"
+    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
 def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:

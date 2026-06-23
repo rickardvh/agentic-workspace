@@ -22295,7 +22295,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             pressure_summary.pop("route_options", None)
             if not pressure_summary.get("candidate_ids"):
                 pressure_summary.pop("candidate_ids", None)
-            pressure_summary["detail_visibility"] = "relevance and advisory backlog stay behind drill_down.detail_command"
+            pressure_summary["detail_visibility"] = "relevance and advisory backlog stay behind verbose implement context"
         compact["candidate_pressure"] = pressure_summary
     issue_scope_evidence = gate.get("issue_scope_evidence")
     if isinstance(issue_scope_evidence, dict) and issue_scope_evidence.get("status") in {"unknown", "partial"}:
