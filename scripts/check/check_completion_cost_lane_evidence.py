@@ -14,6 +14,7 @@ LANE_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "lanes" / "github-16
 STATIC_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evidence" / "github-1680-static-schema-cost-analysis.closeout.json"
 CORPUS_CLOSEOUT = REPO_ROOT / ".agentic-workspace" / "planning" / "closeout-evidence" / "github-1680-json-corpus-cost-ranking.closeout.json"
 EXTERNAL_LANE_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
+LIVE_BEHAVIOR_PROOF_SCRIPT = REPO_ROOT / "scripts" / "check" / "check_completion_cost_live_behavior_proof.py"
 SURFACE_DECISIONS = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "surface-decisions.sample.json"
 BEFORE_AFTER_CLOSEOUT = (
     REPO_ROOT
@@ -40,6 +41,16 @@ def _load_external_lane_module():
     spec = importlib.util.spec_from_file_location("external_agent_evaluation_lane", EXTERNAL_LANE_SCRIPT)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {_repo_relative(EXTERNAL_LANE_SCRIPT)}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_live_behavior_proof_module():
+    spec = importlib.util.spec_from_file_location("check_completion_cost_live_behavior_proof", LIVE_BEHAVIOR_PROOF_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {_repo_relative(LIVE_BEHAVIOR_PROOF_SCRIPT)}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -117,6 +128,7 @@ def build_lane_evidence_report() -> dict[str, Any]:
     lane = _load_json(LANE_PATH)
     external = _load_external_lane_module()
     external_report = external.build_closure_report(external.load_pack(repo_root=REPO_ROOT))
+    live_behavior_proof = _load_live_behavior_proof_module().build_live_behavior_proof_report()
     static_closeout = _load_json(STATIC_CLOSEOUT)
     corpus_closeout = _load_json(CORPUS_CLOSEOUT)
     surface_summary = _surface_decision_summary(_load_json(SURFACE_DECISIONS))
@@ -149,6 +161,11 @@ def build_lane_evidence_report() -> dict[str, Any]:
             "observation_support_status": "present" if behavior_evidence_present else "missing",
             "proof_status": "completed" if behavior_proof_complete else behavior_slice_status or "missing",
             "actual_long_horizon_proof_complete": behavior_proof_complete,
+            "live_behavior_proof_status": live_behavior_proof["status"],
+            "live_run_count": live_behavior_proof["live_evaluation"]["run_count"],
+            "live_clean_run_count": live_behavior_proof["live_evaluation"]["clean_run_count"],
+            "live_failure_counts": live_behavior_proof["live_evaluation"]["failure_counts"],
+            "live_failure_routes": live_behavior_proof["live_failure_routes"],
             "source": "tools/model-cli-harness/external-agent-evaluation",
             "model": external_report["default_external_agent"].get("model"),
             "completion_cost_record_count": completion_cost["record_count"],
@@ -168,7 +185,7 @@ def build_lane_evidence_report() -> dict[str, Any]:
     if not behavior_evidence_present:
         blockers.append("long-horizon behavior evidence must include completion-cost observations")
     if behavior_evidence_present and not behavior_proof_complete:
-        blockers.append("actual long-horizon behavior proof is not complete")
+        blockers.extend(live_behavior_proof["closure_boundary"]["remaining_blockers"])
     if not reductions_present:
         blockers.append("at least one landed reduction must have before/after evidence")
     if stages["before_after_closure_evidence"]["status"] != "present":
