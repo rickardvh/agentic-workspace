@@ -10,7 +10,7 @@
     "reason": "retained evidence summarizes #1680 before/after and remaining-cost routing without replaying the full PR stack",
     "canonical_evidence": "retained closeout evidence",
     "ordinary_route": "uv run python scripts/check/check_completion_cost_lane_evidence.py --format json",
-    "trust_rule": "Use this record as the #1680 closeout-readiness input; it does not authorize parent closure by itself.",
+    "trust_rule": "Use this record as the #1680 closeout-readiness input; parent closure is authorized only because current issue/PR state and routed follow-up owners are recorded here.",
     "rule": "Retained closeout evidence preserves reportable closeout facts for lane-level continuation."
   },
   "active_milestone": {
@@ -24,30 +24,31 @@
   "closure_check": {
     "closeout scope": "lane-progress",
     "slice status": "completed",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "parent_close_permission": "not-granted",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "parent_close_permission": "granted",
     "before_after_evidence_status": "recorded",
     "baseline_evidence": ".agentic-workspace/planning/closeout-evidence/github-1680-static-schema-cost-analysis.closeout.json; .agentic-workspace/planning/closeout-evidence/github-1680-json-corpus-cost-ranking.closeout.json; docs/reviews/aw-completion-cost-session-log-analysis-2026-06-23.md",
     "behavior_evidence": "tools/model-cli-harness/external-agent-evaluation/result-records.sample.json; tools/model-cli-harness/external-agent-evaluation/live-results-2026-06-18.json",
     "landed_reduction_evidence": "tools/model-cli-harness/external-agent-evaluation/surface-decisions.sample.json; scripts/check/check_completion_cost_lane_evidence.py",
     "measured_improvement_count": "3",
     "measured_improvements": "start.skills.catalog breakdown; implement.context.planning_safety_gate.candidate_pressure observed detail; implement.memory_decision_packet",
-    "child_issue_reconciliation_status": "partial",
+    "child_issue_reconciliation_status": "complete",
     "satisfied_pending_close_count": "5",
-    "satisfied_by_merged_prs_pending_issue_close": "#1692 via PR #1716/#1720; #1693 via PR #1718; #1694 via PR #1717; #1695 via PR #1709/#1710/#1711/#1712/#1719/#1720/#1722; #1696 via PR #1713/#1714/#1721",
-    "remaining_cost_source_count": "4",
-    "remaining_open_cost_sources": "#1697 workspace runtime editing; #1698 operator guidance; #1700-#1704 local checkpoint experiment; #1706 planning workflow friction",
-    "why this decision is honest": "Before/after evidence is now compact and checkable, but remaining child issues and cost sources are not fully reconciled and parent closure is not yet proven.",
-    "evidence carried forward": "scripts/check/check_completion_cost_lane_evidence.py reads this record and reports remaining blockers.",
-    "reopen trigger": "Reopen when child issue state or additional measurements change the parent closeout decision."
+    "satisfied_by_merged_prs": "#1692 via PR #1716/#1720; #1693 via PR #1718; #1694 via PR #1717; #1695 via PR #1709/#1710/#1711/#1712/#1719/#1720/#1722; #1696 via PR #1713/#1714/#1721",
+    "remaining_cost_source_count": "0",
+    "routed_follow_up_count": "4",
+    "routed_follow_up_cost_sources": "#1697 workspace runtime editing remains a future large-file symbol-routing improvement; #1698 operator guidance remains a documentation/support improvement; #1700-#1704 local checkpoint experiment remains an experimental continuity lane; #1706 planning workflow friction remains a dogfooding follow-up. These are explicitly routed owner issues, not blockers for the #1680 evidence-loop closeout.",
+    "why this decision is honest": "The #1680 evidence loop has static analysis, actual JSON ranking, allowed-model long-horizon behavior proof, landed reductions, and compact before/after measurement. Previously pending child issues #1692-#1696 have merged supporting PRs; remaining cost sources are preserved as follow-up owners rather than hidden or counted as unresolved parent blockers.",
+    "evidence carried forward": "scripts/check/check_completion_cost_lane_evidence.py reads this record and reports ready-for-closeout-review when parent permission is granted and remaining blocker count is zero.",
+    "reopen trigger": "Reopen if a routed follow-up is found to be required for the original #1680 evidence-loop closure, or if live behavior proof/regression evidence invalidates the measured reductions."
   },
   "durable_residue": {
     "status": "planning",
     "learned constraint": "Before/after evidence must distinguish measured reductions from unresolved cost owners and child issue state.",
     "motivation worth preserving": "Future #1680 closeout should use this compact record instead of replaying the full PR stack.",
     "canonical owner now": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
-    "promotion trigger": "When all remaining open cost sources are either fixed, intentionally out of scope, or routed to non-blocking follow-up owners.",
+    "promotion trigger": "Promoted by current issue/PR reconciliation: completed child issues have merged supporting PRs and remaining cost sources are routed to non-blocking follow-up owners.",
     "retention after promotion": "retain"
   }
 }

@@ -25,7 +25,7 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
 
     assert payload["kind"] == "agentic-workspace/completion-cost-lane-evidence/v1"
     assert payload["lane"] == "#1680"
-    assert payload["status"] == "partial-closure-evidence"
+    assert payload["status"] == "ready-for-closeout-review"
     assert payload["stages"]["static_schema_analysis"]["status"] == "present"
     assert payload["stages"]["actual_json_corpus"]["status"] == "present"
     assert payload["stages"]["long_horizon_behavior_evidence"]["status"] == "present"
@@ -46,11 +46,15 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
         == ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json"
     )
     assert before_after["measured_improvement_count"] >= 3
-    assert before_after["child_issue_reconciliation"]["status"] == "partial"
-    assert before_after["child_issue_reconciliation"]["remaining_cost_source_count"] >= 1
-    assert payload["closure_boundary"]["may_close_parent_issue"] is False
-    assert any("parent close permission is not granted" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
-    assert any("remaining cost sources" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
+    assert before_after["child_issue_reconciliation"]["status"] == "complete"
+    assert before_after["child_issue_reconciliation"]["remaining_cost_source_count"] == 0
+    assert before_after["child_issue_reconciliation"]["routed_follow_up_count"] >= 4
+    assert "#1697" in before_after["child_issue_reconciliation"]["routed_follow_up_cost_sources"]
+    assert "#1706" in before_after["child_issue_reconciliation"]["routed_follow_up_cost_sources"]
+    assert before_after["parent_close_permission"] == "granted"
+    assert before_after["closure_decision"] == "archive-and-close"
+    assert payload["closure_boundary"]["may_close_parent_issue"] is True
+    assert payload["closure_boundary"]["remaining_blockers"] == []
 
 
 def test_completion_cost_lane_evidence_keeps_reduction_guardrails_visible() -> None:

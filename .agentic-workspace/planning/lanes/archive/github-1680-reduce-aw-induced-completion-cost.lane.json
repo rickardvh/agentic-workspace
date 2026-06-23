@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "github-1680-reduce-aw-induced-completion-cost",
   "title": "Reduce AW-induced completion cost",
-  "status": "active",
+  "status": "archived",
   "parent_decomposition_ref": "",
   "lane_outcome": "AW identifies, ranks, reduces, and re-measures meaningful AW-induced completion cost across representative bounded work while preserving intent, proof, residue, reviewability, handoff, and honest closure.",
   "purpose_for_parent": "Serve GitHub #1680 as the broad optimization lane for making the ordinary AW operating loop cheaper without hiding safety-critical signals or collapsing the work into one narrow fix.",
@@ -59,33 +59,33 @@
     {
       "id": "first-reduction-tranche",
       "title": "Land the first meaningful AW-induced cost reductions",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "long-horizon-behavior-proof"
       ],
       "purpose_for_lane": "Apply evidence to #1608 and the near-term tranche from #1692, #1693, and #1694 when those are the cheapest representative reductions.",
       "proof": "Merged selector-first and proof-cost slices route or compact startup detail, skill catalog detail, implement candidate pressure, implement Memory detail, fresh-session digest context, proof retry guidance, proof failure summaries, PR comment deltas, and installed-state drift signals while preserving rollback conditions and focused regressions.",
-      "residual_after_slice": "Before/after signals are useful partial evidence, but completed long-horizon behavior proof still gates lane closeout."
+      "residual_after_slice": "Before/after signals are recorded in surface decisions and the closure evidence packet; residual cost sources are routed to follow-up owner issues."
     },
     {
       "id": "before-after-closure-evidence",
       "title": "Record before/after lane closure evidence",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": "",
       "depends_on": [
         "first-reduction-tranche"
       ],
       "purpose_for_lane": "Record compact evidence of what was optimized, what remains unresolved, and whether bounded work is measurably cheaper or cheaper to continue.",
-      "proof": "Lane proof aggregation includes static, corpus, behavior, reduction, and re-measurement evidence plus explicit remaining cost sources.",
-      "residual_after_slice": "Close #1680 only if the strict completion rule is satisfied; otherwise route residual owner surfaces."
+      "proof": "Lane proof aggregation includes static, corpus, behavior, reduction, and re-measurement evidence plus explicit routing for non-blocking follow-up cost sources.",
+      "residual_after_slice": "Parent #1680 is closed; residual improvement topics remain tracked by #1697, #1698, #1700-#1704, #1706, and #1616/#1729-#1731 as follow-up owner surfaces."
     }
   ],
-  "current_slice": "before-after-closure-evidence",
+  "current_slice": "closed",
   "acceptance_boundary": "This lane is complete only when the evidence loop has found, ranked, reduced, and re-measured meaningful AW-induced cost across representative bounded work. Closure must distinguish landed reductions, the intent served, unresolved cost sources, and whether small bounded work is actually cheaper, without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "proof_strategy": "Aggregate proof from the five lane slices: static schema suspect inventory, actual JSON corpus ranking, long-horizon behavior evidence, at least one landed reduction, and before/after measurement. A useful one-off fix or cost report is partial evidence, not lane completion.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
       ".agentic-workspace/planning/closeout-evidence/github-1680-static-schema-cost-analysis.closeout.json",
       "scripts/check/check_completion_cost_schema_analysis.py emits structured static suspects for start, implement, and report ordinary surfaces.",
@@ -96,21 +96,21 @@
       ".agentic-workspace/planning/closeout-evidence/github-1680-live-behavior-proof-gate-2.closeout.json records the prior live proof gate and the formerly routed OWNERSHIP_BOUNDARY_LEAK blocker.",
       "scripts/check/check_completion_cost_live_behavior_proof.py now reports live behavior proof as complete for the checked-in evidence pack.",
       "tools/model-cli-harness/external-agent-evaluation/surface-decisions.sample.json records before/after cost signals and rollback conditions for landed reduction slices.",
-      ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json records compact before/after evidence, child issue reconciliation, remaining cost sources, and the blocked parent close permission.",
-      "scripts/check/check_completion_cost_lane_evidence.py aggregates the #1680 evidence loop and keeps parent closure blocked until remaining before/after evidence is explicit."
+      ".agentic-workspace/planning/closeout-evidence/github-1680-before-after-closure-evidence.closeout.json records compact before/after evidence, child issue reconciliation, routed follow-up cost sources, and granted parent close permission.",
+      "scripts/check/check_completion_cost_lane_evidence.py aggregates the #1680 evidence loop and reports ready-for-closeout-review when blockers remain reconciled."
     ],
     "known_gaps": [
-      "Child issue reconciliation and remaining-cost owner decisions remain open before #1680 can close."
+      "Follow-up improvements remain tracked outside the closed parent lane: #1697, #1698, #1700-#1704, #1706, and #1616/#1729-#1731."
     ]
   },
-  "residual_lane_work": "Open: reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and close #1680 only if evidence proves representative bounded work is cheaper or cheaper to continue without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
+  "residual_lane_work": "Closed for #1680 evidence-loop purposes. Completed child issues #1692-#1696 are supported by merged PRs. Remaining improvement topics are routed follow-ups rather than parent blockers: #1697, #1698, #1700-#1704, #1706, and #1616/#1729-#1731.",
   "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
-  "parent_close_permission": "not-evaluated",
+  "parent_close_permission": "may-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, clean checked-in live proof evidence, first-tranche reduction signals, and compact before/after closeout evidence have landed; parent closure remains blocked on child issue reconciliation, remaining-cost owner decisions, and explicit parent close permission.",
-    "residual_work": "Reconcile completed child issues (#1692-#1696), decide whether #1697/#1698/#1700-#1706 remain blockers or routed follow-ups, and require explicit parent close permission before any #1680 closeout claim.",
-    "next_owner": "before-after-closure-evidence"
+    "status": "closed",
+    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, clean checked-in live proof evidence, first-tranche reduction signals, and compact before/after closeout evidence have landed. Parent #1680 is closed externally and local close permission is granted because remaining cost sources are routed to follow-up owner issues.",
+    "residual_work": "Continue follow-up owner issues outside the parent lane: #1697, #1698, #1700-#1704, #1706, and #1616/#1729-#1731.",
+    "next_owner": "follow-up-issues"
   },
   "references": [
     {
