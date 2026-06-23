@@ -47,6 +47,13 @@ def _completed_slice_ids(lane: dict[str, Any]) -> list[str]:
     ]
 
 
+def _slice_status(lane: dict[str, Any], slice_id: str) -> str:
+    for item in lane.get("slice_sequence", []):
+        if isinstance(item, dict) and item.get("id") == slice_id:
+            return str(item.get("status", ""))
+    return ""
+
+
 def _surface_decision_summary(decisions_payload: dict[str, Any]) -> dict[str, Any]:
     decisions = [item for item in decisions_payload.get("decisions", []) if isinstance(item, dict)]
     by_decision = Counter(str(item.get("decision")) for item in decisions if item.get("decision"))
@@ -80,7 +87,9 @@ def build_lane_evidence_report() -> dict[str, Any]:
 
     completion_cost = external_report["completion_cost_observability"]
     completed_slices = _completed_slice_ids(lane)
+    behavior_slice_status = _slice_status(lane, "long-horizon-behavior-proof")
     behavior_evidence_present = completion_cost["record_count"] >= 3 and bool(completion_cost["driver_classification_counts"])
+    behavior_proof_complete = behavior_slice_status == "completed"
     reductions_present = surface_summary["before_after_signal_count"] >= 3
     measurement_present = STATIC_CLOSEOUT.exists() and CORPUS_CLOSEOUT.exists()
 
@@ -99,6 +108,9 @@ def build_lane_evidence_report() -> dict[str, Any]:
         },
         "long_horizon_behavior_evidence": {
             "status": "present" if behavior_evidence_present else "missing",
+            "observation_support_status": "present" if behavior_evidence_present else "missing",
+            "proof_status": "completed" if behavior_proof_complete else behavior_slice_status or "missing",
+            "actual_long_horizon_proof_complete": behavior_proof_complete,
             "source": "tools/model-cli-harness/external-agent-evaluation",
             "model": external_report["default_external_agent"].get("model"),
             "completion_cost_record_count": completion_cost["record_count"],
@@ -120,6 +132,8 @@ def build_lane_evidence_report() -> dict[str, Any]:
         blockers.append("static schema and actual JSON corpus evidence are both required")
     if not behavior_evidence_present:
         blockers.append("long-horizon behavior evidence must include completion-cost observations")
+    if behavior_evidence_present and not behavior_proof_complete:
+        blockers.append("actual long-horizon behavior proof is not complete")
     if not reductions_present:
         blockers.append("at least one landed reduction must have before/after evidence")
     if stages["before_after_closure_evidence"]["status"] != "present":

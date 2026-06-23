@@ -1,6 +1,6 @@
 {
   "kind": "planning-execplan/v1",
-  "title": "Aggregate #1680 completion-cost lane evidence",
+  "title": "Address #1723 behavior-proof review",
   "execplan_profile": {
     "schema": "execplan-profile/v1",
     "task_shape": "bounded",
@@ -26,60 +26,58 @@
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
   "canonical_core": {
-    "requested_outcome": "Add a checked #1680 completion-cost lane evidence aggregation that combines existing static, corpus, behavior, and reduction evidence without authorizing parent closure prematurely.",
-    "hard_constraints": "Do not claim #1680 closure; keep the slice bounded to lane evidence aggregation, tests, and the lane record update.",
-    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement the evidence checker, validate it, then open a stacked PR for the before-after evidence slice.",
+    "requested_outcome": "Address PR #1723 review feedback by distinguishing representative behavior observations from completed long-horizon behavior proof.",
+    "hard_constraints": "Do not claim #1680 closure or completed live long-horizon behavior proof. Keep edits bounded to the lane record, aggregate checker, focused tests, archived plan wording, and this active plan.",
+    "agent_may_decide": "Exact status wording and checker field names that make the distinction explicit.",
+    "escalate_when": "A correct fix requires changing external-agent evaluation semantics, closing #1602/#1680, or touching unrelated AW runtime surfaces.",
+    "next_action": "Validate the comment fix, close out this active plan, then push PR #1723 and rebase later stack PRs.",
     "proof_expectations": [
       "uv run pytest tests/test_completion_cost_lane_evidence.py -q",
       "uv run python scripts/check/check_completion_cost_lane_evidence.py --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
       "make test-workspace",
-      "make lint-workspace",
-      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
-      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+      "make lint-workspace"
     ],
     "touched_scope": [
+      ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
       "scripts/check/check_completion_cost_lane_evidence.py",
       "tests/test_completion_cost_lane_evidence.py",
-      ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
-      ".agentic-workspace/planning/execplans/github-1680-lane-evidence-aggregation.plan.json"
+      ".agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json",
+      ".agentic-workspace/planning/execplans/github-1723-behavior-proof-review-fix.plan.json"
     ],
     "completion_criteria": [
-      "The checker emits a structured #1680 lane evidence packet.",
-      "The packet marks static, corpus, behavior, and landed-reduction evidence present.",
-      "The packet keeps parent closure blocked until full before/after evidence and remaining-cost routing are complete.",
-      "The lane record moves the current slice to before-after closure evidence without claiming #1680 closure."
+      "Address #1723 behavior-proof review is implemented, validated, and closed out honestly."
     ],
     "continuation_owner": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
     "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
-    "Create a bounded plan for Aggregate #1680 completion-cost lane evidence."
+    "Address PR #1723 review feedback by distinguishing representative behavior observations from completed long-horizon behavior proof."
   ],
   "non_goals": [
     "Leave adjacent backlog or follow-on work out of this plan."
   ],
   "machine_readable_contract": {
     "intent": {
-      "outcome": "Add a checked #1680 completion-cost lane evidence aggregation that combines existing static, corpus, behavior, and reduction evidence without authorizing parent closure prematurely.",
-      "constraints": "Do not claim #1680 closure; keep the slice bounded to lane evidence aggregation, tests, and the lane record update.",
-      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "outcome": "Address PR #1723 review feedback by distinguishing representative behavior observations from completed long-horizon behavior proof.",
+      "constraints": "Do not claim #1680 closure or completed live long-horizon behavior proof. Keep edits bounded to the lane record, aggregate checker, focused tests, archived plan wording, and this active plan.",
+      "latitude": "Exact status wording and checker field names that make the distinction explicit.",
+      "escalation": "Escalate when a correct fix requires changing external-agent evaluation semantics, closing #1602/#1680, or touching unrelated AW runtime surfaces.",
       "proof": "See proof_report.validation proof."
     },
     "execution": {
-      "milestone": "github-1680-lane-evidence-aggregation",
+      "milestone": "github-1723-behavior-proof-review-fix",
       "status": "completed",
       "next_step": "Continue via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json.",
       "proof": "See proof_report.validation proof."
     },
     "scope": {
       "touched": [
+        ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
         "scripts/check/check_completion_cost_lane_evidence.py",
         "tests/test_completion_cost_lane_evidence.py",
-        ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
-        ".agentic-workspace/planning/execplans/github-1680-lane-evidence-aggregation.plan.json"
+        ".agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json",
+        ".agentic-workspace/planning/execplans/github-1723-behavior-proof-review-fix.plan.json"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -87,14 +85,14 @@
     }
   },
   "intent_continuity": {
-    "larger intended outcome": "Make #1680 honestly closeable by preserving compact evidence for static suspects, actual JSON costs, behavior impact, reductions, before/after measurement, and remaining cost sources.",
+    "larger intended outcome": "Keep #1680 lane evidence honest while aggregating useful PR #1723 evidence.",
     "this slice completes the larger intended outcome": "no",
     "continuation surface": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
-    "activation trigger": "After this checker lands, reconcile child issues and record final before/after closure evidence before closing #1680."
+    "activation trigger": "Complete live long-horizon behavior proof and remaining #1680 closeout evidence."
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
@@ -105,16 +103,16 @@
     "next likely slice": "Continue via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json."
   },
   "intent_interpretation": {
-    "literal request": "Keep working on the active lane, creating stacked PRs and filing dogfooding friction as needed until the lane can honestly close.",
-    "inferred intended outcome": "Advance #1680 from merged reduction slices toward closeout by adding checked aggregate evidence and preserving the remaining blockers.",
-    "chosen concrete what": "Add scripts/check/check_completion_cost_lane_evidence.py, focused tests, and a lane record update.",
+    "literal request": "Address #1723 behavior-proof review",
+    "inferred intended outcome": "Address PR #1723 review feedback by distinguishing representative behavior observations from completed long-horizon behavior proof.",
+    "chosen concrete what": "Downgrade overstated lane statuses and expose proof completion separately in the checker.",
     "interpretation distance": "low",
-    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+    "review guidance": "Confirm PR #1723 no longer treats representative observation support as completed live long-horizon proof."
   },
   "execution_bounds": {
-    "allowed paths": "scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; this execplan; planning state created by the planning CLI.",
-    "max changed files": "5 tracked files plus planning CLI state updates.",
-    "required validation commands": "uv run pytest tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_lane_evidence.py --format json; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json.",
+    "allowed paths": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json; this execplan and closeout archive/state metadata.",
+    "max changed files": "Six expected files before closeout archive/state updates.",
+    "required validation commands": "Focused pytest, lane evidence checker JSON, planning doctor, workspace tests, and workspace lint.",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -130,14 +128,14 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Continue by validating the #1680 lane evidence checker and opening the stacked PR; do not claim #1680 closure.",
+    "tiny resumability note": "PR #1723 review fix distinguishes observation support from completed long-horizon behavior proof.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
-    "requested outcome": "Add a checked #1680 completion-cost lane evidence aggregation that combines existing static, corpus, behavior, and reduction evidence without authorizing parent closure prematurely.",
-    "hard constraints": "Do not claim #1680 closure; keep the slice bounded to lane evidence aggregation, tests, and the lane record update.",
-    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    "requested outcome": "Address PR #1723 review feedback by distinguishing representative behavior observations from completed long-horizon behavior proof.",
+    "hard constraints": "Do not claim #1680 closure or completed live long-horizon behavior proof. Keep edits bounded to the lane record, aggregate checker, focused tests, archived plan wording, and this active plan.",
+    "agent may decide locally": "Exact status wording and checker field names that make the distinction explicit.",
+    "escalate when": "A correct fix requires changing external-agent evaluation semantics, closing #1602/#1680, or touching unrelated AW runtime surfaces."
   },
   "post_decomposition_delegation": {
     "status": "closed-with-continuation-routed",
@@ -153,24 +151,25 @@
   },
   "references": [],
   "active_milestone": {
-    "id": "github-1680-lane-evidence-aggregation",
+    "id": "github-1723-behavior-proof-review-fix",
     "status": "completed",
-    "scope": "Add the #1680 completion-cost lane evidence checker and update the lane record to point at the remaining before-after closure evidence.",
+    "scope": "Address PR #1723 behavior-proof review without broadening beyond lane evidence aggregation.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Run focused checker validation, the AW-selected proof commands, then open a stacked PR."
+    "Validate the comment fix, close out this active plan, then push PR #1723 and rebase later stack PRs."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
+    ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
     "scripts/check/check_completion_cost_lane_evidence.py",
     "tests/test_completion_cost_lane_evidence.py",
-    ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
-    ".agentic-workspace/planning/execplans/github-1680-lane-evidence-aggregation.plan.json"
+    ".agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json",
+    ".agentic-workspace/planning/execplans/github-1723-behavior-proof-review-fix.plan.json"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -178,34 +177,30 @@
   "validation_commands": [
     "uv run pytest tests/test_completion_cost_lane_evidence.py -q",
     "uv run python scripts/check/check_completion_cost_lane_evidence.py --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
     "make test-workspace",
-    "make lint-workspace",
-    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
-    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    "make lint-workspace"
   ],
   "required_tools": [
     "None."
   ],
   "completion_criteria": [
-    "The checker emits a structured #1680 lane evidence packet.",
-    "The packet marks static, corpus, behavior, and landed-reduction evidence present.",
-    "The packet keeps parent closure blocked until full before/after evidence and remaining-cost routing are complete.",
-    "The lane record moves the current slice to before-after closure evidence without claiming #1680 closure."
+    "Address #1723 behavior-proof review is implemented, validated, and closed out honestly."
   ],
   "execution_run": {
     "run status": "completed",
     "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Added a checked #1680 lane evidence aggregator and updated the lane record to mark behavior evidence and first reductions complete while keeping parent closure blocked on before/after evidence.",
-    "scope touched": "#1680 lane evidence aggregation, checker tests, and lane planning state.",
-    "changed surfaces": "scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; .agentic-workspace/planning/execplans/github-1680-lane-evidence-aggregation.plan.json; .agentic-workspace/planning/state.toml",
+    "what happened": "Addressed PR #1723 review by distinguishing representative behavior observation support from completed live long-horizon behavior proof.",
+    "scope touched": "#1680 lane record, lane evidence checker, focused tests, archived aggregate plan wording, and planning metadata.",
+    "changed surfaces": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json; planning closeout metadata.",
     "validations run": "See proof_report.validation proof.",
     "result for continuation": "continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
     "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
   },
   "finished_run_review": {
     "review status": "complete",
-    "scope respected": "Scope stayed bounded to lane evidence aggregation; parent #1680 remains open with explicit before/after and remaining-cost blockers.",
+    "scope respected": "Scope respected; lane current slice is long-horizon-behavior-proof, observation support remains present, and actual long-horizon proof completion remains false.",
     "proof status": "passed",
     "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
     "config compliance": "used planning closeout command-owned writer",
@@ -222,18 +217,18 @@
     "decomposition adjustment": "larger intent remains routed through the continuation owner"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_lane_evidence.py --format text; make lint-workspace; make test-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "validation proof": "uv run pytest tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_lane_evidence.py --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py summary --target . --format json; make test-workspace; make lint-workspace",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
   "intent_satisfaction": {
-    "original intent": "Create a bounded plan for Aggregate #1680 completion-cost lane evidence.",
-    "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "Slice satisfied: #1680 now has a checker-backed aggregate evidence packet. Parent #1680 remains open because representative observations are not completed live long-horizon behavior proof and final before/after closure evidence remains unresolved.",
+    "original intent": "Create a bounded plan for Address #1723 behavior-proof review.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
     "unsolved intent passed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
   },
   "execution_summary": {
-    "outcome delivered": "#1680 now has a checker-backed aggregate evidence packet that distinguishes representative behavior observations from completed long-horizon behavior proof.",
+    "outcome delivered": "PR #1723 no longer upgrades representative sample observations into completed behavior proof.",
     "validation confirmed": "See proof_report.validation proof.",
     "follow-on routed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
     "post-work posterity capture": "archive closeout distillation",
@@ -344,7 +339,7 @@
       "closure_actions": [
         {
           "kind": "issue_closure",
-          "target": "#1680",
+          "target": "#1723",
           "authorized": false,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         }
@@ -358,7 +353,7 @@
           "finished",
           "all",
           "full intent complete",
-          "Closes #1680"
+          "Closes #1723"
         ],
         "diagnostic_only": true
       }
@@ -396,6 +391,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Aggregate #1680 completion-cost lane evidence.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_lane_evidence.py --format text; make lint-workspace; make test-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json\nChanged surfaces: scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; .agentic-workspace/planning/execplans/github-1680-lane-evidence-aggregation.plan.json; .agentic-workspace/planning/state.toml\nDurable residue: planning (.agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Address #1723 behavior-proof review.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run pytest tests/test_completion_cost_lane_evidence.py -q; uv run python scripts/check/check_completion_cost_lane_evidence.py --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py summary --target . --format json; make test-workspace; make lint-workspace\nChanged surfaces: .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; scripts/check/check_completion_cost_lane_evidence.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/execplans/archive/github-1680-lane-evidence-aggregation.plan.json; planning closeout metadata.\nDurable residue: planning (.agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
   }
 }

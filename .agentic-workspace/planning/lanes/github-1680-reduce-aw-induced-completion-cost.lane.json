@@ -47,26 +47,26 @@
     {
       "id": "long-horizon-behavior-proof",
       "title": "Long-horizon behavior evidence for completion-cost impact",
-      "status": "completed",
+      "status": "active",
       "execplan_ref": "",
       "depends_on": [
         "json-corpus-cost-ranking"
       ],
       "purpose_for_lane": "Reuse and strengthen #1602 to show whether suspected surfaces cause rereads, proof churn, over-planning, stale residue, review/repair loops, unsafe closure, or handoff/recovery failures.",
-      "proof": "External-agent evaluation pack records representative completion-cost observations with Codex GPT 5.3 Spark, including rereads, proof churn, review repair loops, unsafe closure, and cost-driver classifications tied to AW sections and owner surfaces.",
-      "residual_after_slice": "At least one reduction must land and be re-measured."
+      "proof": "External-agent evaluation pack records representative completion-cost observation support with Codex GPT 5.3 Spark, including sample rereads, proof churn, review repair loops, unsafe closure, and cost-driver classifications tied to AW sections and owner surfaces. This is evidence-present support, not completed live long-horizon behavior proof.",
+      "residual_after_slice": "Actual long-horizon evaluation proof remains open before this slice can be completed."
     },
     {
       "id": "first-reduction-tranche",
       "title": "Land the first meaningful AW-induced cost reductions",
-      "status": "completed",
+      "status": "planned",
       "execplan_ref": "",
       "depends_on": [
         "long-horizon-behavior-proof"
       ],
       "purpose_for_lane": "Apply evidence to #1608 and the near-term tranche from #1692, #1693, and #1694 when those are the cheapest representative reductions.",
       "proof": "Merged selector-first and proof-cost slices route or compact startup detail, skill catalog detail, implement candidate pressure, implement Memory detail, fresh-session digest context, proof retry guidance, proof failure summaries, PR comment deltas, and installed-state drift signals while preserving rollback conditions and focused regressions.",
-      "residual_after_slice": "Before/after evidence must show representative bounded work is cheaper to finish or continue."
+      "residual_after_slice": "Before/after signals are useful partial evidence, but completed long-horizon behavior proof still gates lane closeout."
     },
     {
       "id": "before-after-closure-evidence",
@@ -81,7 +81,7 @@
       "residual_after_slice": "Close #1680 only if the strict completion rule is satisfied; otherwise route residual owner surfaces."
     }
   ],
-  "current_slice": "before-after-closure-evidence",
+  "current_slice": "long-horizon-behavior-proof",
   "acceptance_boundary": "This lane is complete only when the evidence loop has found, ranked, reduced, and re-measured meaningful AW-induced cost across representative bounded work. Closure must distinguish landed reductions, the intent served, unresolved cost sources, and whether small bounded work is actually cheaper, without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
   "proof_strategy": "Aggregate proof from the five lane slices: static schema suspect inventory, actual JSON corpus ranking, long-horizon behavior evidence, at least one landed reduction, and before/after measurement. A useful one-off fix or cost report is partial evidence, not lane completion.",
   "proof_aggregation": {
@@ -96,17 +96,18 @@
       "scripts/check/check_completion_cost_lane_evidence.py aggregates the #1680 evidence loop and keeps parent closure blocked until remaining before/after evidence is explicit."
     ],
     "known_gaps": [
+      "Representative behavior observations are present, but completed live long-horizon behavior proof remains open before #1680 can close.",
       "Full before/after closure evidence and remaining-cost routing remain open before #1680 can close."
     ]
   },
-  "residual_lane_work": "Open: aggregate before/after closure evidence, explicitly route remaining cost sources, reconcile completed child issues, and close #1680 only if the evidence proves representative bounded work is cheaper or cheaper to continue.",
+  "residual_lane_work": "Open: complete actual long-horizon behavior proof, aggregate before/after closure evidence, explicitly route remaining cost sources, reconcile completed child issues, and close #1680 only if the evidence proves representative bounded work is cheaper or cheaper to continue.",
   "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
   "parent_close_permission": "not-evaluated",
   "closeout_state": {
     "status": "open",
-    "summary": "Static analysis, actual JSON corpus analysis, representative behavior evidence, and the first reduction tranche have landed; parent closure remains blocked on final before/after evidence and remaining-cost routing.",
-    "residual_work": "Run and preserve the #1680 lane evidence aggregation, decide which child issues are satisfied by merged reductions, and record explicit remaining cost owners before any parent closeout claim.",
-    "next_owner": "before-after-closure-evidence"
+    "summary": "Static analysis, actual JSON corpus analysis, representative behavior observations, and first-tranche reduction signals have landed; parent closure remains blocked on completed long-horizon behavior proof, final before/after evidence, and remaining-cost routing.",
+    "residual_work": "Complete actual long-horizon behavior proof, run and preserve the #1680 lane evidence aggregation, decide which child issues are satisfied by merged reductions, and record explicit remaining cost owners before any parent closeout claim.",
+    "next_owner": "long-horizon-behavior-proof"
   },
   "references": [
     {

@@ -29,9 +29,13 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
     assert payload["stages"]["static_schema_analysis"]["status"] == "present"
     assert payload["stages"]["actual_json_corpus"]["status"] == "present"
     assert payload["stages"]["long_horizon_behavior_evidence"]["status"] == "present"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["observation_support_status"] == "present"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["proof_status"] == "active"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["actual_long_horizon_proof_complete"] is False
     assert payload["stages"]["landed_reductions"]["status"] == "present"
     assert payload["stages"]["before_after_closure_evidence"]["status"] == "partial"
     assert payload["closure_boundary"]["may_close_parent_issue"] is False
+    assert any("actual long-horizon behavior proof" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
     assert any("full before/after closure evidence" in blocker for blocker in payload["closure_boundary"]["remaining_blockers"])
 
 
