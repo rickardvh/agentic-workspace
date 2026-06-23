@@ -32,30 +32,16 @@ test('generated package metadata exposes maturity and weak-agent routing status'
 
 test('generated runnable adapter executes supported command without Python runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...[...["checkpoint", "write"], "--format", "json"]], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write", "--format", "json"]], { encoding: 'utf8' });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(typeof payload, 'object');
   assert.equal(result.stderr, '');
 });
 
-test('generated runnable adapter preserves spaced argv values during native execution', () => {
-  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));
-  mkdirSync(spacedTarget, { recursive: true });
-  try {
-    const args = [...["checkpoint", "write"], "--target", "__SPACED_TARGET__"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
-    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
-    assert.equal(result.status, 0);
-    assert.doesNotMatch(result.stderr, /runtime handoff/i);
-  } finally {
-    rmSync(spacedTarget, { recursive: true, force: true });
-  }
-});
-
 test('generated runnable adapter rejects command without required subcommand', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["checkpoint"], "--format", "json"], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cli, ...["checkpoint"]], { encoding: 'utf8' });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /missing subcommand for checkpoint/);
@@ -75,7 +61,7 @@ test('generated runnable adapter exposes routing status and recovery guidance', 
 
 test('generated runnable adapter renders command help without executing runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'checkpoint', '--help'], {
+  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write"], '--help'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0);
@@ -85,7 +71,7 @@ test('generated runnable adapter renders command help without executing runtime'
 
 test('generated runnable adapter validates choices before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'checkpoint', '--format', '__invalid__'], {
+  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write"], '--format', '__invalid__'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);

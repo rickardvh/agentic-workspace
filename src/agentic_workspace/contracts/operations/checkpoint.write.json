@@ -17,55 +17,46 @@
     {
       "name": "task",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "issue",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "pr",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "durable_source",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "last_proof",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "next_safe_command",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "open_blocker",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "dirty_state_summary",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {
       "name": "replace",
       "source": "cli-option",
-      "command_visibility": "runtime-only",
       "required": false
     },
     {

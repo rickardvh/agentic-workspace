@@ -381,6 +381,20 @@ def test_command_generation_extraction_readiness_rejects_uninventoried_product_l
     assert any("product-specific literals without extraction-readiness inventory" in error for error in errors)
 
 
+def test_generated_cli_compatibility_allowlist_rejects_missing_exact_paths() -> None:
+    errors = _checker_case_errors(
+        """
+        checker.GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
+            **checker.GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST,
+            "internal/command-generation/src/command_generation/generated_package_loader.py": "stale internalization residue",
+        }
+        _emit({"errors": checker._validate_generated_cli_compatibility_vocabulary()})
+        """
+    )
+
+    assert any("is listed in GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST but does not exist" in error for error in errors)
+
+
 def test_generated_python_version_output_is_contract_backed() -> None:
     checker = _load_checker()
     root = checker.REPO_ROOT
@@ -597,6 +611,44 @@ def test_generated_artifact_metadata_rejects_unsupported_target_layout() -> None
     )
 
     assert any("generation metadata has unexpected target layout" in error for error in errors)
+
+
+def test_generated_output_git_dirtiness_classifies_line_ending_only_changes() -> None:
+    errors = _checker_case_errors(
+        """
+        relative_path = "generated/workspace/python/line-ending-fixture.txt"
+        path = checker.REPO_ROOT / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        class Output:
+            def __init__(self, path, content):
+                self.path = path
+                self.content = content
+
+        def fake_render_outputs(ir, *, repo_root):
+            return [Output(path, "alpha\\nbeta\\n")]
+
+        def fake_git_output(args):
+            if args == ["status", "--porcelain=v1", "--", "generated"]:
+                return f" M {relative_path}\\n"
+            if args == ["diff", "--numstat", "HEAD", "--", relative_path]:
+                return ""
+            return ""
+
+        try:
+            path.write_bytes(b"alpha\\r\\nbeta\\r\\n")
+            checker.render_workspace_command_package_outputs = fake_render_outputs
+            checker._run_git_output = fake_git_output
+            _emit({"errors": checker._validate_generated_output_git_dirtiness({})})
+        finally:
+            path.unlink(missing_ok=True)
+        """
+    )
+
+    assert errors == [
+        "generated/workspace/python/line-ending-fixture.txt is line-ending-only generated output dirtiness; "
+        "run git restore -- generated/workspace/python/line-ending-fixture.txt or regenerate packages to normalize LF output."
+    ]
 
 
 def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
@@ -1208,6 +1260,52 @@ def test_generated_operation_cli_input_proof_scenarios(monkeypatch) -> None:
         interface=interface,
         inherited_operation_ref=operation_ref,
         inherited_option_names=set(),
+    )
+
+    assert errors == []
+
+
+def test_operation_cli_input_visibility_uses_required_subcommand_interface(monkeypatch) -> None:
+    checker = _load_checker()
+
+    parent_interface = {
+        "name": "checkpoint",
+        "options": [{"name": "target"}, {"name": "format"}],
+        "subcommands_required": True,
+        "subcommands": [
+            {
+                "name": "write",
+                "options": [
+                    {"name": "target"},
+                    {"name": "task"},
+                    {"name": "issue"},
+                    {"name": "durable_source"},
+                    {"name": "replace"},
+                    {"name": "format"},
+                ],
+                "operation_ref": {"id": "checkpoint.write", "path": "operations/checkpoint.write.json"},
+            }
+        ],
+    }
+    operation = {
+        "inputs": [
+            {"name": "target", "source": "cli-option"},
+            {"name": "task", "source": "cli-option"},
+            {"name": "issue", "source": "cli-option"},
+            {"name": "durable_source", "source": "cli-option"},
+            {"name": "replace", "source": "cli-option"},
+            {"name": "format", "source": "cli-option"},
+        ]
+    }
+    monkeypatch.setattr(checker, "_load_json", lambda path: operation)
+
+    errors = checker._validate_operation_cli_inputs_for_interface(
+        package_id="root-workspace",
+        command_path="checkpoint",
+        interface=parent_interface,
+        inherited_operation_ref={"id": "checkpoint.write", "path": "operations/checkpoint.write.json"},
+        inherited_option_names=set(),
+        command_source_id="checkpoint.write.cli",
     )
 
     assert errors == []

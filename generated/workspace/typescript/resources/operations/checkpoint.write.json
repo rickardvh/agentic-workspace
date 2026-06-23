@@ -25,55 +25,46 @@
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "task",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "issue",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "pr",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "durable_source",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "last_proof",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "next_safe_command",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "open_blocker",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "dirty_state_summary",
       "required": false,
       "source": "cli-option"
     },
     {
-      "command_visibility": "runtime-only",
       "name": "replace",
       "required": false,
       "source": "cli-option"

@@ -70,6 +70,19 @@ def _repo_relative(path: Path) -> str:
     return os.path.relpath(path, REPO_ROOT).replace(os.sep, "/")
 
 
+def _run_git_output(args: list[str]) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode:
+        return ""
+    return completed.stdout
+
+
 class RunnableTypescriptConformanceCase(NamedTuple):
     package_id: str
     program: str
@@ -307,8 +320,6 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "packages/verification/src/repo_verification_bootstrap/cli.py": "source-checkout fallback to checked-in generated verification CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
-    "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
-    "tests/test_contract_tooling.py": "legacy-layout fixture and obsolete source guard",
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
     "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/memory/tests/test_packaging.py": "installed private bridge compatibility proof",
@@ -902,11 +913,14 @@ def _validate_operation_cli_inputs_for_interface(
     option_names = set(inherited_option_names) | _interface_parameter_names(interface)
     operation_ref = interface.get("operation_ref", inherited_operation_ref)
     current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    operation_ref_declared_here = isinstance(interface.get("operation_ref"), dict)
     operation_id = str(current_operation_ref.get("id", "")).strip()
     operation_path = str(current_operation_ref.get("path", "")).strip()
     subcommands = interface.get("subcommands", [])
     has_subcommands = isinstance(subcommands, list) and any(isinstance(subcommand, dict) for subcommand in subcommands)
-    if operation_id and operation_path and (option_names or not has_subcommands):
+    subcommands_required = has_subcommands and interface.get("subcommands_required") is not False
+    validate_current_operation = operation_ref_declared_here or not subcommands_required
+    if operation_id and operation_path and validate_current_operation:
         try:
             operation = (
                 _load_generated_operation_json(generated_root, operation_path) if generated_root is not None else _load_json(operation_path)
@@ -4092,6 +4106,47 @@ def _validate_generated_artifact_generation_metadata(ir: dict[str, object]) -> l
     return errors
 
 
+def _git_dirty_path_from_porcelain_line(line: str) -> str:
+    payload = line[3:].strip()
+    if " -> " in payload:
+        payload = payload.rsplit(" -> ", 1)[1].strip()
+    if len(payload) >= 2 and payload[0] == payload[-1] == '"':
+        payload = payload[1:-1]
+    return payload.replace("\\", "/")
+
+
+def _line_ending_only_generated_output_paths(ir: dict[str, object]) -> list[str]:
+    rendered = {
+        _repo_relative(output.path if output.path.is_absolute() else REPO_ROOT / output.path): output.content
+        for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
+    }
+    status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
+    dirty_paths = [_git_dirty_path_from_porcelain_line(line) for line in status.splitlines() if line.strip()]
+    classified: list[str] = []
+    for relative_path in dirty_paths:
+        expected = rendered.get(relative_path)
+        if expected is None:
+            continue
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            continue
+        semantic_diff = _run_git_output(["diff", "--numstat", "HEAD", "--", relative_path]).strip()
+        if semantic_diff:
+            continue
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            current = handle.read()
+        if current == expected or current.replace("\r\n", "\n") == expected:
+            classified.append(relative_path)
+    return sorted(classified)
+
+
+def _validate_generated_output_git_dirtiness(ir: dict[str, object]) -> list[str]:
+    return [
+        f"{path} is line-ending-only generated output dirtiness; run git restore -- {path} or regenerate packages to normalize LF output."
+        for path in _line_ending_only_generated_output_paths(ir)
+    ]
+
+
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap", "verification-cli"):
@@ -4163,6 +4218,12 @@ def _generated_cli_compatibility_allowlist_reason(relative_path: str) -> str | N
 
 def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     errors: list[str] = []
+    for relative_path in sorted(GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST):
+        if not (REPO_ROOT / relative_path).is_file():
+            errors.append(
+                f"{relative_path} is listed in GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST but does not exist; "
+                "remove the stale entry or move historical/provenance-only coverage to a prefix allowlist"
+            )
     candidate_paths: list[str] = []
     if shutil.which("git"):
         completed = subprocess.run(
@@ -4768,6 +4829,7 @@ def _validate_static_surfaces() -> list[str]:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
+        errors.extend(_validate_generated_output_git_dirtiness(ir))
         errors.extend(_validate_command_generation_extraction_readiness(ir))
         errors.extend(_validate_command_generation_non_aw_fixture())
         errors.extend(_validate_generated_operation_cli_inputs(ir))
