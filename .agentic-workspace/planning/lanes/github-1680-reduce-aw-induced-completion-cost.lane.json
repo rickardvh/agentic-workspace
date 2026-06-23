@@ -1,0 +1,176 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "github-1680-reduce-aw-induced-completion-cost",
+  "title": "Reduce AW-induced completion cost",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "AW identifies, ranks, reduces, and re-measures meaningful AW-induced completion cost across representative bounded work while preserving intent, proof, residue, reviewability, handoff, and honest closure.",
+  "purpose_for_parent": "Serve GitHub #1680 as the broad optimization lane for making the ordinary AW operating loop cheaper without hiding safety-critical signals or collapsing the work into one narrow fix.",
+  "subsystems": [
+    "workspace ordinary outputs",
+    "memory routing and reread cost",
+    "planning residue and lane continuation",
+    "verification proof selection",
+    "external-agent evaluation",
+    "operator and local continuity"
+  ],
+  "technical_strategy": "Run #1680 as a closed evidence loop: use static schema analysis to find likely AW-owned completion-cost suspects, actual JSON corpus analysis to rank real ordinary-output costs, long-horizon evaluation to prove behavior impact, then land one or more reductions through subtraction, merger, compression, routing, reuse, or sharper stop/closeout behavior. Start from compact issue comments and local review artifacts instead of replaying the long dogfooding thread.",
+  "technology_choices": [
+    "checked-in Planning lane record for lane authority",
+    "GitHub issues as upstream coordination and child-slice references",
+    "docs/reviews artifacts for compact evidence",
+    "existing summary, proof, and evaluation surfaces before adding new visible mechanisms"
+  ],
+  "slice_sequence": [
+    {
+      "id": "static-schema-cost-analysis",
+      "title": "Static completion-cost analysis for ordinary output schemas",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/closeout-evidence/github-1680-static-schema-cost-analysis.closeout.json",
+      "depends_on": [],
+      "purpose_for_lane": "Use #1690 to identify large required compact fields, duplicated concepts, prose-heavy advisory fields, always-present empty diagnostics, deeply nested next-action/proof/closure state, and fields lacking selector/detail routing.",
+      "proof": "Static analyzer and tests landed: uv run pytest tests/test_completion_cost_schema_analysis.py; uv run python scripts/check/check_completion_cost_schema_analysis.py --format json --max-findings-per-surface 3; ruff; make test-workspace; make lint-workspace; summary and planning doctor.",
+      "residual_after_slice": "Actual JSON corpus analysis must confirm which static suspects matter in ordinary command output."
+    },
+    {
+      "id": "json-corpus-cost-ranking",
+      "title": "Actual JSON completion-cost corpus for ordinary AW outputs",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "static-schema-cost-analysis"
+      ],
+      "purpose_for_lane": "Use #1691 to measure byte size, top fields, empty/default ratios, repeated strings, prose-vs-structured bytes, duplicate concepts, actionability density, and selector escape hatches.",
+      "proof": "Corpus report separates real ordinary-output cost from static suspicion and supplies ranked reduction candidates.",
+      "residual_after_slice": "Long-horizon evaluation must connect ranked surfaces to completion behavior."
+    },
+    {
+      "id": "long-horizon-behavior-proof",
+      "title": "Long-horizon behavior evidence for completion-cost impact",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "json-corpus-cost-ranking"
+      ],
+      "purpose_for_lane": "Reuse and strengthen #1602 to show whether suspected surfaces cause rereads, proof churn, over-planning, stale residue, review/repair loops, unsafe closure, or handoff/recovery failures.",
+      "proof": "Scenario probes or external-agent runs connect one or more ranked cost suspects to observable completion-cost behavior.",
+      "residual_after_slice": "At least one reduction must land and be re-measured."
+    },
+    {
+      "id": "first-reduction-tranche",
+      "title": "Land the first meaningful AW-induced cost reductions",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "long-horizon-behavior-proof"
+      ],
+      "purpose_for_lane": "Apply evidence to #1608 and the near-term tranche from #1692, #1693, and #1694 when those are the cheapest representative reductions.",
+      "proof": "A landed change reduces a meaningful AW-induced cost source while preserving intent routing, adequate proof, explicit unresolved work, reviewability, and handoff/recovery cost.",
+      "residual_after_slice": "Before/after evidence must show representative bounded work is cheaper to finish or continue."
+    },
+    {
+      "id": "before-after-closure-evidence",
+      "title": "Record before/after lane closure evidence",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "first-reduction-tranche"
+      ],
+      "purpose_for_lane": "Record compact evidence of what was optimized, what remains unresolved, and whether bounded work is measurably cheaper or cheaper to continue.",
+      "proof": "Lane proof aggregation includes static, corpus, behavior, reduction, and re-measurement evidence plus explicit remaining cost sources.",
+      "residual_after_slice": "Close #1680 only if the strict completion rule is satisfied; otherwise route residual owner surfaces."
+    }
+  ],
+  "current_slice": "json-corpus-cost-ranking",
+  "acceptance_boundary": "This lane is complete only when the evidence loop has found, ranked, reduced, and re-measured meaningful AW-induced cost across representative bounded work. Closure must distinguish landed reductions, the intent served, unresolved cost sources, and whether small bounded work is actually cheaper, without weakening proof, intent preservation, residue routing, reviewability, handoff, recovery, or honest closure.",
+  "proof_strategy": "Aggregate proof from the five lane slices: static schema suspect inventory, actual JSON corpus ranking, long-horizon behavior evidence, at least one landed reduction, and before/after measurement. A useful one-off fix or cost report is partial evidence, not lane completion.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      ".agentic-workspace/planning/closeout-evidence/github-1680-static-schema-cost-analysis.closeout.json",
+      "scripts/check/check_completion_cost_schema_analysis.py emits structured static suspects for start, implement, and report ordinary surfaces."
+    ],
+    "known_gaps": [
+      "Actual JSON corpus analysis (#1691) has not yet ranked runtime byte share, empty/default ratios, repeated strings, or actionability density.",
+      "Long-horizon behavior evidence and measured reductions remain open before #1680 can close."
+    ]
+  },
+  "residual_lane_work": "Open: actual JSON corpus analysis (#1691), long-horizon behavior proof through #1602, reduction work through #1608 and selected child issues, and before/after closure evidence.",
+  "lane_to_epic_contribution": "Provides the checked-in Planning owner for GitHub #1680 and keeps child optimization issues tied to a strict evidence loop rather than isolated fixes.",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1680",
+      "label": "GitHub #1680",
+      "role": "upstream lane issue"
+    },
+    {
+      "kind": "github-comment",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1680#issuecomment-4777015186",
+      "label": "#1680 shaping note",
+      "role": "closed evidence-loop backbone"
+    },
+    {
+      "kind": "github-comment",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1680#issuecomment-4777077961",
+      "label": "#1680 session-log analysis comment",
+      "role": "first-tranche guidance"
+    },
+    {
+      "kind": "review-artifact",
+      "target": "docs/reviews/aw-completion-cost-session-log-analysis-2026-06-23.md",
+      "label": "AW completion-cost session log analysis",
+      "role": "compact evidence and suggested first tranche"
+    },
+    {
+      "kind": "review-artifact",
+      "target": "docs/reviews/aw-induced-completion-cost-inventory-2026-06-22.md",
+      "label": "AW-induced completion cost inventory",
+      "role": "landed reductions already contributing evidence"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1690",
+      "label": "GitHub #1690",
+      "role": "static schema analysis slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1691",
+      "label": "GitHub #1691",
+      "role": "actual JSON corpus slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1602",
+      "label": "GitHub #1602",
+      "role": "long-horizon behavior evidence"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1608",
+      "label": "GitHub #1608",
+      "role": "ordinary-surface reduction owner"
+    },
+    {
+      "kind": "github-issues",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1692 https://github.com/rickardvh/agentic-workspace/issues/1693 https://github.com/rickardvh/agentic-workspace/issues/1694",
+      "label": "GitHub #1692/#1693/#1694",
+      "role": "suggested first reduction tranche"
+    },
+    {
+      "kind": "github-issues",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1700 https://github.com/rickardvh/agentic-workspace/issues/1701 https://github.com/rickardvh/agentic-workspace/issues/1702 https://github.com/rickardvh/agentic-workspace/issues/1703 https://github.com/rickardvh/agentic-workspace/issues/1704",
+      "label": "GitHub #1700-#1704",
+      "role": "local checkpoint experiment related to lane/session continuity"
+    }
+  ],
+  "notes": "Ingested from GitHub #1680 on 2026-06-23. Static schema analysis (#1690) landed as the first slice; promote json-corpus-cost-ranking (#1691) into an accurate bounded implementation plan before starting that work. Do not close this lane after one useful fix; a small dogfooding batch is partial progress unless the full evidence loop is satisfied."
+}
