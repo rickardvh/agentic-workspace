@@ -1843,6 +1843,14 @@
           "help": "Optional planning id that the proof receipt applies to."
         },
         {
+          "name": "receipt_log",
+          "flags": [
+            "--receipt-log"
+          ],
+          "default": "",
+          "help": "Optional repo-local log path or short excerpt used to attach a compact failed-proof summary."
+        },
+        {
           "name": "dry_run",
           "flags": [
             "--dry-run"

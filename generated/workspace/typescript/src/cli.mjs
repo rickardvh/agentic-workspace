@@ -2253,6 +2253,14 @@ const commandDefinitions = [
           "name": "receipt_plan"
         },
         {
+          "default": "",
+          "flags": [
+            "--receipt-log"
+          ],
+          "help": "Optional repo-local log path or short excerpt used to attach a compact failed-proof summary.",
+          "name": "receipt_log"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--dry-run"
