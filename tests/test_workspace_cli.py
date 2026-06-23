@@ -285,10 +285,69 @@ def test_summary_fresh_session_digest_is_selector_backed(tmp_path: Path, capsys)
     assert digest["issue_evidence"]["status"] == "available"
     assert digest["issue_evidence"]["items"][0]["title"] == "[Workspace]: Reduce AW-induced completion cost"
     assert digest["changed_paths"] == ["docs/reviews/example.md"]
+    assert digest["source_artifacts"] == [
+        ".agentic-workspace/local/cache/external-intent-evidence.json",
+        "docs/reviews/example.md",
+        "GitHub issue refs listed in issue_refs",
+    ]
     assert digest["closure_boundary"]["may_claim_parent_closure"] is False
     assert "cannot close issues" in digest["closure_boundary"]["rule"]
     assert digest["safe_next_command"].endswith('start --target . --task "<next task>" --format json')
     assert "refresh_issue_evidence" in digest["detail_commands"]
+
+
+def test_summary_fresh_session_digest_omits_unrelated_lane_artifacts(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    evidence_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "id": "#42",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "issue",
+                        "title": "Unrelated docs task",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #42 docs lane",
+                "--changed",
+                "docs/notes/unrelated.md",
+                "--select",
+                "fresh_session_digest",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload_text = capsys.readouterr().out
+    digest = json.loads(payload_text)["values"]["fresh_session_digest"]
+
+    assert digest["issue_refs"] == ["#42"]
+    assert digest["source_artifacts"] == [
+        ".agentic-workspace/local/cache/external-intent-evidence.json",
+        "docs/notes/unrelated.md",
+        "GitHub issue refs listed in issue_refs",
+    ]
+    assert "#1680" not in payload_text
+    assert "aw-completion-cost-session-log-analysis-2026-06-23.md" not in payload_text
 
 
 def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path: Path, capsys) -> None:

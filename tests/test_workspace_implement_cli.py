@@ -1842,13 +1842,20 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 15_000, label="implement tiny docs-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 13_000, label="implement tiny docs-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
     assert payload["next"]["action"]
     assert payload["proof"]["required_commands"]
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["status"] == "clear"
+    assert planning_gate["required_next_action"] == "continue-direct"
+    assert planning_gate["changed_path_facts"]["surface_roots"] == ["README.md"]
+    assert "reason" not in planning_gate
+    assert "promotion_command" not in planning_gate
+    assert "active_plan_reliance" not in planning_gate
     assert "change_impact" not in payload
     assert "routine_work_context" not in payload
     assert "generated_surface_trust" not in payload
@@ -1880,13 +1887,20 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 15_000, label="implement tiny code-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 12_000, label="implement tiny code-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
     assert payload["next"]["action"]
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
     assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["status"] == "clear"
+    assert planning_gate["required_next_action"] == "continue-direct"
+    assert planning_gate["changed_path_facts"]["surface_roots"] == ["src"]
+    assert "reason" not in planning_gate
+    assert "promotion_command" not in planning_gate
+    assert "active_plan_reliance" not in planning_gate
     assert "change_impact" not in payload
     assert "routine_work_context" not in payload
     assert "generated_surface_trust" not in payload
