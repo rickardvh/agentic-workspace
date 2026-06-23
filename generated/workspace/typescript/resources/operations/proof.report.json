@@ -16,7 +16,8 @@
     "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
     "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
     "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
-    "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result."
+    "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.",
+    "Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof."
   ],
   "id": "proof.report",
   "inputs": [
@@ -124,7 +125,7 @@
     "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
     "proof changed-path tests cover subsystem proof hints",
     "proof tiny profile omits selected-lane and provenance detail while preserving required commands",
-    "proof receipt tests cover explicit execution evidence recording and planning closeout consumption"
+    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, and planning closeout consumption"
   ],
   "reads": [
     {
@@ -189,7 +190,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, and explicit proof receipt recording.",
+  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, explicit proof receipt recording, and failed-receipt repair retry ladders.",
   "writes": [
     {
       "required": false,
