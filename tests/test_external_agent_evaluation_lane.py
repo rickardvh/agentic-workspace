@@ -433,6 +433,40 @@ def test_model_cli_harness_scores_local_absolute_path_leak_with_owner(tmp_path: 
     assert leak["evidence"].startswith(f"{drive}\\Users\\agent")
 
 
+def test_model_cli_harness_repairs_exported_final_message_without_suppressing_warning(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    run_root = tmp_path / "run"
+    repo.mkdir()
+    run_root.mkdir()
+    readme = repo / "README.md"
+    readme.write_text("notes\n", encoding="utf-8")
+    share_path = run_root / "session.md"
+    raw_message = f"Changed [README.md]({readme.as_posix()}) and see {run_root.as_posix()}/session.md"
+    result = {"status": "success", "final_message": raw_message}
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "memory-consult-before-edit"},
+        result=result,
+        mutation_summary={"created": [], "modified": ["README.md"], "deleted": []},
+        repo_path=repo,
+    )
+    repair = module._repair_result_final_message_local_paths(
+        result=result,
+        repo_path=repo,
+        run_root=run_root,
+        share_path=share_path,
+    )
+
+    leak = next(warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak")
+    assert leak["failure_id"] == "LOCAL_ABSOLUTE_PATH_LEAK"
+    assert repair["status"] == "repaired"
+    assert {item["kind"] for item in repair["repairs"]} == {"repo_relative", "harness_artifact_role"}
+    assert result["final_message"] == "Changed [README.md](README.md) and see <harness artifact>"
+    assert share_path.read_text(encoding="utf-8") == result["final_message"]
+    assert str(tmp_path).replace("\\", "/") not in result["final_message"]
+
+
 def test_model_cli_harness_allows_repo_relative_final_paths(tmp_path: Path) -> None:
     module = _load_harness_module()
     repo = tmp_path / "repo"
