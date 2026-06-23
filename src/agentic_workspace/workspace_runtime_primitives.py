@@ -34749,7 +34749,7 @@ def _record_proof_receipt_payload(
     if not result:
         raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
     receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
-    receipt = {
+    receipt: dict[str, Any] = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": command,
         "result": result,
