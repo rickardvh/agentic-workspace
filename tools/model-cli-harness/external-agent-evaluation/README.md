@@ -40,7 +40,7 @@ Trace-required result records must also include the normalized `agentic-workspac
 
 For #1680 completion-cost work, each probe can also emit `agentic-workspace/external-agent-completion-cost-observations/v1`. The observation packet is maintainer-evaluation evidence only, and records compact behavior-cost signals such as AW command count, proof command count, reread events, proof churn, over-planning, review/repair loops, handoff recovery status, unsafe closure claims, used AW output sections, and classified cost drivers.
 
-Surface simplification decisions should be recorded in `surface-decisions.sample.json` before or alongside a default-output change. Each decision names the surface, owner, evidence records or scenarios, current role, posture decision, expected cost change, and rollback condition. Selector-routed detail must remain recoverable by explicit `--select` or report-section drill-down, and the compact default must still expose hard blockers, proof obligations, closure/residue blockers, and action signals.
+Surface simplification decisions should be recorded in `surface-decisions.sample.json` before or alongside a default-output change. Each decision names the surface, owner, evidence records or scenarios, observed confusion or bypass evidence, current role, posture decision, before/after cost signal, expected cost change, authority-boundary guardrail, and rollback condition. Selector-routed detail must remain recoverable by explicit `--select` or report-section drill-down, and the compact default must still expose hard blockers, proof obligations, closure/residue blockers, and action signals.
 
 Run a real external-agent scenario only when maintainer evidence is needed. The Codex adapter defaults to GPT-5.3 Codex Spark:
 

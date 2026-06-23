@@ -301,6 +301,79 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
+def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    skills = payload["skills"]
+    catalog = skills["catalog"]
+
+    assert skills["kind"] == "agentic-workspace/startup-skills-projection/v1"
+    assert catalog["available"] is True
+    assert catalog["catalog_command_available"] is True
+    assert isinstance(catalog["total_count"], int)
+    assert isinstance(catalog["warning_count"], int)
+    assert "agentic-workspace skills" in catalog["command"]
+    assert catalog["detail_visibility"] == "source and owner breakdowns stay behind catalog.command"
+    assert "counts_by_source_kind" not in catalog
+    assert "counts_by_owner" not in catalog
+    assert "sources" not in catalog
+
+
+def test_compact_skill_catalog_marks_malformed_payload_unavailable() -> None:
+    catalog = workspace_runtime_primitives._compact_startup_skill_catalog_summary({"skills": "bad", "warnings": "bad"})
+
+    assert catalog["available"] is False
+    assert catalog["catalog_command_available"] is True
+    assert catalog["total_count"] == 0
+    assert catalog["warning_count"] == 0
+
+
+def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #1680 lane",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    skills = payload["skills"]
+
+    assert skills["status"] == "recommended"
+    assert skills["required"][0]["id"] == "planning-reporting"
+    assert skills["required"][0]["reason"] == "required by next_safe_action.required_skill"
+    assert "catalog" in skills
+    assert "counts_by_owner" not in skills["catalog"]
+
+
 def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
