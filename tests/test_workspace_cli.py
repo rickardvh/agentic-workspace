@@ -357,6 +357,37 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
+def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix one docs typo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 10_000, label="start tiny docs-task payload", sort_keys=False)
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert "memory_decision_packet" not in payload
+    assert "installed_state_compatibility" not in payload
+    assert "planning_safety_gate" not in payload
+    assert "memory_decision_packet" in payload["drill_down"]["available_selectors"]
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+    assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
+
+
 def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

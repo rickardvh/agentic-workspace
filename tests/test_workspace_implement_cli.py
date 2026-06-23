@@ -1819,6 +1819,82 @@ blocking_claims = ["claim-work-complete"]
             assert selector in payload["drill_down"]["available_selectors"], field
 
 
+def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Fix one docs typo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 15_000, label="implement tiny docs-task payload", sort_keys=False)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["next"]["action"]
+    assert payload["proof"]["required_commands"]
+    assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
+    assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
+    assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert "change_impact" not in payload
+    assert "routine_work_context" not in payload
+    assert "generated_surface_trust" not in payload
+    assert "change_impact" in payload["drill_down"]["available_selectors"]
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('hello')\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "--task",
+                "Fix one code path",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 15_000, label="implement tiny code-task payload", sort_keys=False)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["next"]["action"]
+    assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
+    assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
+    assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
+    assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert "change_impact" not in payload
+    assert "routine_work_context" not in payload
+    assert "generated_surface_trust" not in payload
+    assert "change_impact" in payload["drill_down"]["available_selectors"]
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+
+
 def test_implement_tiny_profile_defers_reuse_pressure_scan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
