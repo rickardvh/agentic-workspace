@@ -361,6 +361,14 @@ def _adapter_fixture_dependencies(adapter: dict[str, Any]) -> list[str]:
     return ["agentic-workspace"]
 
 
+def _adapter_declares_fixture_dependency(adapter: dict[str, Any]) -> bool:
+    dependencies = adapter.get("fixture_dependencies")
+    if isinstance(dependencies, list) and all(isinstance(item, str) and item.strip() for item in dependencies):
+        return True
+    dependency = adapter.get("fixture_dependency")
+    return isinstance(dependency, str) and bool(dependency.strip())
+
+
 def _local_aw_version() -> str:
     return str(tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])
 
@@ -554,6 +562,7 @@ def _prepare_source_checkout_invocation(
             "",
         ]
         if source_checkout_path:
+            source_checkout_path = source_checkout_path.replace("\\", "/")
             lines.extend(
                 [
                     "[tool.uv.sources]",
@@ -3149,6 +3158,9 @@ def run_suite(
     if not isinstance(scenarios, list):
         raise ValueError("suite.scenarios must be a list")
     local_aw_wheelhouse = _build_local_aw_wheelhouse(output_root) if aw_dependency_mode == "local-wheelhouse" else None
+    adapter_source_checkout_path = adapter.get("fixture_source_path") if isinstance(adapter.get("fixture_source_path"), str) else None
+    if adapter_source_checkout_path is None and local_aw_wheelhouse is None and not _adapter_declares_fixture_dependency(adapter):
+        adapter_source_checkout_path = REPO_ROOT.as_posix()
 
     selected = [item for item in scenarios if not scenario_filter or item.get("id") == scenario_filter]
     if scenario_filter and not selected:
@@ -3176,7 +3188,7 @@ def run_suite(
                 adapter=adapter,
                 dependency_specs=_adapter_fixture_dependencies(adapter),
                 local_aw_wheelhouse=local_aw_wheelhouse,
-                source_checkout_path=adapter.get("fixture_source_path") if isinstance(adapter.get("fixture_source_path"), str) else None,
+                source_checkout_path=adapter_source_checkout_path,
             )
             replacements = {
                 "repo": str(paths.repo_path),
