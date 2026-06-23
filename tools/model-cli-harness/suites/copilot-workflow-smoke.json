@@ -412,7 +412,7 @@
       "prompt_variants": [
         {
           "id": "packaging-note",
-          "prompt": "Update the developer notes so the test command is easier for a new contributor to find. Keep the edit small and use the repo's own instructions to orient first. Final answer should name what context you consulted and the file changed."
+          "prompt": "Update the README developer notes so the test command is easier for a new contributor to find. Keep the edit small and use the repo's own instructions to orient first. Final answer should name what context you consulted and the file changed."
         },
         {
           "id": "trap-aware",

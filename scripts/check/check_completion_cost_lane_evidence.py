@@ -167,7 +167,7 @@ def build_lane_evidence_report() -> dict[str, Any]:
             "live_failure_counts": live_behavior_proof["live_evaluation"]["failure_counts"],
             "live_failure_routes": live_behavior_proof["live_failure_routes"],
             "source": "tools/model-cli-harness/external-agent-evaluation",
-            "model": external_report["default_external_agent"].get("model"),
+            "model": live_behavior_proof["live_evaluation_agent"].get("model"),
             "completion_cost_record_count": completion_cost["record_count"],
             "driver_classification_counts": completion_cost["driver_classification_counts"],
             "live_evaluation_status": external_report["live_evaluation"]["status"],

@@ -1,0 +1,108 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Refresh #1680 live behavior evidence",
+  "plan_id": "github-1680-live-evidence-refresh",
+  "created_at": "2026-06-23T15:30:40.704363+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-1680-live-evidence-refresh.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-1680-live-evidence-refresh.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "github-1680-live-evidence-refresh",
+    "status": "completed",
+    "scope": "Refresh checked-in live behavior evidence and lane proof state for the #1616 local-path repair.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "#1680/#1616 live behavior proof",
+    "hard constraints": "Use Codex GPT 5.3 Spark or GPT 5.4 Mini for live evaluation; do not claim parent closure from this slice alone.",
+    "agent may decide locally": "Whether to refresh the stale run in place or append a new clean run, as long as checker semantics remain honest.",
+    "escalate when": "The live run is still dirty, evidence cannot be represented without changing checker semantics, or child issue reconciliation is needed."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Refreshed checked-in #1680 live behavior evidence after the harness final-message repair stack, tightened final-answer prompt guidance to avoid Markdown file links, recorded gpt-5.4-mini live evidence, and advanced the lane record from live-proof blocked to remaining reconciliation blockers.",
+    "scope touched": "External-agent live evidence pack, #1680 lane evidence checker/reporting, harness final-answer path guidance, scenario wording, focused tests, and planning closeout.",
+    "changed surfaces": "tools/model-cli-harness/external-agent-evaluation/live-results-2026-06-18.json; tools/model-cli-harness/external-agent-evaluation/promotion-decisions.sample.json; tools/model-cli-harness/suites/copilot-workflow-smoke.json; scripts/model_cli_harness/run_model_cli_harness.py; scripts/model_cli_harness/external_agent_evaluation_lane.py; scripts/check/check_completion_cost_live_behavior_proof.py; scripts/check/check_completion_cost_lane_evidence.py; tests/test_external_agent_evaluation_lane.py; tests/test_completion_cost_live_behavior_proof.py; tests/test_completion_cost_lane_evidence.py; .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json; planning closeout archive",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The slice satisfies live behavior evidence refresh only. It does not close #1680: aggregate lane evidence still blocks on parent close permission and remaining cost-source reconciliation.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "proof_report": {
+    "validation proof": "Allowed-model live run: gpt-5.4-mini memory-consult-before-edit packaging-note executed at .agentic-workspace/local/scratch/model-cli-harness-live-evidence-refresh/20260623T152211Z-memory-consult-before-edit-codex-gpt-5.4-mini-ede1b44343/run.json; raw local Markdown link was repaired to repo-relative README.md in exported final_message/session.md. Focused proof: uv run pytest tests/test_external_agent_evaluation_lane.py tests/test_completion_cost_live_behavior_proof.py tests/test_completion_cost_lane_evidence.py -q -> 37 passed. Pack validator: external_agent_evaluation_lane.py validate --format json -> ok. Live proof checker -> status complete, proof_complete true, clean_run_count 4, live_evaluation_agent gpt-5.4-mini. Lane evidence checker -> partial-closure-evidence with remaining blockers parent close permission and remaining cost sources. Broad proof: make test-workspace -> [ok] workspace tests (150.58s); make lint-workspace -> [ok]; summary -> warning_count=0 active plan before closeout; planning doctor -> healthy warnings_count=0 needs_review_count=0; collect-only -> 1312 tests collected.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "#1680/#1616 live behavior proof",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Checked-in live behavior proof is now complete and reports gpt-5.4-mini clean live evidence; #1680 remains partial-closure-evidence.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+          "owner": ".agentic-workspace/planning/lanes/github-1680-reduce-aw-induced-completion-cost.lane.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

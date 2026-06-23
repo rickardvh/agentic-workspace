@@ -50,7 +50,8 @@ def build_live_behavior_proof_report() -> dict[str, Any]:
     pack = external.load_pack(repo_root=REPO_ROOT)
     report = external.build_closure_report(pack)
     live = report["live_evaluation"]
-    model = str(report["default_external_agent"].get("model") or "")
+    live_agent = report.get("live_evaluation_agent") or report["default_external_agent"]
+    model = str(live_agent.get("model") or "")
     live_failure_ids = set(live["failure_counts"])
     routes = _live_failure_routes(pack, live_failure_ids)
     routed_failure_ids = {failure_id for route in routes for failure_id in route["failure_ids"]}
@@ -77,6 +78,7 @@ def build_live_behavior_proof_report() -> dict[str, Any]:
         "evidence_present": evidence_present,
         "proof_complete": proof_complete,
         "default_external_agent": report["default_external_agent"],
+        "live_evaluation_agent": live_agent,
         "allowed_models": sorted(ALLOWED_MODELS),
         "live_evaluation": live,
         "fixture_closure_state": report["fixture_closure_state"],

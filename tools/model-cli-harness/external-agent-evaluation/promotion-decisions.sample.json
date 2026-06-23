@@ -41,14 +41,15 @@
     {
       "id": "promote-live-local-path-leak",
       "failure_ids": ["OWNERSHIP_BOUNDARY_LEAK", "LOCAL_ABSOLUTE_PATH_LEAK"],
-      "evidence_record_ids": ["live-memory-consult-20260618T093207Z"],
-      "threshold": "live Codex Spark run leaked local absolute scratch paths in final answer",
-      "decision": "promote",
+      "evidence_record_ids": [],
+      "threshold": "historical live Codex Spark run leaked local absolute scratch paths in final answer; refreshed live evidence is resolved by final-message repair",
+      "decision": "dismiss",
+      "dismissal_reason": "resolved_by_final_message_repair",
       "owner_surface": "harness",
       "fallback_owner_surface": "cli_output",
       "followup_ref": "#1616",
       "remediation_kind": "actionable-issue",
-      "closure_effect": "routed"
+      "closure_effect": "accepted"
     },
     {
       "id": "promote-local-command-memory-route",
