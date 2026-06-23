@@ -141,7 +141,9 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
     assert any(probe.get("artifact_backed") for probe in probes)
     artifact_probe = next(probe for probe in probes if probe["id"] == "artifact-backed-host-startup")
     assert {"artifact_source", "artifact_checksum", "installed_entrypoint"} <= set(artifact_probe["artifact_evidence"]["required_fields"])
-    assert observation_contract["applies_to"] == "all_probes"
+    assert observation_contract["applies_to"] == "representative_evidence_records"
+    assert observation_contract["minimum_observed_records"] == 3
+    assert "representative observed records" in observation_contract["coverage_rule"]
     assert {
         "aw_command_count",
         "proof_command_count",
@@ -162,6 +164,7 @@ def test_external_agent_lane_completion_cost_observations_classify_representativ
         record["scenario_id"]: record["completion_cost_observations"] for record in records if "completion_cost_observations" in record
     }
 
+    assert len(observations) >= _read_json("scenario-probes.json")["completion_cost_observation_contract"]["minimum_observed_records"]
     assert observations["clean-host-startup"]["aw_command_count"] == 1
     assert observations["clean-host-startup"]["cost_drivers"][0]["classification"] == "startup_routing"
     assert observations["stale-memory-active-planning-handoff"]["reread_events"] >= 1

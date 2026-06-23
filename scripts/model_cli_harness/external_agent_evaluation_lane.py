@@ -256,6 +256,7 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         )
 
     observation_contract = pack["scenarios"].get("completion_cost_observation_contract")
+    minimum_observed_records = 1
     _require(isinstance(observation_contract, dict), "scenarios must define completion_cost_observation_contract", errors)
     if isinstance(observation_contract, dict):
         _require(
@@ -269,10 +270,16 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
             errors,
         )
         _require(
-            observation_contract.get("applies_to") == "all_probes",
-            "completion_cost_observation_contract must apply to all_probes",
+            observation_contract.get("applies_to") == "representative_evidence_records",
+            "completion_cost_observation_contract must apply to representative_evidence_records",
             errors,
         )
+        _require(
+            int(observation_contract.get("minimum_observed_records", 0) or 0) >= 1,
+            "completion_cost_observation_contract must define minimum_observed_records",
+            errors,
+        )
+        minimum_observed_records = int(observation_contract.get("minimum_observed_records", 0) or 0)
         required_fields = {str(item) for item in observation_contract.get("required_fields", [])}
         _require(
             COMPLETION_COST_REQUIRED_FIELDS.issubset(required_fields),
@@ -443,9 +450,12 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
 
     _require("PROOF_MISSING_BEFORE_CLAIM" in failure_ids_seen, "sample records must include proof claim-safety failure evidence", errors)
     _require("MEMORY_PULL_MISSING" in failure_ids_seen, "sample records must include Memory routing failure evidence", errors)
+    observed_record_count = sum(
+        1 for record in pack["results"].get("records", []) if isinstance(record.get("completion_cost_observations"), dict)
+    )
     _require(
-        any(isinstance(record.get("completion_cost_observations"), dict) for record in pack["results"].get("records", [])),
-        "sample records must include completion-cost observation evidence",
+        observed_record_count >= minimum_observed_records,
+        "sample records must include representative completion-cost observation evidence",
         errors,
     )
     return errors

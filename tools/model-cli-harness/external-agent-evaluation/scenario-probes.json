@@ -8,7 +8,9 @@
   "completion_cost_observation_contract": {
     "kind": "agentic-workspace/external-agent-completion-cost-observation-contract/v1",
     "status": "maintainer-evaluation-only",
-    "applies_to": "all_probes",
+    "applies_to": "representative_evidence_records",
+    "coverage_rule": "Every canonical probe may carry completion_cost_observations, but this fixture slice requires representative observed records rather than observations on every probe.",
+    "minimum_observed_records": 3,
     "required_fields": [
       "aw_command_count",
       "proof_command_count",
