@@ -64,6 +64,19 @@
       "expected_cost_change": "fewer default bytes while preserving required skill projection and task-specific catalog search",
       "authority_boundary_guardrail": "catalog.command must preserve package-owned skill metadata and must not present generated or host-local catalogues as package authority",
       "rollback_condition": "agents miss a required skill because required/recommended projections no longer name it"
+    },
+    {
+      "id": "implement-observed-candidate-pressure-summary",
+      "surface": "implement.context.planning_safety_gate.candidate_pressure observed detail",
+      "owner": "cli_output",
+      "evidence_refs": ["clean-host-startup", "sample-startup-codex-spark"],
+      "observed_evidence": "docs-only implement dogfood exposed unmatched roadmap relevance and advisory backlog detail even when candidate pressure was observed and non-blocking",
+      "current_role": "advisory residue",
+      "decision": "route",
+      "before_after_cost_signal": "before: docs-only implement emitted 26527 bytes with a 5681-byte planning_safety_gate; after: it emits 21456 bytes with a 2549-byte planning_safety_gate and keeps full detail behind drill_down.detail_command",
+      "expected_cost_change": "fewer default bytes and fewer rereads of unrelated roadmap candidates during bounded implement turns",
+      "authority_boundary_guardrail": "default counts must not turn unrelated planning candidates into hard blockers; full candidate evidence remains available from verbose implement context",
+      "rollback_condition": "agents miss candidate-lane promotion requirements or cannot audit why candidate pressure changed"
     }
   ]
 }
