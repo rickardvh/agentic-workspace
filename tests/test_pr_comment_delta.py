@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "github" / "pr_comment_delta.py"
+README = REPO_ROOT / "scripts" / "github" / "README.md"
 
 
 def _load_module():
@@ -192,3 +193,12 @@ def test_pr_comment_delta_cli_reads_fixture(tmp_path: Path) -> None:
     assert packet["repository"] == "rickardvh/agentic-workspace"
     assert packet["pr_number"] == 1689
     assert packet["smallest_next_action"] == "Clarify ambiguous comments before editing or fetching broad patch context."
+
+
+def test_pr_comment_delta_readme_keeps_live_workflow_discoverable() -> None:
+    text = README.read_text(encoding="utf-8")
+
+    assert "agentic-workspace/pr-comment-delta/v1" in text
+    assert "uv run python scripts/github/pr_comment_delta.py" in text
+    assert "--baseline-json" in text
+    assert "does not write to GitHub" in text
