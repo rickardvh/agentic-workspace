@@ -186,6 +186,7 @@ def test_external_agent_lane_surface_decisions_record_selector_first_start_reduc
     installed_state_decision = decisions["startup-installed-state-compatibility-selector-only"]
     skill_catalog_decision = decisions["startup-skill-catalog-breakdown-command-only"]
     candidate_pressure_decision = decisions["implement-observed-candidate-pressure-summary"]
+    memory_packet_decision = decisions["implement-memory-decision-packet-compact-default"]
 
     assert memory_decision["surface"] == "start.memory_decision_packet"
     assert memory_decision["decision"] == "route"
@@ -207,6 +208,11 @@ def test_external_agent_lane_surface_decisions_record_selector_first_start_reduc
     assert "before:" in candidate_pressure_decision["before_after_cost_signal"]
     assert "after:" in candidate_pressure_decision["before_after_cost_signal"]
     assert "hard blockers" in candidate_pressure_decision["authority_boundary_guardrail"]
+    assert memory_packet_decision["surface"] == "implement.memory_decision_packet"
+    assert memory_packet_decision["decision"] == "route"
+    assert "before:" in memory_packet_decision["before_after_cost_signal"]
+    assert "after:" in memory_packet_decision["before_after_cost_signal"]
+    assert "pull/capture status" in memory_packet_decision["authority_boundary_guardrail"]
 
 
 def test_external_agent_lane_rejects_invalid_completion_cost_observation() -> None:

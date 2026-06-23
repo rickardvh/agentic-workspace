@@ -77,6 +77,19 @@
       "expected_cost_change": "fewer default bytes and fewer rereads of unrelated roadmap candidates during bounded implement turns",
       "authority_boundary_guardrail": "default counts must not turn unrelated planning candidates into hard blockers; full candidate evidence remains available from verbose implement context",
       "rollback_condition": "agents miss candidate-lane promotion requirements or cannot audit why candidate pressure changed"
+    },
+    {
+      "id": "implement-memory-decision-packet-compact-default",
+      "surface": "implement.memory_decision_packet",
+      "owner": "cli_output",
+      "evidence_refs": ["sample-memory-routing-regression", "sample-startup-codex-spark"],
+      "observed_evidence": "bounded implement turns repeated Memory authority, limits, and owner-surface lists even when the required decision was pull/capture status plus commands",
+      "current_role": "authority detail",
+      "decision": "route",
+      "before_after_cost_signal": "before: docs-only implement memory_decision_packet emitted 1831 bytes; after: it emits 860 bytes while preserving pull/capture statuses and commands",
+      "expected_cost_change": "fewer default bytes while preserving the explicit agent-owned Memory decision before claim",
+      "authority_boundary_guardrail": "default compacting must not hide pull/capture status, route commands, relevant candidate routes, or the agent-owned decision boundary; full authority detail remains available in verbose implement context",
+      "rollback_condition": "agents skip required Memory pull/capture decisions or cannot recover full authority and owner-surface detail"
     }
   ]
 }

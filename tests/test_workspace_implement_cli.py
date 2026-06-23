@@ -129,10 +129,38 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["pull"]["status"] == "checked_none"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
-    assert "repo_memory" in packet["capture"]["candidate_owner_surfaces"]
-    assert "local_memory" in packet["capture"]["candidate_owner_surfaces"]
-    assert "planning" in packet["capture"]["candidate_owner_surfaces"]
-    assert packet["authority_boundary"]["agent_owns"]
+    assert packet["pull"]["route_count"] >= 1
+    assert packet["pull"]["relevant_route_count"] == 0
+    assert packet["capture"]["candidate_owner_surface_count"] >= 3
+    assert "candidate_owner_surfaces" not in packet["capture"]
+    assert "authority_boundary" not in packet
+    assert "limits" not in packet
+    assert packet["detail_visibility"] == ("full authority, limits, owner, and candidate detail stay behind verbose implement context")
+    assert len(json.dumps(packet, separators=(",", ":")).encode()) < 900
+
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/package/knowledge-routing.md",
+                "--task",
+                "Improve Memory routing guidance",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    verbose_packet = json.loads(capsys.readouterr().out)["memory_decision_packet"]
+    assert "repo_memory" in verbose_packet["capture"]["candidate_owner_surfaces"]
+    assert "local_memory" in verbose_packet["capture"]["candidate_owner_surfaces"]
+    assert "planning" in verbose_packet["capture"]["candidate_owner_surfaces"]
+    assert verbose_packet["authority_boundary"]["agent_owns"]
 
 
 def test_implement_surfaces_operating_loop_with_proof_blocker(tmp_path: Path, capsys) -> None:
