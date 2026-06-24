@@ -551,6 +551,25 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert trust["items"][0]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
     assert trust["items"][0]["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert trust["items"][0]["direct_edit_allowed"] is False
+    assert trust["items"][0]["action_effect"]["force"] == "required_before_claim"
+    assert trust["items"][0]["action_effect"]["allowed_now"] == "edit-canonical-source-refresh-and-validate-generated-surface"
+    assert trust["items"][0]["action_effect"]["blocked_until_reconciled"] == [
+        "claim-generated-surface-fresh",
+        "claim-task-complete",
+    ]
+    assert trust["items"][0]["action_effect"]["resolution_selector"] == "generated_surface_trust"
+    assert trust["items"][0]["action_effect"]["resolution_command"] == "uv run python scripts/generate/generate_command_packages.py"
+    assert trust["items"][0]["action_effect"]["resolution_commands"] == [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py",
+    ]
+    assert trust["action_effect"]["force"] == "required_before_claim"
+    assert trust["action_effect"]["blocked_until_reconciled"] == ["claim-generated-surfaces-fresh", "claim-task-complete"]
+    assert trust["action_effect"]["resolution_selector"] == "generated_surface_trust"
+    assert trust["action_effect"]["resolution_commands"] == [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py",
+    ]
     assert "Do not hand-edit generated/workspace/python/cli.py" in trust["items"][0]["direct_edit_policy"]
     assert payload["orientation"]["status"] == "changed-path-context"
     assert "preflight" in payload["orientation"]["preflight_command"]
@@ -1506,6 +1525,10 @@ def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, cap
     assert item["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
     assert item["direct_edit_allowed"] is False
     assert "Do not hand-edit generated command package outputs" in item["direct_edit_policy"]
+    assert item["action_effect"]["force"] == "required_before_claim"
+    assert item["action_effect"]["resolution_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert item["action_effect"]["resolution_commands"] == ["uv run python scripts/check/check_generated_command_packages.py"]
+    assert trust["action_effect"]["resolution_commands"] == ["uv run python scripts/check/check_generated_command_packages.py"]
 
 
 def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, capsys) -> None:
@@ -1534,6 +1557,7 @@ def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, c
     assert "generated_cli_freshness" not in payload["proof"]
     assert all("generated_cli_freshness" not in signal for signal in payload["action_signals"]["changed_signals"])
     assert payload["context"]["generated_surface_trust"]["status"] == "not-applicable"
+    assert payload["context"]["generated_surface_trust"]["action_effect"]["force"] == "advisory"
 
 
 def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
@@ -2000,6 +2024,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "Python-only proof" in payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["claim_rule"]
     obligations = payload["proof"]["proof_obligations"]
     assert obligations["required_proof"]["commands"] == payload["proof"]["required_commands"]
+    assert obligations["required_proof"]["action_effect"]["force"] == "required_before_claim"
+    assert obligations["required_proof"]["action_effect"]["blocked_until_reconciled"] == ["claim-task-complete"]
+    assert obligations["required_proof"]["action_effect"]["resolution_selector"] == "proof.proof_obligations.required_proof"
     assert obligations["recommended_confidence_checks"]["status"] == "available"
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
@@ -2011,8 +2038,10 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert context["generated_surface_trust"] == {
         "status": "present",
         "changed_path_count": 1,
+        "action_effect": trust["action_effect"],
         "detail_selector": "generated_surface_trust",
     }
+    assert context["generated_surface_trust"]["action_effect"]["force"] == "required_before_claim"
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     guidance = context["guidance"]
     assert guidance["rule"].startswith("AW exposes facts")

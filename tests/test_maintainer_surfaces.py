@@ -490,6 +490,17 @@ def test_operational_affordance_design_requires_action_changing_warnings() -> No
     assert "objective-drift checks should classify explicit replacement or removal terms" in text
 
 
+def test_ordinary_caution_action_shape_audit_records_dispositions() -> None:
+    index = (WORKSPACE_ROOT / "docs" / "maintainer" / "index.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "ordinary-caution-action-shape-audit.md").read_text(encoding="utf-8")
+
+    assert "ordinary-caution-action-shape-audit.md" in index
+    assert "External issue intent" in text
+    assert "Generated surface trust" in text
+    assert "Required proof" in text
+    assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
+
+
 def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
