@@ -139,6 +139,30 @@
       "remaining_hand_owned_reason": "The current helpers combine schema shape, selector policy, and live runtime facts; migrate only after a generic projection primitive exists."
     },
     {
+      "id": "shared-projection-action-effect-helpers",
+      "title": "Shared projection and action-effect helpers",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_projection.py",
+      "runtime_role": "Small data-only helper module shared by startup, implement, proof, and report packet builders for authority-boundary and action-effect projection.",
+      "source_symbols": [
+        "_authority_boundary_payload",
+        "_tiny_action_effect",
+        "_compact_authority_boundary",
+        "_compact_authority_text"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_runtime_projection.py -q",
+        "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "The helpers preserve AW payload compacting and authority-boundary wording; they are split by owner boundary but not moved into command-generation semantics."
+    },
+    {
       "id": "intent-and-closeout-judgment",
       "title": "Intent, proof, and closeout semantic judgment",
       "owner_class": "aw-owned-runtime",
