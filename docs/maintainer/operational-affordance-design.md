@@ -79,6 +79,18 @@ Every operational surface should answer these questions:
 - Does it expose raw files only after compact outputs point there?
 - Does it keep historical evidence from looking like live work?
 
+## Warning and Gate Posture
+
+Ordinary warnings and gates should be action-changing or selector-backed. A caution signal belongs in first-line output only when it changes at least one of these:
+
+- what action remains allowed now
+- what action or claim is blocked until reconciliation
+- what proof burden or closeout boundary changed
+- which owner surface or selector resolves the signal
+- whether skipping the signal lowers trust, blocks edits, or only blocks final claims
+
+When a caution is only background concern, route it behind a selector, review artifact, or maintainer diagnostic instead of making ordinary agents stop and reread. False-positive-prone signals should prefer typed posture over broad prose. For example, PR/review references should not become unknown issue-scope gates when the task is clearly PR-oriented, and objective-drift checks should classify explicit replacement or removal terms before warning that the retired term disappeared.
+
 ## Examples
 
 ### Startup

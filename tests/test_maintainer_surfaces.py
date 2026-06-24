@@ -480,6 +480,16 @@ def test_contributor_playbook_requires_operational_affordance_review() -> None:
     assert "weak agents can proceed without learning package internals" in text
 
 
+def test_operational_affordance_design_requires_action_changing_warnings() -> None:
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "operational-affordance-design.md").read_text(encoding="utf-8")
+
+    assert "Warning and Gate Posture" in text
+    assert "Ordinary warnings and gates should be action-changing or selector-backed" in text
+    assert "what action or claim is blocked until reconciliation" in text
+    assert "PR/review references should not become unknown issue-scope gates" in text
+    assert "objective-drift checks should classify explicit replacement or removal terms" in text
+
+
 def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")

@@ -25838,6 +25838,13 @@ def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], m
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
     requested_outcomes = _extract_requested_outcomes(task_text)
     acceptance = _task_acceptance_payload(task_text=task_text, requested_outcomes=requested_outcomes)
+    action_effect_clear = {
+        "force": "advisory",
+        "allowed_now": "continue-implementation-and-reconcile-acceptance",
+        "blocked_until_reconciled": [],
+        "claim_boundary": "acceptance-reconciliation-required-before-completion-claim",
+        "resolution_selector": "context.objective_drift",
+    }
     if not task_text:
         return {
             "kind": "agentic-workspace/objective-drift/v1",
@@ -25846,6 +25853,10 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
             "requested_outcomes": [],
             "acceptance_item_count": 0,
             "missing_from_changed_surface": [],
+            "action_effect": {
+                **action_effect_clear,
+                "claim_boundary": "no-task-text-objective-comparison-unavailable",
+            },
         }
     if not requested_outcomes:
         return {
@@ -25856,6 +25867,7 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
             "acceptance_item_count": len(acceptance.get("items", [])),
             "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
             "missing_from_changed_surface": [],
+            "action_effect": action_effect_clear,
         }
     surface_text = _read_changed_surface_text(target_root=target_root, changed_paths=changed_paths)
     searchable = surface_text.lower()
@@ -25887,6 +25899,18 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         if not _requested_outcome_present(searchable, item):
             missing.append(item)
     status = "warning" if missing and changed_paths else "clear"
+    action_effect = {
+        **action_effect_clear,
+        "force": "required_before_claim" if status == "warning" else "advisory",
+        "allowed_now": "continue-implementation-or-inspect-changed-surface",
+        "blocked_until_reconciled": ["claim-task-complete"] if status == "warning" else [],
+        "claim_boundary": (
+            "do-not-claim-complete-until-missing-outcomes-are-delivered-or-explicitly-out-of-scope"
+            if status == "warning"
+            else "acceptance-reconciliation-required-before-completion-claim"
+        ),
+        "resolution_selector": "context.objective_drift",
+    }
     return {
         "kind": "agentic-workspace/objective-drift/v1",
         "status": status,
@@ -25896,6 +25920,7 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
         "acceptance_item_count": len(acceptance.get("items", [])),
         "acceptance_closeout_rule": acceptance.get("closeout_rule", ""),
         "missing_from_changed_surface": missing,
+        "action_effect": action_effect,
         "rule": "Do not claim completion until each acceptance item and requested outcome is mapped to delivered behavior and proof, or explicitly marked out of scope.",
         "recommended_next_action": "Inspect changed files, exports, docs, and tests for the missing requested outcomes before closeout."
         if status == "warning"
@@ -29067,6 +29092,7 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
         "removed_or_retired_outcomes": value.get("removed_or_retired_outcomes", []),
         "replacement_checks": value.get("replacement_checks", []),
         "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
+        "action_effect": value.get("action_effect", {}),
         "recommended_next_action": value.get("recommended_next_action", ""),
         "heuristic": value.get("heuristic", ""),
         "agent_owned_decisions": value.get("agent_owned_decisions", [])[:2] if isinstance(value.get("agent_owned_decisions"), list) else [],
