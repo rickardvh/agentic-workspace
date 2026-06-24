@@ -14,6 +14,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
 - [Ordinary caution action-shape audit](ordinary-caution-action-shape-audit.md): disposition table for ordinary warning and gate classes.
+- [Planning continuation action-shape audit](planning-continuation-action-shape-audit.md): disposition table for active-owner and Planning continuation cautions.
 
 ## Boundary And Measurement
 

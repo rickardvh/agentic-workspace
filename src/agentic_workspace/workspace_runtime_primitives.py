@@ -29782,42 +29782,77 @@ def _active_plan_reliance_payload(
 ) -> dict[str, Any]:
     revision_id = str(planning_revision.get("revision_id", "") or "")
     requirement_status = str(active_delegation_requirement.get("status", "") or "unknown")
+    active_execplan = str(active_summary.get("active_execplan") or active_delegation_requirement.get("path") or "").strip()
     if not active_planning_present:
         status = "no-active-plan"
         permission_claim = "direct-work-no-active-plan"
         integrity = "not-applicable"
         reliance = "not-needed"
+        force = "advisory"
+        allowed_now = "continue-direct-work"
+        blocked_until_reconciled: list[str] = []
+        claim_boundary = "no-active-planning-continuation-claim-boundary"
+        resolution_command = ""
     elif active_delegation_requirement.get("required"):
         status = "blocked"
         permission_claim = "blocked-until-active-plan-decision-recorded"
         integrity = "missing-or-untrusted"
         reliance = "do-not-continue-active-plan"
+        force = "required_before_edit"
+        allowed_now = "record-active-plan-decision-before-editing"
+        blocked_until_reconciled = ["edit-active-plan-owned-work", "claim-active-plan-continuation", "claim-task-complete"]
+        claim_boundary = "do-not-edit-or-claim-active-plan-continuation-until-delegation-decision-is-recorded"
+        resolution_command = str(active_delegation_requirement.get("command") or "")
     elif requirement_status == "delegation-decision-recorded":
         status = "command-written-state-observed"
         permission_claim = "review-before-continuing-active-plan"
         integrity = "command-written-state"
         reliance = "allowed-after-review-of-current-revision"
+        force = "required_before_claim"
+        allowed_now = "continue-after-reviewing-current-active-plan-revision"
+        blocked_until_reconciled = ["claim-active-plan-complete", "claim-task-complete"]
+        claim_boundary = "active-plan-completion-claims-require-current-revision-review-and-closeout"
+        resolution_command = _command_with_cli_invoke(command="agentic-workspace summary --target . --format json", cli_invoke=cli_invoke)
     elif requirement_status == "delegation-decision-not-needed-for-direct-task":
         status = "not-needed-for-current-task"
         permission_claim = "direct-work-not-active-plan-continuation"
         integrity = "not-applicable-to-current-task"
         reliance = "active-plan-gate-not-relied-on"
+        force = "advisory"
+        allowed_now = "continue-direct-work-without-active-plan-reliance"
+        blocked_until_reconciled = ["claim-active-plan-progress", "claim-active-plan-complete"]
+        claim_boundary = "do-not-claim-active-plan-progress-from-this-direct-work"
+        resolution_command = ""
     else:
         status = "active-plan-present"
         permission_claim = "continue-active-plan-after-normal-review"
         integrity = "not-required-by-current-facts"
         reliance = "allowed-after-current-state-review"
+        force = "required_before_claim"
+        allowed_now = "continue-after-reviewing-active-planning-state"
+        blocked_until_reconciled = ["claim-active-plan-complete", "claim-task-complete"]
+        claim_boundary = "active-plan-completion-claims-require-current-state-review-and-closeout"
+        resolution_command = _command_with_cli_invoke(command="agentic-workspace summary --target . --format json", cli_invoke=cli_invoke)
     payload = {
         "kind": "agentic-workspace/active-plan-reliance/v1",
         "status": status,
         "permission_claim": permission_claim,
         "integrity": integrity,
+        "active_execplan": active_execplan,
         "freshness": {
             "revision_id": revision_id,
             "source": "planning_revision",
         },
         "reliance": reliance,
         "requirement_status": requirement_status,
+        "action_effect": {
+            "force": force,
+            "allowed_now": allowed_now,
+            "blocked_until_reconciled": blocked_until_reconciled,
+            "claim_boundary": claim_boundary,
+            "resolution_selector": "planning_safety_gate.active_plan_reliance",
+            "resolution_command": resolution_command,
+        },
     }
     if active_planning_present:
         payload["authority_evidence"] = _active_plan_freshness_evidence(

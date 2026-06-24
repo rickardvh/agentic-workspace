@@ -2322,7 +2322,82 @@ candidates = []
     reliance = payload["context"]["planning_safety_gate"]["active_plan_reliance"]
     assert reliance["permission_claim"] == "direct-work-not-active-plan-continuation"
     assert reliance["requirement_status"] == "delegation-decision-not-needed-for-direct-task"
+    assert reliance["action_effect"]["force"] == "advisory"
+    assert reliance["action_effect"]["allowed_now"] == "continue-direct-work-without-active-plan-reliance"
+    assert reliance["action_effect"]["blocked_until_reconciled"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+    ]
+    assert reliance["action_effect"]["claim_boundary"] == "do-not-claim-active-plan-progress-from-this-direct-work"
+    assert reliance["action_effect"]["resolution_selector"] == "planning_safety_gate.active_plan_reliance"
     assert payload["context"]["planning_safety_gate"]["delegation_decision_required"] is False
+
+
+def test_implement_active_plan_continuation_blocks_edits_until_decision_recorded(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Active Plan",
+            "post_decomposition_delegation": {"status": "required"},
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Active Plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Continue active plan",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    reliance = gate["active_plan_reliance"]
+    assert gate["status"] == "blocked"
+    assert gate["implementation_allowed"] is False
+    assert gate["delegation_decision_required"] is True
+    assert reliance["status"] == "blocked"
+    assert reliance["permission_claim"] == "blocked-until-active-plan-decision-recorded"
+    assert reliance["active_execplan"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    assert reliance["action_effect"]["force"] == "required_before_edit"
+    assert reliance["action_effect"]["allowed_now"] == "record-active-plan-decision-before-editing"
+    assert reliance["action_effect"]["blocked_until_reconciled"] == [
+        "edit-active-plan-owned-work",
+        "claim-active-plan-continuation",
+        "claim-task-complete",
+    ]
+    assert reliance["action_effect"]["resolution_selector"] == "planning_safety_gate.active_plan_reliance"
+    assert "planning delegation-decision" in reliance["action_effect"]["resolution_command"]
 
 
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
