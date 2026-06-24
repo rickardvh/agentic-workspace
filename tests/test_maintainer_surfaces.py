@@ -512,6 +512,17 @@ def test_planning_continuation_action_shape_audit_records_dispositions() -> None
     assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
 
 
+def test_summary_status_preflight_action_shape_audit_records_dispositions() -> None:
+    index = (WORKSPACE_ROOT / "docs" / "maintainer" / "index.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "summary-status-preflight-action-shape-audit.md").read_text(encoding="utf-8")
+
+    assert "summary-status-preflight-action-shape-audit.md" in index
+    assert "Closeout trust inspection" in text
+    assert "Planning surface health warnings" in text
+    assert "Strict preflight token gate" in text
+    assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
+
+
 def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
