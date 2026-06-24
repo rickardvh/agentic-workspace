@@ -269,9 +269,9 @@
     {
       "id": "generated-surface-trust-runtime-packets",
       "title": "Generated-surface trust runtime packets",
-      "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_generated_surface.py",
-      "runtime_role": "Generated-surface trust projections, generated CLI freshness aggregation, selector requests, and tiny surface compatibility review remain runtime-owned until extracted from the monolith.",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_generated_surface.py",
+      "runtime_role": "Generated-surface trust projections, generated CLI freshness aggregation, selector requests, and tiny surface compatibility review are owned by the generated-surface runtime module.",
       "source_symbols": [
         "_generated_surface_trust_payload",
         "_generated_cli_freshness_payload",
@@ -287,10 +287,8 @@
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
       ],
-      "blocked_by": [
-        "#1774"
-      ],
-      "remaining_hand_owned_reason": "Follow-up #1774 owns finishing generated-surface trust runtime extraction while stable generated command/package truth remains contract-owned."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Generated-surface trust runtime extraction is complete for #1774; stable generated command/package truth remains contract-owned."
     },
     {
       "id": "intent-and-closeout-judgment",
