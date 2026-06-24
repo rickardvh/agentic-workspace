@@ -752,7 +752,7 @@ def _installed_state_action_effect(*, status: str, next_action: str | None, conf
         return {
             "force": "advisory",
             "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
-            "blocked_until_reconciled": [],
+            "blocked_until_reconciled": ["claim-installed-state-current", "claim-cli-fully-current"],
             "claim_boundary": "advisory-cli-drift-does-not-block-ordinary-work-but-limits-strong-compatibility-claims",
             "resolution_selector": "installed_state_compatibility",
             "resolution_command": resolution_command,

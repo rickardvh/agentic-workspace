@@ -520,6 +520,47 @@ def test_start_select_installed_state_blocking_drift_blocks_execution(tmp_path: 
     )
 
 
+def test_start_select_installed_state_advisory_drift_limits_currentness_claims(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+
+    assert compatibility["status"] == "upgrade-recommended"
+    assert compatibility["action_effect"]["force"] == "advisory"
+    assert compatibility["action_effect"]["allowed_now"] == "continue-bounded-work-with-compatible-claim-limits"
+    assert compatibility["action_effect"]["blocked_until_reconciled"] == [
+        "claim-installed-state-current",
+        "claim-cli-fully-current",
+    ]
+    assert (
+        compatibility["action_effect"]["claim_boundary"]
+        == "advisory-cli-drift-does-not-block-ordinary-work-but-limits-strong-compatibility-claims"
+    )
+
+
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
