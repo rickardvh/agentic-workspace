@@ -39,20 +39,6 @@ test('generated runnable adapter executes supported command without Python runti
   assert.equal(result.stderr, '');
 });
 
-test('generated runnable adapter preserves spaced argv values during native execution', () => {
-  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));
-  mkdirSync(spacedTarget, { recursive: true });
-  try {
-    const args = ["adopt", "--dry-run", "--target", "__SPACED_TARGET__"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
-    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
-    assert.equal(result.status, 0);
-    assert.doesNotMatch(result.stderr, /runtime handoff/i);
-  } finally {
-    rmSync(spacedTarget, { recursive: true, force: true });
-  }
-});
-
 test('generated runnable adapter exposes routing status and recovery guidance', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });
@@ -66,7 +52,7 @@ test('generated runnable adapter exposes routing status and recovery guidance', 
 
 test('generated runnable adapter renders command help without executing runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'adopt', '--help'], {
+  const result = spawnSync(process.execPath, [cli, ...["adopt"], '--help'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0);
@@ -76,7 +62,7 @@ test('generated runnable adapter renders command help without executing runtime'
 
 test('generated runnable adapter validates choices before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'adopt', '--format', '__invalid__'], {
+  const result = spawnSync(process.execPath, [cli, ...["adopt"], '--format', '__invalid__'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);

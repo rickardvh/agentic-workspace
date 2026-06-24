@@ -341,6 +341,56 @@ def _parse_schema_target(raw: str) -> ReferenceTarget:
     return ReferenceTarget(schema_path, Path("docs/reference") / f"{output_name}.md")
 
 
+def _parse_schema_field(raw: str) -> tuple[str, str]:
+    if ":" not in raw:
+        raise argparse.ArgumentTypeError("--field must use name:type")
+    name, raw_type = raw.split(":", 1)
+    name = name.strip()
+    raw_type = raw_type.strip()
+    if not name or not raw_type:
+        raise argparse.ArgumentTypeError("--field must use non-empty name:type")
+    return name, raw_type
+
+
+def scaffold_schema(*, schema_path: Path, title: str, fields: list[tuple[str, str]], doc_role: str) -> dict[str, Any]:
+    required = [name for name, _raw_type in fields]
+    properties: dict[str, dict[str, Any]] = {}
+    for name, raw_type in fields:
+        properties[name] = {
+            "type": raw_type,
+            "description": f"Describe the {name} field for generated schema reference docs.",
+        }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://agentic-workspace.local/schemas/{schema_path.name}",
+        "title": title,
+        "description": f"Describe the {title} schema for generated schema reference docs.",
+        "type": "object",
+        "additionalProperties": False,
+        "required": required,
+        "properties": properties,
+        "x-agentic-workspace-doc-role": doc_role,
+    }
+
+
+def write_schema_scaffold(
+    *,
+    schema_path: Path,
+    title: str,
+    fields: list[tuple[str, str]],
+    doc_role: str,
+    repo_root: Path = REPO_ROOT,
+    force: bool = False,
+) -> Path:
+    output_path = repo_root / schema_path
+    if output_path.exists() and not force:
+        raise FileExistsError(f"{schema_path.as_posix()} already exists; pass --force to replace it.")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = scaffold_schema(schema_path=schema_path, title=title, fields=fields, doc_role=doc_role)
+    output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return schema_path
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Markdown reference docs from annotated JSON Schemas.")
     parser.add_argument(
@@ -350,11 +400,39 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--check", action="store_true", help="Fail if generated docs are stale.")
     parser.add_argument("--check-annotations", action="store_true", help="Fail if configured schemas miss required doc annotations.")
+    parser.add_argument("--scaffold-schema", help="Create a new annotated schema scaffold at this repo-relative path.")
+    parser.add_argument("--title", help="Title to use with --scaffold-schema.")
+    parser.add_argument(
+        "--field",
+        action="append",
+        type=_parse_schema_field,
+        default=[],
+        help="Field for --scaffold-schema as name:type. May be repeated.",
+    )
+    parser.add_argument("--doc-role", default="schema-reference", help="x-agentic-workspace-doc-role for --scaffold-schema.")
+    parser.add_argument("--force", action="store_true", help="Allow --scaffold-schema to replace an existing file.")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.scaffold_schema:
+        if not args.title:
+            print("--scaffold-schema requires --title", file=sys.stderr)
+            return 2
+        try:
+            path = write_schema_scaffold(
+                schema_path=Path(args.scaffold_schema),
+                title=str(args.title),
+                fields=list(args.field or []),
+                doc_role=str(args.doc_role),
+                force=bool(args.force),
+            )
+        except FileExistsError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(f"[ok] wrote schema scaffold {path.as_posix()}")
+        return 0
     targets = tuple(_parse_schema_target(item) for item in args.schema) if args.schema else DEFAULT_TARGETS
     errors: list[str] = []
     if args.check_annotations:

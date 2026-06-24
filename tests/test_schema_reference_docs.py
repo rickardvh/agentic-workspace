@@ -105,6 +105,44 @@ def test_schema_reference_generator_still_detects_semantic_staleness(tmp_path: P
     assert module.generate(targets=(target,), repo_root=tmp_path, check=True) == [target.output_path]
 
 
+def test_schema_reference_scaffold_includes_required_doc_metadata(tmp_path: Path) -> None:
+    module = _load_generator()
+    schema_path = Path("src/agentic_workspace/contracts/schemas/example.schema.json")
+
+    module.write_schema_scaffold(
+        schema_path=schema_path,
+        title="Example Schema",
+        fields=[("name", "string"), ("count", "integer")],
+        doc_role="fixture",
+        repo_root=tmp_path,
+    )
+
+    schema = (tmp_path / schema_path).read_text(encoding="utf-8")
+    assert '"x-agentic-workspace-doc-role": "fixture"' in schema
+    assert "Describe the name field for generated schema reference docs." in schema
+    assert module._annotation_errors(schema_path, repo_root=tmp_path) == []
+
+
+def test_schema_reference_scaffold_refuses_existing_file_without_force(tmp_path: Path) -> None:
+    module = _load_generator()
+    schema_path = Path("src/agentic_workspace/contracts/schemas/example.schema.json")
+    (tmp_path / schema_path).parent.mkdir(parents=True)
+    (tmp_path / schema_path).write_text("{}\n", encoding="utf-8")
+
+    try:
+        module.write_schema_scaffold(
+            schema_path=schema_path,
+            title="Example Schema",
+            fields=[],
+            doc_role="fixture",
+            repo_root=tmp_path,
+        )
+    except FileExistsError as exc:
+        assert "pass --force" in str(exc)
+    else:  # pragma: no cover - explicit failure branch for readability
+        raise AssertionError("expected FileExistsError")
+
+
 def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> None:
     module = _load_generator()
 
