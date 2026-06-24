@@ -165,9 +165,9 @@
     {
       "id": "startup-runtime-packets",
       "title": "Start and startup runtime packet builders",
-      "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_startup.py",
-      "runtime_role": "Startup packet builders, selector hydration, skill routing, next-safe-action, and startup tiny/compact projections remain behavior-owned by the AW runtime until extracted as a startup owner module.",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_startup.py",
+      "runtime_role": "Startup packet builders, selector hydration, skill routing, next-safe-action, and startup tiny/compact projections are behavior-owned by the startup runtime owner module.",
       "source_symbols": [
         "_start_payload",
         "_tiny_start_payload",
@@ -183,10 +183,8 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1770"
-      ],
-      "remaining_hand_owned_reason": "Follow-up #1770 owns finishing startup/start-context extraction while preserving CLI payload and selector contracts."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Startup/start-context extraction is complete for #1770; compatibility imports in workspace_runtime_primitives.py preserve existing private names."
     },
     {
       "id": "implement-runtime-packets",
