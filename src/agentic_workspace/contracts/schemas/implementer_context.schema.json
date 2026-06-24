@@ -566,7 +566,8 @@
         "kind",
         "status",
         "requested_outcomes",
-        "missing_from_changed_surface"
+        "missing_from_changed_surface",
+        "action_effect"
       ],
       "properties": {
         "kind": {
@@ -612,6 +613,48 @@
             "description": "Requested outcome the agent explicitly reconciled as removed or retired."
           },
           "description": "Reserved for explicit reconciliation evidence; AW does not infer removal or retirement from prompt keyword markers."
+        },
+        "action_effect": {
+          "type": "object",
+          "required": [
+            "force",
+            "allowed_now",
+            "blocked_until_reconciled",
+            "claim_boundary",
+            "resolution_selector"
+          ],
+          "properties": {
+            "force": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "required_before_claim"
+              ],
+              "description": "Whether this objective-drift signal is advisory or required before a completion claim."
+            },
+            "allowed_now": {
+              "type": "string",
+              "description": "Action that remains allowed while the objective-drift signal is unresolved."
+            },
+            "blocked_until_reconciled": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "One claim or action blocked until the missing outcome is reconciled."
+              },
+              "description": "Claims or actions that the drift signal limits."
+            },
+            "claim_boundary": {
+              "type": "string",
+              "description": "Completion claim boundary created by the objective-drift signal."
+            },
+            "resolution_selector": {
+              "type": "string",
+              "description": "Selector or compact field that resolves or explains the signal."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Action-changing semantics for the objective-drift caution signal."
         },
         "rule": {
           "type": "string",

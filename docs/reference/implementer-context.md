@@ -164,6 +164,12 @@ Cheap implementer context for a bounded changed-path scope.
 | `objective_drift.acceptance_closeout_rule` | string | no |  | Acceptance-specific closeout rule carried into objective-drift guidance. |  |  |
 | `objective_drift.missing_from_changed_surface` | array of string | yes |  | Requested terms that were not observed in changed files. |  |  |
 | `objective_drift.removed_or_retired_outcomes` | array of string | no |  | Reserved for explicit reconciliation evidence; AW does not infer removal or retirement from prompt keyword markers. |  |  |
+| `objective_drift.action_effect` | object | yes |  | Action-changing semantics for the objective-drift caution signal. |  |  |
+| `objective_drift.action_effect.force` | enum `"advisory"`, `"required_before_claim"` | yes |  | Whether this objective-drift signal is advisory or required before a completion claim. |  |  |
+| `objective_drift.action_effect.allowed_now` | string | yes |  | Action that remains allowed while the objective-drift signal is unresolved. |  |  |
+| `objective_drift.action_effect.blocked_until_reconciled` | array of string | yes |  | Claims or actions that the drift signal limits. |  |  |
+| `objective_drift.action_effect.claim_boundary` | string | yes |  | Completion claim boundary created by the objective-drift signal. |  |  |
+| `objective_drift.action_effect.resolution_selector` | string | yes |  | Selector or compact field that resolves or explains the signal. |  |  |
 | `objective_drift.rule` | string | no |  | Closeout rule agents should apply when drift is suspected. |  |  |
 | `objective_drift.recommended_next_action` | string | no |  | Small next step for resolving or dismissing the drift signal. |  |  |
 | `objective_drift.heuristic` | string | no |  | Brief explanation of the comparison method. |  |  |

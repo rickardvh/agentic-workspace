@@ -2427,6 +2427,10 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     assert context["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
     assert context["acceptance_reconciliation"]["acceptance_item_count"] >= 2
     assert context["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
+    assert context["objective_drift"]["action_effect"]["force"] == "required_before_claim"
+    assert context["objective_drift"]["action_effect"]["allowed_now"] == "continue-implementation-or-inspect-changed-surface"
+    assert context["objective_drift"]["action_effect"]["blocked_until_reconciled"] == ["claim-task-complete"]
+    assert context["objective_drift"]["action_effect"]["resolution_selector"] == "context.objective_drift"
     intent_proof = payload["proof"]["intent_proof"]
     assert intent_proof["status"] == "needs-agent-judgment"
     assert intent_proof["regression_only_risk"] == "possible"
@@ -2460,6 +2464,8 @@ def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp
     assert "include_children=true" in drift["removed_or_retired_outcomes"]
     assert drift["replacement_checks"][0]["replacement"] == "embed=children"
     assert drift["replacement_checks"][0]["replacement_present"] is True
+    assert drift["action_effect"]["force"] == "advisory"
+    assert drift["action_effect"]["blocked_until_reconciled"] == []
 
 
 def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_path: Path, capsys) -> None:
@@ -2488,6 +2494,7 @@ def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_p
     assert "include_children=true" not in drift["missing_from_changed_surface"]
     assert "embed=children" in drift["missing_from_changed_surface"]
     assert drift["replacement_checks"][0]["replacement_present"] is False
+    assert drift["action_effect"]["claim_boundary"].startswith("do-not-claim-complete")
 
 
 def test_implement_objective_drift_handles_rename_and_ordinary_missing_terms(tmp_path: Path, capsys) -> None:
