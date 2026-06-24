@@ -59,6 +59,13 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |
 | `installed_state_compatibility.adapter_contracts` | array of object | no |  | Entry-surface adapter contracts covered by this model. |  |  |
 | `installed_state_compatibility.next_action` | string \| null | no |  | Suggested command when drift requires or recommends action. |  |  |
+| `installed_state_compatibility.action_effect` | object | no |  | Action and claim effect for the installed-state compatibility condition. |  |  |
+| `installed_state_compatibility.action_effect.force` | enum `"advisory"`, `"required_before_claim"`, `"required_before_execution"` | yes |  | Whether this installed-state condition blocks execution, blocks only claims, or is advisory. |  |  |
+| `installed_state_compatibility.action_effect.allowed_now` | string | yes |  | Action still allowed before reconciling this installed-state condition. |  |  |
+| `installed_state_compatibility.action_effect.blocked_until_reconciled` | array of string | yes |  | Actions or claims blocked until the condition is resolved. |  |  |
+| `installed_state_compatibility.action_effect.claim_boundary` | string | yes |  | Claim limit created by this local or installed-state condition. |  |  |
+| `installed_state_compatibility.action_effect.resolution_selector` | string | yes |  | Selector that exposes the resolving diagnostic. |  |  |
+| `installed_state_compatibility.action_effect.resolution_command` | string | yes |  | Command to run when reconciliation is required or desired. |  |  |
 | `installed_state_compatibility.rule` | string | no |  | Policy rule for applying this packet. |  |  |
 | `selected_modules` | array of string | yes |  | Modules selected for this report invocation. |  |  |
 | `installed_modules` | array of string | yes |  | Installed Agentic Workspace modules detected in the target repository. |  |  |

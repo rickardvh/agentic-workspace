@@ -127,6 +127,8 @@ def _assert_installed_state_compatibility(payload: dict[str, object], *, status:
     assert compatibility["executable"]["classification"]
     assert compatibility["payload"]["status"]
     assert compatibility["generated_artifacts"]["status"]
+    assert compatibility["action_effect"]["force"] in {"advisory", "required_before_claim", "required_before_execution"}
+    assert compatibility["action_effect"]["resolution_selector"] == "installed_state_compatibility"
     return compatibility
 
 

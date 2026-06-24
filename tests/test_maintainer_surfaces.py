@@ -523,6 +523,18 @@ def test_summary_status_preflight_action_shape_audit_records_dispositions() -> N
     assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
 
 
+def test_local_installed_state_action_shape_audit_records_dispositions() -> None:
+    index = (WORKSPACE_ROOT / "docs" / "maintainer" / "index.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "local-installed-state-action-shape-audit.md").read_text(encoding="utf-8")
+
+    assert "local-installed-state-action-shape-audit.md" in index
+    assert "Installed-state compatibility" in text
+    assert "Invoked CLI identity" in text
+    assert "Payload provenance drift" in text
+    assert "Stale installed selector risk" in text
+    assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
+
+
 def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")

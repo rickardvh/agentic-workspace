@@ -728,6 +728,45 @@ def _cli_compatibility_remediation(
     }
 
 
+def _installed_state_action_effect(*, status: str, next_action: str | None, config: WorkspaceConfig) -> dict[str, Any]:
+    resolution_command = next_action or config.cli_invoke
+    if status == "blocking-drift":
+        return {
+            "force": "required_before_execution",
+            "allowed_now": "switch-to-compatible-invocation-before-running-workspace-actions",
+            "blocked_until_reconciled": ["run-workspace-action", "claim-installed-state-compatible"],
+            "claim_boundary": "do-not-trust-workspace-action-output-until-the-effective-cli-invocation-is-compatible",
+            "resolution_selector": "installed_state_compatibility",
+            "resolution_command": resolution_command,
+        }
+    if status == "payload-upgrade-required":
+        return {
+            "force": "required_before_claim",
+            "allowed_now": "continue-bounded-work-with-repo-local-invocation",
+            "blocked_until_reconciled": ["claim-installed-state-fresh", "claim-payload-synced", "claim-generated-surfaces-current"],
+            "claim_boundary": "do-not-claim-local-installed-state-or-generated-payload-freshness-before-running-the-sync-check",
+            "resolution_selector": "installed_state_compatibility",
+            "resolution_command": resolution_command,
+        }
+    if status == "upgrade-recommended":
+        return {
+            "force": "advisory",
+            "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
+            "blocked_until_reconciled": [],
+            "claim_boundary": "advisory-cli-drift-does-not-block-ordinary-work-but-limits-strong-compatibility-claims",
+            "resolution_selector": "installed_state_compatibility",
+            "resolution_command": resolution_command,
+        }
+    return {
+        "force": "advisory",
+        "allowed_now": "continue-ordinary-work",
+        "blocked_until_reconciled": [],
+        "claim_boundary": "installed-state-compatible-does-not-replace-task-proof-or-acceptance-reconciliation",
+        "resolution_selector": "installed_state_compatibility",
+        "resolution_command": resolution_command,
+    }
+
+
 def _installed_state_compatibility_payload(
     *,
     config: WorkspaceConfig,
@@ -805,6 +844,7 @@ def _installed_state_compatibility_payload(
         executable_class = "upgrade-recommended"
     generated_status = "stale" if stale_generated_surfaces else "compatible"
     payload_status = "sync-required" if stale_generated_surfaces or payload_provenance_drift != "none" else "observed-compatible"
+    action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config)
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
@@ -856,6 +896,7 @@ def _installed_state_compatibility_payload(
             },
         ],
         "next_action": next_action,
+        "action_effect": action_effect,
         "rule": (
             "Every entry surface should classify executable, payload, generated-artifact, and adapter posture through this "
             "repo-state-authoritative packet instead of separate CLI- or MCP-specific sync rules."
@@ -879,6 +920,7 @@ def _installed_state_compatibility_payload(
             "generated_artifacts": payload["generated_artifacts"],
             "adapter_contracts": payload["adapter_contracts"],
             "next_action": payload["next_action"],
+            "action_effect": payload["action_effect"],
         }
         if compact_payload["next_action"] is None:
             compact_payload.pop("next_action")

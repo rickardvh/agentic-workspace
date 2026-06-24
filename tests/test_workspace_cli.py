@@ -466,7 +466,58 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     full = selected["values"]["installed_state_compatibility"]
     assert full["status"] == "payload-upgrade-required"
     assert full["payload"]["provenance"]["status"] == "invalid"
+    assert full["action_effect"]["force"] == "required_before_claim"
+    assert full["action_effect"]["allowed_now"] == "continue-bounded-work-with-repo-local-invocation"
+    assert full["action_effect"]["blocked_until_reconciled"] == [
+        "claim-installed-state-fresh",
+        "claim-payload-synced",
+        "claim-generated-surfaces-current",
+    ]
+    assert full["action_effect"]["resolution_selector"] == "installed_state_compatibility"
+    assert "agentic-workspace upgrade" in full["action_effect"]["resolution_command"]
     assert full["adapter_contracts"]
+
+
+def test_start_select_installed_state_blocking_drift_blocks_execution(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert compatibility["executable"]["classification"] == "executable-too-old-or-wrong-version"
+    assert compatibility["action_effect"]["force"] == "required_before_execution"
+    assert compatibility["action_effect"]["allowed_now"] == "switch-to-compatible-invocation-before-running-workspace-actions"
+    assert compatibility["action_effect"]["blocked_until_reconciled"] == [
+        "run-workspace-action",
+        "claim-installed-state-compatible",
+    ]
+    assert (
+        compatibility["action_effect"]["claim_boundary"]
+        == "do-not-trust-workspace-action-output-until-the-effective-cli-invocation-is-compatible"
+    )
 
 
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
@@ -969,6 +1020,14 @@ def test_start_select_surfaces_installed_state_compatibility(tmp_path: Path, cap
     assert compatibility["authority"] == "repo-state-authoritative"
     assert compatibility["executable"]["classification"]
     assert compatibility["payload"]["status"]
+    assert compatibility["status"] == "compatible"
+    assert compatibility["action_effect"]["force"] == "advisory"
+    assert compatibility["action_effect"]["allowed_now"] == "continue-ordinary-work"
+    assert compatibility["action_effect"]["blocked_until_reconciled"] == []
+    assert (
+        compatibility["action_effect"]["claim_boundary"]
+        == "installed-state-compatible-does-not-replace-task-proof-or-acceptance-reconciliation"
+    )
 
 
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
