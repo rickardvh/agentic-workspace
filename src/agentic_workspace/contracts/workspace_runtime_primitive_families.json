@@ -191,9 +191,9 @@
     {
       "id": "implement-runtime-packets",
       "title": "Implement runtime packet builders and projections",
-      "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_implement.py",
-      "runtime_role": "Implement-context assembly, changed-path facts, acceptance/objective-drift projections, and implement tiny/compact projections remain behavior-owned by the AW runtime until extracted as an implement owner module.",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_implement.py",
+      "runtime_role": "Implement-context assembly, changed-path facts, acceptance/objective-drift projections, and implement tiny/compact projections are behavior-owned by the implement runtime owner module.",
       "source_symbols": [
         "_implement_payload",
         "_tiny_implement_payload",
@@ -209,10 +209,8 @@
         "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1771"
-      ],
-      "remaining_hand_owned_reason": "Follow-up #1771 owns finishing implement packet extraction while preserving implement payload and selector contracts."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Implement packet extraction is complete for #1771; compatibility imports in workspace_runtime_primitives.py preserve existing private names."
     },
     {
       "id": "planning-runtime-packets",
