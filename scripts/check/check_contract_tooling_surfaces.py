@@ -47,6 +47,7 @@ from agentic_workspace.contract_tooling import (
     target_support_manifest,
     workflow_artifact_profiles_manifest,
     workflow_definition_format_manifest,
+    workspace_runtime_primitive_families_manifest,
     workspace_surfaces_manifest,
 )
 
@@ -72,6 +73,11 @@ RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = {
     "payload.verify",
     "output.emit.install-result",
     "output.emit.current-memory",
+}
+CHECKER_RUNTIME_FAMILY_SYMBOLS = {
+    "_aw_primitive_declaration_report",
+    "_aw_primitive_runtime_binding_report",
+    "_aw_primitive_ownership_report",
 }
 COMMAND_SURFACE_REFRESH_COMMAND = "uv run python scripts/generate/refresh_command_surfaces.py"
 COMMAND_SURFACE_REFRESH_SEQUENCE = (
@@ -2482,6 +2488,79 @@ def _validate_non_enum_keyword_routing_audit(
     return errors
 
 
+def _validate_workspace_runtime_primitive_families(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    raw_families = payload.get("families", [])
+    families = [family for family in raw_families if isinstance(family, dict)] if isinstance(raw_families, list) else []
+    by_id = {str(family.get("id")): family for family in families}
+    migration_policy = payload.get("migration_policy")
+    migrated_family_id = str(migration_policy.get("migrated_family_id", "")) if isinstance(migration_policy, dict) else ""
+    if migrated_family_id not in by_id:
+        errors.append(f"workspace_runtime_primitive_families migration_policy.migrated_family_id {migrated_family_id!r} is missing")
+    migrated_families = migration_policy.get("migrated_families", []) if isinstance(migration_policy, dict) else []
+    migrated_family_ids = {
+        str(item.get("family_id"))
+        for item in migrated_families
+        if isinstance(item, dict) and isinstance(item.get("family_id"), str)
+    }
+    for family_id in sorted(migrated_family_ids - set(by_id)):
+        errors.append(f"workspace_runtime_primitive_families migration_policy references unknown family {family_id!r}")
+    has_cg_owned_migration = any(
+        isinstance(item, dict)
+        and item.get("owner_class") == "cg-owned-declarative"
+        and str(item.get("family_id", "")) in by_id
+        for item in migrated_families
+    )
+    if not has_cg_owned_migration:
+        errors.append("workspace_runtime_primitive_families migration_policy must name a cg-owned-declarative migrated family")
+    owner_classes = {str(family.get("owner_class", "")) for family in families}
+    for required_class in (
+        "cg-owned-declarative",
+        "contract-owned-declarative",
+        "aw-owned-runtime",
+        "blocked-pending-cg-support",
+        "covered-by-other-issue",
+        "package-owned-covered-by-other-issues",
+    ):
+        if required_class not in owner_classes:
+            errors.append(f"workspace_runtime_primitive_families missing owner_class {required_class!r}")
+    known_primitives = {
+        str(primitive.get("id"))
+        for primitive in operation_primitives_manifest().get("primitives", [])
+        if isinstance(primitive, dict)
+    }
+    aw_ids: list[str] = []
+    for family in families:
+        raw_ids = family.get("aw_owned_primitive_ids", [])
+        if isinstance(raw_ids, list):
+            aw_ids.extend(str(item) for item in raw_ids)
+        raw_symbols = family.get("source_symbols", [])
+        source_symbols = raw_symbols if isinstance(raw_symbols, list) else []
+        for symbol in source_symbols:
+            if not isinstance(symbol, str):
+                continue
+            if not hasattr(cli, symbol) and symbol not in CHECKER_RUNTIME_FAMILY_SYMBOLS:
+                errors.append(f"workspace_runtime_primitive_families source symbol {symbol!r} is not importable from runtime or checker")
+    if len(aw_ids) != len(set(aw_ids)):
+        errors.append("workspace_runtime_primitive_families aw_owned_primitive_ids must be unique across families")
+    for primitive_id in sorted(set(aw_ids) - known_primitives):
+        errors.append(f"workspace_runtime_primitive_families aw_owned_primitive_id {primitive_id!r} is not declared in operation_primitives.json")
+    if not aw_ids:
+        errors.append("workspace_runtime_primitive_families must declare at least one aw_owned_primitive_ids migration")
+    migrated_family = by_id.get(migrated_family_id, {})
+    if isinstance(migrated_family, dict) and not (
+        migrated_family.get("aw_owned_primitive_ids") or migrated_family.get("generated_artifact_metadata_expectations")
+    ):
+        errors.append("workspace_runtime_primitive_families migrated family must carry migrated declaration metadata")
+    metadata_family = by_id.get("generated-command-package-proof-metadata", {})
+    if isinstance(metadata_family, dict) and not metadata_family.get("generated_artifact_metadata_expectations"):
+        errors.append(
+            "workspace_runtime_primitive_families generated-command-package-proof-metadata must carry "
+            "generated_artifact_metadata_expectations"
+        )
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -2659,6 +2738,11 @@ def main(argv: list[str] | None = None) -> int:
         (
             "python runtime projection inventory",
             _validate(python_runtime_projection_inventory_manifest(), "python_runtime_projection_inventory.schema.json"),
+        ),
+        (
+            "workspace runtime primitive families",
+            _validate(workspace_runtime_primitive_families_manifest(), "workspace_runtime_primitive_families.schema.json")
+            + _validate_workspace_runtime_primitive_families(workspace_runtime_primitive_families_manifest()),
         ),
         (
             "lifecycle generation readiness",

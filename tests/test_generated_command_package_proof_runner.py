@@ -567,6 +567,8 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert ownership["ordinary_source_operation_ir"]["retired_primitive_usage_count"] == 0
     assert ownership["ordinary_source_operation_ir"]["aw_owned_usage_count"] > 0
     assert ownership["primitive_declarations"]["status"] == "satisfied"
+    assert ownership["primitive_declarations"]["source"] == "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json"
+    assert ownership["primitive_declarations"]["definition_source"] == "src/agentic_workspace/contracts/operation_primitives.json"
     assert ownership["runtime_bindings"]["status"] == "satisfied"
     assert ownership["retired_command_generation_primitive_usage"]["guard_reference_paths"] == [
         "scripts/check/check_generated_command_packages.py",
@@ -611,6 +613,28 @@ def test_generated_artifact_metadata_rejects_unsupported_target_layout() -> None
     )
 
     assert any("generation metadata has unexpected target layout" in error for error in errors)
+
+
+def test_generated_artifact_metadata_expectations_come_from_family_inventory() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        original = checker.workspace_runtime_primitive_families_manifest
+
+        def fake_inventory() -> dict[str, object]:
+            payload = copy.deepcopy(original())
+            family = next(item for item in payload["families"] if item.get("id") == "generated-command-package-proof-metadata")
+            expectations = dict(family["generated_artifact_metadata_expectations"])
+            expectations["source_ir_schema_version"] = "command-generation/command-package-ir/v0"
+            family["generated_artifact_metadata_expectations"] = expectations
+            return payload
+
+        checker.workspace_runtime_primitive_families_manifest = fake_inventory
+        _emit({"errors": checker._validate_generated_artifact_generation_metadata(ir)})
+        """
+    )
+
+    assert any("canonical command package IR schema mismatch" in error for error in errors)
 
 
 def test_generated_output_git_dirtiness_classifies_line_ending_only_changes() -> None:
@@ -705,6 +729,7 @@ def test_aw_primitive_ownership_report_is_a_stable_downstream_proof(capsys) -> N
     assert payload["ordinary_source_operation_ir"]["aw_owned_usage_count_by_primitive"]["workspace.target-root.resolve"] > 0
     declarations = payload["primitive_declarations"]
     assert declarations["status"] == "satisfied"
+    assert declarations["source"] == "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json"
     declared_ids = {item["aw_owned_id"] for item in declarations["declarations"]}
     assert "workspace.target-root.resolve" in declared_ids
     assert "memory.payload.verify" in declared_ids
@@ -731,6 +756,45 @@ def test_aw_primitive_ownership_report_blocks_missing_aw_declaration() -> None:
     )
 
     assert "AW-owned primitive declarations are missing or invalid" in errors
+
+
+def test_aw_primitive_ownership_report_reads_required_ids_from_family_inventory() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        original = checker.workspace_runtime_primitive_families_manifest
+
+        def fake_inventory() -> dict[str, object]:
+            payload = copy.deepcopy(original())
+            family = next(item for item in payload["families"] if item.get("id") == "aw-owned-primitive-ids")
+            family["aw_owned_primitive_ids"] = list(family["aw_owned_primitive_ids"]) + ["workspace.missing-primitive"]
+            return payload
+
+        checker.workspace_runtime_primitive_families_manifest = fake_inventory
+        _emit({"errors": checker._validate_aw_primitive_ownership_report(ir)})
+        """
+    )
+
+    assert "AW-owned primitive declarations are missing or invalid" in errors
+
+
+def test_aw_primitive_ownership_report_fails_closed_when_family_inventory_cannot_load() -> None:
+    payload = _run_checker_case(
+        """
+        def broken_inventory() -> dict[str, object]:
+            raise RuntimeError("family inventory unavailable")
+
+        checker.workspace_runtime_primitive_families_manifest = broken_inventory
+        try:
+            checker._aw_owned_primitives()
+        except RuntimeError as exc:
+            _emit({"message": str(exc)})
+        else:
+            _emit({"message": "unexpected success"})
+        """
+    )
+
+    assert payload["message"] == "family inventory unavailable"
 
 
 def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:

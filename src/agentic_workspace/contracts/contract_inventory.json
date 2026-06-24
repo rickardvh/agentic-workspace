@@ -441,6 +441,16 @@
       "notes": "AW-side generated-command check inventory classifies checks against the command-generation target matrix so generic target baselines are delegated while AW host behavior remains covered in AW."
     },
     {
+      "area": "workspace_runtime_primitive_families",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+      "consumers": [
+        "scripts/check/check_generated_command_packages.py",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Root workspace_runtime_primitives.py families are classified by owner, with AW-owned primitive IDs declared in this contract instead of a Python checker constant."
+    },
+    {
       "area": "target_support",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/target_support.json",

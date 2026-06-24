@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/workspace_runtime_primitive_families.schema.json",
+  "title": "Workspace runtime primitive families",
+  "description": "Family-level ownership inventory for root workspace_runtime_primitives.py behavior and high-confidence declarative migrations.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "source_path",
+    "classification_rule",
+    "migration_policy",
+    "families"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/workspace-runtime-primitive-families/v1",
+      "description": "Contract version for the workspace runtime primitive family inventory."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short purpose statement for the inventory."
+    },
+    "source_path": {
+      "const": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "description": "Runtime source file whose root primitive families are classified by this inventory."
+    },
+    "classification_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rule used to separate command-generation-owned, contract-owned, AW-owned, package-owned, and blocked families."
+    },
+    "migration_policy": {
+      "type": "object",
+      "required": [
+        "migrated_family_id",
+        "migrated_to",
+        "runtime_consumers",
+        "proof",
+        "compatibility"
+      ],
+      "properties": {
+        "migrated_family_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Family id for the concrete migration delivered by the current inventory slice."
+        },
+        "migrated_to": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Contract or generated surface that now owns the migrated declaration."
+        },
+        "migrated_families": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "family_id",
+              "owner_class",
+              "migrated_from",
+              "migrated_to",
+              "closure_role"
+            ],
+            "properties": {
+              "family_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+                "description": "Migrated runtime primitive family id."
+              },
+              "owner_class": {
+                "enum": [
+                  "cg-owned-declarative",
+                  "contract-owned-declarative",
+                  "aw-owned-runtime",
+                  "package-owned-covered-by-other-issues",
+                  "covered-by-other-issue",
+                  "blocked-pending-cg-support"
+                ],
+                "description": "Owner class for the migrated family."
+              },
+              "migrated_from": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Previous owner location for the migrated declaration."
+              },
+              "migrated_to": {
+                "type": "string",
+                "minLength": 1,
+                "description": "New contract or generated owner location for the migrated declaration."
+              },
+              "closure_role": {
+                "type": "string",
+                "minLength": 1,
+                "description": "How this migration contributes to issue or PR closure."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "All primitive families whose ownership declaration moved in this slice."
+        },
+        "runtime_consumers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime or checker surfaces that consume the migrated declaration."
+        },
+        "proof": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Proof command that validates the migrated declaration path."
+        },
+        "compatibility": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Compatibility impact of moving the declaration to this contract."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Concrete migration metadata for the first safe family moved out of hand-authored Python ownership."
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/family"
+      },
+      "description": "Classified root runtime primitive families."
+    }
+  },
+  "$defs": {
+    "family": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "owner_class",
+        "owner_surface",
+        "runtime_role",
+        "source_symbols",
+        "generated_or_contract_refs",
+        "proof_refs",
+        "blocked_by",
+        "remaining_hand_owned_reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Stable family identifier."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable family title."
+        },
+        "owner_class": {
+          "enum": [
+            "cg-owned-declarative",
+            "contract-owned-declarative",
+            "aw-owned-runtime",
+            "package-owned-covered-by-other-issues",
+            "covered-by-other-issue",
+            "blocked-pending-cg-support"
+          ],
+          "description": "Ownership disposition for the family."
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Primary source of truth or owner surface for the family."
+        },
+        "runtime_role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What runtime code may still do for this family."
+        },
+        "source_symbols": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "description": "Representative runtime or checker symbols for the family."
+        },
+        "aw_owned_primitive_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "description": "AW-owned primitive IDs declared by this family when applicable."
+        },
+        "generated_artifact_metadata_expectations": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "source_ir_schema_version",
+            "target_layout_versions"
+          ],
+          "properties": {
+            "schema_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Expected command-generation generated artifact metadata schema version."
+            },
+            "source_ir_schema_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Expected command package IR schema version used as generated artifact source."
+            },
+            "target_layout_versions": {
+              "type": "object",
+              "required": [
+                "python",
+                "typescript"
+              ],
+              "properties": {
+                "python": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Expected command-generation Python target layout version."
+                },
+                "typescript": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Expected command-generation TypeScript target layout version."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Expected generated target layout versions by target kind."
+            }
+          },
+          "additionalProperties": false,
+          "description": "CG-owned generated artifact metadata expectations consumed by generated package proof."
+        },
+        "generated_or_contract_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Contract, generated artifact, or package surfaces related to this family."
+        },
+        "proof_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Proof commands or checks covering this family."
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Issues or missing generic capabilities that block further migration."
+        },
+        "remaining_hand_owned_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why any remaining runtime code stays hand-owned for now."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}
