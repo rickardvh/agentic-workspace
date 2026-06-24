@@ -13,6 +13,7 @@ Ordinary route:
 2. Use `uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task "<task>" --format json` when changed paths are already known.
 3. Follow `next_safe_action`, `action_signals`, and `skills` before opening raw `.agentic-workspace` files or running drill-down commands.
 4. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.
+5. Actively dogfood Agentic Workspace while using it: look for weak points, friction, ineffective or noisy features, missed routing, avoidable rereads, unclear claim/proof boundaries, and ways to make agent work safer, cheaper, quieter, or more effective. Fix immediate blockers when they are in scope. For durable findings, create narrow preliminary/draft GitHub issues with concrete evidence and the smallest useful intended outcome instead of leaving the learning in chat.
 
 Boundaries:
 - The effective invocation comes from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; `.agentic-workspace/config.local.toml` may override it.
