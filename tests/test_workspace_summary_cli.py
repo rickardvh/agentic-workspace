@@ -445,6 +445,15 @@ candidates = [
     closeout = payload["closeout_trust_inspection"]
     assert closeout["status"] == "required"
     assert closeout["trust"] == "lower-trust"
+    effect = closeout["action_effect"]
+    assert effect["force"] == "required_before_claim"
+    assert effect["allowed_now"] == "inspect-closeout-trust-before-broad-status-claim"
+    assert effect["blocked_until_reconciled"] == [
+        "claim-broad-work-complete",
+        "claim-lane-closeable",
+        "claim-issue-closure-safe",
+    ]
+    assert effect["resolution_selector"] == "closeout_trust_inspection"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
     protocol = closeout["closeout_protocol"]
@@ -457,6 +466,50 @@ candidates = [
     assert closeout["required_next_inspection"] == (
         f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"
     )
+
+
+def test_workspace_summary_closeout_trust_inspection_clear_is_advisory(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Is the direct docs update closeable?",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    closeout = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    assert closeout["status"] == "clear"
+    assert closeout["action_effect"]["force"] == "advisory"
+    assert closeout["action_effect"]["allowed_now"] == "continue-closeout-status-answer"
+    assert closeout["action_effect"]["blocked_until_reconciled"] == []
+    assert closeout["action_effect"]["claim_boundary"] == "closeout-trust-clear-does-not-replace-proof-and-acceptance-reconciliation"
+    assert closeout["action_effect"]["resolution_selector"] == "closeout_trust_inspection"
 
 
 def test_workspace_summary_json_accepts_verbose_detail(tmp_path: Path, capsys) -> None:

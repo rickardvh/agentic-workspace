@@ -15,6 +15,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
 - [Ordinary caution action-shape audit](ordinary-caution-action-shape-audit.md): disposition table for ordinary warning and gate classes.
 - [Planning continuation action-shape audit](planning-continuation-action-shape-audit.md): disposition table for active-owner and Planning continuation cautions.
+- [Summary/status/preflight action-shape audit](summary-status-preflight-action-shape-audit.md): disposition table for recovery and status-adjacent caution outputs.
 
 ## Boundary And Measurement
 

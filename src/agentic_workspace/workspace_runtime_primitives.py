@@ -21091,6 +21091,14 @@ def _completion_closeout_inspection_payload(
             "reason": "task-text semantics are agent-owned; AW does not infer completion/status posture from prompt keywords",
             "detail_command": command,
             "agent_owned_decision": "whether the user is asking for completion, status, or closeout judgment",
+            "action_effect": {
+                "force": "advisory",
+                "allowed_now": "continue-without-closeout-trust-inspection",
+                "blocked_until_reconciled": [],
+                "claim_boundary": "agent-owned-decision-whether-closeout-status-is-being-claimed",
+                "resolution_selector": "closeout_trust_inspection",
+                "resolution_command": command,
+            },
         }
     try:
         from repo_planning_bootstrap.installer import planning_report
@@ -21101,6 +21109,14 @@ def _completion_closeout_inspection_payload(
             "reason": "completion/status question requires closeout trust, but the planning module is not importable",
             "detail_command": command,
             "required_next_inspection": command,
+            "action_effect": {
+                "force": "required_before_claim",
+                "allowed_now": "inspect-or-restore-closeout-trust-before-status-claim",
+                "blocked_until_reconciled": ["claim-broad-work-complete", "claim-lane-closeable", "claim-issue-closure-safe"],
+                "claim_boundary": "do-not-answer-broad-completion-or-closeout-status-without-closeout-trust",
+                "resolution_selector": "closeout_trust_inspection",
+                "resolution_command": command,
+            },
         }
     planning_payload = planning_report(target=target_root)
     closeout = _report_closeout_trust_payload(
@@ -21113,6 +21129,20 @@ def _completion_closeout_inspection_payload(
     lower_trust_count = _as_int(closeout.get("lower_trust_closeout_count"))
     gate_blocking = bool(strict_gate.get("blocking"))
     needs_surface = trust != "normal" or lower_trust_count > 0 or gate_blocking
+    action_effect = {
+        "force": "required_before_claim" if needs_surface else "advisory",
+        "allowed_now": "inspect-closeout-trust-before-broad-status-claim" if needs_surface else "continue-closeout-status-answer",
+        "blocked_until_reconciled": ["claim-broad-work-complete", "claim-lane-closeable", "claim-issue-closure-safe"]
+        if needs_surface
+        else [],
+        "claim_boundary": (
+            "broad-completion-and-closeout-claims-blocked-until-closeout-trust-is-reconciled"
+            if needs_surface
+            else "closeout-trust-clear-does-not-replace-proof-and-acceptance-reconciliation"
+        ),
+        "resolution_selector": "closeout_trust_inspection",
+        "resolution_command": command,
+    }
     return {
         "status": "required" if needs_surface else "clear",
         "reason": "explicit closeout_trust inspection found residue to reconcile before claiming broad work is done"
@@ -21144,6 +21174,7 @@ def _completion_closeout_inspection_payload(
         },
         "required_next_inspection": command,
         "detail_command": command,
+        "action_effect": action_effect,
         "rule": "Do not answer done/complete/closeable for lane, epic, or broad work without reconciling this surface when agent judgment says the user is asking for closeout status.",
         "authority_boundary": _authority_boundary_payload(
             surface="closeout_trust_inspection",
