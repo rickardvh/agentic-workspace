@@ -61,6 +61,7 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
+    workspace_runtime_primitive_families_manifest,
 )
 
 AdapterConformanceCase = ProcessConformanceCase
@@ -197,12 +198,6 @@ PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
 )
 COMMAND_GENERATION_RELEASE_BASE_URL = "https://github.com/rickardvh/command-generation/releases/download"
 COMMAND_GENERATION_COMPATIBLE_RANGE = ">=1.0.0rc1,<2.0.0"
-COMMAND_GENERATION_METADATA_SCHEMA_VERSION = "command-generation/generated-artifact-metadata/v1"
-COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION = "command-generation/command-package-ir/v1"
-COMMAND_GENERATION_TARGET_LAYOUT_VERSION = {
-    "python": "command-generation/python-target-layout/v1",
-    "typescript": "command-generation/typescript-target-layout/v1",
-}
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",
@@ -212,13 +207,6 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "output.emit",
 }
 AW_PRIMITIVE_OWNERSHIP_KIND = "agentic-workspace/aw-primitive-ownership/v1"
-AW_OWNED_PRIMITIVES = {
-    "workspace.target-root.resolve",
-    "memory.payload.status",
-    "memory.payload.lifecycle-plan",
-    "memory.payload.current-memory",
-    "memory.payload.verify",
-}
 RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES = {
     "workspace.root.resolve",
     "payload.status",
@@ -2328,8 +2316,8 @@ def _generated_target_freshness_report(ir: dict[str, object]) -> dict[str, objec
                 "package": "command-generation",
                 "version": _command_generation_package_provenance()["declared_version"],
             },
-            "expected_source_ir_schema_version": COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION,
-            "expected_target_layout_versions": dict(COMMAND_GENERATION_TARGET_LAYOUT_VERSION),
+            "expected_source_ir_schema_version": _generation_metadata_expectations()["source_ir_schema_version"],
+            "expected_target_layout_versions": _generation_metadata_expectations()["target_layout_versions"],
             "error_count": len(metadata_errors),
             "errors": metadata_errors,
         },
@@ -2608,8 +2596,43 @@ def _primitive_definition_by_id() -> dict[str, dict[str, object]]:
     }
 
 
+def _aw_owned_primitives() -> set[str]:
+    inventory = workspace_runtime_primitive_families_manifest()
+    primitive_ids: set[str] = set()
+    for family in inventory.get("families", []):
+        if not isinstance(family, dict):
+            continue
+        for primitive_id in family.get("aw_owned_primitive_ids", []):
+            primitive_ids.add(str(primitive_id))
+    return primitive_ids
+
+
+def _workspace_runtime_family(family_id: str) -> dict[str, object]:
+    inventory = workspace_runtime_primitive_families_manifest()
+    for family in inventory.get("families", []):
+        if isinstance(family, dict) and family.get("id") == family_id:
+            return family
+    raise RuntimeError(f"workspace runtime primitive family inventory is missing {family_id!r}")
+
+
+def _generation_metadata_expectations() -> dict[str, object]:
+    family = _workspace_runtime_family("generated-command-package-proof-metadata")
+    expectations = family.get("generated_artifact_metadata_expectations")
+    if not isinstance(expectations, dict):
+        raise RuntimeError("generated-command-package-proof-metadata is missing generated_artifact_metadata_expectations")
+    target_layout_versions = expectations.get("target_layout_versions")
+    if not isinstance(target_layout_versions, dict):
+        raise RuntimeError("generated_artifact_metadata_expectations.target_layout_versions must be an object")
+    return {
+        "schema_version": str(expectations.get("schema_version", "")),
+        "source_ir_schema_version": str(expectations.get("source_ir_schema_version", "")),
+        "target_layout_versions": {str(key): str(value) for key, value in target_layout_versions.items()},
+    }
+
+
 def _source_operation_aw_owned_primitive_usage() -> list[dict[str, object]]:
     usage: list[dict[str, object]] = []
+    aw_owned_primitives = _aw_owned_primitives()
     for operation_path in _source_operation_contract_paths():
         try:
             operation = json.loads(operation_path.read_text(encoding="utf-8"))
@@ -2618,7 +2641,7 @@ def _source_operation_aw_owned_primitive_usage() -> list[dict[str, object]]:
         operation_id = str(operation.get("id", operation_path.stem))
         for step in _operation_primitive_steps(operation):
             primitive = str(step.get("uses", ""))
-            if primitive not in AW_OWNED_PRIMITIVES:
+            if primitive not in aw_owned_primitives:
                 continue
             usage.append(
                 {
@@ -2664,6 +2687,7 @@ def _generated_command_package_paths(ir: dict[str, object]) -> list[Path]:
 
 def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[dict[str, object]]:
     usage: list[dict[str, object]] = []
+    aw_owned_primitives = _aw_owned_primitives()
     for path in _generated_command_package_paths(ir):
         try:
             package = json.loads(path.read_text(encoding="utf-8"))
@@ -2678,7 +2702,7 @@ def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[d
             if not isinstance(primitive_refs, list):
                 continue
             for primitive in primitive_refs:
-                if primitive not in AW_OWNED_PRIMITIVES:
+                if primitive not in aw_owned_primitives:
                     continue
                 usage.append(
                     {
@@ -2693,10 +2717,11 @@ def _generated_package_aw_owned_primitive_usage(ir: dict[str, object]) -> list[d
 
 def _aw_primitive_declaration_report() -> dict[str, object]:
     primitive_by_id = _primitive_definition_by_id()
+    aw_owned_primitives = _aw_owned_primitives()
     declarations: list[dict[str, object]] = []
     missing: list[str] = []
     invalid: list[str] = []
-    for aw_id in sorted(AW_OWNED_PRIMITIVES):
+    for aw_id in sorted(aw_owned_primitives):
         primitive = primitive_by_id.get(aw_id)
         if not primitive:
             missing.append(aw_id)
@@ -2735,9 +2760,10 @@ def _aw_primitive_declaration_report() -> dict[str, object]:
         )
     return {
         "status": "satisfied" if not missing and not invalid else "blocked",
-        "source": "src/agentic_workspace/contracts/operation_primitives.json",
+        "source": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "definition_source": "src/agentic_workspace/contracts/operation_primitives.json",
         "declared_count": sum(1 for item in declarations if item["status"] == "declared"),
-        "required_count": len(AW_OWNED_PRIMITIVES),
+        "required_count": len(aw_owned_primitives),
         "missing": missing,
         "invalid": invalid,
         "declarations": declarations,
@@ -2749,8 +2775,9 @@ def _aw_primitive_runtime_binding_report(ir: dict[str, object]) -> dict[str, obj
     source_usage = _source_operation_aw_owned_primitive_usage()
     generated_counts = _operation_usage_counts_by_primitive(generated_usage)
     source_counts = _operation_usage_counts_by_primitive(source_usage)
+    aw_owned_primitives = _aw_owned_primitives()
     missing_generated = sorted(
-        aw_id for aw_id in AW_OWNED_PRIMITIVES if aw_id not in generated_counts and aw_id in source_counts
+        aw_id for aw_id in aw_owned_primitives if aw_id not in generated_counts and aw_id in source_counts
     )
     handler_support = {
         "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
@@ -3998,19 +4025,22 @@ def _validate_command_generation_release_provenance() -> list[str]:
 
 
 def _expected_generation_metadata(package: dict[str, object], target: dict[str, object]) -> dict[str, object]:
+    expectations = _generation_metadata_expectations()
+    target_layout_versions = expectations["target_layout_versions"]
+    target_kind = str(target.get("kind", ""))
     return {
-        "schema_version": COMMAND_GENERATION_METADATA_SCHEMA_VERSION,
+        "schema_version": expectations["schema_version"],
         "generator": {
             "package": "command-generation",
             "version": _command_generation_package_provenance()["declared_version"],
         },
         "source_ir": {
-            "schema_version": COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION,
+            "schema_version": expectations["source_ir_schema_version"],
         },
         "target": {
-            "kind": str(target.get("kind", "")),
+            "kind": target_kind,
             "package_name": str(target.get("package_name", "")),
-            "layout_version": COMMAND_GENERATION_TARGET_LAYOUT_VERSION.get(str(target.get("kind", "")), ""),
+            "layout_version": target_layout_versions.get(target_kind, "") if isinstance(target_layout_versions, dict) else "",
         },
     }
 
@@ -4046,10 +4076,13 @@ def _validate_generation_metadata_payload(
 
 def _validate_generated_artifact_generation_metadata(ir: dict[str, object]) -> list[str]:
     errors: list[str] = []
-    if ir.get("schema_version") != COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION:
+    expectations = _generation_metadata_expectations()
+    source_ir_schema_version = expectations["source_ir_schema_version"]
+    target_layout_versions = expectations["target_layout_versions"]
+    if ir.get("schema_version") != source_ir_schema_version:
         errors.append(
             "canonical command package IR schema mismatch: "
-            f"{ir.get('schema_version')!r}, expected {COMMAND_GENERATION_SOURCE_IR_SCHEMA_VERSION!r}"
+            f"{ir.get('schema_version')!r}, expected {source_ir_schema_version!r}"
         )
     if not _command_generation_package_provenance().get("compatible"):
         errors.append("generated artifact metadata cannot be trusted until command-generation package provenance is compatible")
@@ -4062,7 +4095,7 @@ def _validate_generated_artifact_generation_metadata(ir: dict[str, object]) -> l
             target_kind = str(target.get("kind", ""))
             if str(target.get("generation_status", "")) == "deferred":
                 continue
-            if target_kind not in COMMAND_GENERATION_TARGET_LAYOUT_VERSION:
+            if not isinstance(target_layout_versions, dict) or target_kind not in target_layout_versions:
                 errors.append(f"{package.get('id')} has unsupported generated target kind {target_kind!r}")
                 continue
             generated_root = REPO_ROOT / str(target.get("generated_root", ""))

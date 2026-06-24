@@ -207,6 +207,12 @@
       "consumer": "scripts/check/check_generated_command_packages.py"
     },
     {
+      "contract": "workspace_runtime_primitive_families.json",
+      "schema": "workspace_runtime_primitive_families.schema.json",
+      "loader": "workspace_runtime_primitive_families_manifest",
+      "consumer": "scripts/check/check_generated_command_packages.py"
+    },
+    {
       "contract": "lifecycle_generation_readiness.json",
       "schema": "lifecycle_generation_readiness.schema.json",
       "loader": "lifecycle_generation_readiness_manifest",

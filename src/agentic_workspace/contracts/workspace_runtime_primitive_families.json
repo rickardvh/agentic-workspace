@@ -1,0 +1,215 @@
+{
+  "schema_version": "agentic-workspace/workspace-runtime-primitive-families/v1",
+  "summary": "Family-level ownership inventory for root workspace_runtime_primitives.py behavior, used to keep command-generation-owned declarations out of hand-owned runtime semantics.",
+  "source_path": "src/agentic_workspace/workspace_runtime_primitives.py",
+  "classification_rule": "Prefer command-generation or declarative contracts for stable command/package metadata and generated projection behavior. Keep hand-owned only when behavior requires live workspace inspection, semantic judgment, provider integration, mutation safety, or package-specific runtime policy.",
+  "migration_policy": {
+    "migrated_family_id": "generated-command-package-proof-metadata",
+    "migrated_to": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json families[].generated_artifact_metadata_expectations",
+    "migrated_families": [
+      {
+        "family_id": "generated-command-package-proof-metadata",
+        "owner_class": "cg-owned-declarative",
+        "migrated_from": "scripts/check/check_generated_command_packages.py command-generation generated artifact metadata constants",
+        "migrated_to": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json families[].generated_artifact_metadata_expectations",
+        "closure_role": "satisfies #1765 high-confidence CG-owned migration"
+      },
+      {
+        "family_id": "aw-owned-primitive-ids",
+        "owner_class": "contract-owned-declarative",
+        "migrated_from": "scripts/check/check_generated_command_packages.py AW_OWNED_PRIMITIVES",
+        "migrated_to": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json families[].aw_owned_primitive_ids",
+        "closure_role": "supporting contract-owned migration and checker fail-closed proof"
+      }
+    ],
+    "runtime_consumers": [
+      "scripts/check/check_generated_command_packages.py --aw-primitive-ownership",
+      "scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+    ],
+    "proof": "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json",
+    "compatibility": "Payload-compatible: the checker report keeps the same emitted AW primitive ownership shape while reading required primitive IDs from this contract."
+  },
+  "families": [
+    {
+      "id": "generated-command-package-proof-metadata",
+      "title": "Generated command/package proof metadata",
+      "owner_class": "cg-owned-declarative",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json and src/agentic_workspace/contracts/generated_command_check_inventory.json",
+      "runtime_role": "Runtime code and check scripts may aggregate proof reports, but command/package truth, generated artifact maturity, target freshness, and proof metadata are declared in contracts or generated artifacts.",
+      "source_symbols": [
+        "_generated_cli_freshness_payload",
+        "_cli_authority_review_for_changed_paths"
+      ],
+      "generated_artifact_metadata_expectations": {
+        "schema_version": "command-generation/generated-artifact-metadata/v1",
+        "source_ir_schema_version": "command-generation/command-package-ir/v1",
+        "target_layout_versions": {
+          "python": "command-generation/python-target-layout/v1",
+          "typescript": "command-generation/typescript-target-layout/v1"
+        }
+      },
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/generated_command_check_inventory.json",
+        "generated/*/python/command_package.json",
+        "generated/*/typescript/resources/command_package.json"
+      ],
+      "proof_refs": [
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Report assembly and changed-path selection still need runtime context; declarative command/package truth is not owned by workspace_runtime_primitives.py."
+    },
+    {
+      "id": "aw-owned-primitive-ids",
+      "title": "AW-owned primitive ID declarations consumed by generated-package proof",
+      "owner_class": "contract-owned-declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+      "runtime_role": "The generated-package checker derives required AW-owned primitive IDs from this inventory instead of a hand-authored Python constant.",
+      "source_symbols": [
+        "_aw_primitive_declaration_report",
+        "_aw_primitive_runtime_binding_report",
+        "_aw_primitive_ownership_report"
+      ],
+      "aw_owned_primitive_ids": [
+        "workspace.target-root.resolve",
+        "memory.payload.status",
+        "memory.payload.lifecycle-plan",
+        "memory.payload.current-memory",
+        "memory.payload.verify"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/operation_primitives.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Primitive implementation and host support modules remain AW-owned package-domain behavior; only the required primitive-ID set moved to contract ownership."
+    },
+    {
+      "id": "generated-surface-trust-routing",
+      "title": "Generated surface trust metadata and command routes",
+      "owner_class": "cg-owned-declarative",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json plus generated command package metadata",
+      "runtime_role": "Runtime code may expose compact trust projections and changed-path reviews, but target identity, maturity, command route, and generated artifact provenance are generated/contract-owned.",
+      "source_symbols": [
+        "_selector_requests_generated_surface_trust",
+        "_generated_cli_freshness_payload",
+        "_tiny_surface_compatibility_review"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "generated/*"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Changed-path interpretation and user-facing projection remain runtime aggregation; stable generated-surface facts are contract-backed."
+    },
+    {
+      "id": "tiny-compact-output-projections",
+      "title": "Tiny and compact output projection schemas",
+      "owner_class": "blocked-pending-cg-support",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/* plus future generated projection helpers",
+      "runtime_role": "workspace_runtime_primitives.py still contains many compact projection helpers that shape live payloads and selector responses.",
+      "source_symbols": [
+        "_tiny_proof_payload",
+        "_compact_start_delegation_decision",
+        "_compact_status_payload",
+        "_tiny_config_payload"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "src/agentic_workspace/contracts/compact_contract_profile.json"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      ],
+      "blocked_by": [
+        "generic compact-projection operation shape",
+        "selector-aware payload projection generation"
+      ],
+      "remaining_hand_owned_reason": "The current helpers combine schema shape, selector policy, and live runtime facts; migrate only after a generic projection primitive exists."
+    },
+    {
+      "id": "intent-and-closeout-judgment",
+      "title": "Intent, proof, and closeout semantic judgment",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py and Planning/Memory package runtime surfaces",
+      "runtime_role": "Host-specific and package-specific judgment over task intent, closeout trust, proof adequacy, and continuation ownership stays hand-owned.",
+      "source_symbols": [
+        "_intent_custody_payload",
+        "_completion_contract_payload",
+        "_proof_selection_for_changed_paths",
+        "_closeout_report_payload"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/contracts/context_templates.json",
+        ".agentic-workspace/planning"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_proof_cli.py -q"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "These functions interpret live user intent and repository state; hiding that judgment in generated code would move, not reduce, semantic ownership."
+    },
+    {
+      "id": "provider-mutation-safety",
+      "title": "Provider integration and mutation safety behavior",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py plus package lifecycle runtimes",
+      "runtime_role": "Lifecycle mutation, payload provenance, subprocess/provider behavior, and destructive safety checks stay runtime-owned while issue #1656 covers provider/mutation boundary work.",
+      "source_symbols": [
+        "_lifecycle_apply_command",
+        "_workspace_init_or_upgrade_report",
+        "_record_delegation_outcome",
+        "_run_external_intent_refresh_github_adapter"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/preflight_policy.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_cli.py tests/test_workspace_config_cli.py -q"
+      ],
+      "blocked_by": [
+        "#1656"
+      ],
+      "remaining_hand_owned_reason": "Mutation safety and provider truth require live side-effect policy and cannot be replaced by declarative command metadata alone."
+    },
+    {
+      "id": "planning-memory-verification-package-boundaries",
+      "title": "Planning, Memory, and Verification package runtime boundaries",
+      "owner_class": "package-owned-covered-by-other-issues",
+      "owner_surface": "packages/planning, packages/memory, packages/verification",
+      "runtime_role": "Package-specific Planning, Memory, and Verification behavior is already tracked in package-owned runtime inventories and related issues.",
+      "source_symbols": [
+        "_module_operations",
+        "_verification_report_payload",
+        "_selected_module_reports"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "packages/planning/src/repo_planning_bootstrap/contracts",
+        "packages/memory/src/repo_memory_bootstrap/contracts",
+        "packages/verification/src/repo_verification_bootstrap/contracts"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+      ],
+      "blocked_by": [
+        "#1657",
+        "#1658"
+      ],
+      "remaining_hand_owned_reason": "Root AW should inventory these boundaries but not migrate package semantics under this issue."
+    }
+  ]
+}
