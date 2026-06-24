@@ -1268,6 +1268,50 @@
           "type": [ "string", "null" ],
           "description": "Suggested command when drift requires or recommends action."
         },
+        "action_effect": {
+          "type": "object",
+          "required": [
+            "force",
+            "allowed_now",
+            "blocked_until_reconciled",
+            "claim_boundary",
+            "resolution_selector",
+            "resolution_command"
+          ],
+          "properties": {
+            "force": {
+              "enum": [
+                "advisory",
+                "required_before_claim",
+                "required_before_execution"
+              ],
+              "description": "Whether this installed-state condition blocks execution, blocks only claims, or is advisory."
+            },
+            "allowed_now": {
+              "type": "string",
+              "description": "Action still allowed before reconciling this installed-state condition."
+            },
+            "blocked_until_reconciled": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Actions or claims blocked until the condition is resolved."
+            },
+            "claim_boundary": {
+              "type": "string",
+              "description": "Claim limit created by this local or installed-state condition."
+            },
+            "resolution_selector": {
+              "type": "string",
+              "description": "Selector that exposes the resolving diagnostic."
+            },
+            "resolution_command": {
+              "type": "string",
+              "description": "Command to run when reconciliation is required or desired."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Action and claim effect for the installed-state compatibility condition."
+        },
         "rule": {
           "type": "string",
           "description": "Policy rule for applying this packet."
