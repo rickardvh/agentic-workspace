@@ -501,6 +501,17 @@ def test_ordinary_caution_action_shape_audit_records_dispositions() -> None:
     assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
 
 
+def test_planning_continuation_action_shape_audit_records_dispositions() -> None:
+    index = (WORKSPACE_ROOT / "docs" / "maintainer" / "index.md").read_text(encoding="utf-8")
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "planning-continuation-action-shape-audit.md").read_text(encoding="utf-8")
+
+    assert "planning-continuation-action-shape-audit.md" in index
+    assert "Active plan reliance" in text
+    assert "Active delegation decision" in text
+    assert "Direct work with unrelated active plan" in text
+    assert "force, allowed action, blocked claim/action, claim boundary, and resolution selector or command" in text
+
+
 def test_testing_strategy_guides_against_one_off_regression_sprawl() -> None:
     playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
     strategy = (WORKSPACE_ROOT / "docs" / "maintainer" / "testing-strategy.md").read_text(encoding="utf-8")
