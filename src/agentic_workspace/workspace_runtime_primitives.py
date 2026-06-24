@@ -21937,6 +21937,21 @@ def _hydrate_selected_start_advisory_payloads(
             task_text=task_text,
             execution_posture=execution_posture,
         )
+    if _selector_requests(select, "issue_reference_intent"):
+        gate = payload.get("planning_safety_gate")
+        if not isinstance(gate, dict):
+            execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+            gate = _planning_safety_gate_payload(
+                target_root=target_root,
+                config=config,
+                changed_paths=[],
+                task_text=task_text,
+                execution_posture=execution_posture,
+            )
+        if _list_payload(gate.get("issue_refs")):
+            payload["issue_reference_intent"] = _issue_reference_intent_payload(
+                issue_scope_evidence=gate.get("issue_scope_evidence", {}), cli_invoke=config.cli_invoke
+            )
     if _selector_requests(select, "local_chat_checkpoint"):
         payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
     if _selector_requests(select, "installed_state_compatibility"):
@@ -23991,6 +24006,18 @@ def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli
         )
     details_needed = evidence_status in {"unknown", "partial"}
     provider_hint = "github" if "refresh-github" in refresh_command else "external-intent"
+    action_effect = {
+        "force": "required_before_claim" if details_needed else "advisory",
+        "allowed_now": "read-review-and-state-bounded-slice" if details_needed else "continue-with-cached-issue-intent",
+        "blocked_until_reconciled": ["claim-external-issue-scope-confirmed", "claim-task-complete"] if details_needed else [],
+        "claim_boundary": (
+            "do-not-claim-issue-scope-or-task-completion-until-external-intent-is-refreshed"
+            if details_needed
+            else "cached-issue-intent-available-agent-still-owns-semantic-scope"
+        ),
+        "resolution_selector": "context.issue_reference_intent",
+        "resolution_command": refresh_command if details_needed else "",
+    }
     return {
         "kind": "agentic-workspace/issue-reference-intent/v1",
         "status": "details-needed" if details_needed else "evidence-available",
@@ -24004,6 +24031,7 @@ def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli
         "required_next_action": "refresh-external-issue-intent" if details_needed else "use-cached-issue-intent",
         "intent_state": "issue-details-need-fetching" if details_needed else "issue-details-available",
         "not_intent_ambiguity": details_needed,
+        "action_effect": action_effect,
         "reason": (
             "The task names external issue ref(s); fetch issue details before treating the issue body as confirmed scope."
             if details_needed
@@ -26918,6 +26946,9 @@ def _generated_surface_trust_path_payload(*, target_root: Path, path: str, proof
     freshness_status = "validation-required"
     if not refresh_command or source_status == "missing":
         freshness_status = "missing-source-or-refresh-command"
+    refresh = _command_with_cli_invoke(command=refresh_command, cli_invoke=cli_invoke) if refresh_command else ""
+    validation = _command_with_cli_invoke(command=validation_command, cli_invoke=cli_invoke) if validation_command else ""
+    resolution_commands = list(dict.fromkeys(command for command in (refresh, validation) if command))
     return {
         "kind": "generated-surface-trust-item/v1",
         "path": normalized,
@@ -26927,10 +26958,25 @@ def _generated_surface_trust_path_payload(*, target_root: Path, path: str, proof
         "canonical_source_status": source_status,
         "freshness_status": freshness_status,
         "freshness_checked_by_implement": False,
-        "refresh_command": _command_with_cli_invoke(command=refresh_command, cli_invoke=cli_invoke) if refresh_command else "",
-        "validation_command": _command_with_cli_invoke(command=validation_command, cli_invoke=cli_invoke) if validation_command else "",
+        "refresh_command": refresh,
+        "validation_command": validation,
         "direct_edit_allowed": direct_edit_allowed,
         "direct_edit_policy": direct_edit_policy,
+        "action_effect": {
+            "force": "required_before_claim" if not direct_edit_allowed or freshness_status != "validated" else "advisory",
+            "allowed_now": "edit-canonical-source-refresh-and-validate-generated-surface",
+            "blocked_until_reconciled": ["claim-generated-surface-fresh", "claim-task-complete"]
+            if not direct_edit_allowed or freshness_status != "validated"
+            else [],
+            "claim_boundary": (
+                "do-not-claim-generated-output-fresh-until-refresh-and-validation-pass"
+                if refresh or validation
+                else "do-not-claim-generated-output-fresh-until-canonical-source-or-refresh-route-is-restored"
+            ),
+            "resolution_selector": "generated_surface_trust",
+            "resolution_command": resolution_commands[0] if resolution_commands else "",
+            "resolution_commands": resolution_commands,
+        },
     }
 
 
@@ -26943,12 +26989,32 @@ def _generated_surface_trust_payload(
         for item in [_generated_surface_trust_path_payload(target_root=target_root, path=path, proof=proof, cli_invoke=cli_invoke)]
         if item is not None
     ]
+    blocked_paths = [item["path"] for item in items if not item["direct_edit_allowed"]]
+    resolution_commands = list(
+        dict.fromkeys(
+            command
+            for item in items
+            for command in _list_payload(_as_dict(item.get("action_effect")).get("resolution_commands"))
+            if str(command).strip()
+        )
+    )
+    action_effect = {
+        "force": "required_before_claim" if items else "advisory",
+        "allowed_now": "continue-implementation-but-refresh-generated-surfaces-before-claim" if items else "continue-implementation",
+        "blocked_until_reconciled": ["claim-generated-surfaces-fresh", "claim-task-complete"] if items else [],
+        "claim_boundary": (
+            "generated-surface-freshness-must-be-reconciled-before-completion-claim" if items else "no-generated-surface-freshness-warning"
+        ),
+        "resolution_selector": "generated_surface_trust",
+        "resolution_commands": resolution_commands,
+    }
     return {
         "kind": "agentic-workspace/generated-surface-trust/v1",
         "status": "present" if items else "not-applicable",
         "changed_path_count": len(items),
         "items": items,
-        "direct_edit_blocked_paths": [item["path"] for item in items if not item["direct_edit_allowed"]],
+        "direct_edit_blocked_paths": blocked_paths,
+        "action_effect": action_effect,
         "rule": (
             "Generated surfaces are derived artifacts. Edit the canonical source first, refresh the generated output, "
             "and run the validation command before trusting freshness."
@@ -28706,6 +28772,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "changed_path_count": payload.get("generated_surface_trust", {}).get("changed_path_count", 0)
                 if isinstance(payload.get("generated_surface_trust"), dict)
                 else 0,
+                "action_effect": _tiny_action_effect(
+                    payload.get("generated_surface_trust", {}).get("action_effect", {}), include_allowed=False
+                )
+                if isinstance(payload.get("generated_surface_trust"), dict)
+                else {},
                 "detail_selector": "generated_surface_trust",
             },
             "architecture_principles": _architecture_principles_payload(
@@ -28963,18 +29034,33 @@ def _tiny_generated_surface_trust(value: dict[str, Any]) -> dict[str, Any]:
                 "path": item.get("path"),
                 "canonical_source": item.get("canonical_source"),
                 "freshness_status": item.get("freshness_status"),
-                "refresh_command": item.get("refresh_command"),
-                "validation_command": item.get("validation_command"),
                 "direct_edit_allowed": item.get("direct_edit_allowed"),
-                "direct_edit_policy": "Do not hand-edit generated output; edit the canonical source, refresh, then validate.",
             }
         )
     return {
         "status": value.get("status", "present"),
         "changed_path_count": value.get("changed_path_count", len(items)),
         "items": items,
+        "action_effect": _tiny_action_effect(value.get("action_effect", {}), include_allowed=False),
         "detail_selector": "generated_surface_trust",
     }
+
+
+def _tiny_action_effect(value: Any, *, include_allowed: bool = True, include_resolution_commands: bool = True) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    keys = [
+        "force",
+        "blocked_until_reconciled",
+        "resolution_selector",
+        "resolution_command",
+    ]
+    if include_resolution_commands:
+        keys.append("resolution_commands")
+    compact = {key: value[key] for key in keys if key in value}
+    if include_allowed and "allowed_now" in value:
+        compact["allowed_now"] = value["allowed_now"]
+    return compact
 
 
 def _compact_selector_next_safe_action(packet: dict[str, Any]) -> dict[str, Any]:
@@ -39059,6 +39145,7 @@ def _proof_obligations_payload(
                 "rule": "Authority describes why AW surfaced the command; the agent still owns proof sufficiency.",
             }
         )
+    proof_required = bool(required_commands or manual_required)
     return {
         "kind": "agentic-workspace/proof-obligations/v1",
         "status": "required-proof-selected" if required_commands else "manual-proof-required" if manual_required else "no-required-proof",
@@ -39070,6 +39157,18 @@ def _proof_obligations_payload(
             "manual_verification_required": manual_required,
             "manual_verification_status": manual_status,
             "source_field": "required_commands",
+            "action_effect": {
+                "force": "required_before_claim" if proof_required else "advisory",
+                "allowed_now": "continue-implementation-and-run-required-proof" if proof_required else "continue-implementation",
+                "blocked_until_reconciled": ["claim-task-complete"] if proof_required else [],
+                "claim_boundary": (
+                    "completion-claims-blocked-until-required-proof-passes-or-manual-verification-is-recorded"
+                    if proof_required
+                    else "no-required-proof-selected"
+                ),
+                "resolution_selector": "proof.proof_obligations.required_proof",
+                "resolution_commands": required_commands,
+            },
             "rule": (
                 "These commands, or required manual verification when commands are unavailable, are the proof gate for completion claims."
             ),
@@ -39194,6 +39293,9 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "status": required.get("status", "unknown"),
             "commands": visible_required_commands,
             "manual_verification_required": bool(required.get("manual_verification_required", False)),
+            "action_effect": _tiny_action_effect(
+                required.get("action_effect", {}), include_allowed=False, include_resolution_commands=False
+            ),
         },
         "recommended_confidence_checks": {
             "status": recommended.get("status", "unknown"),

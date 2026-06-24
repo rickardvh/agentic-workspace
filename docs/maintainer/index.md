@@ -13,6 +13,7 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Generated command check inventory](generated-command-check-inventory.md): checked split between AW-owned generated-command proof and command-generation-owned generic target baselines.
 - [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
 - [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
+- [Ordinary caution action-shape audit](ordinary-caution-action-shape-audit.md): disposition table for ordinary warning and gate classes.
 
 ## Boundary And Measurement
 

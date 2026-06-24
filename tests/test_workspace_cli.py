@@ -751,6 +751,62 @@ def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path,
     payload = json.loads(capsys.readouterr().out)
     assert payload["next_safe_action"]["next_safe_action"] == "refresh-external-issue-intent"
     assert payload["context"]["issue_reference_intent"]["issue_refs"] == ["#103"]
+    effect = payload["context"]["issue_reference_intent"]["action_effect"]
+    assert effect["force"] == "required_before_claim"
+    assert effect["allowed_now"] == "read-review-and-state-bounded-slice"
+    assert effect["blocked_until_reconciled"] == ["claim-external-issue-scope-confirmed", "claim-task-complete"]
+    assert effect["resolution_selector"] == "context.issue_reference_intent"
+    assert "external-intent refresh-github" in effect["resolution_command"]
+
+
+def test_start_cached_issue_reference_intent_is_advisory(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    evidence_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "id": "#103",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "issue",
+                        "title": "Cached issue-backed intent",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #103",
+                "--select",
+                "issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    intent = payload["values"]["issue_reference_intent"]
+    assert intent["status"] == "evidence-available"
+    effect = intent["action_effect"]
+    assert effect["force"] == "advisory"
+    assert effect["allowed_now"] == "continue-with-cached-issue-intent"
+    assert effect["blocked_until_reconciled"] == []
+    assert effect["resolution_selector"] == "context.issue_reference_intent"
+    assert effect["resolution_command"] == ""
 
 
 def test_start_ambiguous_numeric_ref_stays_advisory_without_blocking_read_work(tmp_path: Path, capsys) -> None:
@@ -775,6 +831,7 @@ def test_start_ambiguous_numeric_ref_stays_advisory_without_blocking_read_work(t
     payload = json.loads(capsys.readouterr().out)
     assert payload["next_safe_action"]["read_only_allowed"] is True
     assert payload["context"]["issue_reference_intent"]["status"] == "details-needed"
+    assert payload["context"]["issue_reference_intent"]["action_effect"]["force"] == "required_before_claim"
     assert payload["context"]["planning"]["planning_safety_gate"]["workflow_sufficient"] is True
 
 
