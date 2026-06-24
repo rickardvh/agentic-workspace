@@ -11,7 +11,7 @@ Ignored local-only continuity checkpoint used to rehydrate a chat after compacti
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Ignored local-only continuity checkpoint used to rehydrate a chat after compaction or resume without treating local notes as closure evidence. |  | x-agentic-workspace-doc-role: "schema-reference" |
-| `kind` | const `"agentic-workspace/local-chat-checkpoint/v1"` | yes |  | Stable checkpoint record discriminator. |  |  |
+| `kind` | const `"agentic-workspace/local-chat-checkpoint/v2"` | yes |  | Stable checkpoint record discriminator. |  |  |
 | `created_at` | string | yes |  | ISO-like UTC timestamp for the first checkpoint write. |  |  |
 | `updated_at` | string | yes |  | ISO-like UTC timestamp for the most recent checkpoint write. |  |  |
 | `task` | string | yes |  | Short current task summary suitable for startup projection. |  |  |
@@ -24,6 +24,66 @@ Ignored local-only continuity checkpoint used to rehydrate a chat after compacti
 | `open_blockers` | array of string | yes |  | Unresolved blockers to re-check after resume. |  |  |
 | `dirty_state_summary` | string | yes |  | Short summary of local dirty state at checkpoint write time. |  |  |
 | `next_safe_command` | string | yes |  | Next safe command to run after resume. |  |  |
+| `volatile_observations` | object | yes |  | Stale-prone local or remote observations captured with provenance and observation time. |  |  |
+| `volatile_observations.repo_root` | ref `#/$defs/observation` | yes |  | Repository root path observed when the checkpoint was written. |  |  |
+| `volatile_observations.repo_root.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.repo_root.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.repo_root.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.remote_origin_url` | ref `#/$defs/observation` | yes |  | Origin remote URL observed when available. |  |  |
+| `volatile_observations.remote_origin_url.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.remote_origin_url.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.remote_origin_url.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.branch` | ref `#/$defs/observation` | yes |  | Git branch observed when the checkpoint was written. |  |  |
+| `volatile_observations.branch.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.branch.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.branch.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.head_commit` | ref `#/$defs/observation` | yes |  | Local HEAD commit observed when the checkpoint was written. |  |  |
+| `volatile_observations.head_commit.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.head_commit.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.head_commit.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.upstream_commit` | ref `#/$defs/observation` | yes |  | Upstream commit observed when available; compare with local HEAD on resume. |  |  |
+| `volatile_observations.upstream_commit.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.upstream_commit.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.upstream_commit.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.current_pr` | ref `#/$defs/observation` | no |  | Pull request number or URL observed when known. |  |  |
+| `volatile_observations.current_pr.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.current_pr.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.current_pr.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.current_issue_refs` | ref `#/$defs/observation` | yes |  | Issue references associated with the checkpoint task. |  |  |
+| `volatile_observations.current_issue_refs.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.current_issue_refs.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.current_issue_refs.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.dirty_state_summary` | ref `#/$defs/observation` | yes |  | Local dirty-state summary observed or preserved at checkpoint write. |  |  |
+| `volatile_observations.dirty_state_summary.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.dirty_state_summary.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.dirty_state_summary.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.remote_comments` | ref `#/$defs/observation` | yes |  | Marker that remote PR/issue comments were not fetched by checkpoint write. |  |  |
+| `volatile_observations.remote_comments.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.remote_comments.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.remote_comments.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.ci_state` | ref `#/$defs/observation` | yes |  | Marker that CI state was not fetched by checkpoint write. |  |  |
+| `volatile_observations.ci_state.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.ci_state.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.ci_state.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `volatile_observations.dependency_state` | ref `#/$defs/observation` | yes |  | Marker that dependency release/availability state was not fetched by checkpoint write. |  |  |
+| `volatile_observations.dependency_state.value` |  | yes |  | Observed value. |  |  |
+| `volatile_observations.dependency_state.source` | string | yes |  | Source of the observed value. |  |  |
+| `volatile_observations.dependency_state.observed_at` | string | yes |  | Timestamp when the value was observed. |  |  |
+| `local_notes` | object | yes |  | Advisory local notes copied from the checkpoint write inputs. |  |  |
+| `local_notes.task` | string | yes |  | Advisory task summary recorded for resume orientation. |  |  |
+| `local_notes.next_safe_command` | string | yes |  | Advisory next command from the checkpoint writer. |  |  |
+| `local_notes.open_blockers` | array of string | yes |  | Local blocker notes to re-check after resume. |  |  |
+| `local_notes.source` | string | yes |  | Where these local notes came from. |  |  |
+| `local_notes.observed_at` | string | yes |  | Timestamp when these local notes were observed. |  |  |
+| `proof_state` | object | yes |  | Proof history plus explicit invalidation conditions; not current completion evidence. |  |  |
+| `proof_state.status` | enum `"historical-local-summary"`, `"no-proof-recorded"` | yes |  | Whether proof history was recorded in this local checkpoint. |  |  |
+| `proof_state.last_proof` | array of string | yes |  | Recently run proof commands or summaries recorded as history. |  |  |
+| `proof_state.source` | string | yes |  | Where the proof history came from. |  |  |
+| `proof_state.observed_at` | string | yes |  | Timestamp when the proof history was recorded. |  |  |
+| `proof_state.valid_until_change` | array of string | yes |  | Change classes that invalidate treating recorded proof as current. |  |  |
+| `proof_state.stale_if` | array of string | yes |  | Concrete stale conditions that require proof re-check. |  |  |
+| `proof_state.rule` | string | yes |  | Rule preventing checkpoint proof history from becoming completion evidence. |  |  |
+| `resume_checklist` | array of object | yes |  | Action-shaped checklist for the next agent before trusting checkpoint state. |  |  |
 | `limits` | object | yes |  | Invariant flags that make the local-only and non-evidence limits explicit. |  |  |
 | `limits.local_only` | const `true` | yes |  | Checkpoint is only for the local workspace. |  |  |
 | `limits.gitignored` | const `true` | yes |  | Checkpoint must remain in an ignored local path. |  |  |

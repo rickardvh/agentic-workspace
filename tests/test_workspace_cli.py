@@ -546,9 +546,29 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
     schema = json.loads(Path("src/agentic_workspace/contracts/schemas/local_chat_checkpoint.schema.json").read_text(encoding="utf-8"))
     errors = sorted(Draft202012Validator(schema).iter_errors(checkpoint), key=lambda error: list(error.path))
     assert [error.message for error in errors] == []
-    assert checkpoint["kind"] == "agentic-workspace/local-chat-checkpoint/v1"
+    assert checkpoint["kind"] == "agentic-workspace/local-chat-checkpoint/v2"
     assert checkpoint["limits"]["not_closure_evidence"] is True
     assert "durable_sources" in checkpoint["resume_rule"]
+    assert "fresh local/remote truth" in checkpoint["resume_rule"]
+    assert checkpoint["volatile_observations"]["repo_root"]["value"] == tmp_path.resolve().as_posix()
+    assert checkpoint["volatile_observations"]["branch"]["source"] == "git branch at checkpoint write"
+    assert checkpoint["volatile_observations"]["head_commit"]["source"] == "git rev-parse HEAD at checkpoint write"
+    assert checkpoint["volatile_observations"]["head_commit"]["observed_at"] == checkpoint["updated_at"]
+    assert checkpoint["volatile_observations"]["current_pr"]["value"] == "1705"
+    assert checkpoint["volatile_observations"]["current_pr"]["observed_at"] == checkpoint["updated_at"]
+    assert checkpoint["volatile_observations"]["remote_comments"]["value"]["status"] == "not-checked-by-local-checkpoint-writer"
+    assert checkpoint["volatile_observations"]["ci_state"]["value"]["status"] == "not-checked-by-local-checkpoint-writer"
+    assert checkpoint["volatile_observations"]["dependency_state"]["value"]["status"] == "not-checked-by-local-checkpoint-writer"
+    assert checkpoint["local_notes"]["task"] == "Implement #1700 checkpoint slice"
+    assert checkpoint["local_notes"]["source"] == "local checkpoint write input; advisory only"
+    assert checkpoint["proof_state"]["status"] == "historical-local-summary"
+    assert checkpoint["proof_state"]["last_proof"] == ["uv run pytest tests/test_workspace_cli.py"]
+    assert "new review or issue comments" in checkpoint["proof_state"]["valid_until_change"]
+    assert any("PR or issue comments changed" in item for item in checkpoint["proof_state"]["stale_if"])
+    assert "current completion evidence" in checkpoint["proof_state"]["rule"]
+    resume_actions = [item["action"] for item in checkpoint["resume_checklist"]]
+    assert "fetch latest PR comments and issue comments" in resume_actions
+    assert "inspect git status and compare local HEAD with PR head" in resume_actions
 
     assert (
         cli.main(
@@ -569,6 +589,10 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
     assert packet["status"] == "present"
     assert packet["durable_source_count"] == 1
     assert packet["durable_sources"] == ["docs/reference/local-chat-checkpoints.md"]
+    assert packet["volatile_observations"]["head_commit"]["observed_at"] == checkpoint["updated_at"]
+    assert packet["volatile_observations"]["current_pr"]["observed_at"] == checkpoint["updated_at"]
+    assert packet["proof_state"]["status"] == "historical-local-summary"
+    assert any(item["action"].startswith("re-run or re-evaluate proof") for item in packet["resume_checklist"])
     assert "local_chat_checkpoint" in startup["drill_down"]["available_selectors"]
     assert "local_chat_checkpoint=present" in startup["action_signals"]["changed_signals"]
 
@@ -659,6 +683,16 @@ def test_local_chat_checkpoint_startup_reports_absent_stale_and_unreadable(tmp_p
     stale = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
     assert stale["status"] == "stale"
     assert stale["durable_sources"] == ["docs/source.md"]
+
+    checkpoint_path.write_text(
+        json.dumps({"kind": "agentic-workspace/local-chat-checkpoint/v1", "durable_sources": ["docs/source.md"]}),
+        encoding="utf-8",
+    )
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    stale_v1 = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert stale_v1["status"] == "stale"
+    assert stale_v1["checkpoint_kind"] == "agentic-workspace/local-chat-checkpoint/v1"
+    assert stale_v1["durable_sources"] == ["docs/source.md"]
 
     checkpoint_path.write_text("{not json", encoding="utf-8")
     assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0

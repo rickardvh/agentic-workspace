@@ -18,11 +18,15 @@
     "open_blockers",
     "dirty_state_summary",
     "next_safe_command",
+    "volatile_observations",
+    "local_notes",
+    "proof_state",
+    "resume_checklist",
     "limits"
   ],
   "properties": {
     "kind": {
-      "const": "agentic-workspace/local-chat-checkpoint/v1",
+      "const": "agentic-workspace/local-chat-checkpoint/v2",
       "description": "Stable checkpoint record discriminator."
     },
     "created_at": {
@@ -67,7 +71,7 @@
     },
     "resume_rule": {
       "type": "string",
-      "pattern": "advisory|durable_sources|durable sources|Re-read|re-read",
+      "pattern": "advisory|durable_sources|durable sources|fresh local/remote truth|Re-read|re-read",
       "description": "Human-readable rule reminding agents that local checkpoints are advisory and durable sources remain authoritative."
     },
     "last_proof": {
@@ -97,6 +101,184 @@
       "type": "string",
       "maxLength": 500,
       "description": "Next safe command to run after resume."
+    },
+    "volatile_observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stale-prone local or remote observations captured with provenance and observation time.",
+      "required": [
+        "repo_root",
+        "remote_origin_url",
+        "branch",
+        "head_commit",
+        "upstream_commit",
+        "current_issue_refs",
+        "dirty_state_summary",
+        "remote_comments",
+        "ci_state",
+        "dependency_state"
+      ],
+      "properties": {
+        "repo_root": {
+          "$ref": "#/$defs/observation",
+          "description": "Repository root path observed when the checkpoint was written."
+        },
+        "remote_origin_url": {
+          "$ref": "#/$defs/observation",
+          "description": "Origin remote URL observed when available."
+        },
+        "branch": {
+          "$ref": "#/$defs/observation",
+          "description": "Git branch observed when the checkpoint was written."
+        },
+        "head_commit": {
+          "$ref": "#/$defs/observation",
+          "description": "Local HEAD commit observed when the checkpoint was written."
+        },
+        "upstream_commit": {
+          "$ref": "#/$defs/observation",
+          "description": "Upstream commit observed when available; compare with local HEAD on resume."
+        },
+        "current_pr": {
+          "$ref": "#/$defs/observation",
+          "description": "Pull request number or URL observed when known."
+        },
+        "current_issue_refs": {
+          "$ref": "#/$defs/observation",
+          "description": "Issue references associated with the checkpoint task."
+        },
+        "dirty_state_summary": {
+          "$ref": "#/$defs/observation",
+          "description": "Local dirty-state summary observed or preserved at checkpoint write."
+        },
+        "remote_comments": {
+          "$ref": "#/$defs/observation",
+          "description": "Marker that remote PR/issue comments were not fetched by checkpoint write."
+        },
+        "ci_state": {
+          "$ref": "#/$defs/observation",
+          "description": "Marker that CI state was not fetched by checkpoint write."
+        },
+        "dependency_state": {
+          "$ref": "#/$defs/observation",
+          "description": "Marker that dependency release/availability state was not fetched by checkpoint write."
+        }
+      }
+    },
+    "local_notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Advisory local notes copied from the checkpoint write inputs.",
+      "required": ["task", "next_safe_command", "open_blockers", "source", "observed_at"],
+      "properties": {
+        "task": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Advisory task summary recorded for resume orientation."
+        },
+        "next_safe_command": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Advisory next command from the checkpoint writer."
+        },
+        "open_blockers": {
+          "type": "array",
+          "description": "Local blocker notes to re-check after resume.",
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "One local blocker note."
+          }
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where these local notes came from."
+        },
+        "observed_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Timestamp when these local notes were observed."
+        }
+      }
+    },
+    "proof_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Proof history plus explicit invalidation conditions; not current completion evidence.",
+      "required": ["status", "last_proof", "source", "observed_at", "valid_until_change", "stale_if", "rule"],
+      "properties": {
+        "status": {
+          "enum": ["historical-local-summary", "no-proof-recorded"],
+          "description": "Whether proof history was recorded in this local checkpoint."
+        },
+        "last_proof": {
+          "type": "array",
+          "description": "Recently run proof commands or summaries recorded as history.",
+          "items": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "One historical proof command or summary."
+          }
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the proof history came from."
+        },
+        "observed_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Timestamp when the proof history was recorded."
+        },
+        "valid_until_change": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Change classes that invalidate treating recorded proof as current.",
+          "items": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "One proof invalidation change class."
+          }
+        },
+        "stale_if": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Concrete stale conditions that require proof re-check.",
+          "items": {
+            "type": "string",
+            "maxLength": 250,
+            "description": "One stale condition."
+          }
+        },
+        "rule": {
+          "type": "string",
+          "pattern": "not treat|current completion evidence|re-run|re-evaluate",
+          "description": "Rule preventing checkpoint proof history from becoming completion evidence."
+        }
+      }
+    },
+    "resume_checklist": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Action-shaped checklist for the next agent before trusting checkpoint state.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "why"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 250
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
+      }
     },
     "limits": {
       "type": "object",
@@ -134,6 +316,29 @@
         "durable_decisions_require_durable_source": {
           "const": true,
           "description": "Durable decisions must be backed by durable sources outside this checkpoint."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A stale-prone observation with source and observation time.",
+      "required": ["value", "source", "observed_at"],
+      "properties": {
+        "value": {
+          "description": "Observed value."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source of the observed value."
+        },
+        "observed_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Timestamp when the value was observed."
         }
       }
     }

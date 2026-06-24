@@ -214,7 +214,7 @@ WORKSPACE_HANDOFF_SURFACES = tuple((Path(relative) for relative in _WORKSPACE_SU
 MODULE_UPGRADE_SOURCE_PATHS = {
     module_name: Path(relative) for module_name, relative in _WORKSPACE_SURFACES_MANIFEST["module_upgrade_source_paths"].items()
 }
-LOCAL_CHAT_CHECKPOINT_KIND = "agentic-workspace/local-chat-checkpoint/v1"
+LOCAL_CHAT_CHECKPOINT_KIND = "agentic-workspace/local-chat-checkpoint/v2"
 LOCAL_CHAT_CHECKPOINT_PATH = Path(".agentic-workspace") / "local" / "chat-checkpoint.json"
 
 
@@ -22574,6 +22574,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "durable_sources",
                 "resume_rule",
                 "next_safe_command",
+                "volatile_observations",
+                "local_notes",
+                "proof_state",
+                "resume_checklist",
                 "detail_command",
                 "authority",
             )
@@ -25476,6 +25480,69 @@ def _compact_checkpoint_refs(values: list[Any], *, limit: int = 3) -> list[str]:
     return refs
 
 
+def _checkpoint_observation(*, value: Any, source: str, observed_at: str) -> dict[str, Any]:
+    return {
+        "value": value,
+        "source": source,
+        "observed_at": observed_at,
+    }
+
+
+def _checkpoint_git_value(*, target_root: Path, args: list[str]) -> str:
+    if _git_metadata_dir(target_root=target_root) is None:
+        return ""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(target_root), *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if completed.returncode != 0:
+        return ""
+    return completed.stdout.strip()
+
+
+def _checkpoint_git_snapshot(*, target_root: Path) -> dict[str, str]:
+    return {
+        "repo_root": target_root.resolve().as_posix(),
+        "remote_origin_url": _checkpoint_git_value(
+            target_root=target_root,
+            args=["config", "--get", "remote.origin.url"],
+        ),
+        "head_commit": _checkpoint_git_value(target_root=target_root, args=["rev-parse", "HEAD"]),
+        "upstream_commit": _checkpoint_git_value(
+            target_root=target_root,
+            args=["rev-parse", "--verify", "@{upstream}"],
+        ),
+    }
+
+
+def _checkpoint_resume_checklist() -> list[dict[str, str]]:
+    return [
+        {
+            "action": "fetch latest PR comments and issue comments",
+            "why": "review and issue state are volatile and may have changed after this checkpoint",
+        },
+        {
+            "action": "inspect git status and compare local HEAD with PR head",
+            "why": "local dirty state, branch, and pushed commits are stale-prone observations",
+        },
+        {
+            "action": "verify dependency pins, release URLs, and digests before relying on them",
+            "why": "dependency availability and release state can change outside this local checkpoint",
+        },
+        {
+            "action": "re-run or re-evaluate proof after any later commit, generated output change, dependency bump, or new review comment",
+            "why": "checkpoint proof summaries are history, not current completion evidence",
+        },
+    ]
+
+
 def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
     path = _local_chat_checkpoint_path(target_root)
     relative_path = LOCAL_CHAT_CHECKPOINT_PATH.as_posix()
@@ -25529,8 +25596,12 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
         "next_safe_command": str(checkpoint.get("next_safe_command", "")).strip(),
         "last_proof_count": len(_list_payload(checkpoint.get("last_proof"))),
         "open_blocker_count": len(_list_payload(checkpoint.get("open_blockers"))),
+        "volatile_observations": _as_dict(checkpoint.get("volatile_observations")),
+        "local_notes": _as_dict(checkpoint.get("local_notes")),
+        "proof_state": _as_dict(checkpoint.get("proof_state")),
+        "resume_checklist": _list_payload(checkpoint.get("resume_checklist"))[:5],
         "limits": _as_dict(checkpoint.get("limits")),
-        "rule": "Local checkpoints are ignored, advisory continuity hints; durable sources remain authoritative.",
+        "rule": "Local checkpoints are advisory continuity hints; fresh local/remote truth and durable sources remain authoritative.",
     }
 
 
@@ -25571,22 +25642,114 @@ def _local_chat_checkpoint_record(
     if not durable_source_values:
         warnings.append("no-durable-source: checkpoint is local only and cannot support closure claims without durable sources")
     branch_posture = _branch_workflow_posture_payload(target_root=target_root)
+    branch = str(branch_posture.get("current_branch") or existing.get("branch", "")).strip()
+    current_pr = pr if pr not in {None, ""} else existing.get("current_pr")
+    current_issue_refs = kept_list("current_issue_refs", issue_refs)
+    last_proof_values = kept_list("last_proof", last_proof)
+    open_blocker_values = kept_list("open_blockers", open_blockers)
+    dirty_state = (dirty_state_summary if dirty_state_summary is not None else str(existing.get("dirty_state_summary", ""))).strip()
+    next_command = next_safe_command if next_safe_command is not None else str(existing.get("next_safe_command", "")).strip()
+    task_text = (task if task is not None else str(existing.get("task", ""))).strip()
+    git_snapshot = _checkpoint_git_snapshot(target_root=target_root)
+    volatile_observations: dict[str, Any] = {
+        "repo_root": _checkpoint_observation(
+            value=git_snapshot["repo_root"],
+            source="resolved target root at checkpoint write",
+            observed_at=now,
+        ),
+        "remote_origin_url": _checkpoint_observation(
+            value=git_snapshot["remote_origin_url"],
+            source="git config remote.origin.url at checkpoint write",
+            observed_at=now,
+        ),
+        "branch": _checkpoint_observation(value=branch, source="git branch at checkpoint write", observed_at=now),
+        "head_commit": _checkpoint_observation(
+            value=git_snapshot["head_commit"],
+            source="git rev-parse HEAD at checkpoint write",
+            observed_at=now,
+        ),
+        "upstream_commit": _checkpoint_observation(
+            value=git_snapshot["upstream_commit"],
+            source="git rev-parse --verify @{upstream} at checkpoint write",
+            observed_at=now,
+        ),
+        "current_issue_refs": _checkpoint_observation(
+            value=current_issue_refs,
+            source="checkpoint write input",
+            observed_at=now,
+        ),
+        "dirty_state_summary": _checkpoint_observation(
+            value=dirty_state,
+            source="checkpoint write input or preserved local checkpoint value",
+            observed_at=now,
+        ),
+        "remote_comments": _checkpoint_observation(
+            value={"status": "not-checked-by-local-checkpoint-writer"},
+            source="checkpoint write does not fetch PR or issue comments",
+            observed_at=now,
+        ),
+        "ci_state": _checkpoint_observation(
+            value={"status": "not-checked-by-local-checkpoint-writer"},
+            source="checkpoint write does not inspect CI state",
+            observed_at=now,
+        ),
+        "dependency_state": _checkpoint_observation(
+            value={"status": "not-checked-by-local-checkpoint-writer"},
+            source="checkpoint write does not inspect dependency releases or availability",
+            observed_at=now,
+        ),
+    }
+    if current_pr not in {None, ""}:
+        volatile_observations["current_pr"] = _checkpoint_observation(
+            value=current_pr,
+            source="checkpoint write input or preserved local checkpoint value",
+            observed_at=now,
+        )
+    local_notes = {
+        "task": task_text,
+        "next_safe_command": next_command,
+        "open_blockers": open_blocker_values,
+        "source": "local checkpoint write input; advisory only",
+        "observed_at": now,
+    }
+    proof_state = {
+        "status": "historical-local-summary" if last_proof_values else "no-proof-recorded",
+        "last_proof": last_proof_values,
+        "source": "checkpoint write input; not current proof",
+        "observed_at": now,
+        "valid_until_change": [
+            "later commits",
+            "generated output changes",
+            "dependency bumps",
+            "new review or issue comments",
+            "local dirty state changes",
+        ],
+        "stale_if": [
+            "HEAD changed after observed_at",
+            "PR or issue comments changed after observed_at",
+            "dependency release or digest state changed after observed_at",
+            "required proof selection changed after observed_at",
+        ],
+        "rule": "Do not treat checkpoint proof history as current completion evidence; re-run or re-evaluate proof after fresh truth checks.",
+    }
     record: dict[str, Any] = {
         "kind": LOCAL_CHAT_CHECKPOINT_KIND,
         "created_at": str(existing.get("created_at") or now),
         "updated_at": now,
-        "task": (task if task is not None else str(existing.get("task", ""))).strip(),
-        "branch": str(branch_posture.get("current_branch") or existing.get("branch", "")).strip(),
-        "current_pr": pr if pr not in {None, ""} else existing.get("current_pr"),
-        "current_issue_refs": kept_list("current_issue_refs", issue_refs),
+        "task": task_text,
+        "branch": branch,
+        "current_pr": current_pr,
+        "current_issue_refs": current_issue_refs,
         "durable_sources": durable_source_values,
-        "resume_rule": "Treat chat before this checkpoint as advisory. Re-read durable_sources before making claims.",
-        "last_proof": kept_list("last_proof", last_proof),
-        "open_blockers": kept_list("open_blockers", open_blockers),
-        "dirty_state_summary": (
-            dirty_state_summary if dirty_state_summary is not None else str(existing.get("dirty_state_summary", ""))
-        ).strip(),
-        "next_safe_command": (next_safe_command if next_safe_command is not None else str(existing.get("next_safe_command", "")).strip()),
+        "resume_rule": "Treat chat before this checkpoint as advisory. Re-read durable_sources and recheck fresh local/remote truth before making claims.",
+        "last_proof": last_proof_values,
+        "open_blockers": open_blocker_values,
+        "dirty_state_summary": dirty_state,
+        "next_safe_command": next_command,
+        "volatile_observations": volatile_observations,
+        "local_notes": local_notes,
+        "proof_state": proof_state,
+        "resume_checklist": _checkpoint_resume_checklist(),
         "limits": {
             "local_only": True,
             "gitignored": True,
@@ -25646,7 +25809,7 @@ def _write_local_chat_checkpoint(
         "current_issue_refs": record.get("current_issue_refs", []),
         "warnings": warnings,
         "resume_rule": record["resume_rule"],
-        "rule": "This command writes only ignored local continuity state; durable claims still require durable AW sources.",
+        "rule": "This command writes only ignored local continuity state; durable claims still require durable AW sources and fresh local/remote truth checks.",
     }
 
 
