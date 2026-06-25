@@ -11,11 +11,26 @@ import pytest
 from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import workspace_runtime_primitives
+from agentic_workspace import (
+    workspace_runtime_core,
+    workspace_runtime_implement,
+    workspace_runtime_planning,
+    workspace_runtime_primitives,
+    workspace_runtime_proof,
+    workspace_runtime_startup,
+)
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
 _generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+_RUNTIME_HELPER_MODULES = (
+    workspace_runtime_core,
+    workspace_runtime_startup,
+    workspace_runtime_implement,
+    workspace_runtime_planning,
+    workspace_runtime_proof,
+    workspace_runtime_primitives,
+)
 
 
 class _WorkspaceCliTestProxy:
@@ -25,10 +40,16 @@ class _WorkspaceCliTestProxy:
         return getattr(workspace_runtime_primitives, name)
 
     def __setattr__(self, name: str, value: object) -> None:
+        patched = False
         if hasattr(_generated_cli, name):
             setattr(_generated_cli, name, value)
-            return
-        setattr(workspace_runtime_primitives, name, value)
+            patched = True
+        for module in _RUNTIME_HELPER_MODULES:
+            if hasattr(module, name):
+                setattr(module, name, value)
+                patched = True
+        if not patched:
+            setattr(workspace_runtime_primitives, name, value)
 
     def __delattr__(self, name: str) -> None:
         if hasattr(_generated_cli, name):

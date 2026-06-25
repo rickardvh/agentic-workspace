@@ -4,137 +4,38 @@
   "rule": "Substring marker tables are allowed only when decision_authority is advisory-only, checker-only, enum-owned, or structured-owned. Repo-specific routing must come from explicit labels, structured state, or learned metadata.",
   "entries": [
     {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_planned_task_posture_residue",
-      "variable": "posture_markers",
+      "path": "packages/memory/scripts/check/check_memory_freshness.py",
+      "function": "_delegates_durable_context",
+      "variable": "delegation_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table identifies planning-posture residue for review and does not choose a workflow owner.",
+      "authority": "The table flags Memory freshness issues for review and does not route task ownership.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_review_artifact_has_resolved_findings",
-      "variable": "resolved_markers",
+      "path": "packages/memory/src/repo_memory_bootstrap/installer.py",
+      "function": "_looks_like_active_current_memory_claim",
+      "variable": "inactive_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table checks review-artifact wording for stale-residue diagnostics and does not route task ownership.",
+      "authority": "The table identifies stale current-memory prose claims for diagnostic review.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_compact_repair_plan_profile",
-      "variable": "repair_terms",
+      "path": "packages/memory/src/repo_memory_bootstrap/installer.py",
+      "function": "_looks_like_improvement_pressure",
+      "variable": "phrase_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table describes repair-shaped diagnostic hints; the agent still owns work-shape judgment.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_capability_posture_for_implementation",
-      "variable": "judgment_terms",
-      "classification": "advisory-diagnostic",
-      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_capability_posture_for_implementation",
-      "variable": "mechanical_terms",
-      "classification": "advisory-diagnostic",
-      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_manual_external_relay_payload",
-      "variable": "code_local_terms",
-      "classification": "advisory-diagnostic",
-      "authority": "The table suppresses noisy relay suggestions for code-local diagnostics; it does not force a route.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_manual_external_relay_payload",
-      "variable": "domain_terms",
-      "classification": "advisory-diagnostic",
-      "authority": "The table supports relay-suggestion diagnostics; it does not make the delegation decision.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_knowledge_gates_payload",
-      "variable": "knowledge_markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table surfaces possible knowledge-gate pressure for agent review and does not enforce routing.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_task_posture_packet_relevant",
-      "variable": "markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table gates visibility of an advisory task-posture packet; it does not decide task ownership.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_ownership_diagnostics",
-      "variable": "active_state_markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table flags possible adapter drift for review and does not select a routing owner.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_ownership_diagnostics",
-      "variable": "config_active_markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table flags possible config drift for review and does not select a routing owner.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-      "function": "_ownership_diagnostics",
-      "variable": "policy_knobs",
-      "classification": "advisory-diagnostic",
-      "authority": "The table identifies policy-looking config fields for drift diagnostics.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
-      "function": "_finished_run_config_signal",
-      "variable": "lower_trust_markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table evaluates finished-run config-signal trust for closeout diagnostics.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
-      "function": "_finished_run_config_signal",
-      "variable": "positive_markers",
-      "classification": "advisory-diagnostic",
-      "authority": "The table evaluates finished-run config-signal trust for closeout diagnostics.",
+      "authority": "The table surfaces possible improvement pressure for routing review and does not write Memory or choose an owner.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
       "path": "packages/planning/scripts/check/check_planning_surfaces.py",
-      "function": "_looks_like_freehand_planning_artifact",
-      "variable": "plan_markers",
+      "function": "_check_docs_surface_roles",
+      "variable": "required_fragments",
       "classification": "advisory-diagnostic",
-      "authority": "The table identifies possible freehand planning artifacts for checker review.",
+      "authority": "The table validates required documentation fragments in a checker.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
@@ -176,37 +77,235 @@
     },
     {
       "path": "packages/planning/scripts/check/check_planning_surfaces.py",
-      "function": "_check_docs_surface_roles",
-      "variable": "required_fragments",
+      "function": "_looks_like_freehand_planning_artifact",
+      "variable": "plan_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table validates required documentation fragments in a checker.",
+      "authority": "The table identifies possible freehand planning artifacts for checker review.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "packages/memory/src/repo_memory_bootstrap/installer.py",
-      "function": "_looks_like_improvement_pressure",
-      "variable": "phrase_markers",
+      "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "function": "_finished_run_config_signal",
+      "variable": "lower_trust_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table surfaces possible improvement pressure for routing review and does not write Memory or choose an owner.",
+      "authority": "The table evaluates finished-run config-signal trust for closeout diagnostics.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "packages/memory/src/repo_memory_bootstrap/installer.py",
-      "function": "_looks_like_active_current_memory_claim",
-      "variable": "inactive_markers",
+      "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "function": "_finished_run_config_signal",
+      "variable": "positive_markers",
       "classification": "advisory-diagnostic",
-      "authority": "The table identifies stale current-memory prose claims for diagnostic review.",
+      "authority": "The table evaluates finished-run config-signal trust for closeout diagnostics.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "packages/memory/scripts/check/check_memory_freshness.py",
-      "function": "_delegates_durable_context",
-      "variable": "delegation_markers",
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_capability_posture_for_implementation",
+      "variable": "judgment_terms",
       "classification": "advisory-diagnostic",
-      "authority": "The table flags Memory freshness issues for review and does not route task ownership.",
+      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_capability_posture_for_implementation",
+      "variable": "mechanical_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_compact_repair_plan_profile",
+      "variable": "repair_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table describes repair-shaped diagnostic hints; the agent still owns work-shape judgment.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_knowledge_gates_payload",
+      "variable": "knowledge_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table surfaces possible knowledge-gate pressure for agent review and does not enforce routing.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_manual_external_relay_payload",
+      "variable": "code_local_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table suppresses noisy relay suggestions for code-local diagnostics; it does not force a route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_manual_external_relay_payload",
+      "variable": "domain_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table supports relay-suggestion diagnostics; it does not make the delegation decision.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_ownership_diagnostics",
+      "variable": "active_state_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags possible adapter drift for review and does not select a routing owner.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_ownership_diagnostics",
+      "variable": "config_active_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags possible config drift for review and does not select a routing owner.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_ownership_diagnostics",
+      "variable": "policy_knobs",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies policy-looking config fields for drift diagnostics.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_planned_task_posture_residue",
+      "variable": "posture_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies planning-posture residue for review and does not choose a workflow owner.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_pr_context_refs_from_task",
+      "variable": "pr_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table distinguishes PR/review wording from generic issue-scope evidence; it downgrades unknown-issue noise but does not prove provider state or task completion.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface PR-context evidence; the agent still fetches provider state and owns semantic scope and proof judgment."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_review_artifact_has_resolved_findings",
+      "variable": "resolved_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table checks review-artifact wording for stale-residue diagnostics and does not route task ownership.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_task_posture_packet_relevant",
+      "variable": "markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table gates visibility of an advisory task-posture packet; it does not decide task ownership.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_capability_posture_for_implementation",
+      "variable": "judgment_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_capability_posture_for_implementation",
+      "variable": "mechanical_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table contributes capability-posture hints, not a package-owned delegation route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_compact_repair_plan_profile",
+      "variable": "repair_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table describes repair-shaped diagnostic hints; the agent still owns work-shape judgment.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_knowledge_gates_payload",
+      "variable": "knowledge_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table surfaces possible knowledge-gate pressure for agent review and does not enforce routing.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_manual_external_relay_payload",
+      "variable": "code_local_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table suppresses noisy relay suggestions for code-local diagnostics; it does not force a route.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_manual_external_relay_payload",
+      "variable": "domain_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table supports relay-suggestion diagnostics; it does not make the delegation decision.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_ownership_diagnostics",
+      "variable": "active_state_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags possible adapter drift for review and does not select a routing owner.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_ownership_diagnostics",
+      "variable": "config_active_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags possible config drift for review and does not select a routing owner.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_ownership_diagnostics",
+      "variable": "policy_knobs",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies policy-looking config fields for drift diagnostics.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_planned_task_posture_residue",
+      "variable": "posture_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies planning-posture residue for review and does not choose a workflow owner.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
@@ -218,6 +317,24 @@
       "authority": "The table distinguishes PR/review wording from generic issue-scope evidence; it downgrades unknown-issue noise but does not prove provider state or task completion.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface PR-context evidence; the agent still fetches provider state and owns semantic scope and proof judgment."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_review_artifact_has_resolved_findings",
+      "variable": "resolved_markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table checks review-artifact wording for stale-residue diagnostics and does not route task ownership.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_task_posture_packet_relevant",
+      "variable": "markers",
+      "classification": "advisory-diagnostic",
+      "authority": "The table gates visibility of an advisory task-posture packet; it does not decide task ownership.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     }
   ]
 }

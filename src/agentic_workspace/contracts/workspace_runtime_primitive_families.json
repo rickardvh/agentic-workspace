@@ -183,10 +183,8 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1780"
-      ],
-      "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted for #1770; dependency decoupling remains owned by #1780 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "implement-runtime-packets",
@@ -209,10 +207,8 @@
         "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1781"
-      ],
-      "remaining_hand_owned_reason": "Implement packet entrypoints are extracted for #1771; dependency decoupling remains owned by #1781 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Implement packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "planning-runtime-packets",
@@ -235,10 +231,8 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_implement_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1782"
-      ],
-      "remaining_hand_owned_reason": "Planning packet entrypoints are extracted for #1772; dependency decoupling remains owned by #1782 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Planning packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "proof-verification-closeout-runtime-packets",
@@ -261,10 +255,8 @@
         "uv run pytest tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1783"
-      ],
-      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted for #1773; dependency decoupling remains owned by #1783 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "generated-surface-trust-runtime-packets",
