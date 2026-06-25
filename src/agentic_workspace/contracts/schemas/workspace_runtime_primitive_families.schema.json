@@ -9,6 +9,7 @@
     "summary",
     "source_path",
     "classification_rule",
+    "shared_core_boundary",
     "migration_policy",
     "families"
   ],
@@ -30,6 +31,52 @@
       "type": "string",
       "minLength": 1,
       "description": "Rule used to separate command-generation-owned, contract-owned, AW-owned, package-owned, and blocked families."
+    },
+    "shared_core_boundary": {
+      "type": "object",
+      "required": [
+        "source_path",
+        "classification_rule",
+        "enforcement",
+        "consumer_modules",
+        "families"
+      ],
+      "properties": {
+        "source_path": {
+          "const": "src/agentic_workspace/workspace_runtime_core.py",
+          "description": "Shared runtime-core source file consumed by extracted runtime owner modules."
+        },
+        "classification_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary rule for deciding whether a helper may stay in workspace_runtime_core.py."
+        },
+        "enforcement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checker behavior that keeps the core boundary fail-closed."
+        },
+        "consumer_modules": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime owner modules whose imports from workspace_runtime_core.py are checked against this boundary."
+        },
+        "families": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/shared_core_family"
+          },
+          "description": "Allowed shared-core helper families consumed by extracted runtime owner modules."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit boundary for workspace_runtime_core.py so extracted runtime modules do not grow a new catch-all surface."
     },
     "migration_policy": {
       "type": "object",
@@ -133,6 +180,60 @@
     }
   },
   "$defs": {
+    "shared_core_family": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "allowed_owner_modules",
+        "source_symbols",
+        "core_role",
+        "exclusion_rule"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "Stable shared-core family identifier."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable family title."
+        },
+        "allowed_owner_modules": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Extracted runtime modules that may import this helper family from core."
+        },
+        "source_symbols": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "description": "Allowed core symbols for this helper family."
+        },
+        "core_role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this family is shared core behavior rather than a generated or owner-module entrypoint."
+        },
+        "exclusion_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What must not be added to this family, preserving owner-module boundaries."
+        }
+      },
+      "additionalProperties": false
+    },
     "family": {
       "type": "object",
       "required": [
