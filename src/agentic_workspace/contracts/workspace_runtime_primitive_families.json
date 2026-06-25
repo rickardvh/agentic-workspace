@@ -243,9 +243,9 @@
     {
       "id": "proof-verification-closeout-runtime-packets",
       "title": "Proof, verification, and closeout runtime packet builders",
-      "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_proof.py",
-      "runtime_role": "Proof selection, verification aggregation, closeout obligations, and completion-contract projections remain behavior-owned by the AW runtime until extracted as a proof/closeout owner module.",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_proof.py",
+      "runtime_role": "Proof selection, verification aggregation, closeout obligations, and completion-contract projections are owned by the proof/closeout runtime module.",
       "source_symbols": [
         "_proof_payload",
         "_proof_selection_for_changed_paths",
@@ -262,9 +262,9 @@
         "make test-workspace"
       ],
       "blocked_by": [
-        "#1773"
+        "#1783"
       ],
-      "remaining_hand_owned_reason": "Follow-up #1773 owns finishing proof/verification/closeout extraction while preserving proof and closeout contracts."
+      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted for #1773; dependency decoupling remains owned by #1783 while compatibility imports preserve existing private names."
     },
     {
       "id": "generated-surface-trust-runtime-packets",
