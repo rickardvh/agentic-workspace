@@ -58,7 +58,9 @@
         "uv run python scripts/generate/generate_command_packages.py --check",
         "uv run python scripts/check/check_generated_command_packages.py"
       ],
-      "blocked_by": [],
+      "blocked_by": [
+        "#1780"
+      ],
       "remaining_hand_owned_reason": "Report assembly and changed-path selection still need runtime context; declarative command/package truth is not owned by workspace_runtime_primitives.py."
     },
     {
@@ -184,7 +186,7 @@
         "make test-workspace"
       ],
       "blocked_by": [],
-      "remaining_hand_owned_reason": "Startup/start-context extraction is complete for #1770; compatibility imports in workspace_runtime_primitives.py preserve existing private names."
+      "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted for #1770; dependency decoupling remains owned by #1780 while compatibility imports preserve existing private names."
     },
     {
       "id": "implement-runtime-packets",
