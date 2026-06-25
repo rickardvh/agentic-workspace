@@ -416,6 +416,70 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
+def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.test_evidence_change_decision]
+level = "high"
+applies_to_paths = ["tests/**"]
+applies_to_task_markers = ["regression test"]
+required_evidence = ["verification_proof_decision_review"]
+proof_profile = "test_evidence_change"
+force = "required-before-closeout"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix the runtime issue by adding a regression test",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    guardrail = payload["context"]["pre_test_evidence_guardrail"]
+    assert guardrail["status"] == "advisory"
+    assert guardrail["blocking"] is False
+    assert guardrail["source_boundary"]["no_universal_task_keyword_policy"] is True
+    assert any("task marker matched regression test" in source for source in guardrail["trigger_sources"])
+    assert "package-local-behavior" in guardrail["evidence_owner_options"]
+    assert "convert-to-conformance" in guardrail["proof_decision_options"]
+    assert any("trust question" in question for question in guardrail["pre_test_decision_questions"])
+    assert "pre_test_evidence_guardrail" in payload["action_signals"]["advisory_detail"]["selectors"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix a bug in the README",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    quiet_payload = json.loads(capsys.readouterr().out)
+    assert "pre_test_evidence_guardrail" not in quiet_payload["context"]
+    assert "pre_test_evidence_guardrail" not in quiet_payload["action_signals"]["advisory_detail"]["selectors"]
+
+
 def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

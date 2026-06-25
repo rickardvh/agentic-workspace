@@ -337,6 +337,18 @@
       "checked_in_justification": "Compact agent-recorded evidence labels preserve proof/review handoff decisions that would otherwise be lossy in chat or PR prose."
     },
     {
+      "pattern": ".agentic-workspace/verification/test-strategy-dispositions.json",
+      "format": "json",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_strategy_dispositions",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Optional compact disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions without storing raw review transcripts.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "Compact agent-recorded test strategy dispositions preserve evidence-owner decisions that would otherwise be lossy in chat or PR prose."
+    },
+    {
       "pattern": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
       "format": "toml",
       "owner": "memory-payload",

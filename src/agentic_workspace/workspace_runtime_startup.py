@@ -69,6 +69,7 @@ from agentic_workspace.workspace_runtime_core import (
     _operating_posture_payload,
     _package_boundary_payload,
     _parent_intent_status_payload,
+    _pre_test_evidence_guardrail_payload,
     _prep_only_handoff_payload,
     _raw_active_planning_record_for_closeout,
     _read_only_response_posture_payload,
@@ -235,6 +236,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
+        **({"pre_test_evidence_guardrail": payload["pre_test_evidence_guardrail"]} if "pre_test_evidence_guardrail" in payload else {}),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": "Use listed skills only when directly relevant; otherwise proceed from the next action.",
@@ -409,7 +411,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         read_only_allowed=bool(projected["next_safe_action"].get("read_only_allowed")),
         proof_required=bool(projected["next_safe_action"].get("proof_required")),
         proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
-        advisory_selectors=["skill_routing", "workflow_sufficiency"],
+        advisory_selectors=[
+            "skill_routing",
+            "workflow_sufficiency",
+            *(["pre_test_evidence_guardrail"] if "pre_test_evidence_guardrail" in payload else []),
+        ],
         agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
     )
     return projected
@@ -609,6 +615,15 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    pre_test_guardrail = _pre_test_evidence_guardrail_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        config=config,
+        compact=True,
+    )
+    if pre_test_guardrail.get("status") == "advisory":
+        payload["pre_test_evidence_guardrail"] = pre_test_guardrail
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="startup",
         cli_invoke=config.cli_invoke,
@@ -1176,6 +1191,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             )
             if key in payload["applicable_intent_status"]
         }
+    pre_test_guardrail = payload.get("pre_test_evidence_guardrail", {})
+    if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
+        context["pre_test_evidence_guardrail"] = pre_test_guardrail
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
         cli_invocation = payload.get("cli_invocation", {})
@@ -1243,6 +1261,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") == "attention":
         startup_changed_signals.append("sibling_repo_aw_freshness=attention")
+    if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
+        startup_changed_signals.append("pre_test_evidence=advisory")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
@@ -1262,6 +1282,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("installed_state_compatibility")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         advisory_selectors.append("local_chat_checkpoint")
+    if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
+        advisory_selectors.append("pre_test_evidence_guardrail")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -1354,6 +1376,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "vague_outcome_orientation",
         "intent_acknowledgement",
         "lane_shaping_gate",
+        "pre_test_evidence_guardrail",
     ):
         if optional_key in payload:
             context[optional_key] = payload[optional_key]

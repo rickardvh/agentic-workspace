@@ -576,6 +576,7 @@
           "_load_proof_route_hints",
           "_make_targets_without_negative_routes",
           "_missing_repo_path_references_in_command",
+          "_pre_test_evidence_guardrail_payload",
           "_proof_adequacy_payload",
           "_proof_command_for_target",
           "_proof_command_is_search_sweep",
