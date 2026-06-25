@@ -87,9 +87,7 @@
       "proof_refs": [
         "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
       ],
-      "blocked_by": [
-        "#1780"
-      ],
+      "blocked_by": [],
       "remaining_hand_owned_reason": "Primitive implementation and host support modules remain AW-owned package-domain behavior; only the required primitive-ID set moved to contract ownership."
     },
     {
@@ -185,7 +183,9 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [],
+      "blocked_by": [
+        "#1780"
+      ],
       "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted for #1770; dependency decoupling remains owned by #1780 while compatibility imports preserve existing private names."
     },
     {
