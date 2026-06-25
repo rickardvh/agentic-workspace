@@ -58,9 +58,7 @@
         "uv run python scripts/generate/generate_command_packages.py --check",
         "uv run python scripts/check/check_generated_command_packages.py"
       ],
-      "blocked_by": [
-        "#1780"
-      ],
+      "blocked_by": [],
       "remaining_hand_owned_reason": "Report assembly and changed-path selection still need runtime context; declarative command/package truth is not owned by workspace_runtime_primitives.py."
     },
     {
@@ -89,7 +87,9 @@
       "proof_refs": [
         "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
       ],
-      "blocked_by": [],
+      "blocked_by": [
+        "#1780"
+      ],
       "remaining_hand_owned_reason": "Primitive implementation and host support modules remain AW-owned package-domain behavior; only the required primitive-ID set moved to contract ownership."
     },
     {
