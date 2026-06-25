@@ -261,8 +261,10 @@
         "uv run pytest tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [],
-      "remaining_hand_owned_reason": "Proof/verification/closeout extraction is complete for #1773; compatibility imports in workspace_runtime_primitives.py preserve existing private names."
+      "blocked_by": [
+        "#1783"
+      ],
+      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted for #1773; dependency decoupling remains owned by #1783 while compatibility imports preserve existing private names."
     },
     {
       "id": "generated-surface-trust-runtime-packets",
