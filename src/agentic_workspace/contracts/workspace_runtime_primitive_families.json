@@ -209,8 +209,10 @@
         "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [],
-      "remaining_hand_owned_reason": "Implement packet extraction is complete for #1771; compatibility imports in workspace_runtime_primitives.py preserve existing private names."
+      "blocked_by": [
+        "#1781"
+      ],
+      "remaining_hand_owned_reason": "Implement packet entrypoints are extracted for #1771; dependency decoupling remains owned by #1781 while compatibility imports preserve existing private names."
     },
     {
       "id": "planning-runtime-packets",
