@@ -8,6 +8,9 @@ COPY src ./src
 COPY scripts ./scripts
 COPY packages ./packages
 COPY generated ./generated
+COPY .github/release-ownership.json ./.github/release-ownership.json
+COPY .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json ./.agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json
+COPY tests/test_workspace_packaging.py ./tests/test_workspace_packaging.py
 COPY pyproject.toml ./pyproject.toml
 
 ENV PYTHONPATH=/work:/work/src:/work/packages/planning/src:/work/packages/memory/src
