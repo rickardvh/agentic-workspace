@@ -1,7 +1,7 @@
 """Proof, verification, and closeout runtime packet builders.
 
-This module owns proof and closeout runtime packet helpers extracted from
-``workspace_runtime_primitives`` while preserving the old private import names.
+This module owns proof and closeout runtime packet helpers while the old
+monolith keeps compatibility re-exports for legacy private import names.
 """
 
 from __future__ import annotations
@@ -15,356 +15,103 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
-
-
-def _runtime_attr(name: str) -> Any:
-    from agentic_workspace import workspace_runtime_primitives as runtime
-
-    return getattr(runtime, name)
-
-
-class _RuntimeValue:
-    def __init__(self, name: str) -> None:
-        self._name = name
-
-    def _value(self) -> Any:
-        return _runtime_attr(self._name)
-
-    def __getitem__(self, key: Any) -> Any:
-        return self._value()[key]
-
-    def get(self, *args: Any, **kwargs: Any) -> Any:
-        return self._value().get(*args, **kwargs)
-
-    def __iter__(self):
-        return iter(self._value())
-
-    def __bool__(self) -> bool:
-        return bool(self._value())
-
-
-_PROOF_EXECUTION_STATUSES = _RuntimeValue("_PROOF_EXECUTION_STATUSES")
-_PROOF_SELECTION_RULES = _RuntimeValue("_PROOF_SELECTION_RULES")
-
-
-def _active_planning_assurance_for_proof(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_planning_assurance_for_proof")(*args, **kwargs)
-
-
-def _active_planning_record_for_report_section(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_planning_record_for_report_section")(*args, **kwargs)
-
-
-def _adapt_make_proof_command_for_target(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_adapt_make_proof_command_for_target")(*args, **kwargs)
-
-
-def _applicable_intent_status_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_applicable_intent_status_payload")(*args, **kwargs)
-
-
-def _apply_learned_route_hints_to_capabilities(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_apply_learned_route_hints_to_capabilities")(*args, **kwargs)
-
-
-def _architecture_principles_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_architecture_principles_payload")(*args, **kwargs)
-
-
-def _as_dict(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_as_dict")(*args, **kwargs)
-
-
-def _assurance_item_state(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_assurance_item_state")(*args, **kwargs)
-
-
-def _assurance_requirements_report_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_assurance_requirements_report_payload")(*args, **kwargs)
-
-
-def _assurance_requirements_with_verification(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_assurance_requirements_with_verification")(*args, **kwargs)
-
-
-def _authority_boundary_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_authority_boundary_payload")(*args, **kwargs)
-
-
-def _cli_authority_classification_for_path(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_cli_authority_classification_for_path")(*args, **kwargs)
-
-
-def _cli_authority_review_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_cli_authority_review_for_changed_paths")(*args, **kwargs)
-
-
-def _closeout_intent_evidence_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_intent_evidence_payload")(*args, **kwargs)
-
-
-def _closeout_report_adoption_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_adoption_payload")(*args, **kwargs)
-
-
-def _closeout_report_completeness_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_completeness_payload")(*args, **kwargs)
-
-
-def _closeout_report_decision_review_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_decision_review_payload")(*args, **kwargs)
-
-
-def _closeout_report_final_response_rendering_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_final_response_rendering_payload")(*args, **kwargs)
-
-
-def _closeout_report_profile_policy_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_profile_policy_payload")(*args, **kwargs)
-
-
-def _closeout_report_review_compression_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_review_compression_payload")(*args, **kwargs)
-
-
-def _closeout_report_selected_review_mode(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_selected_review_mode")(*args, **kwargs)
-
-
-def _closeout_report_traceability_rows(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_closeout_report_traceability_rows")(*args, **kwargs)
-
-
-def _command_with_cli_invoke(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_command_with_cli_invoke")(*args, **kwargs)
-
-
-def _completion_gate_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_completion_gate_payload")(*args, **kwargs)
-
-
-def _confirm_learned_route_hints(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_confirm_learned_route_hints")(*args, **kwargs)
-
-
-def _dedupe(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_dedupe")(*args, **kwargs)
-
-
-def _defaults_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_defaults_payload")(*args, **kwargs)
-
-
-def _direct_cli_edit_review_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_direct_cli_edit_review_for_changed_paths")(*args, **kwargs)
-
-
-def _docs_only_reduction_lane(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_docs_only_reduction_lane")(*args, **kwargs)
-
-
-def _generated_cli_freshness_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_generated_cli_freshness_payload")(*args, **kwargs)
-
-
-def _host_repo_learning_posture_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_host_repo_learning_posture_payload")(*args, **kwargs)
-
-
-def _intent_decision_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_decision_projection")(*args, **kwargs)
-
-
-def _intent_proof_prompt_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_proof_prompt_payload")(*args, **kwargs)
-
-
-def _issue_scope_evidence_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_issue_scope_evidence_payload")(*args, **kwargs)
-
-
-def _lane(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_lane")(*args, **kwargs)
-
-
-def _lane_execution_metadata(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_lane_execution_metadata")(*args, **kwargs)
-
-
-def _learned_route_reliance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_learned_route_reliance_payload")(*args, **kwargs)
-
-
-def _list_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_list_payload")(*args, **kwargs)
-
-
-def _load_proof_route_hints(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_load_proof_route_hints")(*args, **kwargs)
-
-
-def _load_workspace_config(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_load_workspace_config")(*args, **kwargs)
-
-
-def _make_targets_without_negative_routes(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_make_targets_without_negative_routes")(*args, **kwargs)
-
-
-def _makefile_targets(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_makefile_targets")(*args, **kwargs)
-
-
-def _manual_verification_templates_for_intents(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_manual_verification_templates_for_intents")(*args, **kwargs)
-
-
-def _missing_repo_path_references_in_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_missing_repo_path_references_in_command")(*args, **kwargs)
-
-
-def _ordered_module_names(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_ordered_module_names")(*args, **kwargs)
-
-
-def _package_json_scripts(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_package_json_scripts")(*args, **kwargs)
-
-
-def _package_scripts_without_negative_routes(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_package_scripts_without_negative_routes")(*args, **kwargs)
-
-
-def _parent_intent_status_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_parent_intent_status_payload")(*args, **kwargs)
-
-
-def _project_roots_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_project_roots_for_changed_paths")(*args, **kwargs)
-
-
-def _proof_adequacy_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_adequacy_payload")(*args, **kwargs)
-
-
-def _proof_command_for_target(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_command_for_target")(*args, **kwargs)
-
-
-def _proof_command_is_search_sweep(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_command_is_search_sweep")(*args, **kwargs)
-
-
-def _proof_command_tiers(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_command_tiers")(*args, **kwargs)
-
-
-def _proof_completion_options(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_completion_options")(*args, **kwargs)
-
-
-def _proof_confidence_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_confidence_payload")(*args, **kwargs)
-
-
-def _proof_execution_evidence_summary(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_execution_evidence_summary")(*args, **kwargs)
-
-
-def _proof_intent_for_lane(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_intent_for_lane")(*args, **kwargs)
-
-
-def _proof_kind_for_lane(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_kind_for_lane")(*args, **kwargs)
-
-
-def _proof_next_decision_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_next_decision_payload")(*args, **kwargs)
-
-
-def _proof_route_decision_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_route_decision_payload")(*args, **kwargs)
-
-
-def _proof_route_explanation_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_route_explanation_payload")(*args, **kwargs)
-
-
-def _proof_route_source_for_lane(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_route_source_for_lane")(*args, **kwargs)
-
-
-def _requirement_grounding_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_requirement_grounding_payload")(*args, **kwargs)
-
-
-def _routine_work_context_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_routine_work_context_payload")(*args, **kwargs)
-
-
-def _run_lifecycle_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_run_lifecycle_command")(*args, **kwargs)
-
-
-def _select(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_select")(*args, **kwargs)
-
-
-def _skill_behavior_impact_review_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_skill_behavior_impact_review_for_changed_paths")(*args, **kwargs)
-
-
-def _split_validation_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_split_validation_command")(*args, **kwargs)
-
-
-def _subsystem_matches_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_subsystem_matches_for_changed_paths")(*args, **kwargs)
-
-
-def _supplemental_proof_lanes_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_supplemental_proof_lanes_for_changed_paths")(*args, **kwargs)
-
-
-def _surface_value_review_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_surface_value_review_for_changed_paths")(*args, **kwargs)
-
-
-def _target_proof_capabilities(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_target_proof_capabilities")(*args, **kwargs)
-
-
-def _test_strategy_check_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_test_strategy_check_payload")(*args, **kwargs)
-
-
-def _tiny_surface_compatibility_review(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_surface_compatibility_review")(*args, **kwargs)
-
-
-def _transient_validation_retry_guidance(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_transient_validation_retry_guidance")(*args, **kwargs)
-
-
-def _validation_plan_for_proof(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_validation_plan_for_proof")(*args, **kwargs)
-
-
-def _verification_report_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_verification_report_payload")(*args, **kwargs)
-
-
-def _workflow_obligation_closeout_contract_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_workflow_obligation_closeout_contract_payload")(*args, **kwargs)
-
-
-def _workflow_obligations_report_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_workflow_obligations_report_payload")(*args, **kwargs)
-
-
-def _workflow_sufficiency_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_workflow_sufficiency_payload")(*args, **kwargs)
+from agentic_workspace.workspace_runtime_core import (
+    _PROOF_EXECUTION_STATUSES,
+    _PROOF_SELECTION_RULES,
+    _active_planning_assurance_for_proof,
+    _active_planning_record_for_report_section,
+    _adapt_make_proof_command_for_target,
+    _applicable_intent_status_payload,
+    _apply_learned_route_hints_to_capabilities,
+    _architecture_principles_payload,
+    _assurance_item_state,
+    _assurance_requirements_report_payload,
+    _assurance_requirements_with_verification,
+    _authority_boundary_payload,
+    _cli_authority_review_for_changed_paths,
+    _closeout_intent_evidence_payload,
+    _closeout_report_adoption_payload,
+    _closeout_report_completeness_payload,
+    _closeout_report_decision_review_payload,
+    _closeout_report_final_response_rendering_payload,
+    _closeout_report_profile_policy_payload,
+    _closeout_report_review_compression_payload,
+    _closeout_report_selected_review_mode,
+    _closeout_report_traceability_rows,
+    _completion_gate_payload,
+    _confirm_learned_route_hints,
+    _dedupe,
+    _defaults_payload,
+    _direct_cli_edit_review_for_changed_paths,
+    _docs_only_reduction_lane,
+    _host_repo_learning_posture_payload,
+    _intent_decision_projection,
+    _intent_proof_prompt_payload,
+    _issue_scope_evidence_payload,
+    _lane_execution_metadata,
+    _learned_route_reliance_payload,
+    _load_proof_route_hints,
+    _load_workspace_config,
+    _make_targets_without_negative_routes,
+    _makefile_targets,
+    _manual_verification_templates_for_intents,
+    _missing_repo_path_references_in_command,
+    _ordered_module_names,
+    _package_json_scripts,
+    _package_scripts_without_negative_routes,
+    _parent_intent_status_payload,
+    _project_roots_for_changed_paths,
+    _proof_adequacy_payload,
+    _proof_command_for_target,
+    _proof_command_is_search_sweep,
+    _proof_command_tiers,
+    _proof_completion_options,
+    _proof_confidence_payload,
+    _proof_execution_evidence_summary,
+    _proof_intent_for_lane,
+    _proof_kind_for_lane,
+    _proof_next_decision_payload,
+    _proof_route_decision_payload,
+    _proof_route_explanation_payload,
+    _proof_route_source_for_lane,
+    _requirement_grounding_payload,
+    _routine_work_context_payload,
+    _run_lifecycle_command,
+    _skill_behavior_impact_review_for_changed_paths,
+    _split_validation_command,
+    _subsystem_matches_for_changed_paths,
+    _supplemental_proof_lanes_for_changed_paths,
+    _surface_value_review_for_changed_paths,
+    _target_proof_capabilities,
+    _test_strategy_check_payload,
+    _transient_validation_retry_guidance,
+    _validation_plan_for_proof,
+    _verification_report_payload,
+    _workflow_obligation_closeout_contract_payload,
+    _workflow_obligations_report_payload,
+    _workflow_sufficiency_payload,
+)
+from agentic_workspace.workspace_runtime_generated_surface import (
+    _as_dict,
+    _cli_authority_classification_for_path,
+    _command_with_cli_invoke,
+    _generated_cli_freshness_payload,
+    _list_payload,
+    _tiny_surface_compatibility_review,
+)
+
+
+def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    generated_cli: Any = None
+    try:
+        from generated.workspace.python import cli as generated_cli
+    except Exception:
+        pass
+    if generated_cli is not None:
+        patched = getattr(generated_cli, "_run_lifecycle_command", None)
+        if patched is not None and patched is not _run_lifecycle_command:
+            return patched(*args, **kwargs)
+    return _run_lifecycle_command(*args, **kwargs)
 
 
 def _closeout_report_payload(
@@ -567,7 +314,7 @@ def _closeout_report_payload(
         review_mode=selected_review_mode,
     )
     detail_commands = {
-        "closeout_report": profile_policy["next_command"],
+        "closeout_report": str(profile_policy.get("next_command", "")),
         "closeout_trust": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section closeout_trust --format json",
             cli_invoke=config.cli_invoke,
@@ -750,7 +497,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         current["doctor_health"] = "not-installed"
     else:
         config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
-        status_payload = _run_lifecycle_command(
+        status_payload = _proof_lifecycle_command(
             command_name="status",
             target_root=target_root,
             local_only_repo_root=None,
@@ -761,7 +508,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             non_interactive=False,
             config=config,
         )
-        doctor_payload = _run_lifecycle_command(
+        doctor_payload = _proof_lifecycle_command(
             command_name="doctor",
             target_root=target_root,
             local_only_repo_root=None,

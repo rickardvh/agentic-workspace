@@ -15,6 +15,12 @@ Family-level ownership inventory for root workspace_runtime_primitives.py behavi
 | `summary` | string | yes |  | Short purpose statement for the inventory. |  |  |
 | `source_path` | const `"src/agentic_workspace/workspace_runtime_primitives.py"` | yes |  | Runtime source file whose root primitive families are classified by this inventory. |  |  |
 | `classification_rule` | string | yes |  | Rule used to separate command-generation-owned, contract-owned, AW-owned, package-owned, and blocked families. |  |  |
+| `shared_core_boundary` | object | yes |  | Explicit boundary for workspace_runtime_core.py so extracted runtime modules do not grow a new catch-all surface. |  |  |
+| `shared_core_boundary.source_path` | const `"src/agentic_workspace/workspace_runtime_core.py"` | yes |  | Shared runtime-core source file consumed by extracted runtime owner modules. |  |  |
+| `shared_core_boundary.classification_rule` | string | yes |  | Boundary rule for deciding whether a helper may stay in workspace_runtime_core.py. |  |  |
+| `shared_core_boundary.enforcement` | string | yes |  | Checker behavior that keeps the core boundary fail-closed. |  |  |
+| `shared_core_boundary.consumer_modules` | array of string | yes |  | Runtime owner modules whose imports from workspace_runtime_core.py are checked against this boundary. |  |  |
+| `shared_core_boundary.families` | array of ref `#/$defs/shared_core_family` | yes |  | Allowed shared-core helper families consumed by extracted runtime owner modules. |  |  |
 | `migration_policy` | object | yes |  | Concrete migration metadata for the first safe family moved out of hand-authored Python ownership. |  |  |
 | `migration_policy.migrated_family_id` | string | yes |  | Family id for the concrete migration delivered by the current inventory slice. |  |  |
 | `migration_policy.migrated_to` | string | yes |  | Contract or generated surface that now owns the migrated declaration. |  |  |

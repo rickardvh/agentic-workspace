@@ -1,7 +1,7 @@
 """Planning continuation and active-state runtime packets.
 
-This module owns Planning runtime packet helpers extracted from
-``workspace_runtime_primitives`` while preserving the old private import names.
+This module owns Planning runtime packet helpers while the old monolith keeps
+compatibility re-exports for legacy private import names.
 """
 
 from __future__ import annotations
@@ -12,140 +12,37 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import WorkspaceConfig
-
-
-def _runtime_attr(name: str) -> Any:
-    from agentic_workspace import workspace_runtime_primitives as runtime
-
-    return getattr(runtime, name)
-
-
-class _RuntimeValue:
-    def __init__(self, name: str) -> None:
-        self._name = name
-
-    def _value(self) -> Any:
-        return _runtime_attr(self._name)
-
-    def __getitem__(self, key: Any) -> Any:
-        return self._value()[key]
-
-    def get(self, *args: Any, **kwargs: Any) -> Any:
-        return self._value().get(*args, **kwargs)
-
-    def __iter__(self):
-        return iter(self._value())
-
-    def __bool__(self) -> bool:
-        return bool(self._value())
-
-
-def _active_plan_delegation_requirement(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_plan_delegation_requirement")(*args, **kwargs)
-
-
-def _active_plan_parent_decomposition_requirement(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_plan_parent_decomposition_requirement")(*args, **kwargs)
-
-
-def _active_plan_reliance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_plan_reliance_payload")(*args, **kwargs)
-
-
-def _allow_ancillary_memory_feedback_path(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_allow_ancillary_memory_feedback_path")(*args, **kwargs)
-
-
-def _allow_completed_archive_publication_residue(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_allow_completed_archive_publication_residue")(*args, **kwargs)
-
-
-def _allow_issue_scoped_planning_state_reconciliation(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_allow_issue_scoped_planning_state_reconciliation")(*args, **kwargs)
-
-
-def _as_dict(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_as_dict")(*args, **kwargs)
-
-
-def _authority_boundary_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_authority_boundary_payload")(*args, **kwargs)
-
-
-def _candidate_promotion_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_candidate_promotion_command")(*args, **kwargs)
-
-
-def _candidate_refs(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_candidate_refs")(*args, **kwargs)
-
-
-def _candidate_relevance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_candidate_relevance_payload")(*args, **kwargs)
-
-
-def _candidate_route_label(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_candidate_route_label")(*args, **kwargs)
-
-
-def _candidate_with_canonical_route(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_candidate_with_canonical_route")(*args, **kwargs)
-
-
-def _capability_structural_hints(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_capability_structural_hints")(*args, **kwargs)
-
-
-def _command_with_cli_invoke(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_command_with_cli_invoke")(*args, **kwargs)
-
-
-def _command_with_expected_planning_revision(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_command_with_expected_planning_revision")(*args, **kwargs)
-
-
-def _external_intent_status_by_ref(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_external_intent_status_by_ref")(*args, **kwargs)
-
-
-def _fast_planning_active_summary(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_fast_planning_active_summary")(*args, **kwargs)
-
-
-def _issue_scope_evidence_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_issue_scope_evidence_payload")(*args, **kwargs)
-
-
-def _planning_hierarchy_owner_requirement(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_hierarchy_owner_requirement")(*args, **kwargs)
-
-
-def _planning_revision_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_revision_payload")(*args, **kwargs)
-
-
-def _planning_roadmap_candidates(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_roadmap_candidates")(*args, **kwargs)
-
-
-def _planning_safety_path_classification(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_safety_path_classification")(*args, **kwargs)
-
-
-def _planning_safety_promotion_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_safety_promotion_command")(*args, **kwargs)
-
-
-def _pr_context_refs_from_task(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_pr_context_refs_from_task")(*args, **kwargs)
-
-
-def _read_only_allowance_packet(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_read_only_allowance_packet")(*args, **kwargs)
-
-
-def _work_shape_guidance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_work_shape_guidance_payload")(*args, **kwargs)
+from agentic_workspace.workspace_runtime_core import (
+    _active_plan_delegation_requirement,
+    _active_plan_parent_decomposition_requirement,
+    _active_plan_reliance_payload,
+    _allow_ancillary_memory_feedback_path,
+    _allow_completed_archive_publication_residue,
+    _allow_issue_scoped_planning_state_reconciliation,
+    _authority_boundary_payload,
+    _candidate_promotion_command,
+    _candidate_refs,
+    _candidate_relevance_payload,
+    _candidate_route_label,
+    _candidate_with_canonical_route,
+    _capability_structural_hints,
+    _command_with_expected_planning_revision,
+    _external_intent_status_by_ref,
+    _fast_planning_active_summary,
+    _issue_scope_evidence_payload,
+    _planning_hierarchy_owner_requirement,
+    _planning_revision_payload,
+    _planning_roadmap_candidates,
+    _planning_safety_path_classification,
+    _planning_safety_promotion_command,
+    _pr_context_refs_from_task,
+    _read_only_allowance_packet,
+    _work_shape_guidance_payload,
+)
+from agentic_workspace.workspace_runtime_generated_surface import (
+    _as_dict,
+    _command_with_cli_invoke,
+)
 
 
 def _planning_candidate_pressure_payload(

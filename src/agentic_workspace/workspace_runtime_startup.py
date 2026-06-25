@@ -1,7 +1,7 @@
 """Startup runtime packet builders for Agentic Workspace.
 
-This module owns start/startup payload construction extracted from
-``workspace_runtime_primitives`` while preserving the old private import names.
+This module owns start/startup payload construction while the old monolith keeps
+compatibility re-exports for legacy private import names.
 """
 
 from __future__ import annotations
@@ -11,403 +11,107 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import WorkspaceConfig
-
-
-def _runtime_attr(name: str) -> Any:
-    from agentic_workspace import workspace_runtime_primitives as runtime
-
-    return getattr(runtime, name)
-
-
-class _RuntimeValue:
-    def __init__(self, name: str) -> None:
-        self._name = name
-
-    def _value(self) -> Any:
-        return _runtime_attr(self._name)
-
-    def __getitem__(self, key: Any) -> Any:
-        return self._value()[key]
-
-    def get(self, *args: Any, **kwargs: Any) -> Any:
-        return self._value().get(*args, **kwargs)
-
-    def __iter__(self):
-        return iter(self._value())
-
-    def __bool__(self) -> bool:
-        return bool(self._value())
-
-
-_CONTEXT_TEMPLATES = _RuntimeValue("_CONTEXT_TEMPLATES")
-
-
-def _active_intent_contract_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_intent_contract_payload")(*args, **kwargs)
-
-
-def _active_planning_record_for_report_section(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_active_planning_record_for_report_section")(*args, **kwargs)
-
-
-def _applicable_intent_status_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_applicable_intent_status_payload")(*args, **kwargs)
-
-
-def _apply_lane_shaping_gate_to_start_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_apply_lane_shaping_gate_to_start_payload")(*args, **kwargs)
-
-
-def _as_dict(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_as_dict")(*args, **kwargs)
-
-
-def _assurance_requirements_report_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_assurance_requirements_report_payload")(*args, **kwargs)
-
-
-def _attach_start_router_fields(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_attach_start_router_fields")(*args, **kwargs)
-
-
-def _authority_markers_for_startup(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_authority_markers_for_startup")(*args, **kwargs)
-
-
-def _available_selectors_for_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_available_selectors_for_payload")(*args, **kwargs)
-
-
-def _boundary_warning_for_path(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_boundary_warning_for_path")(*args, **kwargs)
-
-
-def _cli_compatibility_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_cli_compatibility_payload")(*args, **kwargs)
-
-
-def _cli_invocation_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_cli_invocation_payload")(*args, **kwargs)
-
-
-def _command_with_cli_invoke(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_command_with_cli_invoke")(*args, **kwargs)
-
-
-def _compact_action_signals_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_action_signals_payload")(*args, **kwargs)
-
-
-def _compact_assurance_requirements(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_assurance_requirements")(*args, **kwargs)
-
-
-def _compact_continuation_state_contract(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_continuation_state_contract")(*args, **kwargs)
-
-
-def _compact_intent_evidence(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_intent_evidence")(*args, **kwargs)
-
-
-def _compact_repair_plan_profile(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_repair_plan_profile")(*args, **kwargs)
-
-
-def _compact_repo_posture_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_repo_posture_projection")(*args, **kwargs)
-
-
-def _compact_selector_next_safe_action(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_selector_next_safe_action")(*args, **kwargs)
-
-
-def _compact_start_closeout_obligations(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_start_closeout_obligations")(*args, **kwargs)
-
-
-def _compact_start_delegation_decision(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_start_delegation_decision")(*args, **kwargs)
-
-
-def _compact_start_prep_only_handoff(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_start_prep_only_handoff")(*args, **kwargs)
-
-
-def _compact_start_proof_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_start_proof_payload")(*args, **kwargs)
-
-
-def _compact_start_workflow_obligations(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_start_workflow_obligations")(*args, **kwargs)
-
-
-def _compact_startup_installed_state_signal(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_startup_installed_state_signal")(*args, **kwargs)
-
-
-def _compact_task_posture_packet_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_compact_task_posture_packet_projection")(*args, **kwargs)
-
-
-def _completion_boundary_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_completion_boundary_payload")(*args, **kwargs)
-
-
-def _completion_closeout_inspection_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_completion_closeout_inspection_payload")(*args, **kwargs)
-
-
-def _context_router_family_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_context_router_family_payload")(*args, **kwargs)
-
-
-def _continuation_reorientation_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_continuation_reorientation_payload")(*args, **kwargs)
-
-
-def _execution_posture_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_execution_posture_payload")(*args, **kwargs)
-
-
-def _fast_installed_modules(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_fast_installed_modules")(*args, **kwargs)
-
-
-def _feature_tier_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_feature_tier_payload")(*args, **kwargs)
-
-
-def _guidance_with_cli_invoke(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_guidance_with_cli_invoke")(*args, **kwargs)
-
-
-def _installed_state_compatibility_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_installed_state_compatibility_payload")(*args, **kwargs)
-
-
-def _intent_acknowledgement_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_acknowledgement_payload")(*args, **kwargs)
-
-
-def _intent_custody_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_custody_payload")(*args, **kwargs)
-
-
-def _intent_decision_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_decision_projection")(*args, **kwargs)
-
-
-def _intent_discovery_dialogue_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_discovery_dialogue_payload")(*args, **kwargs)
-
-
-def _intent_elicitation_protocol_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_elicitation_protocol_payload")(*args, **kwargs)
-
-
-def _intent_satisfaction_matrix_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_intent_satisfaction_matrix_payload")(*args, **kwargs)
-
-
-def _invoked_cli_identity_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_invoked_cli_identity_payload")(*args, **kwargs)
-
-
-def _is_config_posture_task(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_is_config_posture_task")(*args, **kwargs)
-
-
-def _is_prep_only_handoff_task(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_is_prep_only_handoff_task")(*args, **kwargs)
-
-
-def _issue_reference_intent_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_issue_reference_intent_payload")(*args, **kwargs)
-
-
-def _list_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_list_payload")(*args, **kwargs)
-
-
-def _load_workspace_config(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_load_workspace_config")(*args, **kwargs)
-
-
-def _local_chat_checkpoint_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_local_chat_checkpoint_projection")(*args, **kwargs)
-
-
-def _maintainer_mode_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_maintainer_mode_payload")(*args, **kwargs)
-
-
-def _memory_consult_from_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_memory_consult_from_payload")(*args, **kwargs)
-
-
-def _memory_consult_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_memory_consult_payload")(*args, **kwargs)
-
-
-def _memory_decision_packet_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_memory_decision_packet_payload")(*args, **kwargs)
-
-
-def _module_operations(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_module_operations")(*args, **kwargs)
-
-
-def _module_registry(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_module_registry")(*args, **kwargs)
-
-
-def _next_safe_action_packet(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_next_safe_action_packet")(*args, **kwargs)
-
-
-def _normalize_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_normalize_changed_paths")(*args, **kwargs)
-
-
-def _operating_posture_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_operating_posture_payload")(*args, **kwargs)
-
-
-def _package_boundary_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_package_boundary_payload")(*args, **kwargs)
-
-
-def _parent_intent_status_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_parent_intent_status_payload")(*args, **kwargs)
-
-
-def _planning_safety_gate_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_planning_safety_gate_payload")(*args, **kwargs)
-
-
-def _prep_only_handoff_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_prep_only_handoff_payload")(*args, **kwargs)
-
-
-def _proof_selection_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_proof_selection_for_changed_paths")(*args, **kwargs)
-
-
-def _raw_active_planning_record_for_closeout(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_raw_active_planning_record_for_closeout")(*args, **kwargs)
-
-
-def _read_only_response_posture_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_read_only_response_posture_payload")(*args, **kwargs)
-
-
-def _repo_posture_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_repo_posture_payload")(*args, **kwargs)
-
-
-def _routine_work_context_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_routine_work_context_payload")(*args, **kwargs)
-
-
-def _run_preflight_command(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_run_preflight_command")(*args, **kwargs)
-
-
-def _selector_first_planning_safety_gate(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_selector_first_planning_safety_gate")(*args, **kwargs)
-
-
-def _selector_requests(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_selector_requests")(*args, **kwargs)
-
-
-def _sibling_repo_aw_freshness_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_sibling_repo_aw_freshness_payload")(*args, **kwargs)
-
-
-def _start_tiny_payload_fast(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_start_tiny_payload_fast")(*args, **kwargs)
-
-
-def _startup_closeout_report_route(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_startup_closeout_report_route")(*args, **kwargs)
-
-
-def _startup_continuation_view_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_startup_continuation_view_payload")(*args, **kwargs)
-
-
-def _startup_skill_routing_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_startup_skill_routing_payload")(*args, **kwargs)
-
-
-def _startup_skills_projection(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_startup_skills_projection")(*args, **kwargs)
-
-
-def _task_intent_carry_forward_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_intent_carry_forward_payload")(*args, **kwargs)
-
-
-def _task_intent_evidence_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_intent_evidence_payload")(*args, **kwargs)
-
-
-def _task_mentioned_existing_paths(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_mentioned_existing_paths")(*args, **kwargs)
-
-
-def _task_posture_packet_changes_routing(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_posture_packet_changes_routing")(*args, **kwargs)
-
-
-def _task_posture_packet_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_posture_packet_payload")(*args, **kwargs)
-
-
-def _task_posture_packet_relevant(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_task_posture_packet_relevant")(*args, **kwargs)
-
-
-def _tiny_acceptance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_acceptance_payload")(*args, **kwargs)
-
-
-def _tiny_adaptive_routing_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_adaptive_routing_payload")(*args, **kwargs)
-
-
-def _tiny_durable_intent(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_durable_intent")(*args, **kwargs)
-
-
-def _tiny_required_proof_commands(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_required_proof_commands")(*args, **kwargs)
-
-
-def _tiny_task_intent_promotion_guidance(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_task_intent_promotion_guidance")(*args, **kwargs)
-
-
-def _tiny_workflow_sufficiency(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_tiny_workflow_sufficiency")(*args, **kwargs)
-
-
-def _uv_cache_guidance_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_uv_cache_guidance_payload")(*args, **kwargs)
-
-
-def _vague_outcome_orientation_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_vague_outcome_orientation_payload")(*args, **kwargs)
-
-
-def _workflow_sufficiency_payload(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_workflow_sufficiency_payload")(*args, **kwargs)
-
-
-def _workspace_absence_startup_review(*args: Any, **kwargs: Any) -> Any:
-    return _runtime_attr("_workspace_absence_startup_review")(*args, **kwargs)
+from agentic_workspace.workspace_runtime_core import (
+    _CONTEXT_TEMPLATES,
+    _active_intent_contract_payload,
+    _active_planning_record_for_report_section,
+    _applicable_intent_status_payload,
+    _apply_lane_shaping_gate_to_start_payload,
+    _assurance_requirements_report_payload,
+    _attach_start_router_fields,
+    _authority_markers_for_startup,
+    _available_selectors_for_payload,
+    _boundary_warning_for_path,
+    _cli_compatibility_payload,
+    _cli_invocation_payload,
+    _compact_action_signals_payload,
+    _compact_assurance_requirements,
+    _compact_continuation_state_contract,
+    _compact_intent_evidence,
+    _compact_repair_plan_profile,
+    _compact_repo_posture_projection,
+    _compact_selector_next_safe_action,
+    _compact_start_closeout_obligations,
+    _compact_start_delegation_decision,
+    _compact_start_prep_only_handoff,
+    _compact_start_proof_payload,
+    _compact_start_workflow_obligations,
+    _compact_startup_installed_state_signal,
+    _compact_task_posture_packet_projection,
+    _completion_boundary_payload,
+    _completion_closeout_inspection_payload,
+    _context_router_family_payload,
+    _continuation_reorientation_payload,
+    _execution_posture_payload,
+    _fast_installed_modules,
+    _feature_tier_payload,
+    _guidance_with_cli_invoke,
+    _installed_state_compatibility_payload,
+    _intent_acknowledgement_payload,
+    _intent_custody_payload,
+    _intent_decision_projection,
+    _intent_discovery_dialogue_payload,
+    _intent_elicitation_protocol_payload,
+    _intent_satisfaction_matrix_payload,
+    _invoked_cli_identity_payload,
+    _is_config_posture_task,
+    _is_prep_only_handoff_task,
+    _issue_reference_intent_payload,
+    _load_workspace_config,
+    _local_chat_checkpoint_projection,
+    _maintainer_mode_payload,
+    _memory_consult_from_payload,
+    _memory_consult_payload,
+    _memory_decision_packet_payload,
+    _module_operations,
+    _module_registry,
+    _next_safe_action_packet,
+    _operating_posture_payload,
+    _package_boundary_payload,
+    _parent_intent_status_payload,
+    _prep_only_handoff_payload,
+    _raw_active_planning_record_for_closeout,
+    _read_only_response_posture_payload,
+    _repo_posture_payload,
+    _routine_work_context_payload,
+    _run_preflight_command,
+    _selector_first_planning_safety_gate,
+    _selector_requests,
+    _sibling_repo_aw_freshness_payload,
+    _start_tiny_payload_fast,
+    _startup_closeout_report_route,
+    _startup_continuation_view_payload,
+    _startup_skill_routing_payload,
+    _startup_skills_projection,
+    _task_intent_carry_forward_payload,
+    _task_intent_evidence_payload,
+    _task_mentioned_existing_paths,
+    _task_posture_packet_changes_routing,
+    _task_posture_packet_payload,
+    _task_posture_packet_relevant,
+    _tiny_acceptance_payload,
+    _tiny_adaptive_routing_payload,
+    _tiny_durable_intent,
+    _tiny_required_proof_commands,
+    _tiny_task_intent_promotion_guidance,
+    _tiny_workflow_sufficiency,
+    _uv_cache_guidance_payload,
+    _vague_outcome_orientation_payload,
+    _workflow_sufficiency_payload,
+    _workspace_absence_startup_review,
+)
+from agentic_workspace.workspace_runtime_generated_surface import (
+    _as_dict,
+    _command_with_cli_invoke,
+    _list_payload,
+    _normalize_changed_paths,
+)
+from agentic_workspace.workspace_runtime_planning import (
+    _planning_safety_gate_payload,
+)
+from agentic_workspace.workspace_runtime_proof import (
+    _proof_selection_for_changed_paths,
+)
 
 
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:

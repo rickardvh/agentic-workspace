@@ -183,10 +183,8 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1780"
-      ],
-      "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted for #1770; dependency decoupling remains owned by #1780 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Startup/start-context entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "implement-runtime-packets",
@@ -209,10 +207,8 @@
         "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1781"
-      ],
-      "remaining_hand_owned_reason": "Implement packet entrypoints are extracted for #1771; dependency decoupling remains owned by #1781 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Implement packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "planning-runtime-packets",
@@ -235,10 +231,8 @@
         "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_implement_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1782"
-      ],
-      "remaining_hand_owned_reason": "Planning packet entrypoints are extracted for #1772; dependency decoupling remains owned by #1782 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Planning packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "proof-verification-closeout-runtime-packets",
@@ -261,10 +255,8 @@
         "uv run pytest tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
         "make test-workspace"
       ],
-      "blocked_by": [
-        "#1783"
-      ],
-      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted for #1773; dependency decoupling remains owned by #1783 while compatibility imports preserve existing private names."
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "Proof/verification/closeout packet entrypoints are extracted and no longer depend on private lookups into workspace_runtime_primitives.py; compatibility imports preserve existing private names."
     },
     {
       "id": "generated-surface-trust-runtime-packets",
@@ -363,5 +355,314 @@
       ],
       "remaining_hand_owned_reason": "Root AW should inventory these boundaries but not migrate package semantics under this issue."
     }
-  ]
+  ],
+  "shared_core_boundary": {
+    "source_path": "src/agentic_workspace/workspace_runtime_core.py",
+    "classification_rule": "workspace_runtime_core.py is a checked shared-helper boundary for extracted runtime owner modules. A symbol may be imported from core only when it is classified in one of these families, has a family-level shared-core role, and is consumed by an allowed owner module. New owner-specific packet assembly belongs in the owner module, not in core.",
+    "enforcement": "scripts/check/check_contract_tooling_surfaces.py parses workspace_runtime_startup.py, workspace_runtime_implement.py, workspace_runtime_planning.py, and workspace_runtime_proof.py imports from agentic_workspace.workspace_runtime_core and fails when an import is undeclared, stale, or used by a module outside the family allowlist.",
+    "consumer_modules": [
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "src/agentic_workspace/workspace_runtime_planning.py",
+      "src/agentic_workspace/workspace_runtime_proof.py"
+    ],
+    "families": [
+      {
+        "id": "changed-surface-and-boundary-review",
+        "title": "Changed-surface and boundary review",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_boundary_warning_for_path",
+          "_change_impact_path_payload",
+          "_ownership_payload",
+          "_project_roots_for_changed_paths",
+          "_read_changed_surface_text",
+          "_repo_posture_payload",
+          "_sibling_repo_aw_freshness_payload",
+          "_workspace_absence_startup_review"
+        ],
+        "core_role": "Shared core may expose changed-path, source-boundary, and repository-surface classification helpers because implement and proof both need the same path facts.",
+        "exclusion_rule": "Do not add owner-specific remediation text or review-thread response behavior here; keep that in the requesting owner surface."
+      },
+      {
+        "id": "compact-selector-and-output-projections",
+        "title": "Compact selector and output projections",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_adaptive_routing_payload",
+          "_attach_start_router_fields",
+          "_available_selectors_for_payload",
+          "_compact_action_signals_payload",
+          "_compact_assurance_requirements",
+          "_compact_memory_decision_packet",
+          "_compact_repair_plan_profile",
+          "_compact_repo_posture_projection",
+          "_compact_selector_next_safe_action",
+          "_compact_start_closeout_obligations",
+          "_compact_start_proof_payload",
+          "_compact_tiny_required_proof_commands",
+          "_context_router_family_payload",
+          "_guidance_with_cli_invoke",
+          "_local_chat_checkpoint_projection",
+          "_selector_first_planning_safety_gate",
+          "_selector_requests",
+          "_start_tiny_payload_fast",
+          "_startup_skill_routing_payload",
+          "_startup_skills_projection",
+          "_tiny_action_effect",
+          "_tiny_adaptive_routing_payload",
+          "_tiny_generated_surface_trust",
+          "_tiny_objective_drift",
+          "_tiny_proof_obligations_payload",
+          "_tiny_required_proof_commands",
+          "_tiny_work_shape_guidance",
+          "_transient_validation_retry_guidance",
+          "_uv_cache_guidance_payload",
+          "_work_shape_guidance_payload"
+        ],
+        "core_role": "Shared core may expose small selector and compact-output building blocks while the owner modules decide which selectors to include in their payloads.",
+        "exclusion_rule": "Do not add complete tiny payload entrypoints or owner-specific selector orchestration here; new complete packet projections belong in the owner module."
+      },
+      {
+        "id": "intent-task-and-continuation-state",
+        "title": "Intent, task, and continuation state projections",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_acceptance_reconciliation_prompt_payload",
+          "_active_intent_contract_payload",
+          "_active_plan_delegation_requirement",
+          "_active_plan_parent_decomposition_requirement",
+          "_applicable_intent_status_payload",
+          "_architecture_principles_payload",
+          "_closeout_intent_evidence_payload",
+          "_compact_continuation_state_contract",
+          "_compact_intent_evidence",
+          "_compact_start_delegation_decision",
+          "_compact_start_prep_only_handoff",
+          "_compact_start_workflow_obligations",
+          "_compact_task_posture_packet_projection",
+          "_completion_boundary_payload",
+          "_completion_gate_payload",
+          "_continuation_reorientation_payload",
+          "_delegation_decision_requires_attention",
+          "_execution_posture_payload",
+          "_external_intent_status_by_ref",
+          "_intent_acknowledgement_payload",
+          "_intent_custody_payload",
+          "_intent_decision_projection",
+          "_intent_discovery_dialogue_payload",
+          "_intent_elicitation_protocol_payload",
+          "_intent_proof_prompt_payload",
+          "_intent_satisfaction_matrix_payload",
+          "_is_prep_only_handoff_task",
+          "_issue_reference_intent_payload",
+          "_memory_consult_from_payload",
+          "_memory_consult_payload",
+          "_operating_loop_decision_payload",
+          "_operating_posture_payload",
+          "_parent_intent_status_payload",
+          "_plan_delegation_packet_payload",
+          "_pr_context_refs_from_task",
+          "_prep_only_handoff_payload",
+          "_proof_intent_for_lane",
+          "_read_only_allowance_packet",
+          "_read_only_response_posture_payload",
+          "_replacement_or_removal_intent",
+          "_requirement_grounding_payload",
+          "_reuse_pressure_payload",
+          "_routine_work_context_payload",
+          "_startup_continuation_view_payload",
+          "_task_acceptance_payload",
+          "_task_contract_payload",
+          "_task_intent_carry_forward_payload",
+          "_task_intent_evidence_payload",
+          "_task_mentioned_existing_paths",
+          "_task_posture_packet_changes_routing",
+          "_task_posture_packet_payload",
+          "_task_posture_packet_relevant",
+          "_tiny_acceptance_payload",
+          "_tiny_acceptance_reconciliation",
+          "_tiny_durable_intent",
+          "_tiny_task_intent_promotion_guidance",
+          "_tiny_workflow_sufficiency",
+          "_unplanned_parent_intent_status_payload",
+          "_vague_outcome_orientation_payload",
+          "_workflow_obligation_closeout_contract_payload",
+          "_workflow_obligations_report_payload",
+          "_workflow_sufficiency_payload"
+        ],
+        "core_role": "Shared core may expose reusable projections over active intent, task posture, memory consult, and continuation state because startup, implement, and proof packets all reconcile the same workspace state.",
+        "exclusion_rule": "Do not add owner-only wording, final packet layout, or new semantic acceptance policy without moving it to the owning packet module."
+      },
+      {
+        "id": "planning-safety-and-candidate-routing",
+        "title": "Planning safety and candidate routing",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_active_plan_reliance_payload",
+          "_active_planning_assurance_for_proof",
+          "_active_planning_record_for_report_section",
+          "_allow_ancillary_memory_feedback_path",
+          "_allow_completed_archive_publication_residue",
+          "_allow_issue_scoped_planning_state_reconciliation",
+          "_authority_hierarchy_payload",
+          "_candidate_promotion_command",
+          "_candidate_refs",
+          "_candidate_relevance_payload",
+          "_candidate_route_label",
+          "_candidate_with_canonical_route",
+          "_capability_structural_hints",
+          "_command_with_expected_planning_revision",
+          "_fast_planning_active_summary",
+          "_learned_route_reliance_payload",
+          "_planning_hierarchy_owner_requirement",
+          "_planning_revision_payload",
+          "_planning_roadmap_candidates",
+          "_planning_safety_path_classification",
+          "_planning_safety_promotion_command",
+          "_raw_active_planning_record_for_closeout"
+        ],
+        "core_role": "Shared core may expose Planning state readers and route classifiers used by startup, implement, and Planning packets to avoid conflicting planning-safety interpretations.",
+        "exclusion_rule": "Do not add Planning packet assembly or Planning-owner decisions here; those belong in workspace_runtime_planning.py."
+      },
+      {
+        "id": "proof-validation-and-closeout-routing",
+        "title": "Proof, validation, and closeout routing",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_adapt_make_proof_command_for_target",
+          "_apply_learned_route_hints_to_capabilities",
+          "_assurance_item_state",
+          "_assurance_requirements_report_payload",
+          "_assurance_requirements_with_verification",
+          "_cli_authority_review_for_changed_paths",
+          "_closeout_report_adoption_payload",
+          "_closeout_report_completeness_payload",
+          "_closeout_report_decision_review_payload",
+          "_closeout_report_final_response_rendering_payload",
+          "_closeout_report_profile_policy_payload",
+          "_closeout_report_review_compression_payload",
+          "_closeout_report_selected_review_mode",
+          "_closeout_report_traceability_rows",
+          "_completion_closeout_inspection_payload",
+          "_confirm_learned_route_hints",
+          "_direct_cli_edit_review_for_changed_paths",
+          "_docs_only_reduction_lane",
+          "_host_repo_learning_posture_payload",
+          "_lane_execution_metadata",
+          "_load_proof_route_hints",
+          "_make_targets_without_negative_routes",
+          "_missing_repo_path_references_in_command",
+          "_proof_adequacy_payload",
+          "_proof_command_for_target",
+          "_proof_command_is_search_sweep",
+          "_proof_command_tiers",
+          "_proof_completion_options",
+          "_proof_confidence_payload",
+          "_proof_execution_evidence_summary",
+          "_proof_kind_for_lane",
+          "_proof_next_decision_payload",
+          "_proof_route_decision_payload",
+          "_proof_route_explanation_payload",
+          "_proof_route_source_for_lane",
+          "_run_lifecycle_command",
+          "_skill_behavior_impact_review_for_changed_paths",
+          "_split_validation_command",
+          "_startup_closeout_report_route",
+          "_supplemental_proof_lanes_for_changed_paths",
+          "_surface_value_review_for_changed_paths",
+          "_validation_plan_for_proof",
+          "_verification_report_payload"
+        ],
+        "core_role": "Shared core may expose proof route facts, validation command discovery, and closeout evidence helpers used by implement and proof packets.",
+        "exclusion_rule": "Do not add proof packet assembly, closeout report layout, or final completion decisions here; those belong in workspace_runtime_proof.py."
+      },
+      {
+        "id": "runtime-data-normalization-and-dedupe",
+        "title": "Runtime data normalization and small predicates",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_apply_lane_shaping_gate_to_start_payload",
+          "_as_int",
+          "_authority_boundary_payload",
+          "_authority_markers_for_startup",
+          "_cli_compatibility_payload",
+          "_dedupe",
+          "_extract_requested_outcomes",
+          "_issue_scope_evidence_payload",
+          "_maintainer_mode_payload",
+          "_memory_decision_packet_payload",
+          "_next_safe_action_packet",
+          "_requested_outcome_present",
+          "_run_preflight_command",
+          "_test_strategy_check_payload"
+        ],
+        "core_role": "Shared core may expose small normalization, dedupe, and reusable predicate helpers when they are not a packet entrypoint and reduce inconsistent handling across owners.",
+        "exclusion_rule": "Do not add broad semantic helper families to this bucket; promote them to a named family with a specific owner-boundary reason first."
+      },
+      {
+        "id": "workspace-environment-and-contract-loaders",
+        "title": "Workspace environment and contract loaders",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_proof.py"
+        ],
+        "source_symbols": [
+          "_CONTEXT_TEMPLATES",
+          "_PROOF_EXECUTION_STATUSES",
+          "_PROOF_SELECTION_RULES",
+          "_cli_invocation_payload",
+          "_compact_startup_installed_state_signal",
+          "_defaults_payload",
+          "_fast_installed_modules",
+          "_feature_tier_payload",
+          "_installed_state_compatibility_payload",
+          "_invoked_cli_identity_payload",
+          "_is_config_posture_task",
+          "_load_workspace_config",
+          "_makefile_targets",
+          "_manual_verification_templates_for_intents",
+          "_module_operations",
+          "_module_registry",
+          "_ordered_module_names",
+          "_package_boundary_payload",
+          "_package_json_scripts",
+          "_package_scripts_without_negative_routes",
+          "_subsystem_matches_for_changed_paths",
+          "_target_proof_capabilities"
+        ],
+        "core_role": "Shared core may expose stable config, contract, module, and command-environment lookups used by multiple packet owners. These helpers do not decide a packet owner entrypoint; they normalize repository and contract facts for owners.",
+        "exclusion_rule": "Do not add packet assembly, owner-specific selector behavior, or command entrypoint dispatch here; keep those in the runtime owner module or generated surface."
+      }
+    ]
+  }
 }

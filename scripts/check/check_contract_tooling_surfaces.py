@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from agentic_workspace import workspace_runtime_core as runtime_core
 from agentic_workspace import workspace_runtime_primitives as cli
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
@@ -79,6 +80,13 @@ CHECKER_RUNTIME_FAMILY_SYMBOLS = {
     "_aw_primitive_runtime_binding_report",
     "_aw_primitive_ownership_report",
 }
+WORKSPACE_RUNTIME_CORE_IMPORT_MODULE = "agentic_workspace.workspace_runtime_core"
+WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES = [
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/workspace_runtime_proof.py",
+]
 COMMAND_SURFACE_REFRESH_COMMAND = "uv run python scripts/generate/refresh_command_surfaces.py"
 COMMAND_SURFACE_REFRESH_SEQUENCE = (
     "uv run python scripts/generate/generate_command_packages.py",
@@ -2558,6 +2566,85 @@ def _validate_workspace_runtime_primitive_families(payload: dict[str, object]) -
             "workspace_runtime_primitive_families generated-command-package-proof-metadata must carry "
             "generated_artifact_metadata_expectations"
         )
+    errors.extend(_validate_workspace_runtime_core_boundary(payload))
+    return errors
+
+
+def _runtime_core_imports_by_consumer(consumer_modules: list[str]) -> dict[str, set[str]]:
+    imports_by_consumer: dict[str, set[str]] = {}
+    for consumer_module in consumer_modules:
+        path = REPO_ROOT / consumer_module
+        if not path.exists():
+            imports_by_consumer[consumer_module] = set()
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        symbols: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module == WORKSPACE_RUNTIME_CORE_IMPORT_MODULE:
+                symbols.update(alias.name for alias in node.names)
+        imports_by_consumer[consumer_module] = symbols
+    return imports_by_consumer
+
+
+def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    raw_boundary = payload.get("shared_core_boundary")
+    if not isinstance(raw_boundary, dict):
+        return ["workspace_runtime_primitive_families missing shared_core_boundary"]
+    raw_consumers = raw_boundary.get("consumer_modules", [])
+    consumers = [str(item) for item in raw_consumers] if isinstance(raw_consumers, list) else []
+    if consumers != WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES:
+        errors.append(
+            "workspace_runtime_primitive_families shared_core_boundary.consumer_modules must match "
+            "the checked runtime owner module list"
+        )
+    imports_by_consumer = _runtime_core_imports_by_consumer(WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES)
+    observed: set[tuple[str, str]] = {
+        (consumer, symbol) for consumer, symbols in imports_by_consumer.items() for symbol in symbols
+    }
+    raw_families = raw_boundary.get("families", [])
+    families = [family for family in raw_families if isinstance(family, dict)] if isinstance(raw_families, list) else []
+    symbol_allowed_consumers: dict[str, set[str]] = {}
+    for family in families:
+        family_id = str(family.get("id", ""))
+        raw_symbols = family.get("source_symbols", [])
+        raw_allowed_consumers = family.get("allowed_owner_modules", [])
+        symbols = [str(symbol) for symbol in raw_symbols] if isinstance(raw_symbols, list) else []
+        allowed_consumers = (
+            {str(consumer) for consumer in raw_allowed_consumers} if isinstance(raw_allowed_consumers, list) else set()
+        )
+        for consumer in sorted(allowed_consumers - set(WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES)):
+            errors.append(
+                f"workspace_runtime_primitive_families shared_core_boundary family {family_id!r} "
+                f"allows unknown consumer module {consumer!r}"
+            )
+        for symbol in symbols:
+            if symbol in symbol_allowed_consumers:
+                errors.append(f"workspace_runtime_primitive_families shared_core_boundary duplicates symbol {symbol!r}")
+            symbol_allowed_consumers.setdefault(symbol, set()).update(allowed_consumers)
+            if not hasattr(runtime_core, symbol):
+                errors.append(f"workspace_runtime_primitive_families shared_core_boundary symbol {symbol!r} is not importable from core")
+    covered = {
+        (consumer, symbol)
+        for symbol, allowed_consumers in symbol_allowed_consumers.items()
+        for consumer in allowed_consumers
+        if symbol in imports_by_consumer.get(consumer, set())
+    }
+    for consumer, symbol in sorted(observed - covered):
+        if symbol not in symbol_allowed_consumers:
+            errors.append(
+                "workspace_runtime_primitive_families shared_core_boundary missing imported core symbol "
+                f"{symbol!r} for {consumer}"
+            )
+            continue
+        errors.append(
+            "workspace_runtime_primitive_families shared_core_boundary does not allow "
+            f"{consumer} to import core symbol {symbol!r}"
+        )
+    declared = set(symbol_allowed_consumers)
+    observed_symbols = {symbol for _, symbol in observed}
+    for symbol in sorted(declared - observed_symbols):
+        errors.append(f"workspace_runtime_primitive_families shared_core_boundary contains stale core symbol {symbol!r}")
     return errors
 
 
