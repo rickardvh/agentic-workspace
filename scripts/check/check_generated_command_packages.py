@@ -306,6 +306,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
     "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
     "packages/verification/src/repo_verification_bootstrap/cli.py": "source-checkout fallback to checked-in generated verification CLI package",
+    "src/agentic_workspace/workspace_runtime_core.py": "shared runtime helper compatibility wrapper",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
