@@ -217,9 +217,9 @@
     {
       "id": "planning-runtime-packets",
       "title": "Planning continuation and active-state runtime packets",
-      "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_planning.py or the Planning package runtime boundary",
-      "runtime_role": "Planning continuation, active-state, safety-gate, candidate-pressure, and active execplan projections remain runtime-owned until moved behind the Planning owner boundary.",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_planning.py",
+      "runtime_role": "Planning continuation, active-state, safety-gate, candidate-pressure, and active execplan projections are owned by the Planning runtime packet module.",
       "source_symbols": [
         "_active_planning_record",
         "_planning_safety_gate_payload",
@@ -236,9 +236,9 @@
         "make test-workspace"
       ],
       "blocked_by": [
-        "#1772"
+        "#1782"
       ],
-      "remaining_hand_owned_reason": "Follow-up #1772 owns finishing Planning packet extraction while preserving active-state and continuation behavior."
+      "remaining_hand_owned_reason": "Planning packet entrypoints are extracted for #1772; dependency decoupling remains owned by #1782 while compatibility imports preserve existing private names."
     },
     {
       "id": "proof-verification-closeout-runtime-packets",
