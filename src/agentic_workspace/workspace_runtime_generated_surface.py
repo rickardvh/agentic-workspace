@@ -7,7 +7,7 @@ This module owns generated-surface trust projections extracted from
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE
 from agentic_workspace.contract_tooling import authority_markers_manifest, proof_selection_rules_manifest
@@ -149,6 +149,14 @@ def _generated_surface_source_status(*, target_root: Path, canonical_source: str
     if existing:
         return "present"
     return "not-checked"
+
+
+@overload
+def _command_with_cli_invoke(*, command: str, cli_invoke: str) -> str: ...
+
+
+@overload
+def _command_with_cli_invoke(*, command: None, cli_invoke: str) -> None: ...
 
 
 def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:

@@ -102,10 +102,11 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    generated_cli: Any = None
     try:
         from generated.workspace.python import cli as generated_cli
     except Exception:
-        generated_cli = None
+        pass
     if generated_cli is not None:
         patched = getattr(generated_cli, "_run_lifecycle_command", None)
         if patched is not None and patched is not _run_lifecycle_command:
@@ -313,7 +314,7 @@ def _closeout_report_payload(
         review_mode=selected_review_mode,
     )
     detail_commands = {
-        "closeout_report": profile_policy["next_command"],
+        "closeout_report": str(profile_policy.get("next_command", "")),
         "closeout_trust": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section closeout_trust --format json",
             cli_invoke=config.cli_invoke,
