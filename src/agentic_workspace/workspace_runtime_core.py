@@ -21045,6 +21045,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "intent_satisfaction_matrix",
         "issue_reference_intent",
         "workflow_sufficiency",
+        "pre_test_evidence_guardrail",
         "task_posture_packet",
         "next_safe_action",
         "health",
@@ -21475,6 +21476,15 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    pre_test_guardrail = _pre_test_evidence_guardrail_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        config=config,
+        compact=True,
+    )
+    if pre_test_guardrail.get("status") == "advisory":
+        payload["pre_test_evidence_guardrail"] = pre_test_guardrail
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="startup",
         cli_invoke=config.cli_invoke,
@@ -26080,6 +26090,178 @@ _TEST_STRATEGY_DISPOSITION_VALUES = {
     "temporary-with-follow-up-consolidation",
 }
 
+_PRE_TEST_EVIDENCE_REQUIREMENT_IDS = {"test_evidence_change_decision"}
+_PRE_TEST_EVIDENCE_PROOF_PROFILES = {"test_evidence_change"}
+_PRE_TEST_EVIDENCE_REQUIRED_LABELS = {"verification_proof_decision_review"}
+
+
+def _is_python_test_path_for_guardrail(path: str) -> bool:
+    candidate = Path(path)
+    normalized = candidate.as_posix()
+    return candidate.suffix == ".py" and candidate.name.startswith("test_") and (normalized.startswith("tests/") or "/tests/" in normalized)
+
+
+def _pre_test_evidence_requirement(requirement: dict[str, Any]) -> bool:
+    requirement_id = str(requirement.get("id", "")).strip()
+    proof_profile = str(requirement.get("proof_profile") or "").strip()
+    required_evidence = {str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()}
+    if requirement_id in _PRE_TEST_EVIDENCE_REQUIREMENT_IDS:
+        return True
+    if proof_profile in _PRE_TEST_EVIDENCE_PROOF_PROFILES:
+        return True
+    return bool(required_evidence & _PRE_TEST_EVIDENCE_REQUIRED_LABELS)
+
+
+def _pre_test_evidence_requirement_matches(
+    *, config: WorkspaceConfig | None, changed_paths: list[str] | None, task_text: str | None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    relevant = [item for item in _assurance_requirement_payloads(config) if _pre_test_evidence_requirement(item)]
+    matched: list[dict[str, Any]] = []
+    for requirement in relevant:
+        applies, applies_because, _activation_facts = _assurance_requirement_match(
+            requirement=requirement,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            planning_facts={},
+        )
+        if not applies:
+            continue
+        requirement_id = str(requirement.get("id", "")).strip()
+        matched.append(
+            {
+                "requirement_id": requirement_id,
+                "source": f"assurance.requirements.{requirement_id}",
+                "matches": applies_because,
+                "authority_refs": _list_payload(requirement.get("authority_refs")),
+                "required_evidence": _list_payload(requirement.get("required_evidence")),
+                "proof_profile": requirement.get("proof_profile"),
+            }
+        )
+    return relevant, matched
+
+
+def _verification_evidence_strategy_payload(verification: dict[str, Any] | None) -> dict[str, Any]:
+    verification_payload = _as_dict(verification)
+    return _as_dict(verification_payload.get("evidence_strategy"))
+
+
+def _pre_test_evidence_guardrail_payload(
+    *,
+    target_root: Path | None = None,
+    changed_paths: list[str] | None = None,
+    task_text: str | None,
+    config: WorkspaceConfig | None = None,
+    verification: dict[str, Any] | None = None,
+    compact: bool = False,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    changed_test_paths = [path for path in normalized_paths if _is_python_test_path_for_guardrail(path)]
+    if config is None and target_root is not None:
+        try:
+            config = _load_workspace_config(target_root=target_root)
+        except WorkspaceUsageError:
+            config = None
+    configured_requirements, matched_requirements = _pre_test_evidence_requirement_matches(
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+    )
+    trigger_sources = [f"changed test path {path}" for path in changed_test_paths]
+    for matched in matched_requirements:
+        for reason in _list_payload(matched.get("matches")):
+            trigger_sources.append(f"{matched.get('source')}: {reason}")
+    trigger_sources = _dedupe([str(item) for item in trigger_sources if str(item).strip()])
+    if not trigger_sources:
+        return {
+            "kind": "agentic-workspace/pre-test-evidence-guardrail/v1",
+            "status": "not-applicable",
+            "changed_test_paths": changed_test_paths,
+            "configured_requirement_count": len(configured_requirements),
+            "blocking": False,
+        }
+
+    verification_payload = _as_dict(verification)
+    if not verification_payload and target_root is not None:
+        try:
+            assurance_requirements = _assurance_requirements_report_payload(
+                config=config,
+                target_root=target_root,
+                active_planning_record=None,
+                task_text=task_text,
+                changed_paths=normalized_paths,
+            )
+            verification_payload = _verification_report_payload(
+                target_root=target_root,
+                changed_paths=normalized_paths,
+                task_text=task_text,
+                assurance_requirements=assurance_requirements,
+            )
+        except WorkspaceUsageError:
+            verification_payload = {}
+    evidence_strategy = _verification_evidence_strategy_payload(verification_payload)
+    proof_governance = _as_dict(evidence_strategy.get("proof_governance"))
+    regression_sprawl = _as_dict(evidence_strategy.get("regression_sprawl"))
+    evidence_owner_options = [str(item) for item in _list_payload(proof_governance.get("proof_owner_options")) if str(item).strip()]
+    proof_decision_options = [str(item) for item in _list_payload(proof_governance.get("available_decisions")) if str(item).strip()]
+    decision_questions = [str(item) for item in _list_payload(proof_governance.get("pre_test_decision_questions")) if str(item).strip()]
+    sprawl_questions = [str(item) for item in _list_payload(regression_sprawl.get("review_questions")) if str(item).strip()]
+    payload = {
+        "kind": "agentic-workspace/pre-test-evidence-guardrail/v1",
+        "status": "advisory",
+        "blocking": False,
+        "trigger_sources": trigger_sources,
+        "activation_sources": matched_requirements,
+        "changed_test_paths": changed_test_paths,
+        "decision_prompt": (
+            "Before adding or expanding ordinary regression tests, choose the evidence owner and the narrowest proof surface."
+        ),
+        "evidence_owner_options": evidence_owner_options,
+        "proof_decision_options": proof_decision_options,
+        "pre_test_decision_questions": decision_questions,
+        "regression_sprawl_review_questions": sprawl_questions,
+        "detail_selectors": ["test_strategy_check", "verification"],
+        "source_boundary": {
+            "activation": "configured assurance requirement markers/paths or explicit changed test paths",
+            "options": "verification.evidence_strategy.proof_governance",
+            "review_questions": "verification.evidence_strategy.regression_sprawl",
+            "no_universal_task_keyword_policy": True,
+        },
+        "authority_boundary": _authority_boundary_payload(
+            surface="pre_test_evidence_guardrail",
+            observed_by_aw=trigger_sources[:5],
+            recommended_by_aw=["choose the proof owner before adding ordinary regression-test evidence"],
+            proof_hints=[
+                "verification.evidence_strategy.proof_governance",
+                "verification.evidence_strategy.regression_sprawl",
+                "assurance.requirements.*.applies_to_task_markers",
+            ],
+            agent_owned_decisions=[
+                "whether new executable proof is needed",
+                "which owner should hold the evidence",
+                "what narrow proof surface answers the trust question",
+            ],
+            rule="AW surfaces configured evidence-owner choices early; it does not decide the host repo's testing strategy.",
+        ),
+    }
+    if not compact:
+        return payload
+    return {
+        key: payload[key]
+        for key in (
+            "kind",
+            "status",
+            "blocking",
+            "trigger_sources",
+            "changed_test_paths",
+            "decision_prompt",
+            "evidence_owner_options",
+            "proof_decision_options",
+            "pre_test_decision_questions",
+            "detail_selectors",
+            "source_boundary",
+        )
+    }
+
 
 def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
     path = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
@@ -26152,12 +26334,25 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
 def _test_strategy_check_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
 ) -> dict[str, Any]:
-    test_paths = [
-        path
-        for path in changed_paths
-        if Path(path).name.startswith("test_") and Path(path).suffix == ".py" and ("tests/" in path or path.startswith("tests/"))
-    ]
+    test_paths = [path for path in changed_paths if _is_python_test_path_for_guardrail(path)]
+    pre_test_guardrail = _pre_test_evidence_guardrail_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        verification=verification,
+    )
     if not test_paths:
+        if pre_test_guardrail.get("status") == "advisory":
+            return {
+                "kind": "agentic-workspace/test-strategy-check/v1",
+                "status": "advisory",
+                "changed_test_paths": [],
+                "pre_test_evidence_guardrail": pre_test_guardrail,
+                "evidence_owner_options": pre_test_guardrail.get("evidence_owner_options", []),
+                "proof_decision_options": pre_test_guardrail.get("proof_decision_options", []),
+                "pre_test_decision_questions": pre_test_guardrail.get("pre_test_decision_questions", []),
+                "blocking": False,
+            }
         return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
     disposition_record = _load_test_strategy_dispositions(target_root)
     disposition_items = [item for item in _list_payload(disposition_record.get("items")) if isinstance(item, dict)]
@@ -26234,6 +26429,11 @@ def _test_strategy_check_payload(
         "unknown_materiality_count": unknown_materiality_count,
         "files": files,
         "reviewer_requested_coverage": reviewer_requested,
+        "pre_test_evidence_guardrail": pre_test_guardrail,
+        "evidence_owner_options": pre_test_guardrail.get("evidence_owner_options", []),
+        "proof_decision_options": pre_test_guardrail.get("proof_decision_options", []),
+        "pre_test_decision_questions": pre_test_guardrail.get("pre_test_decision_questions", []),
+        "regression_sprawl_review_questions": pre_test_guardrail.get("regression_sprawl_review_questions", []),
         "verification_evidence_surfaces": {
             "evidence_strategy_status": evidence_strategy.get("status", "unavailable"),
             "proof_governance_status": proof_governance.get("status", "unavailable"),

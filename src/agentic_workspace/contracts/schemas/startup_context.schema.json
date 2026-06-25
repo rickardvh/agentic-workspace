@@ -22,6 +22,11 @@
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
       "additionalProperties": true
     },
+    "pre_test_evidence_guardrail": {
+      "type": "object",
+      "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or changed test paths indicate test-shape decisions.",
+      "additionalProperties": true
+    },
     "task_posture_packet": {
       "$ref": "#/$defs/task_posture_packet",
       "description": "Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing."

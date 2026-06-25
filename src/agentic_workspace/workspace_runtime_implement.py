@@ -671,6 +671,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     reuse_pressure = payload.get("reuse_pressure", {})
     if isinstance(reuse_pressure, dict):
         reuse_pressure = dict(reuse_pressure)
+    test_strategy_check = payload.get("test_strategy_check", {})
+    test_strategy_check = test_strategy_check if isinstance(test_strategy_check, dict) else {}
+    test_strategy_applicable = str(test_strategy_check.get("status") or "").strip() not in {"", "not-applicable"}
     workflow_sufficiency = _tiny_workflow_sufficiency(payload.get("workflow_sufficiency"))
     context_reuse_pressure = {
         "status": reuse_pressure.get("status") if isinstance(reuse_pressure, dict) else None,
@@ -687,9 +690,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "architecture_principles",
         "requirement_grounding",
         "plan_delegation_packet",
-        "test_strategy_check",
         "routine_work_context",
     ]
+    if test_strategy_applicable:
+        advisory_selectors.insert(-1, "test_strategy_check")
     if delegation_attention:
         advisory_selectors.insert(2, "context.delegation_decision")
     detail_commands = {
@@ -943,18 +947,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "detail_selector": "plan_delegation_packet",
             },
             "test_strategy_check": {
-                "status": payload.get("test_strategy_check", {}).get("status", "not-applicable")
-                if isinstance(payload.get("test_strategy_check"), dict)
-                else "not-applicable",
-                "changed_test_paths": payload.get("test_strategy_check", {}).get("changed_test_paths", [])
-                if isinstance(payload.get("test_strategy_check"), dict)
-                else [],
-                "hotspot_file_count": payload.get("test_strategy_check", {}).get("hotspot_file_count", 0)
-                if isinstance(payload.get("test_strategy_check"), dict)
-                else 0,
-                "scenario_matrix_candidate_count": payload.get("test_strategy_check", {}).get("scenario_matrix_candidate_count", 0)
-                if isinstance(payload.get("test_strategy_check"), dict)
-                else 0,
+                "status": test_strategy_check.get("status", "not-applicable"),
+                "changed_test_paths": test_strategy_check.get("changed_test_paths", []),
+                "hotspot_file_count": test_strategy_check.get("hotspot_file_count", 0),
+                "scenario_matrix_candidate_count": test_strategy_check.get("scenario_matrix_candidate_count", 0),
+                "pre_test_guardrail_status": _as_dict(test_strategy_check.get("pre_test_evidence_guardrail")).get(
+                    "status", "not-applicable"
+                ),
+                "evidence_owner_options": test_strategy_check.get("evidence_owner_options", [])[:8],
+                "pre_test_decision_questions": test_strategy_check.get("pre_test_decision_questions", [])[:3],
                 "detail_selector": "test_strategy_check",
             },
         },
@@ -1009,6 +1010,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
     if not delegation_attention:
         remove_available_selector("context.delegation_decision")
+    if not test_strategy_applicable:
+        tiny_context_for_test_strategy = projected.get("context", {})
+        if isinstance(tiny_context_for_test_strategy, dict):
+            tiny_context_for_test_strategy.pop("test_strategy_check", None)
+        remove_available_selector("context.test_strategy_check")
+        remove_available_selector("test_strategy_check")
     if isinstance(payload.get("generated_surface_trust"), dict) and payload["generated_surface_trust"].get("status") == "present":
         tiny_context = projected.get("context", {})
         if isinstance(tiny_context, dict):

@@ -4426,8 +4426,44 @@ def test_runtime_warning_eta(): assert True
     assert check["reviewer_requested_coverage"] is True
     assert check["disposition_required_before_closeout"] is True
     assert check["verification_evidence_surfaces"]["proof_decision_status"]
+    assert check["pre_test_evidence_guardrail"]["status"] == "advisory"
+    assert check["pre_test_evidence_guardrail"]["blocking"] is False
+    assert check["pre_test_evidence_guardrail"]["source_boundary"]["no_universal_task_keyword_policy"] is True
+    assert "package-local-behavior" in check["evidence_owner_options"]
+    assert "convert-to-conformance" in check["proof_decision_options"]
+    assert any("trust question" in question for question in check["pre_test_decision_questions"])
+    assert any("scenario matrix" in question for question in check["regression_sprawl_review_questions"])
     assert "standalone-durable-contract-proof" in check["record_disposition_options"]
     assert check["files"][0]["parametrized_test_count"] == 1
+
+
+def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "runtime.py", "def runtime_value():\n    return 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/runtime.py",
+                "--task",
+                "Adjust runtime behavior",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "test_strategy_check" not in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "test_strategy_check" not in payload["drill_down"]["available_selectors"]
+    assert "context.test_strategy_check" not in payload["drill_down"]["available_selectors"]
+    assert "test_strategy_check" not in payload["context"]
 
 
 def test_test_strategy_check_reads_recorded_disposition(tmp_path: Path, capsys) -> None:

@@ -14,6 +14,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `kind` | const `"startup-context/v1"` | yes |  | Discriminator for the startup context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
 | `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
+| `pre_test_evidence_guardrail` | object | no |  | Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or changed test paths indicate test-shape decisions. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |

@@ -1,0 +1,17 @@
+{
+  "kind": "agentic-workspace/test-strategy-dispositions/v1",
+  "items": [
+    {
+      "id": "issue-1786-pre-test-evidence-guardrail-cli-surfaces",
+      "disposition": "standalone-durable-contract-proof",
+      "changed_test_paths": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "reason": "The change adds focused CLI contract coverage for the startup guardrail and implement tiny-output routing; the evidence belongs with package-local runtime behavior rather than a broad regression matrix.",
+      "proof_owner": "package-local-behavior",
+      "replacement_or_follow_up_evidence": [],
+      "reviewer_requested_coverage": true
+    }
+  ]
+}
