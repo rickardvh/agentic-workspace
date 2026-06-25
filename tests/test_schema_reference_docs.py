@@ -152,6 +152,8 @@ def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> Non
 
     assert "minimum safe context for entering or resuming work" in startup
     assert "Ordered surfaces and commands an agent should use" in startup
+    assert "`context.pre_test_evidence_guardrail`" in startup
+    assert "Selector-first location for the optional non-blocking pre-test evidence-owner advisory" in startup
     assert "Combined workspace report payload for installed modules" in report
     assert "Recommended next action derived from report health" in report
     assert "Manifest for a checked-in agent aid" in aid

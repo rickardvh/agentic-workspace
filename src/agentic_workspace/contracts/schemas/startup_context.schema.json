@@ -309,6 +309,13 @@
     "context": {
       "type": "object",
       "description": "Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields.",
+      "properties": {
+        "pre_test_evidence_guardrail": {
+          "type": "object",
+          "description": "Selector-first location for the optional non-blocking pre-test evidence-owner advisory; mirrors the root field when startup exposes the guardrail in context detail.",
+          "additionalProperties": true
+        }
+      },
       "additionalProperties": true
     },
     "parent_intent_status": {
