@@ -54,7 +54,7 @@ derived_from = ["anti_intents:Do not let this repo's current language, tooling, 
 allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
 forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
 affected_decisions = ["routing", "ownership", "proof-selection"]
-path_globs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
 guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
 derived_applications = ["non-enum-keyword-routing"]
 proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
@@ -776,6 +776,74 @@ blocked_without_evidence = ["docs-rendering-complete"]
     assert subsystem["matched_subsystem_ids"] == ["docs-rendering"]
     assert subsystem["effective_assurance_level"] == "low"
     assert "manual_review" not in subsystem["missing_evidence"]
+
+
+def test_implement_routes_runtime_assurance_from_workspace_runtime_subsystem(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+owns = ["workspace command routing", "workspace runtime source boundaries"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.workspace-cli-runtime]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
+required_evidence = ["workspace_runtime_proof"]
+proof_profile = "workspace_behavior"
+force = "required-before-closeout"
+blocked_without_evidence = ["claim-work-complete"]
+claim_boundary = "workspace-runtime-routing"
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Terse runtime refactor",
+                "--select",
+                "assurance_requirements,architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assurance = values["assurance_requirements"]
+    subsystem = assurance["subsystem_assurance"]
+    assert subsystem["matched_subsystem_ids"] == ["workspace-cli-runtime"]
+    assert subsystem["matched_profiles"][0]["applies_because"] == ["changed path matched subsystem workspace-cli-runtime"]
+    assert subsystem["missing_evidence"] == ["workspace_runtime_proof"]
+    assert assurance["active"][0]["id"] == "subsystem:workspace-cli-runtime"
+    assert assurance["active"][0]["proof_profile"] == "workspace_behavior"
+    architecture = values["architecture_principles"]
+    assert architecture["matched_count"] == 1
+    assert architecture["matched_principles"][0]["matched_paths"] == [
+        {
+            "path": "src/agentic_workspace/workspace_runtime_core.py",
+            "pattern": "src/agentic_workspace/workspace_runtime*.py",
+        }
+    ]
 
 
 def test_assurance_reads_compact_evidence_records(tmp_path: Path, capsys) -> None:
@@ -3749,7 +3817,7 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write_architecture_principles(tmp_path)
-    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
 
     assert (
         cli.main(
@@ -3758,7 +3826,7 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "src/agentic_workspace/workspace_runtime_core.py",
                 "--task",
                 "Refactor runtime routing",
                 "--format",
@@ -3780,8 +3848,8 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     assert packet["matched_principles"][0]["guardrails"][0]["id"] == "non-enum-keyword-routing"
     assert packet["matched_principles"][0]["matched_paths"] == [
         {
-            "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-            "pattern": "src/agentic_workspace/workspace_runtime_primitives.py",
+            "path": "src/agentic_workspace/workspace_runtime_core.py",
+            "pattern": "src/agentic_workspace/workspace_runtime*.py",
         }
     ]
     assert packet["matched_principles"][0]["guardrail_refs"] == ["docs/maintainer/non-enum-keyword-routing-audit.json"]

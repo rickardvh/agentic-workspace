@@ -194,7 +194,7 @@ applies_to_paths = [
   "packages/planning/src/**/archive*.py",
   "packages/planning/src/**/closeout*.py",
   "packages/planning/tests/**/test_archive*.py",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/workspace_runtime*.py",
   "tests/test_workspace_summary_cli.py",
   "tests/test_workspace_implement_cli.py",
 ]
@@ -206,6 +206,7 @@ applies_to_task_markers = [
   "completion claim",
 ]
 assurance_requirement_refs = []
+proof_profiles = ["workspace_behavior"]
 scenario_refs = ["closeout_intent_satisfaction_review"]
 steps = [
   "Inspect closeout trust and intent-satisfaction surfaces.",
@@ -219,13 +220,13 @@ review_owner = "maintainer"
 authority_refs = [
   ".agentic-workspace/docs/reporting-contract.md",
   ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
   "packages/planning/src/**/archive*.py",
   "packages/planning/src/**/closeout*.py",
   "packages/planning/tests/**/test_archive*.py",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/workspace_runtime*.py",
 ]
 retention = "retain-summary"
 non_goals = [
@@ -245,7 +246,7 @@ purpose = "Keep requirement-grounding and delegation support inspectable without
 applies_to_paths = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/workspace_runtime*.py",
   "tests/test_workspace_config_cli.py",
   "tests/test_workspace_implement_cli.py",
 ]
@@ -257,6 +258,7 @@ applies_to_task_markers = [
   "handoff",
 ]
 assurance_requirement_refs = []
+proof_profiles = ["workspace_behavior"]
 scenario_refs = ["requirement_grounding_delegation_review"]
 steps = [
   "Inspect requirement grounding and delegation report fields for the changed paths.",
@@ -270,12 +272,12 @@ review_owner = "maintainer"
 authority_refs = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/workspace_runtime*.py",
 ]
 retention = "retain-summary"
 non_goals = [

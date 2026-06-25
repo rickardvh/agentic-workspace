@@ -63,17 +63,17 @@ force = "required-before-closeout"
 blocking_claims = ["claim-work-complete", "close-parent-lane"]
 notes = "Planning and closeout behavior changes need explicit intent-satisfaction and residue-routing evidence before broad completion claims."
 
-[assurance.requirements.workspace_runtime_routing]
-level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_primitives.py"]
-applies_to_task_markers = ["workspace runtime", "requirement grounding", "delegation", "assurance"]
-authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime", "src/agentic_workspace/workspace_runtime_primitives.py"]
+[assurance.subsystem_profiles.workspace-cli-runtime]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
 required_evidence = ["workspace_runtime_proof", "tiny_surface_compatibility_review"]
 proof_profile = "workspace_behavior"
 workflow_obligation_refs = ["adapter_surface_refresh"]
 review_owner = "maintainer"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocked_without_evidence = ["claim-work-complete"]
+claim_boundary = "workspace-runtime-routing"
 notes = "Workspace runtime routing changes need focused runtime proof and compact-output compatibility review before broad completion claims."
 
 [assurance.requirements.model_harness_evidence]

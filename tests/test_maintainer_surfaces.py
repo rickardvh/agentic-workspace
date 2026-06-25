@@ -680,6 +680,61 @@ def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -
     assert any(warning.warning_class == "package_local_install_drift" for warning in warnings)
 
 
+def test_runtime_source_routing_checker_accepts_current_repo() -> None:
+    mod = _load_module(_checker_script_path(), "maintainer_surfaces_runtime_current")
+
+    warnings = mod.gather_maintainer_warnings(repo_root=WORKSPACE_ROOT)
+
+    assert not any(warning.warning_class.startswith("RUNTIME_") for warning in warnings)
+
+
+def test_runtime_source_routing_checker_reports_drift(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "maintainer_surfaces_runtime_drift")
+    _write_planning_surfaces(tmp_path)
+    _write_generated_agent_surfaces(tmp_path)
+    _write_docs_surfaces(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["generated/workspace/python/**"]
+owns = ["workspace command routing"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+path_globs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+[protocols.closeout_intent_satisfaction]
+authority_refs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+stale_when = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+
+[protocols.requirement_grounding_delegation]
+authority_refs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+stale_when = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+""",
+    )
+
+    warning_classes = {warning.warning_class for warning in mod.gather_maintainer_warnings(repo_root=tmp_path)}
+
+    assert "RUNTIME_SOURCE_OWNERSHIP_DRIFT" in warning_classes
+    assert "RUNTIME_ARCHITECTURE_ROUTING_DRIFT" in warning_classes
+    assert "RUNTIME_VERIFICATION_ROUTING_DRIFT" in warning_classes
+
+
 def test_render_wrapper_keeps_backward_compatible_entrypoint_alias() -> None:
     mod = _load_module(_render_script_path(), "maintainer_render_alias")
 
