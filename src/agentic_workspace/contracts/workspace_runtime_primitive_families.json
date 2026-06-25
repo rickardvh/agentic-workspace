@@ -139,6 +139,160 @@
       "remaining_hand_owned_reason": "The current helpers combine schema shape, selector policy, and live runtime facts; migrate only after a generic projection primitive exists."
     },
     {
+      "id": "shared-projection-action-effect-helpers",
+      "title": "Shared projection and action-effect helpers",
+      "owner_class": "aw-owned-runtime",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_projection.py",
+      "runtime_role": "Small data-only helper module shared by startup, implement, proof, and report packet builders for authority-boundary and action-effect projection.",
+      "source_symbols": [
+        "_authority_boundary_payload",
+        "_tiny_action_effect",
+        "_compact_authority_boundary",
+        "_compact_authority_text"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_runtime_projection.py -q",
+        "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q"
+      ],
+      "blocked_by": [],
+      "remaining_hand_owned_reason": "The helpers preserve AW payload compacting and authority-boundary wording; they are split by owner boundary but not moved into command-generation semantics."
+    },
+    {
+      "id": "startup-runtime-packets",
+      "title": "Start and startup runtime packet builders",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_startup.py",
+      "runtime_role": "Startup packet builders, selector hydration, skill routing, next-safe-action, and startup tiny/compact projections remain behavior-owned by the AW runtime until extracted as a startup owner module.",
+      "source_symbols": [
+        "_start_payload",
+        "_tiny_start_payload",
+        "_selector_first_start_payload",
+        "_hydrate_selected_start_advisory_payloads"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/context_templates.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_summary_cli.py -q",
+        "make test-workspace"
+      ],
+      "blocked_by": [
+        "#1770"
+      ],
+      "remaining_hand_owned_reason": "Follow-up #1770 owns finishing startup/start-context extraction while preserving CLI payload and selector contracts."
+    },
+    {
+      "id": "implement-runtime-packets",
+      "title": "Implement runtime packet builders and projections",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_implement.py",
+      "runtime_role": "Implement-context assembly, changed-path facts, acceptance/objective-drift projections, and implement tiny/compact projections remain behavior-owned by the AW runtime until extracted as an implement owner module.",
+      "source_symbols": [
+        "_implement_payload",
+        "_tiny_implement_payload",
+        "_objective_drift_payload",
+        "_change_impact_payload"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "src/agentic_workspace/contracts/context_templates.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
+        "make test-workspace"
+      ],
+      "blocked_by": [
+        "#1771"
+      ],
+      "remaining_hand_owned_reason": "Follow-up #1771 owns finishing implement packet extraction while preserving implement payload and selector contracts."
+    },
+    {
+      "id": "planning-runtime-packets",
+      "title": "Planning continuation and active-state runtime packets",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_planning.py or the Planning package runtime boundary",
+      "runtime_role": "Planning continuation, active-state, safety-gate, candidate-pressure, and active execplan projections remain runtime-owned until moved behind the Planning owner boundary.",
+      "source_symbols": [
+        "_active_planning_record",
+        "_planning_safety_gate_payload",
+        "_active_execplan_record_payload",
+        "_planning_candidate_pressure_payload"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "packages/planning/src/repo_planning_bootstrap/contracts"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_start_cli.py tests/test_workspace_implement_cli.py -q",
+        "make test-workspace"
+      ],
+      "blocked_by": [
+        "#1772"
+      ],
+      "remaining_hand_owned_reason": "Follow-up #1772 owns finishing Planning packet extraction while preserving active-state and continuation behavior."
+    },
+    {
+      "id": "proof-verification-closeout-runtime-packets",
+      "title": "Proof, verification, and closeout runtime packet builders",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_proof.py",
+      "runtime_role": "Proof selection, verification aggregation, closeout obligations, and completion-contract projections remain behavior-owned by the AW runtime until extracted as a proof/closeout owner module.",
+      "source_symbols": [
+        "_proof_payload",
+        "_proof_selection_for_changed_paths",
+        "_proof_obligations_payload",
+        "_closeout_report_payload"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/contracts/report_contract.json"
+      ],
+      "proof_refs": [
+        "uv run pytest tests/test_workspace_proof_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py -q",
+        "make test-workspace"
+      ],
+      "blocked_by": [
+        "#1773"
+      ],
+      "remaining_hand_owned_reason": "Follow-up #1773 owns finishing proof/verification/closeout extraction while preserving proof and closeout contracts."
+    },
+    {
+      "id": "generated-surface-trust-runtime-packets",
+      "title": "Generated-surface trust runtime packets",
+      "owner_class": "covered-by-other-issue",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py pending extraction to workspace_runtime_generated_surface.py",
+      "runtime_role": "Generated-surface trust projections, generated CLI freshness aggregation, selector requests, and tiny surface compatibility review remain runtime-owned until extracted from the monolith.",
+      "source_symbols": [
+        "_generated_surface_trust_payload",
+        "_generated_cli_freshness_payload",
+        "_tiny_surface_compatibility_review",
+        "_selector_requests_generated_surface_trust"
+      ],
+      "generated_or_contract_refs": [
+        "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json"
+      ],
+      "proof_refs": [
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+      ],
+      "blocked_by": [
+        "#1774"
+      ],
+      "remaining_hand_owned_reason": "Follow-up #1774 owns finishing generated-surface trust runtime extraction while stable generated command/package truth remains contract-owned."
+    },
+    {
       "id": "intent-and-closeout-judgment",
       "title": "Intent, proof, and closeout semantic judgment",
       "owner_class": "aw-owned-runtime",
