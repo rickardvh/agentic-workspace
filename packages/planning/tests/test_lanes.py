@@ -279,6 +279,12 @@ def test_summary_and_doctor_validate_invalid_active_lane_schema(tmp_path: Path) 
     assert schema_warning["path"].endswith("invalid-lane.lane.json")
     assert "slice_sequence.0" in schema_warning["message"]
     assert "execplan_ref" in schema_warning["message"]
+    affordance = schema_warning["repair_affordance"]
+    assert affordance["kind"] == "planning-lane-schema-repair/v1"
+    assert affordance["reference_shape"] == {"kind": "artifact", "path": "<repo-relative-path>", "role": "context"}
+    assert affordance["slice_sequence_entry_shape"]["execplan_ref"].endswith("<slice>.plan.json")
+    assert affordance["slice_sequence_entry_shape"]["depends_on"] == []
+    assert "purpose_for_lane" in affordance["slice_sequence_entry_shape"]
 
     doctor = doctor_bootstrap(target=tmp_path)
     doctor_warning = next(warning for warning in doctor.warnings if warning["warning_class"] == "planning_lane_schema_invalid")

@@ -488,10 +488,21 @@ candidates = [
         for warning in summary["planning_surface_health"]["warnings"]
         if warning["warning_class"] == "historical_work_in_live_planning_state"
     )
+    active_owner_warning = next(
+        warning
+        for warning in summary["planning_surface_health"]["warnings"]
+        if "active item active-without-plan requires an execplan" in warning["message"]
+    )
     live_state_rule = summary["planning_surface_health"]["authoring_affordances"]["live_state_rule"]
 
     assert summary["planning_surface_health"]["status"] == "not-clean"
     assert any("active item active-without-plan requires an execplan" in message for message in messages)
+    owner_repair = active_owner_warning["repair_affordance"]
+    assert owner_repair["missing_owner"] == "execplan surface"
+    assert owner_repair["expected_state_field"] == "execplan or surface"
+    assert owner_repair["expected_shape"] == ".agentic-workspace/planning/execplans/<id>.plan.json"
+    assert "new-plan --id active-without-plan" in owner_repair["command_owned_repair"]
+    assert owner_repair["field_absent_after_closeout"] == "todo.active_items[] entry"
     assert any("ready item ready-missing-proof requires proof" in message for message in messages)
     assert any("ready item ready-missing-proof requires review_role" in message for message in messages)
     assert any("ready item ready-missing-proof requires handoff_ready = true" in message for message in messages)
