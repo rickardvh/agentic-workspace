@@ -48,6 +48,24 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["config_effect_audit"]["detail_command"].endswith(
         "agentic-workspace report --target ./repo --section config_effect_audit --format json"
     )
+    projection = payload["configuration_projection"]
+    assert projection["kind"] == "agentic-workspace/configuration-projection/v1"
+    assert projection["projection_status_counts"]["active"] >= 1
+    assert projection["projection_status_counts"]["unprojected"] == 0
+    assert projection["unprojected_fields"] == []
+    obligation_projection = next(field for field in projection["facts"] if field["field"] == "workflow_obligations.<name>.*")
+    assert obligation_projection["projection_status"] == "active"
+    assert "scope_tags" in obligation_projection["applicability_signal"]
+    assert "hide obligation detail" in obligation_projection["suppression_rule"]
+    assert obligation_projection["owner_boundary"] == "human-owned"
+    local_projection = next(field for field in projection["facts"] if field["field"] == "runtime|handoff|safety|delegation_targets")
+    assert local_projection["owner_boundary"] == "local-human-owned"
+    assert "cannot create shared repo obligations" in local_projection["authority_exception"]
+    assert projection["verification"]["positive_surfacing"][0]["id"] == "startup-config-task-routes-to-config"
+    assert projection["verification"]["non_applicable_suppression"][0]["id"] == "ordinary-report-keeps-detail-sectioned"
+    assert projection["detail_command"].endswith(
+        "agentic-workspace report --target ./repo --section configuration_projection --format json"
+    )
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
@@ -307,7 +325,23 @@ requires_human_verification_on_pr = true
     assert payload["next_detail"]["select"].endswith("agentic-workspace config --target . --select <field.path> --format json")
     assert payload["next_detail"]["verbose"].endswith("agentic-workspace config --target . --verbose --format json")
     assert "config_effect_audit" not in payload
+    assert "configuration_projection" not in payload
     assert len(output) < 3000
+
+
+def test_config_command_compact_reports_projection_summary_without_fact_detail(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    full_payload = cli._config_payload(config=cli._load_workspace_config(target_root=tmp_path))
+    payload = cli._compact_config_payload(full_payload)
+    projection = payload["configuration_projection"]
+    assert projection["status"] == "present"
+    assert projection["projection_status_counts"]["active"] >= 1
+    assert projection["unprojected_field_count"] == 0
+    assert projection["detail_command"].endswith(
+        "agentic-workspace report --target ./repo --section configuration_projection --format json"
+    )
+    assert "facts" not in projection
 
 
 def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Path, capsys) -> None:

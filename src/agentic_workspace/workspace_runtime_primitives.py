@@ -8340,6 +8340,7 @@ def _run_report_command(
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": _configuration_projection_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": memory_consult,
@@ -12047,6 +12048,7 @@ def _run_report_router_command(
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": _compact_configuration_projection_payload(_configuration_projection_payload(config=config)),
         "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
@@ -28591,6 +28593,182 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+def _configuration_projection_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    effect_audit = _config_effect_audit_payload(config=config)
+    field_effects = [dict(item) for item in _list_payload(effect_audit.get("field_effects")) if isinstance(item, dict)]
+
+    projection_facts: list[dict[str, Any]] = []
+    for effect in field_effects:
+        field = str(effect.get("field", ""))
+        scope = str(effect.get("scope", ""))
+        dependency = str(effect.get("agent_dependency", ""))
+        commands = [str(item) for item in _list_payload(effect.get("concrete_commands")) if str(item).strip()]
+        payload_fields = [str(item) for item in _list_payload(effect.get("payload_fields")) if str(item).strip()]
+        owner_boundary = "human-owned" if scope == "repo-config" else "local-human-owned" if scope == "local-config" else "package-owned"
+        if dependency == "not-applicable":
+            status = "unprojected"
+        elif commands and payload_fields:
+            status = "active"
+        else:
+            status = "latent"
+        projection_facts.append(
+            {
+                "field": field,
+                "scope": scope,
+                "effect_type": str(effect.get("effect_type", "")),
+                "projection_status": status,
+                "ordinary_path_routes": commands,
+                "payload_fields": payload_fields,
+                "applicability_signal": _configuration_projection_applicability(field),
+                "suppression_rule": _configuration_projection_suppression(field),
+                "owner_boundary": owner_boundary,
+                "authority_exception": _configuration_projection_authority_exception(
+                    field=field, owner_boundary=owner_boundary, dependency=dependency
+                ),
+            }
+        )
+
+    status_counts: dict[str, int] = {"active": 0, "latent": 0, "stale": 0, "unprojected": 0}
+    for fact in projection_facts:
+        projection_status = str(fact.get("projection_status", "unprojected"))
+        status_counts[projection_status] = status_counts.get(projection_status, 0) + 1
+
+    positive_probes = [
+        {
+            "id": "startup-config-task-routes-to-config",
+            "command": _command_with_cli_invoke(
+                command='agentic-workspace start --target ./repo --task "inspect configured posture" --format json',
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "next_safe_action.action=inspect-effective-config",
+            "covers": ["workspace posture", "config-posture-routing"],
+        },
+        {
+            "id": "implementation-routes-proof-and-posture",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace implement --target ./repo --changed <paths> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "proof, authority, and task_posture_packet reflect applicable config",
+            "covers": ["proof", "ownership", "closeout"],
+        },
+        {
+            "id": "report-section-inspects-projection",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section configuration_projection --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "projection_status_counts and facts are present",
+            "covers": ["machine-consumable coverage"],
+        },
+    ]
+    suppression_probes = [
+        {
+            "id": "ordinary-report-keeps-detail-sectioned",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --format json", cli_invoke=config.cli_invoke
+            ),
+            "expect": "router names configuration_projection in section hints without expanding every fact",
+            "covers": ["non-applicable suppression", "compact-output"],
+        },
+        {
+            "id": "local-posture-stays-local",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace config --target ./repo --format json", cli_invoke=config.cli_invoke
+            ),
+            "expect": "local runtime/delegation posture is advisory and not shared repo authority",
+            "covers": ["ownership exceptions"],
+        },
+    ]
+    return {
+        "kind": "agentic-workspace/configuration-projection/v1",
+        "status": "present",
+        "purpose": "Machine-consumable coverage of which configured facts can affect ordinary startup, implementation, proof, report, and closeout routing.",
+        "rule": "Configured facts must have an ordinary-path route, applicability signal, suppression rule, owner boundary, and verification probe before being treated as active runtime guidance.",
+        "projection_status_counts": status_counts,
+        "facts": projection_facts,
+        "unprojected_fields": [fact for fact in projection_facts if fact.get("projection_status") == "unprojected"],
+        "owner_boundary_exceptions": [
+            {
+                "owner_boundary": "human-owned",
+                "rule": "Repo config declares policy and posture; AW may validate and project it, but the agent still owns semantic fit unless a hard gate is explicit.",
+            },
+            {
+                "owner_boundary": "local-human-owned",
+                "rule": "Local config may shape handoff and runtime guidance on this machine, but must not become shared repo authority or close issues by itself.",
+            },
+            {
+                "owner_boundary": "agent-owned",
+                "rule": "Config may recommend work shape, proof proportionality, or delegation, but cannot remove agent judgment where output labels authority_class=agent-owned or advisory-support.",
+            },
+        ],
+        "verification": {
+            "positive_surfacing": positive_probes,
+            "non_applicable_suppression": suppression_probes,
+            "contract_check": "Tests should assert both an applicable field surfacing path and an irrelevant/detail-heavy path staying sectioned.",
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section configuration_projection --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+    }
+
+
+def _compact_configuration_projection_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": payload["kind"],
+        "status": payload["status"],
+        "projection_status_counts": payload["projection_status_counts"],
+        "unprojected_field_count": len(payload["unprojected_fields"]),
+        "owner_boundary_exception_count": len(payload["owner_boundary_exceptions"]),
+        "verification_probe_count": len(payload["verification"]["positive_surfacing"])
+        + len(payload["verification"]["non_applicable_suppression"]),
+        "detail_command": payload["detail_command"],
+    }
+
+
+def _configuration_projection_applicability(field: str) -> str:
+    if field.startswith("workflow_obligations"):
+        return "task text, changed paths, or active Planning scope matches obligation scope_tags"
+    if field.startswith("assurance"):
+        return "changed paths, active Planning assurance fields, or selected proof profile require assurance routing"
+    if field.startswith("runtime|handoff|safety|delegation_targets"):
+        return "delegation or runtime posture is relevant to the current task shape and safety allows handoff"
+    if field.startswith("local_memory"):
+        return "local memory is enabled and a memory-backed route is requested"
+    if field.startswith("system_intent"):
+        return "task, changed paths, or subsystem config intersects durable system intent"
+    if field.startswith("update.modules"):
+        return "status, doctor, or upgrade inspects installed module freshness"
+    if field.startswith("workspace.maintainer_mode"):
+        return "maintainer mode is enabled or dogfooding/reporting posture is requested"
+    return "configured field is requested directly or the ordinary route names its payload field"
+
+
+def _configuration_projection_suppression(field: str) -> str:
+    if field.startswith("workflow_obligations"):
+        return "hide obligation detail when no current scope tag matches; keep configured list behind config/report selectors"
+    if field.startswith("assurance"):
+        return "hide proof profile detail until proof selection, assurance report, or closeout trust needs it"
+    if field.startswith("runtime|handoff|safety|delegation_targets"):
+        return "hide target detail unless delegation posture changes the next action or config detail is requested"
+    if field.startswith("local_memory"):
+        return "hide local memory detail when disabled or when shared repo authority is being reported"
+    if field.startswith("system_intent"):
+        return "surface only compact applicable-intent facts unless system-intent detail is requested"
+    return "keep detailed field data behind config/report selectors unless it changes the ordinary next action"
+
+
+def _configuration_projection_authority_exception(*, field: str, owner_boundary: str, dependency: str) -> str:
+    if owner_boundary == "local-human-owned":
+        return "local-only advisory; cannot create shared repo obligations, proof gates, or closeout claims"
+    if dependency in {"medium", "high"}:
+        return "advisory or diagnostic projection; agent owns semantic applicability unless another payload reports a hard gate"
+    if field.startswith("assurance") or field.startswith("workflow_obligations"):
+        return "may create closeout or proof pressure only through the named proof, obligation, or closeout payload"
+    return "tool-owned validation may affect output, but human-owned config remains the source authority"
+
+
 def _scope_tags_for_current_work(
     *, active_planning_record: dict[str, Any] | None, task_text: str | None = None, changed_paths: list[str] | None = None
 ) -> tuple[list[str], list[str]]:
@@ -38104,6 +38282,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "warnings": list(config.warnings),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": _configuration_projection_payload(config=config),
         "workspace": {
             "enabled_modules": list(config.enabled_modules),
             "module_enablement_source": "repo-config" if config.exists else "product-default",
@@ -38204,6 +38383,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "warning_count": len(payload["config_effect_audit"]["claimed_vs_actual_warnings"]),
             "detail_command": payload["config_effect_audit"]["detail_command"],
         },
+        "configuration_projection": _compact_configuration_projection_payload(payload["configuration_projection"]),
         "workspace": {
             "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],

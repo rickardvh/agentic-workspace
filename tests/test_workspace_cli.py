@@ -1326,6 +1326,32 @@ def test_report_sections_expose_authority_and_compliance_boundaries(tmp_path: Pa
     assert strengths["schema_validity"] == "strong"
 
 
+def test_report_exposes_configuration_projection_without_expanding_config_detail(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    router = json.loads(capsys.readouterr().out)
+    projection = router["context"]["configuration_projection"]
+    assert projection["projection_status_counts"]["active"] >= 1
+    assert projection["unprojected_field_count"] == 0
+    assert projection["verification_probe_count"] >= 2
+    assert "facts" not in projection
+    hint = next(item for item in router["drill_down"]["section_hints"] if item["section"] == "configuration_projection")
+    assert "projection coverage" in hint["purpose_summary"]
+    assert hint["volume"] == "normal"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["selector"] == {"section": "configuration_projection"}
+    answer = selected["answer"]
+    assert answer["kind"] == "agentic-workspace/configuration-projection/v1"
+    assert answer["unprojected_fields"] == []
+    assert any(item["owner_boundary"] == "local-human-owned" for item in answer["facts"])
+    assert answer["verification"]["non_applicable_suppression"][0]["id"] == "ordinary-report-keeps-detail-sectioned"
+
+
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
     assert cli.main(["defaults", "--verbose", "--section", "improvement_intake", "--format", "json"]) == 0
 

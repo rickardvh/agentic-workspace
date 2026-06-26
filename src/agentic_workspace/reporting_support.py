@@ -587,6 +587,11 @@ def report_router_payload(
             cli_invoke=cli_invoke,
             target_arg=target_arg,
         ),
+        "configuration_projection": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section configuration_projection --format json",
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        ),
         "feature_tier": _command_with_cli_invoke(
             "agentic-workspace modules --target ./repo --format json", cli_invoke=cli_invoke, target_arg=target_arg
         ),
@@ -650,6 +655,7 @@ def report_router_payload(
         "section_hints": compact_section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
+        "configuration_projection": payload.get("configuration_projection", {}),
         "durable_intent": payload.get("durable_intent", {}),
         "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "external_work_reconciliation": _report_router_external_work_reconciliation(payload.get("external_work_reconciliation", {})),
@@ -719,6 +725,7 @@ def report_router_payload(
                 "context.routine_work_context",
                 "context.warning_summary",
                 "context.execution_shape",
+                "context.configuration_projection",
                 "context.improvement_intake",
                 "context.external_work_reconciliation",
                 "context.closeout_report",
@@ -776,9 +783,10 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
         "applicable_intent": 4,
         "operating_posture": 5,
         "external_work_reconciliation": 6,
-        "module_reports": 7,
-        "successful_completion_cost": 8,
-        "findings": 9,
+        "configuration_projection": 7,
+        "module_reports": 8,
+        "successful_completion_cost": 9,
+        "findings": 10,
     }
     ordered = sorted(
         hints,
@@ -1188,6 +1196,7 @@ def report_section_hints(
         "config": "resolved workspace config and local posture",
         "config_enforcement": "config fields classified by actual enforcement strength and operational routes",
         "config_effect_audit": "audit of actual config force, affected outputs, and agent-dependent settings",
+        "configuration_projection": "config-to-runtime projection coverage, suppression rules, owner exceptions, and verification probes",
         "registry": "module registry and lifecycle metadata",
     }
     findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
@@ -1229,6 +1238,7 @@ def report_section_hints(
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "config_enforcement": "inspect when deciding whether a config field is hard, operational, advisory, or local-only",
         "config_effect_audit": "inspect when verifying whether settings have concrete behavior or only advise agents",
+        "configuration_projection": "inspect when verifying configured behavior has ordinary-path projection or stays suppressed",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
     }
     if current_status in {"absent", "direct-or-no-active-plan"}:
