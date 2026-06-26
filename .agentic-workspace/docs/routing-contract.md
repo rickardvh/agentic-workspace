@@ -26,14 +26,15 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 - `.agentic-workspace/planning/state.toml` (`todo.active_items`): Repo-owned active task queue and smallest near-term follow-ons.
 - `.agentic-workspace/planning/state.toml` (`roadmap`): Repo-owned inactive long-horizon candidate work and promotion signals.
 - `.agentic-workspace/planning/execplans/`: Active, sequencing-heavy execution contracts.
-- `llms.txt`: Agent entrypoint router for external handoff and first-contact.
-- `agent-installation.md`: Detailed external install/adopt handoff instructions.
+- `AGENTS.md`: Agent entrypoint router for external handoff and first-contact after bootstrap.
+- `docs/agentic-workspace-install.md`: Detailed external install/adopt handoff instructions.
 
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
-- **Primary Command**: `agentic-workspace init --target ./repo --preset full`.
-- **Guest-Mode Command**: `agentic-workspace install --target ./repo --preset full`.
-- **Optional Local Sandbox Command**: `agentic-workspace install --target ./repo --preset full --local-only`.
+- **Start Here**: Read `docs/agentic-workspace-install.md`.
+- **Primary Command**: `agentic-workspace init --target ./repo --modules memory`.
+- **Module Selection**: Choose the smallest explicit `--modules` set that fits, such as `memory`, `planning`, `verification`, or `planning,memory`.
+- **Fallback Only**: Use `uvx` or `pipx run` only as an explicit temporary/debug fallback when the target repo has no installed CLI yet.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
 - **Orientation**: Return to the configured startup file (default `AGENTS.md`) after bootstrap is complete.
 

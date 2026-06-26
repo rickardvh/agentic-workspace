@@ -43,7 +43,7 @@ Do not treat prose surfaces as the primary authority once the structured substra
 
 Agentic Workspace surfaces use short headers to distinguish repo-owned policy from package-owned state.
 
-`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --format json` to inspect the resolved effective view before relying on a setting. Use `--verbose` or `--verbose` only when the tiny answer is insufficient.
+`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --format json` to inspect the resolved effective view before relying on a setting. Use `--select <field[,field...]>` for exact detail and `--verbose` only when the tiny answer is insufficient.
 
 Package-owned state surfaces, such as `.agentic-workspace/planning/state.toml`, use a stricter header. When the CLI is available, inspect them through `agentic-workspace summary --format json` and mutate through the package command named by that output instead of freehanding file structure.
 
@@ -98,7 +98,7 @@ The structured substrate is authoritative.
 The following prose surfaces are compatibility adapters and routing bridges:
 
 - `AGENTS.md`
-- `llms.txt`
+- `docs/agentic-workspace-install.md`
 - generated helper guidance exposed through compact report/default surfaces
 
 They should:
