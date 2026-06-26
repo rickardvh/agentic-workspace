@@ -1003,6 +1003,89 @@ def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path,
     assert "external-intent refresh-github" in effect["resolution_command"]
 
 
+def test_start_open_issue_intake_routes_refresh_and_grouping(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    evidence_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-06-26T08:00:00+00:00",
+                "refresh_metadata": {"adapter": "fixture", "open_count": 4, "closed_count": 0},
+                "items": [
+                    {"id": "#1739", "system": "github", "status": "open", "kind": "lane", "title": "Dogfooding friction lane"},
+                    {
+                        "id": "#1804",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "slice",
+                        "parent_id": "#1739",
+                        "title": "Warn on unsupported lane status",
+                    },
+                    {
+                        "id": "#1803",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "slice",
+                        "parent_id": "#1739",
+                        "title": "Repair affordances",
+                    },
+                    {"id": "#1802", "system": "github", "status": "open", "kind": "issue", "title": "Open issue intake"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1739-dogfooding", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1739", title = "Dogfooding friction lane", promotion_signal = "Promote first.", suggested_first_slice = "Review child slices." },
+  { id = "github-1802-open-issue-intake", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1802", title = "Open issue intake", promotion_signal = "Promote when selected.", suggested_first_slice = "Add intake routing." },
+]
+""",
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Ingest and prioritise open issues",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "refresh-open-issue-intake"
+    intake = payload["context"]["open_issue_intake"]
+    assert "external-intent refresh-github" in intake["command_owned_intake"]
+    assert "--apply-planning-candidates" in intake["command_owned_intake"]
+    assert intake["freshness"]["status"] == "fresh-enough"
+    assert intake["counts"]["open_issue_count"] == 4
+    assert intake["counts"]["planning_candidate_count"] == 2
+    grouping = intake["grouping_hints"]
+    assert grouping["parent_lanes"][0]["id"] == "#1739"
+    assert grouping["child_issue_clusters"][0]["parent_id"] == "#1739"
+    assert grouping["child_issue_clusters"][0]["child_count"] == 2
+    assert grouping["standalone_candidates"][0]["id"] == "#1802"
+    assert intake["detailed_issue_list_rule"]
+
+
 def test_start_cached_issue_reference_intent_is_advisory(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

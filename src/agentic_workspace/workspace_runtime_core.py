@@ -18362,6 +18362,68 @@ def _planning_candidate_suggestions_from_external_items(*, target_root: Path, it
     }
 
 
+def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    open_items = [item for item in items if isinstance(item, dict) and str(item.get("status", "")).strip() == "open"]
+    by_id = {str(item.get("id", "")).strip(): item for item in open_items if str(item.get("id", "")).strip()}
+    candidate_refs: set[str] = set()
+    for candidate in candidates or []:
+        refs = str(candidate.get("refs", "")).strip()
+        candidate_refs.update(f"#{match}" for match in re.findall(r"#(\d+)\b", refs))
+    parent_lanes: list[dict[str, Any]] = []
+    child_clusters: dict[str, dict[str, Any]] = {}
+    standalone: list[dict[str, Any]] = []
+    for item in open_items:
+        ref = str(item.get("id", "")).strip()
+        title = str(item.get("title", "")).strip()
+        kind = str(item.get("kind", "")).strip()
+        parent_id = str(item.get("parent_id", "")).strip()
+        compact_item = {
+            "id": ref,
+            "title": title,
+            "kind": kind or "issue",
+            "has_planning_candidate": ref in candidate_refs,
+        }
+        if kind in {"lane", "epic"}:
+            parent_lanes.append(compact_item)
+            continue
+        if parent_id:
+            cluster = child_clusters.setdefault(
+                parent_id,
+                {
+                    "parent_id": parent_id,
+                    "parent_title": str(by_id.get(parent_id, {}).get("title", "")).strip(),
+                    "child_count": 0,
+                    "children": [],
+                },
+            )
+            cluster["child_count"] += 1
+            if len(cluster["children"]) < 3:
+                cluster["children"].append(compact_item)
+            continue
+        standalone.append(compact_item)
+    parent_lanes = sorted(parent_lanes, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
+    clusters = sorted(child_clusters.values(), key=lambda item: (-int(item.get("child_count", 0)), str(item.get("parent_id", ""))))[:3]
+    standalone = sorted(standalone, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
+    return {
+        "kind": "external-issue-grouping-hints/v1",
+        "status": "present" if open_items else "none",
+        "open_item_count": len(open_items),
+        "parent_lane_count": sum(1 for item in open_items if str(item.get("kind", "")).strip() in {"lane", "epic"}),
+        "child_slice_count": sum(1 for item in open_items if str(item.get("parent_id", "")).strip()),
+        "standalone_count": sum(
+            1
+            for item in open_items
+            if str(item.get("kind", "")).strip() not in {"lane", "epic"} and not str(item.get("parent_id", "")).strip()
+        ),
+        "candidate_backed_count": len(candidate_refs),
+        "parent_lanes": parent_lanes,
+        "child_issue_clusters": clusters,
+        "standalone_candidates": standalone,
+        "detail_selector": "open_issue_intake.grouping_hints",
+        "rule": "Grouping hints are compact routing clues from provider-agnostic evidence, not a priority decision or full issue list.",
+    }
+
+
 def _toml_inline_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
@@ -18782,6 +18844,12 @@ def _refresh_github_external_intent_evidence(
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
     planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=items)
+    planning_candidate_grouping = _external_issue_grouping_hints(
+        items=items,
+        candidates=[
+            candidate for candidate in _list_payload(planning_candidate_suggestions.get("candidates")) if isinstance(candidate, dict)
+        ],
+    )
     stale_planning_candidate_reconciliation = _stale_planning_candidate_reconciliation(
         target_root=target_root,
         items=items,
@@ -18829,6 +18897,7 @@ def _refresh_github_external_intent_evidence(
         "state_source": state_source,
         "limit_source": limit_source,
         "planning_candidate_suggestions": planning_candidate_suggestions,
+        "planning_candidate_grouping": planning_candidate_grouping,
         "planning_candidate_apply": planning_candidate_apply,
         "stale_planning_candidate_reconciliation": stale_planning_candidate_reconciliation,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
@@ -20759,6 +20828,7 @@ _START_TINY_ONLY_SELECTORS = {
     "durable_intent",
     "immediate_next_allowed_action",
     "issue_reference_intent",
+    "open_issue_intake",
     "intent_custody",
     "intent_elicitation_protocol",
     "next_safe_action",
@@ -21825,6 +21895,35 @@ def _start_tiny_payload_fast(
                 "read_first": [command],
                 "open_execplan_only_when": startup_template["open_execplan_only_when"],
             }
+    open_issue_intake = _open_issue_intake_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
+    if (
+        open_issue_intake.get("status") != "not-applicable"
+        and not active_planning_present
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        payload["open_issue_intake"] = open_issue_intake
+        command = str(open_issue_intake.get("command_owned_intake") or "")
+        if payload["immediate_next_allowed_action"].get("action") == "choose-smallest-workflow-shape":
+            payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+                surface="start",
+                decision="open-issue-intake-route",
+                reason="The task asks to ingest, refresh, triage, or prioritise open issues; use the command-owned external-intent intake path first.",
+                required_next_action="refresh-open-issue-intake",
+                evidence_required=["external-intent evidence refresh/apply result"],
+            )
+            payload["immediate_next_allowed_action"] = {
+                "action": "refresh-open-issue-intake",
+                "summary": "Refresh/apply external issue intake, then inspect compact grouping hints before promoting a lane.",
+                "command": command,
+                "run": command,
+                "risk": "read-only-plus-planning-candidate-intake",
+                "required_inputs": ["target repo", "open issue intake task"],
+                "next_proof": "rerun start or summary after intake and use grouping hints before promotion.",
+                "read_first": [command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
     _apply_lane_shaping_gate_to_start_payload(
         payload=payload,
         config=config,
@@ -22400,6 +22499,101 @@ def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig,
             cli_invoke=config.cli_invoke,
         ),
         "rule": "Issue refs are external-intent handles until cached provider-agnostic evidence or active Planning owns the scope.",
+    }
+
+
+def _is_open_issue_intake_task(task_text: str | None) -> bool:
+    text = " ".join(str(task_text or "").lower().split())
+    if not text:
+        return False
+    issue_terms = ("open issue", "open issues", "github issue", "github issues", "external issue", "external issues", "backlog")
+    intake_terms = (
+        "ingest",
+        "intake",
+        "prioritise",
+        "prioritize",
+        "triage",
+        "review",
+        "refresh",
+        "group",
+        "lane",
+        "lanes",
+    )
+    return any(term in text for term in issue_terms) and any(term in text for term in intake_terms)
+
+
+def _planning_state_roadmap_candidates(*, target_root: Path) -> list[dict[str, Any]]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return []
+    try:
+        payload = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    roadmap = payload.get("roadmap", {}) if isinstance(payload, dict) else {}
+    candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    return [candidate for candidate in candidates if isinstance(candidate, dict)]
+
+
+def _open_issue_intake_payload(*, target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    if not _is_open_issue_intake_task(task_text):
+        return {"kind": "agentic-workspace/open-issue-intake/v1", "status": "not-applicable"}
+    path, relative_path, storage = _external_intent_evidence_read_location(target_root)
+    evidence: dict[str, Any] = {}
+    if path.exists():
+        try:
+            evidence = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            evidence = {}
+    items = [item for item in _list_payload(evidence.get("items")) if isinstance(item, dict)]
+    candidates = _planning_state_roadmap_candidates(target_root=target_root)
+    refreshed_at = str(evidence.get("refreshed_at") or _as_dict(evidence.get("refresh_metadata")).get("refreshed_at") or "").strip()
+    freshness_status = "fresh-enough" if path.exists() and refreshed_at else "needs-refresh"
+    grouping = _external_issue_grouping_hints(items=items, candidates=candidates)
+    refresh_command = _command_with_cli_invoke(
+        command="agentic-workspace external-intent refresh-github --target . --state all --storage cache --apply-planning-candidates --format json",
+        cli_invoke=cli_invoke,
+    )
+    status = "ready-to-review" if items or candidates else "refresh-needed"
+    recommended = "refresh-apply-intake" if freshness_status == "needs-refresh" else "inspect-candidate-grouping"
+    if candidates and freshness_status == "fresh-enough":
+        recommended = "promote-or-review-first-lane"
+    return {
+        "kind": "agentic-workspace/open-issue-intake/v1",
+        "status": status,
+        "trigger": "open-issue-intake-task",
+        "command_owned_intake": refresh_command,
+        "recommended_next_action": recommended,
+        "freshness": {
+            "status": freshness_status,
+            "source_path": relative_path if path.exists() else "",
+            "storage": storage if path.exists() else "none",
+            "refreshed_at": refreshed_at,
+            "refresh_before_relying_on_grouping": freshness_status != "fresh-enough",
+        },
+        "counts": {
+            "evidence_item_count": len(items),
+            "open_issue_count": sum(1 for item in items if str(item.get("status", "")).strip() == "open"),
+            "planning_candidate_count": len(candidates),
+        },
+        "grouping_hints": grouping,
+        "first_lane_hint": (
+            grouping.get("parent_lanes") or grouping.get("child_issue_clusters") or grouping.get("standalone_candidates") or [{}]
+        )[0],
+        "detail_selectors": ["open_issue_intake.grouping_hints", "routine_work_context"],
+        "detailed_issue_list_rule": "Detailed issue bodies and full issue lists stay behind external-intent evidence or explicit follow-up commands.",
+        "authority_boundary": _authority_boundary_payload(
+            surface="open_issue_intake",
+            observed_by_aw=[
+                "task requests open issue intake",
+                f"cached_evidence={path.exists()}",
+                f"planning_candidate_count={len(candidates)}",
+            ],
+            recommended_by_aw=[recommended],
+            agent_owned_decisions=["priority judgment", "which lane or candidate to promote first"],
+            human_owned_decisions=["business priority when grouping hints are insufficient"],
+            rule="AW exposes command-owned intake and grouping hints; it does not replace human issue prioritization.",
+        ),
     }
 
 

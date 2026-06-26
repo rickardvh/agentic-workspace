@@ -776,7 +776,31 @@ candidates = [
                         "closedAt": "2026-05-20T00:00:00Z",
                         "body": "",
                         "comments": 0,
-                    }
+                    },
+                    {
+                        "number": 11,
+                        "title": "Parent intake lane",
+                        "state": "OPEN",
+                        "url": "https://github.com/acme/project/issues/11",
+                        "labels": [{"name": "priority/high"}],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-05-20T00:00:00Z",
+                        "closedAt": "",
+                        "body": "## Issue kind\nlane\n",
+                        "comments": 0,
+                    },
+                    {
+                        "number": 12,
+                        "title": "Child intake slice",
+                        "state": "OPEN",
+                        "url": "https://github.com/acme/project/issues/12",
+                        "labels": [{"name": "priority/medium"}],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-05-20T00:00:00Z",
+                        "closedAt": "",
+                        "body": "## Issue kind\nslice\n\nParent: #11\n",
+                        "comments": 0,
+                    },
                 ]
             )
         )
@@ -801,6 +825,10 @@ candidates = [
     dry_run_payload = json.loads(capsys.readouterr().out)
 
     assert dry_run_exit_code == 0
+    grouping = dry_run_payload["planning_candidate_grouping"]
+    assert grouping["parent_lanes"][0]["id"] == "#11"
+    assert grouping["child_issue_clusters"][0]["parent_id"] == "#11"
+    assert grouping["child_issue_clusters"][0]["child_count"] == 1
     stale_candidate = dry_run_payload["stale_planning_candidate_reconciliation"]["stale_candidates"][0]
     assert stale_candidate["id"] == "github-10-stale"
     assert stale_candidate["reconcile_command"] == (
@@ -830,7 +858,9 @@ candidates = [
     assert reconciliation["status"] == "applied"
     assert reconciliation["stale_candidates"][0]["id"] == "github-10-stale"
     state = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    assert state["roadmap"]["candidates"] == []
+    candidate_ids = {candidate["id"] for candidate in state["roadmap"]["candidates"]}
+    assert "github-10-stale" not in candidate_ids
+    assert candidate_ids == {"github-11-parent-intake-lane", "github-12-child-intake-slice"}
     cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
     assert cache_payload["previous_items"][0]["id"] == "#10"
 
