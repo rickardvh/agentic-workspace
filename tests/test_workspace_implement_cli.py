@@ -1618,6 +1618,15 @@ owner = "human+agent"
 ownership = "repo_owned"
 authority = "primary"
 summary = "Mixed-audience documentation surface."
+
+[[authority_surfaces]]
+concern = "human-owned-agent-aid"
+surface = "aids/agent.md"
+owner = "human"
+audience = "agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Human-owned surface intended for agent consumption."
 """,
     )
     _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
@@ -1625,6 +1634,7 @@ summary = "Mixed-audience documentation surface."
     _write(tmp_path / "agent" / "runbook.md", "# Runbook\n")
     _write(tmp_path / "contracts" / "schema.json", "{}\n")
     _write(tmp_path / "docs" / "mixed.md", "# Mixed\n")
+    _write(tmp_path / "aids" / "agent.md", "# Agent aid\n")
 
     assert (
         cli.main(
@@ -1638,6 +1648,7 @@ summary = "Mixed-audience documentation surface."
                 "agent/runbook.md",
                 "contracts/schema.json",
                 "docs/mixed.md",
+                "aids/agent.md",
                 "--select",
                 "change_impact",
                 "--format",
@@ -1649,10 +1660,10 @@ summary = "Mixed-audience documentation surface."
 
     impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
     assert impact["optimization_posture"]["status"] == "review-required"
-    assert impact["optimization_posture"]["active_path_count"] == 4
+    assert impact["optimization_posture"]["active_path_count"] == 5
     assert impact["optimization_posture"]["owner_boundary_path_count"] == 0
     assert impact["optimization_posture"]["review_required_path_count"] == 1
-    assert impact["optimization_posture"]["audience_override_count"] == 4
+    assert impact["optimization_posture"]["audience_override_count"] == 5
     assert impact["optimization_posture"]["effective_target"] == "mixed"
     assert impact["optimization_posture"]["review_required"] is True
     by_path = {item["path"]: item for item in impact["paths"]}
@@ -1669,6 +1680,7 @@ summary = "Mixed-audience documentation surface."
     assert human_posture["exempt_from_optimization_pressure"] is False
     assert human_posture["owner"] == "human"
     assert human_posture["audience"] == "human"
+    assert human_posture["audience_source"] == "owner-inferred"
     assert human_posture["effective_target"] == "human-readability-control-review"
     assert human_posture["effective_optimization_bias"] == "human-readability-control-review"
     assert "human-readability" in human_posture["signals"]
@@ -1677,19 +1689,29 @@ summary = "Mixed-audience documentation surface."
     assert agent_posture["exempt_from_optimization_pressure"] is False
     assert agent_posture["owner"] == "agent"
     assert agent_posture["audience"] == "agent"
+    assert agent_posture["audience_source"] == "owner-inferred"
     assert agent_posture["effective_target"] == "agent-efficiency"
     assert agent_posture["effective_optimization_bias"] == "agent-efficiency"
     assert "machine-readable-structure" in agent_posture["signals"]
     machine_posture = by_path["contracts/schema.json"]["optimization_posture"]
     assert machine_posture["status"] == "active"
     assert machine_posture["audience"] == "machine"
+    assert machine_posture["audience_source"] == "owner-inferred"
     assert machine_posture["effective_target"] == "stable-contract-validation"
     assert "stable-contract" in machine_posture["signals"]
     mixed_posture = by_path["docs/mixed.md"]["optimization_posture"]
     assert mixed_posture["status"] == "review-required"
     assert mixed_posture["audience"] == "mixed"
+    assert mixed_posture["audience_source"] == "owner-inferred"
     assert mixed_posture["effective_target"] == "mixed-audience-review"
     assert "tradeoff-review" in mixed_posture["signals"]
+    explicit_agent_posture = by_path["aids/agent.md"]["optimization_posture"]
+    assert explicit_agent_posture["status"] == "active"
+    assert explicit_agent_posture["owner"] == "human"
+    assert explicit_agent_posture["audience"] == "agent"
+    assert explicit_agent_posture["audience_source"] == "explicit"
+    assert explicit_agent_posture["effective_target"] == "agent-efficiency"
+    assert "agent-efficiency" in explicit_agent_posture["signals"]
 
 
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:

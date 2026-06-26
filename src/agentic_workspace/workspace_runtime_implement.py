@@ -210,6 +210,7 @@ def _optimization_posture_for_path(
     optimization_bias: str,
 ) -> dict[str, Any]:
     owner = str(path_payload.get("owner") or "unknown")
+    audience_value = str(path_payload.get("audience") or "").strip().lower()
     surface_origin = str(path_payload.get("surface_origin") or "unknown")
     authority = str(path_payload.get("authority") or "unknown")
     hard_blocked = bool(path_payload.get("hard_blockers"))
@@ -229,30 +230,57 @@ def _optimization_posture_for_path(
     has_agent = bool(owner_tokens & {"agent", "agents"})
     has_machine = bool(owner_tokens & {"machine", "machines"})
     audience_conflict = sum((has_human, has_agent, has_machine)) > 1
-    if owner_key in {"mixed", "hybrid"} or audience_conflict:
+    explicit_audience_tokens = {token.strip() for token in audience_value.replace("+", ",").replace("/", ",").split(",") if token.strip()}
+    explicit_audience_conflict = len(explicit_audience_tokens & {"human", "agent", "machine"}) > 1
+    if audience_value in {"mixed", "hybrid"} or explicit_audience_conflict:
         audience = "mixed"
-        audience_source = "owner"
+        audience_source = "explicit"
+        effective_target = "mixed-audience-review"
+        effective_optimization_bias = "preserve-human-and-agent-usability"
+        audience_reason = "explicit mixed-audience surface needs review when human, agent, or machine targets trade off"
+        signals = ["mixed-audience", "reviewability", "machine-readable-structure", "tradeoff-review"]
+    elif audience_value in {"human", "agent", "machine"}:
+        audience = audience_value
+        audience_source = "explicit"
+        if audience == "human":
+            effective_target = "human-readability-control-review"
+            effective_optimization_bias = "human-readability-control-review"
+            audience_reason = "explicit human-use audience is optimised for human readability, control, and review"
+            signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
+        elif audience == "agent":
+            effective_target = "agent-efficiency"
+            effective_optimization_bias = "agent-efficiency"
+            audience_reason = "explicit agent-use audience is optimised for agent efficiency and machine-readable structure"
+            signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
+        else:
+            effective_target = "stable-contract-validation"
+            effective_optimization_bias = "stable-contract-validation"
+            audience_reason = "explicit machine-use audience is optimised for stable contracts and validation"
+            signals = ["stable-contract", "validation", "machine-readable-structure"]
+    elif owner_key in {"mixed", "hybrid"} or audience_conflict:
+        audience = "mixed"
+        audience_source = "owner-inferred"
         effective_target = "mixed-audience-review"
         effective_optimization_bias = "preserve-human-and-agent-usability"
         audience_reason = "mixed-audience surface needs review when human, agent, or machine targets trade off"
         signals = ["mixed-audience", "reviewability", "machine-readable-structure", "tradeoff-review"]
     elif has_human:
         audience = "human"
-        audience_source = "owner"
+        audience_source = "owner-inferred"
         effective_target = "human-readability-control-review"
         effective_optimization_bias = "human-readability-control-review"
         audience_reason = "human-use surface is optimised for human readability, control, and review"
         signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
     elif has_agent:
         audience = "agent"
-        audience_source = "owner"
+        audience_source = "owner-inferred"
         effective_target = "agent-efficiency"
         effective_optimization_bias = "agent-efficiency"
         audience_reason = "agent-use surface is optimised for agent efficiency and machine-readable structure"
         signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
     elif has_machine:
         audience = "machine"
-        audience_source = "owner"
+        audience_source = "owner-inferred"
         effective_target = "stable-contract-validation"
         effective_optimization_bias = "stable-contract-validation"
         audience_reason = "machine-use surface is optimised for stable contracts and validation"
