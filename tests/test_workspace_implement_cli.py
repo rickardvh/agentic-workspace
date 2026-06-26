@@ -1523,6 +1523,9 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     source = by_path["src/agentic_workspace/workspace_runtime_primitives.py"]
     assert source["owner"] == "subsystem:workspace-runtime"
     assert source["surface_origin"] == "source-authored"
+    assert source["optimization_posture"]["status"] == "owner-boundary"
+    assert source["optimization_posture"]["exempt_from_optimization_pressure"] is True
+    assert "explicit owner boundary" in source["optimization_posture"]["reason"]
     assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
     assert "subsystem:workspace-runtime" in source["related"]["proof_lanes"]
 
@@ -1547,12 +1550,76 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert unknown["ownership_matched"] is False
     assert unknown["signal"] == "warning"
     assert "No explicit ownership ledger match" in unknown["warnings"][0]
+    assert unknown["optimization_posture"]["status"] == "active"
+    assert unknown["optimization_posture"]["optimization_bias"] == "balanced"
 
     assert impact["generated_path_count"] == 1
     assert impact["managed_path_count"] == 1
     assert impact["unknown_path_count"] == 1
     assert impact["hard_blocker_count"] == 1
     assert impact["proof_impact"]["required_commands"]
+
+
+def test_implement_change_impact_routes_optimization_posture_around_owner_boundaries(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+improvement_latitude = "proactive"
+optimization_bias = "agent-efficiency"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[authority_surfaces]]
+concern = "human-authored-plan"
+surface = "strategy/human-plan.md"
+owner = "human"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Human-owned strategy surface."
+""",
+    )
+    _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
+    _write(tmp_path / "strategy" / "human-plan.md", "# Strategy\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/feature.py",
+                "strategy/human-plan.md",
+                "--select",
+                "change_impact",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
+    assert impact["optimization_posture"]["status"] == "mixed"
+    assert impact["optimization_posture"]["active_path_count"] == 1
+    assert impact["optimization_posture"]["owner_boundary_path_count"] == 1
+    by_path = {item["path"]: item for item in impact["paths"]}
+    source_posture = by_path["src/feature.py"]["optimization_posture"]
+    assert source_posture["status"] == "active"
+    assert source_posture["improvement_latitude"] == "proactive"
+    assert source_posture["optimization_bias"] == "agent-efficiency"
+    assert "agent-efficiency" in source_posture["signals"]
+    human_posture = by_path["strategy/human-plan.md"]["optimization_posture"]
+    assert human_posture["status"] == "owner-boundary"
+    assert human_posture["exempt_from_optimization_pressure"] is True
+    assert human_posture["owner"] == "human"
 
 
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
@@ -1986,6 +2053,12 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert payload["context"]["optimization_posture"] == {
+        "status": "active",
+        "active_path_count": 1,
+        "owner_boundary_path_count": 0,
+        "closeout_required": True,
+    }
     planning_gate = payload["context"]["planning_safety_gate"]
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"

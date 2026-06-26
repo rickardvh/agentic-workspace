@@ -203,7 +203,118 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
     }
 
 
-def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+def _optimization_posture_for_path(
+    *,
+    path_payload: dict[str, Any],
+    improvement_latitude: str,
+    optimization_bias: str,
+) -> dict[str, Any]:
+    owner = str(path_payload.get("owner") or "unknown")
+    surface_origin = str(path_payload.get("surface_origin") or "unknown")
+    authority = str(path_payload.get("authority") or "unknown")
+    hard_blocked = bool(path_payload.get("hard_blockers"))
+    ownership = str(path_payload.get("ownership") or "")
+    explicit_owner_boundary = owner not in {"unknown", "repo", "workspace"} or ownership in {
+        "module_managed",
+        "managed_fence",
+    }
+    exempt = hard_blocked or surface_origin in {"generated", "managed"} or explicit_owner_boundary
+    status = "owner-boundary" if exempt else "active"
+    if hard_blocked:
+        reason = "direct edit is blocked by authority or generated-surface routing"
+    elif surface_origin == "generated":
+        reason = "generated projection should route through its source contract before optimisation pressure"
+    elif surface_origin == "managed":
+        reason = "managed or module-owned surface preserves owner boundary before optimisation pressure"
+    elif explicit_owner_boundary:
+        reason = f"explicit owner boundary {owner} requires review/escalation instead of silent optimisation pressure"
+    else:
+        reason = "configured repo optimisation posture applies to this implementation path"
+    closeout_questions = (
+        [
+            "Was optimisation pressure intentionally not applied because an owner or authority boundary controls this surface?",
+            "Was review or escalation routed when the owner boundary matters?",
+        ]
+        if exempt
+        else [
+            "Did the implementation improve or preserve agent-readable structure, efficiency, reuse, residue handling, and architecture boundaries?",
+            "If the configured optimisation posture was not followed, is the divergence explicit before completion claims?",
+        ]
+    )
+    return {
+        "status": status,
+        "improvement_latitude": improvement_latitude,
+        "optimization_bias": optimization_bias,
+        "owner": owner,
+        "surface_origin": surface_origin,
+        "authority": authority,
+        "exempt_from_optimization_pressure": exempt,
+        "reason": reason,
+        "signals": []
+        if exempt
+        else ["agent-efficiency", "proactive-improvement", "reuse-pressure", "architecture-boundary", "residue-routing"],
+        "closeout_questions": closeout_questions,
+    }
+
+
+def _optimization_posture_summary(paths: list[dict[str, Any]]) -> dict[str, Any]:
+    posture_items = [_as_dict(path.get("optimization_posture")) for path in paths if isinstance(path, dict)]
+    active_count = sum(1 for item in posture_items if item.get("status") == "active")
+    exempt_count = sum(1 for item in posture_items if item.get("status") == "owner-boundary")
+    if active_count and exempt_count:
+        status = "mixed"
+    elif active_count:
+        status = "active"
+    elif exempt_count:
+        status = "owner-boundary"
+    else:
+        status = "unavailable"
+    return {
+        "kind": "agentic-workspace/optimization-posture-routing/v1",
+        "status": status,
+        "active_path_count": active_count,
+        "owner_boundary_path_count": exempt_count,
+        "closeout_required": bool(active_count or exempt_count),
+        "rule": "Configured improvement_latitude and optimization_bias apply to implementation paths unless explicit ownership, managed/generated status, or direct-edit authority routes the work differently.",
+        "active_closeout_question": "Did the implementation improve or preserve agent-readable structure, efficiency, reuse, residue handling, and architecture boundaries?",
+        "owner_boundary_question": "Was optimisation pressure withheld or routed because an explicit owner or authority boundary controls the surface?",
+    }
+
+
+def _optimization_posture_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    proof: dict[str, Any],
+    cli_invoke: str,
+    improvement_latitude: str,
+    optimization_bias: str,
+) -> dict[str, Any]:
+    if not changed_paths:
+        return _optimization_posture_summary([])
+    ownership_payload = _ownership_payload(target_root=target_root, descriptors=_module_operations())
+    paths = [
+        _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
+        for path in changed_paths
+    ]
+    for path_payload in paths:
+        path_payload["optimization_posture"] = _optimization_posture_for_path(
+            path_payload=path_payload,
+            improvement_latitude=improvement_latitude,
+            optimization_bias=optimization_bias,
+        )
+    return _optimization_posture_summary(paths)
+
+
+def _change_impact_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    proof: dict[str, Any],
+    cli_invoke: str,
+    improvement_latitude: str = "reactive",
+    optimization_bias: str = "neutral",
+) -> dict[str, Any]:
     if not changed_paths:
         return {
             "kind": "agentic-workspace/change-impact/v1",
@@ -219,6 +330,12 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
         _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
         for path in changed_paths
     ]
+    for path_payload in paths:
+        path_payload["optimization_posture"] = _optimization_posture_for_path(
+            path_payload=path_payload,
+            improvement_latitude=improvement_latitude,
+            optimization_bias=optimization_bias,
+        )
     facts = [f"{item['path']}: {fact}" for item in paths for fact in item["facts"]]
     warnings = [f"{item['path']}: {warning}" for item in paths for warning in item["warnings"]]
     hard_blockers = [f"{item['path']}: {blocker}" for item in paths for blocker in item["hard_blockers"]]
@@ -235,6 +352,7 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
         "unknown_path_count": unknown_count,
         "warning_count": len(warnings),
         "hard_blocker_count": len(hard_blockers),
+        "optimization_posture": _optimization_posture_summary(paths),
         "paths": paths,
         "facts": facts,
         "warnings": warnings,
@@ -246,7 +364,7 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
             ),
         },
-        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, and proof selection for the changed paths.",
+        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, configured optimisation posture, and proof selection for the changed paths.",
     }
 
 
@@ -543,7 +661,22 @@ def _implement_payload(
         )
     if include_change_impact:
         payload["change_impact"] = _change_impact_payload(
-            target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            proof=proof,
+            cli_invoke=config.cli_invoke,
+            improvement_latitude=config.improvement_latitude,
+            optimization_bias=config.optimization_bias,
+        )
+        payload["optimization_posture"] = payload["change_impact"].get("optimization_posture", {})
+    else:
+        payload["optimization_posture"] = _optimization_posture_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            proof=proof,
+            cli_invoke=config.cli_invoke,
+            improvement_latitude=config.improvement_latitude,
+            optimization_bias=config.optimization_bias,
         )
     if include_assurance_requirements:
         payload["assurance_requirements"] = _assurance_requirements_report_payload(
@@ -679,6 +812,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not (isinstance(reuse_pressure, dict) and reuse_pressure.get("status") == "deferred"):
         context_reuse_pressure["state"] = reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None
         context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
+    optimization_posture = _as_dict(payload.get("optimization_posture"))
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
     delegation_attention = _delegation_decision_requires_attention(delegation_decision)
     advisory_selectors = [
@@ -872,6 +1006,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
             "reuse_pressure": context_reuse_pressure,
+            "optimization_posture": {
+                "status": optimization_posture.get("status", "unavailable"),
+                "active_path_count": optimization_posture.get("active_path_count", 0),
+                "owner_boundary_path_count": optimization_posture.get("owner_boundary_path_count", 0),
+                "closeout_required": optimization_posture.get("closeout_required", False),
+            },
             "generated_surface_trust": {
                 "status": payload.get("generated_surface_trust", {}).get("status", "not-applicable")
                 if isinstance(payload.get("generated_surface_trust"), dict)
