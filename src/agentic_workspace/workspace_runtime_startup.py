@@ -807,7 +807,36 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
             "question_to_user": question,
         }
-    if not active_planning_present and _is_prep_only_handoff_task(task_text):
+    if (
+        not active_planning_present
+        and task_path_references.get("path_reference_kind") == "path-scoped-work"
+        and (not changed_paths)
+        and (not _is_config_posture_task(task_text))
+    ):
+        path_scoped_paths = _list_payload(task_path_references.get("path_scoped_paths")) or task_mentioned_paths
+        implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
+        if implement_command:
+            implement_command = implement_command.replace("<paths>", " ".join(path_scoped_paths))
+        else:
+            implement_command = _command_with_cli_invoke(
+                command=f"agentic-workspace implement --changed {' '.join(path_scoped_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-known-task-paths",
+            "summary": "The task text explicitly asks for work on existing repo paths. Run the implement surface for those paths before broader startup or raw workspace reads.",
+            "command": implement_command,
+            "run": implement_command,
+            "risk": "read-only changed-path routing",
+            "required_inputs": ["target repo", "named path(s)"],
+            "next_proof": "use the proof.required_commands from implement output",
+            "read_first": [implement_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "detected_paths": path_scoped_paths,
+            "path_reference_kind": task_path_references.get("path_reference_kind"),
+            "matched_action_terms": _list_payload(task_path_references.get("matched_action_terms")),
+        }
+    elif not active_planning_present and _is_prep_only_handoff_task(task_text):
         prep_only = _prep_only_handoff_payload(config=config)
         planning_command = prep_only["first_command"]
         summary_command = prep_only["after_write"]

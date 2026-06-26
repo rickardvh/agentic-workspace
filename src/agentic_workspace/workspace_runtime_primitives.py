@@ -21557,7 +21557,36 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
             "question_to_user": question,
         }
-    if not active_planning_present and _is_prep_only_handoff_task(task_text):
+    if (
+        not active_planning_present
+        and task_path_references.get("path_reference_kind") == "path-scoped-work"
+        and (not changed_paths)
+        and (not _is_config_posture_task(task_text))
+    ):
+        path_scoped_paths = _list_payload(task_path_references.get("path_scoped_paths")) or task_mentioned_paths
+        implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
+        if implement_command:
+            implement_command = implement_command.replace("<paths>", " ".join(path_scoped_paths))
+        else:
+            implement_command = _command_with_cli_invoke(
+                command=f"agentic-workspace implement --changed {' '.join(path_scoped_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
+        payload["immediate_next_allowed_action"] = {
+            "action": "inspect-known-task-paths",
+            "summary": "The task text explicitly asks for work on existing repo paths. Run the implement surface for those paths before broader startup or raw workspace reads.",
+            "command": implement_command,
+            "run": implement_command,
+            "risk": "read-only changed-path routing",
+            "required_inputs": ["target repo", "named path(s)"],
+            "next_proof": "use the proof.required_commands from implement output",
+            "read_first": [implement_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "detected_paths": path_scoped_paths,
+            "path_reference_kind": task_path_references.get("path_reference_kind"),
+            "matched_action_terms": _list_payload(task_path_references.get("matched_action_terms")),
+        }
+    elif not active_planning_present and _is_prep_only_handoff_task(task_text):
         prep_only = _prep_only_handoff_payload(config=config)
         payload["prep_only_handoff"] = prep_only
         payload["immediate_next_allowed_action"] = {
@@ -22963,6 +22992,27 @@ def _task_mentioned_existing_paths(*, task_text: str | None, target_root: Path) 
     return found[:6]
 
 
+_PATH_SCOPED_ACTION_TERMS = (
+    "change",
+    "edit",
+    "explain",
+    "fix",
+    "implement",
+    "inspect",
+    "modify",
+    "review",
+    "update",
+    "validate",
+)
+
+
+def _task_path_action_terms_for_window(text: str) -> list[str]:
+    lowered = text.lower()
+    return [
+        term for term in _PATH_SCOPED_ACTION_TERMS if re.search(rf"(?<![a-z0-9_-]){re.escape(term)}(?:ing|ed|s)?(?![a-z0-9_-])", lowered)
+    ]
+
+
 def _task_path_reference_payload(*, task_text: str | None, detected_paths: list[str]) -> dict[str, Any]:
     paths = _normalize_changed_paths(detected_paths)
     if not paths:
@@ -22972,17 +23022,35 @@ def _task_path_reference_payload(*, task_text: str | None, detected_paths: list[
             "path_reference_kind": "none",
             "detected_paths": [],
         }
+    text = str(task_text or "")
+    lowered = text.lower()
+    scoped_paths: list[str] = []
+    matched_action_terms: list[str] = []
+    for path in paths:
+        path_index = lowered.find(path.lower())
+        if path_index < 0:
+            continue
+        window = text[max(0, path_index - 80) : min(len(text), path_index + len(path) + 80)]
+        action_terms = _task_path_action_terms_for_window(window)
+        if not action_terms:
+            continue
+        scoped_paths.append(path)
+        for term in action_terms:
+            if term not in matched_action_terms:
+                matched_action_terms.append(term)
+    path_reference_kind = "path-scoped-work" if scoped_paths else "conceptual-reference"
     return {
         "kind": "agentic-workspace/task-path-references/v1",
         "status": "present",
-        "path_reference_kind": "conceptual-reference",
+        "path_reference_kind": path_reference_kind,
         "detected_paths": paths,
-        "path_scoped_paths": [],
+        "path_scoped_paths": scoped_paths,
+        "matched_action_terms": matched_action_terms,
         "agent_decision_required": True,
-        "rule": "Named repo paths in task text are observed facts, not changed-path routing authority. Use explicit --changed paths when path-scoped workflow is known.",
+        "rule": "Named repo paths in task text are observed facts. Explicit path-work verbs near those paths may route changed-path inspection; otherwise references stay conceptual.",
         "limits": [
             "Conceptual references to workflow/config/docs do not force implement --changed.",
-            "AW does not infer path-scoped work from prompt keywords, filenames, or prose markers.",
+            "AW does not infer path-scoped work from filenames or prose markers alone.",
             "Explicit --changed arguments remain authoritative changed-path routing.",
         ],
     }
