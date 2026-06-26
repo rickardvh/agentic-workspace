@@ -51,10 +51,22 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     projection = payload["configuration_projection"]
     assert projection["kind"] == "agentic-workspace/configuration-projection/v1"
     assert projection["projection_status_counts"]["active"] >= 1
+    assert projection["projection_status_counts"]["latent"] >= 1
     assert projection["projection_status_counts"]["unprojected"] == 0
     assert projection["unprojected_fields"] == []
+    projection_sources = {field["id"] for field in projection["facts"]}
+    assert {
+        "ownership:authority-ledger",
+        "system-intent:durable-intent",
+        "verification:manifest",
+        "memory:routing-metadata",
+        "planning:active-state-obligations",
+    } <= projection_sources
     obligation_projection = next(field for field in projection["facts"] if field["field"] == "workflow_obligations.<name>.*")
     assert obligation_projection["projection_status"] == "active"
+    assert obligation_projection["source_surface"] == ".agentic-workspace/config.toml"
+    assert obligation_projection["ordinary_path_routes"]
+    assert obligation_projection["trigger"]
     assert "scope_tags" in obligation_projection["applicability_signal"]
     assert "hide obligation detail" in obligation_projection["suppression_rule"]
     assert obligation_projection["owner_boundary"] == "human-owned"
@@ -66,6 +78,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert projection["detail_command"].endswith(
         "agentic-workspace report --target ./repo --section configuration_projection --format json"
     )
+    surfacing_eval = projection["selective_surfacing_evaluation"]
+    assert surfacing_eval["status"] == "pass"
+    assert {check["id"]: check["result"] for check in surfacing_eval["checks"]} == {
+        "required-guidance-present": "pass",
+        "positive-and-suppression-scenarios-present": "pass",
+        "irrelevant-guidance-suppressed-from-compact-output": "pass",
+        "compact-output-size-bounded": "pass",
+    }
+    assert surfacing_eval["metrics"]["projection_row_count"] == len(projection["facts"])
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
@@ -205,6 +226,40 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "cheap switching across agents and subscriptions",
         "persisted shared knowledge beats rediscovery",
     ]
+
+
+def test_configuration_projection_reports_selector_backed_and_stale_sources(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[modules]
+enabled = ["planning", "memory", "verification"]
+""".strip(),
+    )
+    verification_manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    if verification_manifest.exists():
+        verification_manifest.unlink()
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    projection = payload["configuration_projection"]
+    facts = {field["id"]: field for field in projection["facts"]}
+    assert facts["ownership:authority-ledger"]["projection_status"] == "selector-backed"
+    assert facts["memory:routing-metadata"]["projection_status"] == "selector-backed"
+    assert facts["verification:manifest"]["projection_status"] == "stale"
+    assert projection["projection_status_counts"]["selector-backed"] >= 2
+    assert projection["projection_status_counts"]["stale"] >= 1
+    assert facts["verification:manifest"]["ordinary_path_routes"]
+    assert "missing enabled manifest" in facts["verification:manifest"]["suppression_rule"]
+    scenarios = {scenario["id"]: scenario["covered"] for scenario in projection["selective_surfacing_evaluation"]["scenarios"]}
+    assert scenarios["selector-backed-owner-memory-intent"] is True
+    assert scenarios["stale-or-unprojected-gap"] is True
 
 
 def test_config_command_reports_selected_fields_for_agent_startup(tmp_path: Path, capsys) -> None:
