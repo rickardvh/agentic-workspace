@@ -1369,6 +1369,59 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
 
 
+def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    router = json.loads(capsys.readouterr().out)
+    ordinary_path = router["context"]["report_profile"]["ordinary_agent_path"]
+    assert ordinary_path["primary_design_unit"] == "phase_question"
+    assert ordinary_path["rule"] == "Answer the current phase question first; commands are routed affordances, not the workflow."
+    assert [item["phase"] for item in ordinary_path["phase_questions"]] == [
+        "startup",
+        "work_shaping",
+        "governing_knowledge",
+        "implementation_context",
+        "proof",
+        "closeout",
+        "continuation",
+    ]
+    assert ordinary_path["phase_questions"][0]["question"] == "What is the smallest safe context before acting?"
+    assert "agentic-workspace start" in ordinary_path["phase_questions"][0]["primary_affordance"]
+    assert "command inventories" in ordinary_path["phase_questions"][0]["boundary"]
+    assert ordinary_path["phase_questions"][3]["phase"] == "implementation_context"
+    assert "implement --changed <paths>" in ordinary_path["phase_questions"][3]["primary_affordance"]
+    assert "intent-satisfaction judgment" in ordinary_path["phase_questions"][4]["boundary"]
+    assert ordinary_path["phase_questions"][6]["question"] == "How can a future agent resume without replaying chat?"
+
+
+def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    router = json.loads(capsys.readouterr().out)
+    ordinary_path = router["context"]["report_profile"]["ordinary_agent_path"]
+    lane_model = ordinary_path["lane_completion_model"]
+    assert lane_model["kind"] == "agentic-workspace/ordinary-lane-completion-model/v1"
+    assert lane_model["visibility_disposition"]["question"].startswith("Does this surface change")
+    assert "start" in lane_model["visibility_disposition"]["retained_first_contact"]
+    assert "preflight" in lane_model["visibility_disposition"]["diagnostic_or_recovery"]
+    assert "docs/reference/" in lane_model["visibility_disposition"]["generated_or_reference"]
+    assert "claim_boundary" in lane_model["artifact_lifecycle"]["minimal_survivor_shape"]
+    assert [scenario["id"] for scenario in lane_model["restart_scenarios"]] == [
+        "direct-work",
+        "known-changed-paths",
+        "active-lane-continuation",
+        "takeover-or-recovery",
+        "parent-lane-closeout",
+    ]
+    assert "owner surface before broad reading" in lane_model["affordance_first_rules"]
+    assert lane_model["reasoning_skill_boundary"].startswith("Use reasoning skills")
+    assert "restart scenarios reviewed or routed" in lane_model["closeout_checks"]
+
+
 def test_selective_surfacing_evaluation_fails_on_missing_guidance_or_compact_noise(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     config = cli._load_workspace_config(target_root=tmp_path)

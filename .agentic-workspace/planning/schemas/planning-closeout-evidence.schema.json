@@ -53,9 +53,6 @@
     "closure_check": {
       "$ref": "#/$defs/string_map"
     },
-    "dogfooding_evidence": {
-      "type": "object"
-    },
     "durable_residue": {
       "$ref": "#/$defs/string_map"
     },

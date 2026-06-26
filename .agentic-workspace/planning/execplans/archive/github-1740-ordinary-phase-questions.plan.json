@@ -1,0 +1,395 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Complete cheapest safe ordinary path lane",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Complete active lane lane-1739-cheapest-safe-ordinary-path on PR #1805, covering GitHub #1740, #1741, #1743, #1744, and #1745.",
+    "hard_constraints": "Keep scope bounded to the active lane: phase questions, surface-value disposition, artifact lifecycle compression, restart/continuation validation, and affordance-first ordinary packets.",
+    "agent_may_decide": "Bounded doc/runtime wording, compact report packet fields, focused tests, validation tightening, and lane closeout routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Archived as PR #1805 lane evidence; no active continuation on master.",
+    "proof_expectations": [
+      "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the rest of lane lane-1739-cheapest-safe-ordinary-path on PR #1805\" --format json",
+      "uv run pytest tests/test_workspace_cli.py -q",
+      "make maintainer-surfaces",
+      "uv run python scripts/run_agentic_workspace.py summary --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/",
+      ".agentic-workspace/planning/lanes/",
+      "docs/package/ordinary-continuity-loop.md",
+      "docs/package/overview.md",
+      "src/agentic_workspace/reporting_support.py",
+      "tests/test_workspace_cli.py"
+    ],
+    "completion_criteria": [
+      "Docs and ordinary report guidance define phase questions as the ordinary product design unit.",
+      "Visible surfaces have action-changing disposition and routed boundaries.",
+      "Artifact lifecycle classes and minimal survivor shape are defined.",
+      "Restart/continuation scenarios are exposed as design tests.",
+      "Ordinary report guidance exposes affordance-first lane packets before command choices.",
+      "Focused runtime test and maintainer-surface validation pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Complete active lane #1739 so ordinary Agentic Workspace operation is framed around the cheapest safe path: phase questions, visible-surface value, lifecycle compression, restart validation, and affordance-first packets."
+  ],
+  "non_goals": [
+    "Do not introduce new root commands or broad command-generation restructuring in this slice.",
+    "Do not create app, dependency, database, schema, or unrelated scaffold files."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete active lane lane-1739-cheapest-safe-ordinary-path on PR #1805, covering GitHub #1740, #1741, #1743, #1744, and #1745.",
+      "constraints": "Keep scope bounded to the active lane: phase questions, surface-value disposition, artifact lifecycle compression, restart/continuation validation, and affordance-first ordinary packets.",
+      "latitude": "Bounded doc/runtime wording, compact report packet fields, focused tests, validation tightening, and lane closeout routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "lane-1739-cheapest-safe-ordinary-path",
+      "status": "archived",
+      "next_step": "No active continuation; retained as PR #1805 lane evidence.",
+      "proof": "Run implement context selection, focused runtime tests, maintainer surfaces, summary, and planning doctor before claiming completion."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/lanes/",
+        "docs/package/ordinary-continuity-loop.md",
+        "docs/package/overview.md",
+        "src/agentic_workspace/reporting_support.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "This work completes the active #1739 lane on PR #1805.",
+        "Commands are routed affordances; phase questions and lane-completion packets are the primary ordinary design units."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #1739 active lane lane-1739-cheapest-safe-ordinary-path",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Lane #1739 completion model and ordinary report packet.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none for lane implementation; PR review and merge remain",
+    "next likely slice": "none for this lane after proof passes"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the rest of the lane on this PR",
+    "inferred intended outcome": "Complete GitHub #1739 lane child slices #1741, #1743, #1744, and #1745 in addition to completed #1740.",
+    "chosen concrete what": "Update docs and ordinary report guidance so phase questions, visibility disposition, artifact lifecycle, restart scenarios, and affordance-first rules own ordinary workflow decisions before command selection.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the delivered docs/runtime guidance covers all #1739 child slices without introducing a new first-contact manual."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/, .agentic-workspace/planning/lanes/, docs/package/ordinary-continuity-loop.md, docs/package/overview.md, src/agentic_workspace/reporting_support.py, and focused tests.",
+    "max changed files": "Keep to planning records, the package docs, one ordinary-output implementation surface, and focused tests unless validation proves another generated surface must refresh.",
+    "required validation commands": "implement --changed context, focused pytest, make test-workspace, make lint-workspace, make maintainer-surfaces, summary, and planning doctor.",
+    "ask-before-refactor threshold": "New root commands, broad command-generation restructuring, dependency changes, or unrelated package surfaces.",
+    "stop before touching": "App scaffolds, dependency manifests, database/schema files, unrelated modules, or broad generated references not required by validation.",
+    "manual JSON validation": "Use summary, doctor, and package checks for planning-state validation."
+  },
+  "stop_conditions": {
+    "stop when": "Docs/runtime guidance and tests satisfy #1739 lane child slices and PR #1805 is updated.",
+    "escalate when boundary reached": "The fix requires new root commands, broad framework/evaluation systems, or redesigning root command contracts.",
+    "escalate on scope drift": "The work turns into broad generated-command restructuring or unrelated product setup.",
+    "escalate on proof failure": "Focused tests, maintainer surfaces, summary, or planning doctor fail and cannot be repaired in scope."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "No active planning continuation; lane #1739 implementation proof is retained and command selection is routed behind phase/lane packets.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete active lane lane-1739-cheapest-safe-ordinary-path on PR #1805",
+    "hard constraints": "Keep scope bounded to lane #1739: phase-question framing, visible-surface disposition, lifecycle compression, restart scenarios, and affordance-first packet behavior.",
+    "agent may decide locally": "Bounded doc/runtime wording, focused report payload fields, tests, validation tightening, and lane closeout routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the lane outcome separately from PR review and issue-closure actions.",
+    "slice shaping bias": "Keep the work bounded to lane #1739 while carrying PR review/merge as the remaining continuation.",
+    "broader-lane validation question": "Did the PR satisfy all child slices, or only complete the original #1740 local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #1739 via active lane lane-1739-cheapest-safe-ordinary-path",
+      "label": "GitHub #1739 via active lane lane-1739-cheapest-safe-ordinary-path",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "lane-1739-cheapest-safe-ordinary-path",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None; archived as PR #1805 lane evidence."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/",
+    ".agentic-workspace/planning/lanes/",
+    "docs/package/ordinary-continuity-loop.md",
+    "docs/package/overview.md",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to lane #1739.",
+    "Phase questions are the ordinary design unit; commands are routed affordances."
+  ],
+  "validation_commands": [
+    "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the rest of lane lane-1739-cheapest-safe-ordinary-path on PR #1805\" --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make maintainer-surfaces",
+    "uv run python scripts/run_agentic_workspace.py summary --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Docs define phase questions as the ordinary product design unit.",
+    "Primary ordinary surfaces have explicit phase ownership, value disposition, and routed boundaries.",
+    "Artifact lifecycle classes and minimal survivor shape are documented and exposed in ordinary report guidance.",
+    "Restart/continuation scenarios are documented and exposed as design tests.",
+    "Ordinary report guidance exposes phase questions and lane-completion rules before command choices.",
+    "Focused runtime tests, workspace tests, workspace lint, maintainer surfaces, summary, and planning doctor pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active lane lane-1739-cheapest-safe-ordinary-path",
+    "what happened": "completed lane #1739 implementation on PR #1805",
+    "scope touched": "planning records, package docs, ordinary report payload, and focused tests",
+    "changed surfaces": "planning state, execplan scaffold, lane record, docs, reporting support, tests",
+    "validations run": "implement --changed context for expanded lane; uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make maintainer-surfaces; summary; planning doctor; docs diff review",
+    "result for continuation": "PR #1805 contains the completed #1739 lane evidence without leaving active continuation state on master.",
+    "next step": "None in checked-in planning state."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes: changed planning records, ordinary-loop docs, ordinary report payload, and focused runtime tests only",
+    "proof status": "passed",
+    "intent served": "yes for #1739 active lane: #1740, #1741, #1743, #1744, and #1745 are all covered",
+    "config compliance": "followed AGENTS start/implement route, selected proof, and dogfooding issue routing already created for earlier friction",
+    "misinterpretation risk": "low: phase questions are explicit in durable docs and ordinary report guidance",
+    "follow-on decision": "retain as archive evidence; do not make PR review an active master continuation"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed: uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make maintainer-surfaces; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused runtime tests cover report_profile.ordinary_agent_path phase-question and lane-completion packets; workspace tests, workspace lint, maintainer surfaces, summary, and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1739 via active lane lane-1739-cheapest-safe-ordinary-path",
+    "was original intent fully satisfied?": "yes for #1739 active lane",
+    "evidence of intent satisfaction": "docs/package/ordinary-continuity-loop.md, docs/package/overview.md, src/agentic_workspace/reporting_support.py, tests/test_workspace_cli.py, and archived lane proof now cover phase questions, surface visibility disposition, artifact lifecycle compression, restart scenarios, and affordance-first ordinary packets.",
+    "unsolved intent passed to": "No checked-in active continuation; PR review/merge remains outside master planning state."
+  },
+  "execution_summary": {
+    "outcome delivered": "The ordinary path now has phase-question and lane-completion packets covering visible-surface value, lifecycle compression, restart validation, and affordance-first output before legacy command fields.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none in checked-in planning state",
+    "post-work posterity capture": "recorded in this execplan and lane proof aggregation",
+    "knowledge promoted (Memory/Docs/Config)": "docs/package ordinary-loop/overview docs",
+    "resume from": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "All lane child slices are implemented and validated on PR #1805; issue closure remains a PR/maintainer action.",
+    "evidence carried forward": "Ordinary-loop docs, overview docs, runtime ordinary_agent_path lane_completion_model packet, focused tests, workspace tests, workspace lint, maintainer surfaces, summary, and planning doctor.",
+    "reopen trigger": "Review finds that lane_completion_model fails to satisfy #1741/#1743/#1744/#1745 acceptance or ordinary guidance still requires command inventory selection before phase/lane packets."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "lane_complete",
+    "claim_level_allowed": "lane_complete",
+    "required_next_action": "",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "Issue tracker closure should happen through PR/maintainer review, not checked-in active planning state.",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active lane intent?",
+      "answer": "yes",
+      "reason": "All child slices #1740, #1741, #1743, #1744, and #1745 have evidence in docs, runtime report packet, tests, and lane proof aggregation."
+    },
+    "continuation": {
+      "owner_surface": "GitHub PR #1805",
+      "created_or_required": true,
+      "reason": "Review, merge, and issue closure remain outside the checked-in implementation proof."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    },
+    "rule": "Active lane #1739 is complete on PR #1805 after validation; PR review and merge remain."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Unsupported lane slice status `ready-for-review` caused compact summary to report no lane record instead of a repairable warning."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "GitHub #1804: [Review]: Warn when unsupported lane slice status drops lane projection"
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub #1804"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "GitHub #1804 covers the unsupported lane slice status projection warning gap."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-06-26: Scaffolded by agentic-planning new-plan."
+  ],
+  "control_gates": [
+    {
+      "id": "implementation-proof",
+      "owner_role": "implementation",
+      "required_for": [
+        "before completion claim and PR closeout"
+      ],
+      "status": "satisfied",
+      "evidence": [
+        "implement --changed context output",
+        "focused pytest",
+        "make maintainer-surfaces",
+        "summary",
+        "planning doctor"
+      ],
+      "blocking": true,
+      "next_action": "Run the validation sequence and record proof before claiming completion."
+    }
+  ]
+}

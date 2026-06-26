@@ -14,14 +14,13 @@ Use it for natural-language intent elicitation, not mechanical classification. T
 - The requested task, initiative, repo/system outcome, completion boundary, anti-goals, or unresolved assumptions are unclear.
 - Two plausible interpretations would produce materially different work, proof, or closure claims.
 - Existing Planning, Memory, issue, config, or system-intent evidence is stale, contradictory, unavailable, or missing in a way that can change the next safe action.
-- A compact `intent_custody` record would preserve enough intent for continuation without creating duplicate Planning state.
 
 ## Protocol
 
 1. Name two or three plausible interpretations, not just one inferred intent.
 2. Ask one compact question that captures why the work matters, desired outcome, non-goals, and an acceptable first slice.
 3. If the user does not answer and progress is still safe, proceed only with stated assumptions and visible uncertainty.
-4. Carry the clarified result into the smallest existing surface: `task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue.
+4. Carry the clarified result into the smallest existing surface: `task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue, including a `completion-boundary` when closure could otherwise be ambiguous.
 5. Stop the dialogue after one bounded clarification unless the user's answer exposes a real safety, authority, or scope blocker.
 
 ## Output Shape
@@ -50,12 +49,6 @@ Each `intent_records` entry should use the compact custody shape:
 - `freshness`
 
 Prefer `intent_custody` when compact refs, boundaries, anti-goals, provenance, and freshness are enough. Promote to Planning, Memory, an issue, or `durable_intent` only when the intent must survive as owned durable state.
-
-## Ask vs Proceed
-
-Ask the user when plausible interpretations differ materially, anti-goals are likely but unstated, or silent first-slice choice could close or defer the wrong intent.
-
-Proceed with visible assumptions when the first slice is low-risk and reversible, the correction point is explicit, and completion claims stay limited to that slice.
 
 ## Examples
 

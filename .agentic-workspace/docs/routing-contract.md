@@ -26,16 +26,15 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 - `.agentic-workspace/planning/state.toml` (`todo.active_items`): Repo-owned active task queue and smallest near-term follow-ons.
 - `.agentic-workspace/planning/state.toml` (`roadmap`): Repo-owned inactive long-horizon candidate work and promotion signals.
 - `.agentic-workspace/planning/execplans/`: Active, sequencing-heavy execution contracts.
-- `docs/agentic-workspace-install.md`: Public install/adopt handoff for agents linked to the source repository.
+- `AGENTS.md`: Agent entrypoint router for external handoff and first-contact after bootstrap.
+- `docs/agentic-workspace-install.md`: Detailed external install/adopt handoff instructions.
 
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
-- **Module Selector**: `agentic-workspace defaults --section module_selection --format json`.
-- **Memory Command**: `agentic-workspace install --target ./repo --modules memory`.
-- **Planning Command**: `agentic-workspace install --target ./repo --modules planning`.
-- **Verification Command**: `agentic-workspace install --target ./repo --modules verification`.
-- **Combined Command**: `agentic-workspace install --target ./repo --modules planning,memory` only when both Memory and Planning are explicitly desired.
-- **Optional Local Sandbox Command**: add `--local-only` to the selected preset command when the install should stay local.
+- **Start Here**: Read `docs/agentic-workspace-install.md`.
+- **Primary Command**: `agentic-workspace init --target ./repo --modules memory`.
+- **Module Selection**: Choose the smallest explicit `--modules` set that fits, such as `memory`, `planning`, `verification`, or `planning,memory`.
+- **Fallback Only**: Use `uvx` or `pipx run` only as an explicit temporary/debug fallback when the target repo has no installed CLI yet.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
 - **Orientation**: Return to the configured startup file (default `AGENTS.md`) after bootstrap is complete.
 

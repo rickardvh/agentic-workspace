@@ -31,7 +31,33 @@ Installed repositories get a `.agentic-workspace/` directory plus small adapter 
 
 Startup and report outputs should make the investment visible. They are useful when they show what cost was avoided or contained: rediscovery avoided by Memory, scope contained by Planning, proof selected by repo state, continuation routed to a checked-in owner, or repeated friction converted into a durable improvement target.
 
-Ordinary startup is:
+Ordinary operation is organized around phase questions, not command discovery:
+
+| Phase question | Ordinary affordance |
+| --- | --- |
+| What is the smallest safe context before acting? | `agentic-workspace start --target ./repo --task "<task>" --format json` |
+| Is this direct, bounded, lane, epic, takeover, or continuation work? | `start`, `summary`, or routed Planning mutation |
+| Which source can change interpretation, edits, proof, or closeout? | knowledge routes and gates in compact output |
+| What narrow working set is safe to touch now? | `agentic-workspace implement --changed <paths> --task "<task>" --format json` |
+| What evidence is required for the claim? | `agentic-workspace proof --target ./repo --changed <paths> --format json` |
+| What must survive after this agent stops? | Planning closeout/archive, Memory capture, proof receipts, or follow-up issues |
+| How can a future agent resume without replaying chat? | `agentic-workspace summary --target ./repo --format json` |
+
+The commands are affordances for the current question. Diagnostic and
+maintainer surfaces such as `preflight`, `report`, `config`, `defaults`,
+`ownership`, `modules`, `status`, `doctor`, generated references, and module
+CLIs stay behind routing unless the compact packet or the user's request names
+that need.
+
+For broad ordinary-path lanes, the same report packet carries a compact lane
+completion model. It records surface visibility disposition, artifact lifecycle
+compression, restart/continuation scenarios, and affordance-first output rules
+without turning those concerns into another first-contact manual. Use it to
+check whether a lane reduced visible machinery, preserved enough residue for
+restart, and moved prose-first guidance toward typed routes, selectors, proof
+commands, and claim boundaries.
+
+When no prior state is known, start with:
 
 ```bash
 agentic-workspace start --target ./repo --format json

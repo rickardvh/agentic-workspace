@@ -6,7 +6,7 @@
 schema_version = 1
 
 [modules]
-enabled = ["planning", "memory"]
+enabled = ["planning", "memory", "verification"]
 
 [workspace]
 agent_instructions_file = "AGENTS.md"
