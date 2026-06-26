@@ -4606,9 +4606,30 @@ candidates = []
     assert packet["recommended_route"] == "validation-delegate"
 
 
+def _write_python_test_evidence_config(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[workspace]
+cli_invoke = "uv run python scripts/run_agentic_workspace.py"
+
+[assurance.requirements.test_evidence_change_decision]
+level = "high"
+applies_to_paths = ["tests/**"]
+required_evidence = ["verification_proof_decision_review"]
+proof_profile = "test_evidence_change"
+review_owner = "maintainer"
+force = "required-before-closeout"
+""",
+    )
+
+
 def test_implement_surfaces_test_strategy_check_for_hotspot_tests(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(
         tmp_path / "tests" / "test_runtime.py",
         """
@@ -4661,12 +4682,76 @@ def test_runtime_warning_eta(): assert True
     assert check["pre_test_evidence_guardrail"]["status"] == "advisory"
     assert check["pre_test_evidence_guardrail"]["blocking"] is False
     assert check["pre_test_evidence_guardrail"]["source_boundary"]["no_universal_task_keyword_policy"] is True
+    assert check["pre_test_evidence_guardrail"]["source_boundary"]["no_universal_filename_policy"] is True
+    assert check["pre_test_evidence_guardrail"]["evidence_path_classifications"][0]["source"] == (
+        "assurance.requirements.test_evidence_change_decision"
+    )
     assert "package-local-behavior" in check["evidence_owner_options"]
     assert "convert-to-conformance" in check["proof_decision_options"]
     assert any("trust question" in question for question in check["pre_test_decision_questions"])
     assert any("scenario matrix" in question for question in check["regression_sprawl_review_questions"])
     assert "standalone-durable-contract-proof" in check["record_disposition_options"]
     assert check["files"][0]["parametrized_test_count"] == 1
+
+
+def test_implement_classifies_declared_non_python_evidence_path(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[workspace]
+cli_invoke = "uv run python scripts/run_agentic_workspace.py"
+
+[assurance.requirements.frontend_evidence_change]
+level = "high"
+applies_to_paths = ["web/specs/*.spec.ts"]
+required_evidence = ["verification_proof_decision_review"]
+proof_profile = "test_evidence_change"
+review_owner = "maintainer"
+force = "required-before-closeout"
+""",
+    )
+    _write(tmp_path / "web" / "specs" / "checkout.spec.ts", "test('checkout flow', () => expect(true).toBe(true));\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "web/specs/checkout.spec.ts",
+                "--task",
+                "Adjust frontend evidence",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["status"] == "advisory"
+    assert check["changed_test_paths"] == ["web/specs/checkout.spec.ts"]
+    guardrail = check["pre_test_evidence_guardrail"]
+    assert guardrail["status"] == "advisory"
+    assert guardrail["source_boundary"]["no_universal_filename_policy"] is True
+    assert guardrail["evidence_path_classifications"] == [
+        {
+            "path": "web/specs/checkout.spec.ts",
+            "source": "assurance.requirements.frontend_evidence_change",
+            "matched_by": "assurance.applies_to_paths",
+            "pattern": "web/specs/*.spec.ts",
+            "authority_refs": [],
+        }
+    ]
+    assert check["files"][0]["path"] == "web/specs/checkout.spec.ts"
+    assert check["files"][0]["test_function_count"] == 0
 
 
 def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Path, capsys) -> None:
@@ -4701,6 +4786,7 @@ def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Pa
 def test_test_strategy_check_reads_recorded_disposition(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     _write_json(
         tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
@@ -4752,6 +4838,7 @@ def test_test_strategy_check_distinguishes_non_material_retained_test_edit(tmp_p
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
@@ -4789,6 +4876,7 @@ def test_test_strategy_check_marks_added_test_as_material(tmp_path: Path, capsys
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
@@ -4824,6 +4912,7 @@ def test_test_strategy_check_marks_deleted_test_as_material(tmp_path: Path, caps
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
@@ -4857,6 +4946,7 @@ def test_test_strategy_check_marks_count_change_as_material(tmp_path: Path, caps
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
@@ -4893,6 +4983,7 @@ def test_test_strategy_check_marks_renamed_test_as_material(tmp_path: Path, caps
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
@@ -4923,6 +5014,7 @@ def test_test_strategy_check_marks_renamed_test_as_material(tmp_path: Path, caps
 def test_test_strategy_check_requires_temporary_follow_up_evidence(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     _write_json(
         tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
@@ -4966,6 +5058,7 @@ def test_test_strategy_check_requires_temporary_follow_up_evidence(tmp_path: Pat
 def test_proof_surfaces_test_strategy_check_for_closeout_visibility(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_contract():\n    assert True\n")
 
     assert (

@@ -208,6 +208,11 @@
       "description": "Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up.",
       "additionalProperties": true
     },
+    "optimization_posture": {
+      "type": "object",
+      "description": "Compact configured optimisation posture summary for changed implementation paths, with detailed per-path reasoning kept behind change_impact.",
+      "additionalProperties": true
+    },
     "assurance_requirements": {
       "type": "object",
       "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned.",
@@ -230,7 +235,7 @@
     },
     "test_strategy_check": {
       "type": "object",
-      "description": "Advisory ordinary-test sustainability projection, including recorded disposition state when changed tests are present.",
+      "description": "Advisory evidence/test sustainability projection, including recorded disposition state when declared changed evidence paths are present.",
       "additionalProperties": true
     },
     "routine_work_context": {
