@@ -8388,6 +8388,7 @@ def _run_report_command(
         cli_compatibility=_cli_compatibility_payload(config=config),
         summary=_summarise_reports(target_root=target_root, reports=module_reports, descriptors=descriptors, command_name="report"),
     )
+    configuration_projection = _configuration_projection_payload(config=config)
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -8414,6 +8415,8 @@ def _run_report_command(
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": configuration_projection,
+        "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": memory_consult,
@@ -12099,6 +12102,7 @@ def _run_report_router_command(
             "command": next_command,
             "run": next_command,
         }
+    configuration_projection = _configuration_projection_payload(config=config)
     router_source = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -12121,6 +12125,8 @@ def _run_report_router_command(
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": _compact_configuration_projection_payload(configuration_projection),
+        "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
@@ -28928,6 +28934,474 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+def _configuration_projection_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    effect_audit = _config_effect_audit_payload(config=config)
+    field_effects = [dict(item) for item in _list_payload(effect_audit.get("field_effects")) if isinstance(item, dict)]
+
+    projection_facts: list[dict[str, Any]] = []
+    for effect in field_effects:
+        field = str(effect.get("field", ""))
+        scope = str(effect.get("scope", ""))
+        dependency = str(effect.get("agent_dependency", ""))
+        commands = [str(item) for item in _list_payload(effect.get("concrete_commands")) if str(item).strip()]
+        payload_fields = [str(item) for item in _list_payload(effect.get("payload_fields")) if str(item).strip()]
+        owner_boundary = "human-owned" if scope == "repo-config" else "local-human-owned" if scope == "local-config" else "package-owned"
+        status = "unprojected" if dependency == "not-applicable" else "active" if commands and payload_fields else "latent"
+        projection_facts.append(
+            _configuration_projection_row(
+                row_id=f"config:{field}",
+                source="workspace-config",
+                source_surface=".agentic-workspace/config.toml",
+                owner=owner_boundary,
+                field=field,
+                configured_concern=field,
+                status=status,
+                ordinary_path_routes=commands,
+                payload_fields=payload_fields,
+                trigger=_configuration_projection_applicability(field),
+                suppression_rule=_configuration_projection_suppression(field),
+                proof_or_test_coverage=["tests/test_workspace_config_cli.py", "tests/test_workspace_cli.py"],
+                effect_type=str(effect.get("effect_type", "")),
+                scope=scope,
+                authority_exception=_configuration_projection_authority_exception(
+                    field=field, owner_boundary=owner_boundary, dependency=dependency
+                ),
+            )
+        )
+    projection_facts.extend(_ambient_configuration_projection_rows(config=config))
+
+    status_counts: dict[str, int] = {
+        "active": 0,
+        "selector-backed": 0,
+        "latent": 0,
+        "stale": 0,
+        "unprojected": 0,
+        "owner-exempt": 0,
+    }
+    for fact in projection_facts:
+        projection_status = str(fact.get("projection_status", "unprojected"))
+        status_counts[projection_status] = status_counts.get(projection_status, 0) + 1
+
+    positive_probes = [
+        {
+            "id": "startup-config-task-routes-to-config",
+            "command": _command_with_cli_invoke(
+                command='agentic-workspace start --target ./repo --task "inspect configured posture" --format json',
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "next_safe_action.action=inspect-effective-config",
+            "covers": ["workspace posture", "config-posture-routing"],
+        },
+        {
+            "id": "implementation-routes-proof-and-posture",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace implement --target ./repo --changed <paths> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "proof, authority, and task_posture_packet reflect applicable config",
+            "covers": ["proof", "ownership", "closeout"],
+        },
+        {
+            "id": "report-section-inspects-projection",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section configuration_projection --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "expect": "projection_status_counts and facts are present",
+            "covers": ["machine-consumable coverage"],
+        },
+    ]
+    suppression_probes = [
+        {
+            "id": "ordinary-report-keeps-detail-sectioned",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --format json", cli_invoke=config.cli_invoke
+            ),
+            "expect": "router names configuration_projection in section hints without expanding every fact",
+            "covers": ["non-applicable suppression", "compact-output"],
+        },
+        {
+            "id": "local-posture-stays-local",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace config --target ./repo --format json", cli_invoke=config.cli_invoke
+            ),
+            "expect": "local runtime/delegation posture is advisory and not shared repo authority",
+            "covers": ["ownership exceptions"],
+        },
+    ]
+    payload = {
+        "kind": "agentic-workspace/configuration-projection/v1",
+        "status": "present",
+        "purpose": "Machine-consumable coverage of which configured facts can affect ordinary startup, implementation, proof, report, and closeout routing.",
+        "rule": "Configured facts must have an ordinary-path route, applicability signal, suppression rule, owner boundary, and verification probe before being treated as active runtime guidance.",
+        "projection_status_counts": status_counts,
+        "facts": projection_facts,
+        "unprojected_fields": [fact for fact in projection_facts if fact.get("projection_status") == "unprojected"],
+        "owner_boundary_exceptions": [
+            {
+                "owner_boundary": "human-owned",
+                "rule": "Repo config declares policy and posture; AW may validate and project it, but the agent still owns semantic fit unless a hard gate is explicit.",
+            },
+            {
+                "owner_boundary": "local-human-owned",
+                "rule": "Local config may shape handoff and runtime guidance on this machine, but must not become shared repo authority or close issues by itself.",
+            },
+            {
+                "owner_boundary": "agent-owned",
+                "rule": "Config may recommend work shape, proof proportionality, or delegation, but cannot remove agent judgment where output labels authority_class=agent-owned or advisory-support.",
+            },
+        ],
+        "verification": {
+            "positive_surfacing": positive_probes,
+            "non_applicable_suppression": suppression_probes,
+            "contract_check": "Tests should assert both an applicable field surfacing path and an irrelevant/detail-heavy path staying sectioned.",
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section configuration_projection --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+    }
+    payload["selective_surfacing_evaluation"] = _selective_surfacing_evaluation_payload(
+        projection_payload=payload,
+        compact_projection=_compact_configuration_projection_payload(payload),
+        cli_invoke=config.cli_invoke,
+    )
+    return payload
+
+
+def _configuration_projection_row(
+    *,
+    row_id: str,
+    source: str,
+    source_surface: str,
+    owner: str,
+    field: str,
+    configured_concern: str,
+    status: str,
+    ordinary_path_routes: list[str],
+    payload_fields: list[str],
+    trigger: str,
+    suppression_rule: str,
+    proof_or_test_coverage: list[str],
+    scope: str = "",
+    effect_type: str = "",
+    authority_exception: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": row_id,
+        "source": source,
+        "source_surface": source_surface,
+        "owner": owner,
+        "field": field,
+        "configured_concern": configured_concern,
+        "scope": scope,
+        "effect_type": effect_type,
+        "projection_status": status,
+        "status": status,
+        "ordinary_path_routes": ordinary_path_routes,
+        "payload_fields": payload_fields,
+        "trigger": trigger,
+        "applicability_signal": trigger,
+        "suppression_rule": suppression_rule,
+        "proof_or_test_coverage": proof_or_test_coverage,
+        "owner_boundary": owner,
+        "authority_exception": authority_exception
+        or "AW reports the route and owner; the agent owns semantic applicability unless a hard gate is explicit.",
+    }
+
+
+def _ambient_configuration_projection_rows(*, config: WorkspaceConfig) -> list[dict[str, Any]]:
+    target_root = config.target_root or Path(".")
+    rows: list[dict[str, Any]] = []
+    ownership_path = target_root / ".agentic-workspace" / "OWNERSHIP.toml"
+    ownership_exists = ownership_path.is_file()
+    rows.append(
+        _configuration_projection_row(
+            row_id="ownership:authority-ledger",
+            source="ownership",
+            source_surface=".agentic-workspace/OWNERSHIP.toml",
+            owner="human-owned",
+            field="ownership.authority_surfaces",
+            configured_concern="ownership, authority, audience, managed-surface, and subsystem routing",
+            status="selector-backed" if ownership_exists else "latent",
+            ordinary_path_routes=[
+                "agentic-workspace ownership --target ./repo --format json",
+                "agentic-workspace implement --target ./repo --changed <paths> --select change_impact --format json",
+            ],
+            payload_fields=["ownership", "change_impact.paths[].owner", "change_impact.paths[].optimization_posture"],
+            trigger="changed path intersects an authority surface, module root, managed surface, or subsystem path",
+            suppression_rule="ordinary report keeps ownership detail behind ownership/change_impact selectors unless a path boundary affects the next action",
+            proof_or_test_coverage=[
+                "tests/test_workspace_implement_cli.py::test_implement_change_impact_routes_optimization_posture_by_audience_boundary"
+            ],
+        )
+    )
+    system_intent_path = target_root / ".agentic-workspace" / "system-intent" / "intent.toml"
+    system_intent_sources = [str(item) for item in config.system_intent.sources if str(item).strip()]
+    rows.append(
+        _configuration_projection_row(
+            row_id="system-intent:durable-intent",
+            source="system-intent",
+            source_surface=".agentic-workspace/system-intent/intent.toml",
+            owner="human-owned",
+            field="system_intent.sources",
+            configured_concern="durable system and architecture intent",
+            status="selector-backed" if system_intent_path.is_file() or system_intent_sources else "latent",
+            ordinary_path_routes=[
+                "agentic-workspace system-intent --target ./repo --format json",
+                "agentic-workspace report --target ./repo --section durable_intent --format json",
+                "agentic-workspace implement --target ./repo --changed <paths> --select architecture_principles --format json",
+            ],
+            payload_fields=["durable_intent", "applicable_intent", "architecture_principles"],
+            trigger="task text or changed paths intersect durable system intent, subsystem intent, or architecture principle globs",
+            suppression_rule="surface compact applicable-intent or architecture-principle status only when work intersects durable intent; keep full intent behind selectors",
+            proof_or_test_coverage=["tests/test_workspace_implement_cli.py", "tests/test_workspace_intent_cli.py"],
+        )
+    )
+    verification_enabled = "verification" in set(config.enabled_modules)
+    verification_manifest = target_root / ".agentic-workspace" / "verification" / "manifest.toml"
+    verification_status = "selector-backed" if verification_manifest.is_file() else "stale" if verification_enabled else "latent"
+    rows.append(
+        _configuration_projection_row(
+            row_id="verification:manifest",
+            source="verification",
+            source_surface=".agentic-workspace/verification/manifest.toml",
+            owner="human-owned",
+            field="verification.manifest",
+            configured_concern="Verification protocol activation, proof routes, and known gaps",
+            status=verification_status,
+            ordinary_path_routes=[
+                "agentic-workspace report --target ./repo --section verification --format json",
+                "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            ],
+            payload_fields=["verification", "proof.verification_enrichment", "assurance_requirements.verification"],
+            trigger="Verification module is enabled and a manifest protocol matches task markers, changed paths, or proof routes",
+            suppression_rule="do not surface inactive Verification protocol detail in ordinary output; report missing enabled manifest as stale coverage, not a hard blocker by default",
+            proof_or_test_coverage=[
+                "tests/test_workspace_implement_cli.py::test_implement_verification_task_marker_reports_configured_protocol_authority"
+            ],
+        )
+    )
+    memory_index = target_root / ".agentic-workspace" / "memory" / "repo" / "index.md"
+    rows.append(
+        _configuration_projection_row(
+            row_id="memory:routing-metadata",
+            source="memory",
+            source_surface=".agentic-workspace/memory/repo/index.md",
+            owner="memory-owned",
+            field="memory.routing_metadata",
+            configured_concern="Memory route hints, read budgets, and anti-rediscovery metadata",
+            status="selector-backed" if memory_index.is_file() else "latent",
+            ordinary_path_routes=[
+                "agentic-workspace memory route --target ./repo --stage implement --files <paths> --format json",
+                "agentic-workspace implement --target ./repo --changed <paths> --format json",
+            ],
+            payload_fields=["memory_consult", "memory_decision_packet"],
+            trigger="task or changed paths match Memory manifest/index routing metadata",
+            suppression_rule="ordinary paths show read-first and route counts; candidate owner detail stays behind Memory selectors",
+            proof_or_test_coverage=[
+                "tests/test_workspace_implement_cli.py::test_implement_surfaces_memory_decision_packet_for_changed_paths"
+            ],
+        )
+    )
+    active_plan = _active_planning_record_for_report_section(target_root=target_root)
+    active_plan_present = bool(active_plan) and str(active_plan.get("status", "")).lower() != "absent"
+    rows.append(
+        _configuration_projection_row(
+            row_id="planning:active-state-obligations",
+            source="planning",
+            source_surface=".agentic-workspace/planning/state.toml",
+            owner="planning-owned",
+            field="planning.active_state",
+            configured_concern="active Planning intent, proof expectations, blockers, and closeout obligations",
+            status="active" if active_plan_present else "latent",
+            ordinary_path_routes=[
+                "agentic-workspace summary --format json",
+                "agentic-workspace implement --target ./repo --changed <paths> --format json",
+                "agentic-workspace report --target ./repo --section completion_contract --format json",
+            ],
+            payload_fields=["summary.execution_readiness", "implement.planning_safety_gate", "completion_contract"],
+            trigger="active TODO item or execplan exists, or broad lane work needs shared intent custody",
+            suppression_rule="do not require Planning for narrow direct work; surface active obligations when present or when broad work claims lane progress",
+            proof_or_test_coverage=["tests/test_workspace_implement_cli.py", "tests/test_workspace_summary_cli.py"],
+        )
+    )
+    rows.append(
+        _configuration_projection_row(
+            row_id="local-memory:disabled-default",
+            source="local-config",
+            source_surface=".agentic-workspace/config.local.toml [local_memory]",
+            owner="local-human-owned",
+            field="local_memory.enabled",
+            configured_concern="optional local-only memory posture",
+            status="latent" if not config.local_override.local_memory_enabled else "selector-backed",
+            ordinary_path_routes=["agentic-workspace report --target ./repo --section local_memory --format json"],
+            payload_fields=["local_memory"],
+            trigger="local_memory.enabled is true in local config",
+            suppression_rule="disabled or local-only memory stays out of shared authority and ordinary repo closeout",
+            proof_or_test_coverage=["tests/test_workspace_config_cli.py"],
+            authority_exception="local-only advisory; cannot become shared Planning, Memory, proof, or closeout authority",
+        )
+    )
+    return rows
+
+
+def _compact_configuration_projection_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    evaluation = payload.get("selective_surfacing_evaluation", {})
+    checks = _list_payload(evaluation.get("checks")) if isinstance(evaluation, dict) else []
+    failing = [item for item in checks if isinstance(item, dict) and item.get("result") == "fail"]
+    return {
+        "kind": payload["kind"],
+        "status": payload["status"],
+        "projection_status_counts": payload["projection_status_counts"],
+        "unprojected_field_count": len(payload["unprojected_fields"]),
+        "owner_boundary_exception_count": len(payload["owner_boundary_exceptions"]),
+        "verification_probe_count": len(payload["verification"]["positive_surfacing"])
+        + len(payload["verification"]["non_applicable_suppression"]),
+        "evaluation": {
+            "status": evaluation.get("status", "not-run") if isinstance(evaluation, dict) else "not-run",
+            "check_count": len(checks),
+            "failing_check_count": len(failing),
+            "detail_section": "selective_surfacing_evaluation",
+        },
+        "detail_command": payload["detail_command"],
+    }
+
+
+def _selective_surfacing_evaluation_payload(
+    *, projection_payload: dict[str, Any], compact_projection: dict[str, Any], cli_invoke: str
+) -> dict[str, Any]:
+    facts = [dict(item) for item in _list_payload(projection_payload.get("facts")) if isinstance(item, dict)]
+    statuses = {str(item.get("projection_status") or item.get("status") or "") for item in facts}
+    compact_json_size = len(json.dumps(compact_projection, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    compact_has_fact_detail = "facts" in compact_projection or "owner_boundary_exceptions" in compact_projection
+    required_fields = ("source_surface", "owner", "ordinary_path_routes", "trigger", "suppression_rule", "projection_status")
+    missing_required_guidance = [
+        str(item.get("id") or item.get("field") or "")
+        for item in facts
+        if any(key not in item or item.get(key) in (None, "", []) for key in required_fields)
+    ]
+    scenario_ids = {
+        "positive-config-surfacing": "active" in statuses,
+        "selector-backed-owner-memory-intent": "selector-backed" in statuses,
+        "latent-suppression": "latent" in statuses,
+        "stale-or-unprojected-gap": bool(statuses & {"stale", "unprojected"}),
+        "ordinary-output-noise": not compact_has_fact_detail,
+    }
+    required_scenarios = ("positive-config-surfacing", "latent-suppression", "ordinary-output-noise")
+    checks = [
+        {
+            "id": "required-guidance-present",
+            "result": "fail" if missing_required_guidance else "pass",
+            "fails_when": "any projection row lacks source_surface, owner, ordinary_path_routes, trigger, suppression_rule, or projection_status",
+            "evidence": missing_required_guidance[:5],
+            "finding_route": "issue follow-up when a source family lacks route/status fields",
+        },
+        {
+            "id": "positive-and-suppression-scenarios-present",
+            "result": "pass" if all(scenario_ids[item] for item in required_scenarios) else "fail",
+            "fails_when": "representative active positive-surfacing or latent/ordinary-output suppression scenarios are missing",
+            "evidence": scenario_ids,
+            "finding_route": "Planning continuation or narrow issue for the missing scenario class",
+        },
+        {
+            "id": "irrelevant-guidance-suppressed-from-compact-output",
+            "result": "fail" if compact_has_fact_detail else "pass",
+            "fails_when": "compact ordinary projection contains full facts or owner-boundary exception prose",
+            "evidence": {"compact_has_fact_detail": compact_has_fact_detail},
+            "finding_route": "direct fix to router/compact projection shape",
+        },
+        {
+            "id": "compact-output-size-bounded",
+            "result": "pass" if compact_json_size <= 1400 else "fail",
+            "fails_when": "compact configuration_projection summary exceeds 1400 JSON bytes",
+            "evidence": {"compact_json_size": compact_json_size, "max_json_size": 1400},
+            "finding_route": "surface-value guardrail issue or direct compact-shape fix",
+        },
+    ]
+    failing = [item for item in checks if item["result"] == "fail"]
+    return {
+        "kind": "agentic-workspace/selective-surfacing-evaluation/v1",
+        "status": "pass" if not failing else "fail",
+        "purpose": "Cheap contract checks for whether configured guidance surfaces when needed and stays hidden when irrelevant.",
+        "scenario_count": len(scenario_ids),
+        "scenarios": [
+            {
+                "id": scenario_id,
+                "covered": covered,
+                "role": (
+                    "positive surfacing"
+                    if scenario_id.startswith("positive")
+                    else "selector-backed surfacing"
+                    if scenario_id.startswith("selector")
+                    else "non-applicable suppression"
+                    if scenario_id in {"latent-suppression", "ordinary-output-noise"}
+                    else "gap visibility"
+                ),
+            }
+            for scenario_id, covered in scenario_ids.items()
+        ],
+        "checks": checks,
+        "failing_checks": failing,
+        "metrics": {
+            "projection_row_count": len(facts),
+            "compact_json_size": compact_json_size,
+            "compact_selector_count": 1,
+            "status_counts": projection_payload.get("projection_status_counts", {}),
+        },
+        "finding_routing": {
+            "rule": "Route failed checks to the narrowest owner: direct fix for compact shape, issue for product behavior, Memory only for durable anti-rediscovery lessons.",
+            "memory_allowed_when": "the same evaluation failure recurs and the lesson is durable across tasks",
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section selective_surfacing_evaluation --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _configuration_projection_applicability(field: str) -> str:
+    if field.startswith("workflow_obligations"):
+        return "task text, changed paths, or active Planning scope matches obligation scope_tags"
+    if field.startswith("assurance"):
+        return "changed paths, active Planning assurance fields, or selected proof profile require assurance routing"
+    if field.startswith("runtime|handoff|safety|delegation_targets"):
+        return "delegation or runtime posture is relevant to the current task shape and safety allows handoff"
+    if field.startswith("local_memory"):
+        return "local memory is enabled and a memory-backed route is requested"
+    if field.startswith("system_intent"):
+        return "task, changed paths, or subsystem config intersects durable system intent"
+    if field.startswith("update.modules"):
+        return "status, doctor, or upgrade inspects installed module freshness"
+    if field.startswith("workspace.maintainer_mode"):
+        return "maintainer mode is enabled or dogfooding/reporting posture is requested"
+    return "configured field is requested directly or the ordinary route names its payload field"
+
+
+def _configuration_projection_suppression(field: str) -> str:
+    if field.startswith("workflow_obligations"):
+        return "hide obligation detail when no current scope tag matches; keep configured list behind config/report selectors"
+    if field.startswith("assurance"):
+        return "hide proof profile detail until proof selection, assurance report, or closeout trust needs it"
+    if field.startswith("runtime|handoff|safety|delegation_targets"):
+        return "hide target detail unless delegation posture changes the next action or config detail is requested"
+    if field.startswith("local_memory"):
+        return "hide local memory detail when disabled or when shared repo authority is being reported"
+    if field.startswith("system_intent"):
+        return "surface only compact applicable-intent facts unless system-intent detail is requested"
+    return "keep detailed field data behind config/report selectors unless it changes the ordinary next action"
+
+
+def _configuration_projection_authority_exception(*, field: str, owner_boundary: str, dependency: str) -> str:
+    if owner_boundary == "local-human-owned":
+        return "local-only advisory; cannot create shared repo obligations, proof gates, or closeout claims"
+    if dependency in {"medium", "high"}:
+        return "advisory or diagnostic projection; agent owns semantic applicability unless another payload reports a hard gate"
+    if field.startswith("assurance") or field.startswith("workflow_obligations"):
+        return "may create closeout or proof pressure only through the named proof, obligation, or closeout payload"
+    return "tool-owned validation may affect output, but human-owned config remains the source authority"
+
+
 def _scope_tags_for_current_work(
     *, active_planning_record: dict[str, Any] | None, task_text: str | None = None, changed_paths: list[str] | None = None
 ) -> tuple[list[str], list[str]]:
@@ -38441,6 +38915,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "warnings": list(config.warnings),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
+        "configuration_projection": _configuration_projection_payload(config=config),
         "workspace": {
             "enabled_modules": list(config.enabled_modules),
             "module_enablement_source": "repo-config" if config.exists else "product-default",
@@ -38541,6 +39016,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "warning_count": len(payload["config_effect_audit"]["claimed_vs_actual_warnings"]),
             "detail_command": payload["config_effect_audit"]["detail_command"],
         },
+        "configuration_projection": _compact_configuration_projection_payload(payload["configuration_projection"]),
         "workspace": {
             "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],

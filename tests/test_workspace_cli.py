@@ -1326,6 +1326,77 @@ def test_report_sections_expose_authority_and_compliance_boundaries(tmp_path: Pa
     assert strengths["schema_validity"] == "strong"
 
 
+def test_report_exposes_configuration_projection_without_expanding_config_detail(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    router = json.loads(capsys.readouterr().out)
+    projection = router["context"]["configuration_projection"]
+    assert projection["projection_status_counts"]["active"] >= 1
+    assert projection["unprojected_field_count"] == 0
+    assert projection["verification_probe_count"] >= 2
+    assert projection["evaluation"]["status"] == "pass"
+    assert projection["evaluation"]["detail_section"] == "selective_surfacing_evaluation"
+    assert "facts" not in projection
+    assert "owner_boundary_exceptions" not in projection
+    evaluation = router["context"]["selective_surfacing_evaluation"]
+    assert evaluation["status"] == "pass"
+    assert evaluation["failing_check_count"] == 0
+    assert evaluation["metrics"]["compact_selector_count"] == 1
+    hint = next(item for item in router["drill_down"]["section_hints"] if item["section"] == "configuration_projection")
+    assert "projection coverage" in hint["purpose_summary"]
+    assert hint["volume"] == "normal"
+    eval_hint = next(item for item in router["drill_down"]["section_hints"] if item["section"] == "selective_surfacing_evaluation")
+    assert "cheap contract checks" in eval_hint["purpose_summary"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["selector"] == {"section": "configuration_projection"}
+    answer = selected["answer"]
+    assert answer["kind"] == "agentic-workspace/configuration-projection/v1"
+    assert answer["unprojected_fields"] == []
+    assert any(item["owner_boundary"] == "local-human-owned" for item in answer["facts"])
+    assert answer["verification"]["non_applicable_suppression"][0]["id"] == "ordinary-report-keeps-detail-sectioned"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "selective_surfacing_evaluation", "--format", "json"]) == 0
+
+    selected_eval = json.loads(capsys.readouterr().out)
+    assert selected_eval["selector"] == {"section": "selective_surfacing_evaluation"}
+    assert selected_eval["answer"]["kind"] == "agentic-workspace/selective-surfacing-evaluation/v1"
+    assert selected_eval["answer"]["status"] == "pass"
+    assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
+
+
+def test_selective_surfacing_evaluation_fails_on_missing_guidance_or_compact_noise(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    config = cli._load_workspace_config(target_root=tmp_path)
+    projection = cli._configuration_projection_payload(config=config)
+    compact = cli._compact_configuration_projection_payload(projection)
+
+    noisy_compact = {**compact, "facts": projection["facts"]}
+    noisy_evaluation = cli._selective_surfacing_evaluation_payload(
+        projection_payload=projection,
+        compact_projection=noisy_compact,
+        cli_invoke=config.cli_invoke,
+    )
+    noisy_checks = {check["id"]: check for check in noisy_evaluation["checks"]}
+    assert noisy_checks["irrelevant-guidance-suppressed-from-compact-output"]["result"] == "fail"
+    assert noisy_evaluation["status"] == "fail"
+
+    broken_projection = {**projection, "facts": [{"id": "broken:row", "projection_status": "active"}]}
+    missing_evaluation = cli._selective_surfacing_evaluation_payload(
+        projection_payload=broken_projection,
+        compact_projection=compact,
+        cli_invoke=config.cli_invoke,
+    )
+    missing_checks = {check["id"]: check for check in missing_evaluation["checks"]}
+    assert missing_checks["required-guidance-present"]["result"] == "fail"
+    assert missing_checks["required-guidance-present"]["evidence"] == ["broken:row"]
+    assert missing_evaluation["finding_routing"]["rule"].startswith("Route failed checks")
+
+
 def test_improvement_intake_includes_repair_recurrence_subtype(capsys) -> None:
     assert cli.main(["defaults", "--verbose", "--section", "improvement_intake", "--format", "json"]) == 0
 
