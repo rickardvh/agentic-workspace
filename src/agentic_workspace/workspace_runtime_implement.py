@@ -214,45 +214,71 @@ def _optimization_posture_for_path(
     authority = str(path_payload.get("authority") or "unknown")
     hard_blocked = bool(path_payload.get("hard_blockers"))
     ownership = str(path_payload.get("ownership") or "")
-    explicit_owner_boundary = owner not in {"unknown", "repo", "workspace"} or ownership in {
-        "module_managed",
-        "managed_fence",
-    }
-    exempt = hard_blocked or surface_origin in {"generated", "managed"} or explicit_owner_boundary
-    status = "owner-boundary" if exempt else "active"
+    direct_edit_boundary = (
+        hard_blocked
+        or surface_origin in {"generated", "managed"}
+        or ownership
+        in {
+            "module_managed",
+            "managed_fence",
+        }
+    )
+    owner_key = owner.removeprefix("authority:").lower()
+    if owner_key in {"human", "humans", "person", "people"}:
+        optimization_target = "human-use"
+        effective_optimization_bias = "human-readability-control-review"
+        audience_reason = "human-use surface is optimised for human readability, control, and review"
+        signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
+    elif owner_key in {"agent", "agents"}:
+        optimization_target = "agent-use"
+        effective_optimization_bias = "agent-efficiency"
+        audience_reason = "agent-use surface is optimised for agent efficiency and machine-readable structure"
+        signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
+    else:
+        optimization_target = "configured-repo-posture"
+        effective_optimization_bias = optimization_bias
+        audience_reason = "configured repo optimisation posture applies to this implementation path"
+        signals = ["agent-efficiency", "proactive-improvement", "reuse-pressure", "architecture-boundary", "residue-routing"]
+    status = "owner-boundary" if direct_edit_boundary else "active"
     if hard_blocked:
         reason = "direct edit is blocked by authority or generated-surface routing"
     elif surface_origin == "generated":
         reason = "generated projection should route through its source contract before optimisation pressure"
     elif surface_origin == "managed":
         reason = "managed or module-owned surface preserves owner boundary before optimisation pressure"
-    elif explicit_owner_boundary:
-        reason = f"explicit owner boundary {owner} requires review/escalation instead of silent optimisation pressure"
+    elif ownership in {"module_managed", "managed_fence"}:
+        reason = "managed ownership preserves owner boundary before optimisation pressure"
     else:
-        reason = "configured repo optimisation posture applies to this implementation path"
+        reason = audience_reason
     closeout_questions = (
         [
-            "Was optimisation pressure intentionally not applied because an owner or authority boundary controls this surface?",
-            "Was review or escalation routed when the owner boundary matters?",
+            "Was optimisation routed through the canonical source, generated owner, or managed command path before changing this surface?",
+            "Was review or escalation routed when the owner or authority boundary matters?",
         ]
-        if exempt
+        if direct_edit_boundary
         else [
-            "Did the implementation improve or preserve agent-readable structure, efficiency, reuse, residue handling, and architecture boundaries?",
-            "If the configured optimisation posture was not followed, is the divergence explicit before completion claims?",
+            "Did the implementation improve or preserve the effective optimisation target for this surface?",
+            "If the configured repo posture was retargeted for a human-use or agent-use surface, is that audience boundary explicit before completion claims?",
         ]
+    )
+    review_guidance = (
+        "Subsystem-owned implementation surface: keep configured posture active and use subsystem proof/review guidance."
+        if owner.startswith("subsystem:")
+        else "Use the effective optimisation target for this surface."
     )
     return {
         "status": status,
         "improvement_latitude": improvement_latitude,
         "optimization_bias": optimization_bias,
+        "effective_optimization_bias": effective_optimization_bias,
+        "optimization_target": optimization_target,
         "owner": owner,
         "surface_origin": surface_origin,
         "authority": authority,
-        "exempt_from_optimization_pressure": exempt,
+        "exempt_from_optimization_pressure": direct_edit_boundary,
         "reason": reason,
-        "signals": []
-        if exempt
-        else ["agent-efficiency", "proactive-improvement", "reuse-pressure", "architecture-boundary", "residue-routing"],
+        "signals": [] if direct_edit_boundary else signals,
+        "review_guidance": review_guidance,
         "closeout_questions": closeout_questions,
     }
 
@@ -275,9 +301,9 @@ def _optimization_posture_summary(paths: list[dict[str, Any]]) -> dict[str, Any]
         "active_path_count": active_count,
         "owner_boundary_path_count": exempt_count,
         "closeout_required": bool(active_count or exempt_count),
-        "rule": "Configured improvement_latitude and optimization_bias apply to implementation paths unless explicit ownership, managed/generated status, or direct-edit authority routes the work differently.",
-        "active_closeout_question": "Did the implementation improve or preserve agent-readable structure, efficiency, reuse, residue handling, and architecture boundaries?",
-        "owner_boundary_question": "Was optimisation pressure withheld or routed because an explicit owner or authority boundary controls the surface?",
+        "rule": "Configured improvement_latitude and optimization_bias apply to ordinary implementation paths; human-use and agent-use surfaces retarget optimisation by audience, while managed, generated, and direct-edit-blocked surfaces route through their source or owner path first.",
+        "active_closeout_question": "Did the implementation improve or preserve the effective optimisation target for each active surface?",
+        "owner_boundary_question": "Was optimisation routed through the source, generated owner, managed command, or authority path before changing an owner-boundary surface?",
     }
 
 

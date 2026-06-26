@@ -1523,9 +1523,11 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     source = by_path["src/agentic_workspace/workspace_runtime_primitives.py"]
     assert source["owner"] == "subsystem:workspace-runtime"
     assert source["surface_origin"] == "source-authored"
-    assert source["optimization_posture"]["status"] == "owner-boundary"
-    assert source["optimization_posture"]["exempt_from_optimization_pressure"] is True
-    assert "explicit owner boundary" in source["optimization_posture"]["reason"]
+    assert source["optimization_posture"]["status"] == "active"
+    assert source["optimization_posture"]["exempt_from_optimization_pressure"] is False
+    assert source["optimization_posture"]["optimization_target"] == "configured-repo-posture"
+    assert source["optimization_posture"]["effective_optimization_bias"] == "balanced"
+    assert "Subsystem-owned implementation surface" in source["optimization_posture"]["review_guidance"]
     assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
     assert "subsystem:workspace-runtime" in source["related"]["proof_lanes"]
 
@@ -1560,7 +1562,7 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert impact["proof_impact"]["required_commands"]
 
 
-def test_implement_change_impact_routes_optimization_posture_around_owner_boundaries(tmp_path: Path, capsys) -> None:
+def test_implement_change_impact_routes_optimization_posture_by_audience_boundary(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
@@ -1583,10 +1585,19 @@ owner = "human"
 ownership = "repo_owned"
 authority = "primary"
 summary = "Human-owned strategy surface."
+
+[[authority_surfaces]]
+concern = "agent-runbook"
+surface = "agent/runbook.md"
+owner = "agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Agent-owned runbook surface."
 """,
     )
     _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
     _write(tmp_path / "strategy" / "human-plan.md", "# Strategy\n")
+    _write(tmp_path / "agent" / "runbook.md", "# Runbook\n")
 
     assert (
         cli.main(
@@ -1597,6 +1608,7 @@ summary = "Human-owned strategy surface."
                 "--changed",
                 "src/feature.py",
                 "strategy/human-plan.md",
+                "agent/runbook.md",
                 "--select",
                 "change_impact",
                 "--format",
@@ -1607,19 +1619,31 @@ summary = "Human-owned strategy surface."
     )
 
     impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
-    assert impact["optimization_posture"]["status"] == "mixed"
-    assert impact["optimization_posture"]["active_path_count"] == 1
-    assert impact["optimization_posture"]["owner_boundary_path_count"] == 1
+    assert impact["optimization_posture"]["status"] == "active"
+    assert impact["optimization_posture"]["active_path_count"] == 3
+    assert impact["optimization_posture"]["owner_boundary_path_count"] == 0
     by_path = {item["path"]: item for item in impact["paths"]}
     source_posture = by_path["src/feature.py"]["optimization_posture"]
     assert source_posture["status"] == "active"
     assert source_posture["improvement_latitude"] == "proactive"
     assert source_posture["optimization_bias"] == "agent-efficiency"
+    assert source_posture["effective_optimization_bias"] == "agent-efficiency"
+    assert source_posture["optimization_target"] == "configured-repo-posture"
     assert "agent-efficiency" in source_posture["signals"]
     human_posture = by_path["strategy/human-plan.md"]["optimization_posture"]
-    assert human_posture["status"] == "owner-boundary"
-    assert human_posture["exempt_from_optimization_pressure"] is True
+    assert human_posture["status"] == "active"
+    assert human_posture["exempt_from_optimization_pressure"] is False
     assert human_posture["owner"] == "human"
+    assert human_posture["optimization_target"] == "human-use"
+    assert human_posture["effective_optimization_bias"] == "human-readability-control-review"
+    assert "human-readability" in human_posture["signals"]
+    agent_posture = by_path["agent/runbook.md"]["optimization_posture"]
+    assert agent_posture["status"] == "active"
+    assert agent_posture["exempt_from_optimization_pressure"] is False
+    assert agent_posture["owner"] == "agent"
+    assert agent_posture["optimization_target"] == "agent-use"
+    assert agent_posture["effective_optimization_bias"] == "agent-efficiency"
+    assert "machine-readable-structure" in agent_posture["signals"]
 
 
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
