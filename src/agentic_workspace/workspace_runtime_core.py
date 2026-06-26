@@ -26096,12 +26096,6 @@ _PRE_TEST_EVIDENCE_PROOF_PROFILES = {"test_evidence_change"}
 _PRE_TEST_EVIDENCE_REQUIRED_LABELS = {"verification_proof_decision_review"}
 
 
-def _is_python_test_path_for_guardrail(path: str) -> bool:
-    candidate = Path(path)
-    normalized = candidate.as_posix()
-    return candidate.suffix == ".py" and candidate.name.startswith("test_") and (normalized.startswith("tests/") or "/tests/" in normalized)
-
-
 def _pre_test_evidence_requirement(requirement: dict[str, Any]) -> bool:
     requirement_id = str(requirement.get("id", "")).strip()
     proof_profile = str(requirement.get("proof_profile") or "").strip()
@@ -26164,20 +26158,6 @@ def _test_evidence_path_classifications(
                         "authority_refs": _list_payload(protocol.get("authority_refs")),
                     }
                 )
-    classified_paths = {str(item.get("path")) for item in classifications}
-    for path in normalized_paths:
-        if path in classified_paths or not _is_python_test_path_for_guardrail(path):
-            continue
-        classifications.append(
-            {
-                "path": path,
-                "source": "compatibility.python-test-path",
-                "matched_by": "compatibility-fallback",
-                "pattern": "tests/**/test_*.py",
-                "authority_refs": [],
-                "compatibility": True,
-            }
-        )
     deduped: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     for item in classifications:
@@ -26307,10 +26287,7 @@ def _pre_test_evidence_guardrail_payload(
         "regression_sprawl_review_questions": sprawl_questions,
         "detail_selectors": ["test_strategy_check", "verification"],
         "source_boundary": {
-            "activation": (
-                "declared assurance/Verification evidence path facts first; Python test filename conventions are a bounded "
-                "compatibility fallback, not package-wide policy"
-            ),
+            "activation": ("declared assurance/Verification evidence path facts; AW does not infer host test conventions from filenames"),
             "options": "verification.evidence_strategy.proof_governance",
             "review_questions": "verification.evidence_strategy.regression_sprawl",
             "no_universal_task_keyword_policy": True,

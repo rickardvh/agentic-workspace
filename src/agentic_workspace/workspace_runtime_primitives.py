@@ -26089,12 +26089,6 @@ def _test_strategy_check_payload(
                 if _path_matches_subsystem_pattern(path=path, pattern=pattern) and path not in test_paths:
                     test_paths.append(path)
     if not test_paths:
-        test_paths = [
-            path
-            for path in normalized_paths
-            if Path(path).name.startswith("test_") and Path(path).suffix == ".py" and ("tests/" in path or path.startswith("tests/"))
-        ]
-    if not test_paths:
         return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
     disposition_record = _load_test_strategy_dispositions(target_root)
     disposition_items = [item for item in _list_payload(disposition_record.get("items")) if isinstance(item, dict)]
