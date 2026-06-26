@@ -8388,6 +8388,7 @@ def _run_report_command(
         cli_compatibility=_cli_compatibility_payload(config=config),
         summary=_summarise_reports(target_root=target_root, reports=module_reports, descriptors=descriptors, command_name="report"),
     )
+    configuration_projection = _configuration_projection_payload(config=config)
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -8414,8 +8415,8 @@ def _run_report_command(
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
-        "configuration_projection": _configuration_projection_payload(config=config),
-        "selective_surfacing_evaluation": _configuration_projection_payload(config=config)["selective_surfacing_evaluation"],
+        "configuration_projection": configuration_projection,
+        "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": memory_consult,
@@ -12101,6 +12102,7 @@ def _run_report_router_command(
             "command": next_command,
             "run": next_command,
         }
+    configuration_projection = _configuration_projection_payload(config=config)
     router_source = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -12123,8 +12125,8 @@ def _run_report_router_command(
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
-        "configuration_projection": _compact_configuration_projection_payload(_configuration_projection_payload(config=config)),
-        "selective_surfacing_evaluation": _configuration_projection_payload(config=config)["selective_surfacing_evaluation"],
+        "configuration_projection": _compact_configuration_projection_payload(configuration_projection),
+        "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
