@@ -203,7 +203,236 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
     }
 
 
-def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+def _optimization_posture_for_path(
+    *,
+    path_payload: dict[str, Any],
+    improvement_latitude: str,
+    optimization_bias: str,
+) -> dict[str, Any]:
+    owner = str(path_payload.get("owner") or "unknown")
+    audience_value = str(path_payload.get("audience") or "").strip().lower()
+    surface_origin = str(path_payload.get("surface_origin") or "unknown")
+    authority = str(path_payload.get("authority") or "unknown")
+    hard_blocked = bool(path_payload.get("hard_blockers"))
+    ownership = str(path_payload.get("ownership") or "")
+    direct_edit_boundary = (
+        hard_blocked
+        or surface_origin in {"generated", "managed"}
+        or ownership
+        in {
+            "module_managed",
+            "managed_fence",
+        }
+    )
+    owner_key = owner.removeprefix("authority:").lower()
+    owner_tokens = {token.strip() for token in owner_key.replace("+", ",").replace("/", ",").split(",") if token.strip()}
+    has_human = bool(owner_tokens & {"human", "humans", "person", "people"})
+    has_agent = bool(owner_tokens & {"agent", "agents"})
+    has_machine = bool(owner_tokens & {"machine", "machines"})
+    audience_conflict = sum((has_human, has_agent, has_machine)) > 1
+    explicit_audience_tokens = {token.strip() for token in audience_value.replace("+", ",").replace("/", ",").split(",") if token.strip()}
+    explicit_audience_conflict = len(explicit_audience_tokens & {"human", "agent", "machine"}) > 1
+    if audience_value in {"mixed", "hybrid"} or explicit_audience_conflict:
+        audience = "mixed"
+        audience_source = "explicit"
+        effective_target = "mixed-audience-review"
+        effective_optimization_bias = "preserve-human-and-agent-usability"
+        audience_reason = "explicit mixed-audience surface needs review when human, agent, or machine targets trade off"
+        signals = ["mixed-audience", "reviewability", "machine-readable-structure", "tradeoff-review"]
+    elif audience_value in {"human", "agent", "machine"}:
+        audience = audience_value
+        audience_source = "explicit"
+        if audience == "human":
+            effective_target = "human-readability-control-review"
+            effective_optimization_bias = "human-readability-control-review"
+            audience_reason = "explicit human-use audience is optimised for human readability, control, and review"
+            signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
+        elif audience == "agent":
+            effective_target = "agent-efficiency"
+            effective_optimization_bias = "agent-efficiency"
+            audience_reason = "explicit agent-use audience is optimised for agent efficiency and machine-readable structure"
+            signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
+        else:
+            effective_target = "stable-contract-validation"
+            effective_optimization_bias = "stable-contract-validation"
+            audience_reason = "explicit machine-use audience is optimised for stable contracts and validation"
+            signals = ["stable-contract", "validation", "machine-readable-structure"]
+    elif owner_key in {"mixed", "hybrid"} or audience_conflict:
+        audience = "mixed"
+        audience_source = "owner-inferred"
+        effective_target = "mixed-audience-review"
+        effective_optimization_bias = "preserve-human-and-agent-usability"
+        audience_reason = "mixed-audience surface needs review when human, agent, or machine targets trade off"
+        signals = ["mixed-audience", "reviewability", "machine-readable-structure", "tradeoff-review"]
+    elif has_human:
+        audience = "human"
+        audience_source = "owner-inferred"
+        effective_target = "human-readability-control-review"
+        effective_optimization_bias = "human-readability-control-review"
+        audience_reason = "human-use surface is optimised for human readability, control, and review"
+        signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
+    elif has_agent:
+        audience = "agent"
+        audience_source = "owner-inferred"
+        effective_target = "agent-efficiency"
+        effective_optimization_bias = "agent-efficiency"
+        audience_reason = "agent-use surface is optimised for agent efficiency and machine-readable structure"
+        signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
+    elif has_machine:
+        audience = "machine"
+        audience_source = "owner-inferred"
+        effective_target = "stable-contract-validation"
+        effective_optimization_bias = "stable-contract-validation"
+        audience_reason = "machine-use surface is optimised for stable contracts and validation"
+        signals = ["stable-contract", "validation", "machine-readable-structure"]
+    else:
+        audience = "unknown"
+        audience_source = "none"
+        effective_target = optimization_bias
+        effective_optimization_bias = optimization_bias
+        audience_reason = "configured repo optimisation posture applies to this implementation path"
+        signals = ["agent-efficiency", "proactive-improvement", "reuse-pressure", "architecture-boundary", "residue-routing"]
+    source_route = "source-or-owner-first" if direct_edit_boundary else "direct"
+    status = (
+        "review-required" if audience == "mixed" and not direct_edit_boundary else "owner-boundary" if direct_edit_boundary else "active"
+    )
+    if hard_blocked:
+        reason = "direct edit is blocked by authority or generated-surface routing"
+    elif surface_origin == "generated":
+        reason = "generated projection should route through its source contract before optimisation pressure"
+    elif surface_origin == "managed":
+        reason = "managed or module-owned surface preserves owner boundary before optimisation pressure"
+    elif ownership in {"module_managed", "managed_fence"}:
+        reason = "managed ownership preserves owner boundary before optimisation pressure"
+    else:
+        reason = audience_reason
+    closeout_questions = (
+        [
+            "Was optimisation routed through the canonical source, generated owner, or managed command path before changing this surface?",
+            "Was review or escalation routed when the owner or authority boundary matters?",
+        ]
+        if direct_edit_boundary
+        else [
+            "Which audience target wins if human, agent, or machine optimisation goals trade off?",
+            "Was review or escalation routed instead of silently guessing the effective target?",
+        ]
+        if audience == "mixed"
+        else [
+            "Did the implementation improve or preserve the effective optimisation target for this surface?",
+            "If the configured repo posture was retargeted for a human-use or agent-use surface, is that audience boundary explicit before completion claims?",
+        ]
+    )
+    review_guidance = (
+        "Subsystem-owned implementation surface: keep configured posture active and use subsystem proof/review guidance."
+        if owner.startswith("subsystem:")
+        else "Use the effective optimisation target for this surface."
+    )
+    return {
+        "status": status,
+        "improvement_latitude": improvement_latitude,
+        "optimization_bias": optimization_bias,
+        "effective_optimization_bias": effective_optimization_bias,
+        "configured_posture": {
+            "improvement_latitude": improvement_latitude,
+            "optimization_bias": optimization_bias,
+        },
+        "audience": audience,
+        "audience_source": audience_source,
+        "effective_target": effective_target,
+        "optimization_target": effective_target,
+        "source_route": source_route,
+        "owner": owner,
+        "surface_origin": surface_origin,
+        "authority": authority,
+        "exempt_from_optimization_pressure": direct_edit_boundary,
+        "reason": reason,
+        "signals": [] if direct_edit_boundary else signals,
+        "review_guidance": review_guidance,
+        "closeout_questions": closeout_questions,
+    }
+
+
+def _optimization_posture_summary(paths: list[dict[str, Any]]) -> dict[str, Any]:
+    posture_items = [_as_dict(path.get("optimization_posture")) for path in paths if isinstance(path, dict)]
+    active_count = sum(1 for item in posture_items if item.get("status") == "active")
+    exempt_count = sum(1 for item in posture_items if item.get("status") == "owner-boundary")
+    review_count = sum(1 for item in posture_items if item.get("status") == "review-required")
+    source_routed_count = sum(1 for item in posture_items if item.get("source_route") == "source-or-owner-first")
+    audience_overrides = [
+        item
+        for item in posture_items
+        if item.get("audience") in {"human", "agent", "machine", "mixed"} and item.get("status") != "owner-boundary"
+    ]
+    effective_targets = sorted(
+        {str(item.get("effective_target")) for item in posture_items if str(item.get("effective_target") or "").strip()}
+    )
+    configured_postures = [
+        _as_dict(item.get("configured_posture")) for item in posture_items if isinstance(item.get("configured_posture"), dict)
+    ]
+    configured_posture = configured_postures[0] if configured_postures else {}
+    if review_count:
+        status = "review-required"
+    elif active_count and exempt_count:
+        status = "mixed"
+    elif active_count:
+        status = "active"
+    elif exempt_count:
+        status = "owner-boundary"
+    else:
+        status = "unavailable"
+    return {
+        "kind": "agentic-workspace/optimization-posture-routing/v1",
+        "status": status,
+        "active_path_count": active_count,
+        "owner_boundary_path_count": exempt_count,
+        "review_required_path_count": review_count,
+        "source_routed_path_count": source_routed_count,
+        "audience_override_count": len(audience_overrides),
+        "effective_target": effective_targets[0] if len(effective_targets) == 1 else "mixed" if effective_targets else "unknown",
+        "configured_posture": configured_posture,
+        "closeout_required": bool(active_count or exempt_count or review_count),
+        "review_required": bool(review_count),
+        "review_guidance": "Review mixed or conflicting audience signals before choosing an optimisation target." if review_count else "",
+        "rule": "Configured improvement_latitude and optimization_bias apply to ordinary implementation paths; explicit audience retargets optimisation for human, agent, machine, or mixed use, while managed, generated, and direct-edit-blocked surfaces route through their source or owner path first.",
+        "active_closeout_question": "Did the implementation improve or preserve the effective optimisation target for each active surface?",
+        "owner_boundary_question": "Was optimisation routed through the source, generated owner, managed command, or authority path before changing an owner-boundary surface?",
+    }
+
+
+def _optimization_posture_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    proof: dict[str, Any],
+    cli_invoke: str,
+    improvement_latitude: str,
+    optimization_bias: str,
+) -> dict[str, Any]:
+    if not changed_paths:
+        return _optimization_posture_summary([])
+    ownership_payload = _ownership_payload(target_root=target_root, descriptors=_module_operations())
+    paths = [
+        _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
+        for path in changed_paths
+    ]
+    for path_payload in paths:
+        path_payload["optimization_posture"] = _optimization_posture_for_path(
+            path_payload=path_payload,
+            improvement_latitude=improvement_latitude,
+            optimization_bias=optimization_bias,
+        )
+    return _optimization_posture_summary(paths)
+
+
+def _change_impact_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    proof: dict[str, Any],
+    cli_invoke: str,
+    improvement_latitude: str = "reactive",
+    optimization_bias: str = "neutral",
+) -> dict[str, Any]:
     if not changed_paths:
         return {
             "kind": "agentic-workspace/change-impact/v1",
@@ -219,6 +448,12 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
         _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
         for path in changed_paths
     ]
+    for path_payload in paths:
+        path_payload["optimization_posture"] = _optimization_posture_for_path(
+            path_payload=path_payload,
+            improvement_latitude=improvement_latitude,
+            optimization_bias=optimization_bias,
+        )
     facts = [f"{item['path']}: {fact}" for item in paths for fact in item["facts"]]
     warnings = [f"{item['path']}: {warning}" for item in paths for warning in item["warnings"]]
     hard_blockers = [f"{item['path']}: {blocker}" for item in paths for blocker in item["hard_blockers"]]
@@ -235,6 +470,7 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
         "unknown_path_count": unknown_count,
         "warning_count": len(warnings),
         "hard_blocker_count": len(hard_blockers),
+        "optimization_posture": _optimization_posture_summary(paths),
         "paths": paths,
         "facts": facts,
         "warnings": warnings,
@@ -246,7 +482,7 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
             ),
         },
-        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, and proof selection for the changed paths.",
+        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, configured optimisation posture, and proof selection for the changed paths.",
     }
 
 
@@ -543,7 +779,22 @@ def _implement_payload(
         )
     if include_change_impact:
         payload["change_impact"] = _change_impact_payload(
-            target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            proof=proof,
+            cli_invoke=config.cli_invoke,
+            improvement_latitude=config.improvement_latitude,
+            optimization_bias=config.optimization_bias,
+        )
+        payload["optimization_posture"] = payload["change_impact"].get("optimization_posture", {})
+    else:
+        payload["optimization_posture"] = _optimization_posture_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            proof=proof,
+            cli_invoke=config.cli_invoke,
+            improvement_latitude=config.improvement_latitude,
+            optimization_bias=config.optimization_bias,
         )
     if include_assurance_requirements:
         payload["assurance_requirements"] = _assurance_requirements_report_payload(
@@ -682,6 +933,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not (isinstance(reuse_pressure, dict) and reuse_pressure.get("status") == "deferred"):
         context_reuse_pressure["state"] = reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None
         context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
+    optimization_posture = _as_dict(payload.get("optimization_posture"))
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
     delegation_attention = _delegation_decision_requires_attention(delegation_decision)
     advisory_selectors = [
@@ -876,6 +1128,25 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
             "reuse_pressure": context_reuse_pressure,
+            "optimization_posture": {
+                "status": optimization_posture.get("status", "unavailable"),
+                "effective_target": optimization_posture.get("effective_target", "unknown"),
+                "configured_posture": "/".join(
+                    str(optimization_posture.get("configured_posture", {}).get(key, ""))
+                    for key in ("improvement_latitude", "optimization_bias")
+                    if str(optimization_posture.get("configured_posture", {}).get(key, "")).strip()
+                ),
+                **(
+                    {"audience_overrides": optimization_posture.get("audience_override_count", 0)}
+                    if optimization_posture.get("audience_override_count", 0)
+                    else {}
+                ),
+                **(
+                    {"source_routed_paths": optimization_posture.get("source_routed_path_count", 0)}
+                    if optimization_posture.get("source_routed_path_count", 0)
+                    else {}
+                ),
+            },
             "generated_surface_trust": {
                 "status": payload.get("generated_surface_trust", {}).get("status", "not-applicable")
                 if isinstance(payload.get("generated_surface_trust"), dict)

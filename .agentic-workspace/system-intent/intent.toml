@@ -69,7 +69,7 @@ affected_decisions = [
   "runtime-boundary-design"
 ]
 path_globs = [
-  "src/agentic_workspace/workspace_runtime_primitives.py",
+  "src/agentic_workspace/workspace_runtime*.py",
   "src/agentic_workspace/config.py",
   "src/agentic_workspace/reporting_support.py",
   "scripts/check/check_contract_tooling_surfaces.py",

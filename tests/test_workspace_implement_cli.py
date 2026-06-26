@@ -54,7 +54,7 @@ derived_from = ["anti_intents:Do not let this repo's current language, tooling, 
 allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
 forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
 affected_decisions = ["routing", "ownership", "proof-selection"]
-path_globs = ["src/agentic_workspace/workspace_runtime_primitives.py"]
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
 guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
 derived_applications = ["non-enum-keyword-routing"]
 proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
@@ -778,6 +778,74 @@ blocked_without_evidence = ["docs-rendering-complete"]
     assert "manual_review" not in subsystem["missing_evidence"]
 
 
+def test_implement_routes_runtime_assurance_from_workspace_runtime_subsystem(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+owns = ["workspace command routing", "workspace runtime source boundaries"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.workspace-cli-runtime]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
+required_evidence = ["workspace_runtime_proof"]
+proof_profile = "workspace_behavior"
+force = "required-before-closeout"
+blocked_without_evidence = ["claim-work-complete"]
+claim_boundary = "workspace-runtime-routing"
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Terse runtime refactor",
+                "--select",
+                "assurance_requirements,architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assurance = values["assurance_requirements"]
+    subsystem = assurance["subsystem_assurance"]
+    assert subsystem["matched_subsystem_ids"] == ["workspace-cli-runtime"]
+    assert subsystem["matched_profiles"][0]["applies_because"] == ["changed path matched subsystem workspace-cli-runtime"]
+    assert subsystem["missing_evidence"] == ["workspace_runtime_proof"]
+    assert assurance["active"][0]["id"] == "subsystem:workspace-cli-runtime"
+    assert assurance["active"][0]["proof_profile"] == "workspace_behavior"
+    architecture = values["architecture_principles"]
+    assert architecture["matched_count"] == 1
+    assert architecture["matched_principles"][0]["matched_paths"] == [
+        {
+            "path": "src/agentic_workspace/workspace_runtime_core.py",
+            "pattern": "src/agentic_workspace/workspace_runtime*.py",
+        }
+    ]
+
+
 def test_assurance_reads_compact_evidence_records(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -1455,11 +1523,20 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     source = by_path["src/agentic_workspace/workspace_runtime_primitives.py"]
     assert source["owner"] == "subsystem:workspace-runtime"
     assert source["surface_origin"] == "source-authored"
+    assert source["optimization_posture"]["status"] == "active"
+    assert source["optimization_posture"]["exempt_from_optimization_pressure"] is False
+    assert source["optimization_posture"]["audience"] == "unknown"
+    assert source["optimization_posture"]["source_route"] == "direct"
+    assert source["optimization_posture"]["effective_target"] == "balanced"
+    assert source["optimization_posture"]["effective_optimization_bias"] == "balanced"
+    assert "Subsystem-owned implementation surface" in source["optimization_posture"]["review_guidance"]
     assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
     assert "subsystem:workspace-runtime" in source["related"]["proof_lanes"]
 
     generated = by_path["generated/workspace/python/command_package.json"]
     assert generated["surface_origin"] == "generated"
+    assert generated["optimization_posture"]["status"] == "owner-boundary"
+    assert generated["optimization_posture"]["source_route"] == "source-or-owner-first"
     assert generated["signal"] == "hard_blocker"
     assert generated["safe_to_edit"] is False
     assert generated["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
@@ -1470,6 +1547,8 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert managed["owner"] == "planning"
     assert managed["surface_origin"] == "managed"
     assert managed["matched_by"] == "module_root"
+    assert managed["optimization_posture"]["status"] == "owner-boundary"
+    assert managed["optimization_posture"]["source_route"] == "source-or-owner-first"
     assert managed["signal"] == "warning"
     assert managed["safe_to_edit"] is True
     assert any("command-owned mutation" in warning for warning in managed["warnings"])
@@ -1479,12 +1558,160 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert unknown["ownership_matched"] is False
     assert unknown["signal"] == "warning"
     assert "No explicit ownership ledger match" in unknown["warnings"][0]
+    assert unknown["optimization_posture"]["status"] == "active"
+    assert unknown["optimization_posture"]["optimization_bias"] == "balanced"
+    assert unknown["optimization_posture"]["audience"] == "unknown"
+    assert unknown["optimization_posture"]["effective_target"] == "balanced"
 
     assert impact["generated_path_count"] == 1
     assert impact["managed_path_count"] == 1
     assert impact["unknown_path_count"] == 1
     assert impact["hard_blocker_count"] == 1
+    assert impact["optimization_posture"]["source_routed_path_count"] == 2
     assert impact["proof_impact"]["required_commands"]
+
+
+def test_implement_change_impact_routes_optimization_posture_by_audience_boundary(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+improvement_latitude = "proactive"
+optimization_bias = "agent-efficiency"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[authority_surfaces]]
+concern = "human-authored-plan"
+surface = "strategy/human-plan.md"
+owner = "human"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Human-owned strategy surface."
+
+[[authority_surfaces]]
+concern = "agent-runbook"
+surface = "agent/runbook.md"
+owner = "agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Agent-owned runbook surface."
+
+[[authority_surfaces]]
+concern = "machine-contract"
+surface = "contracts/schema.json"
+owner = "machine"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Machine-consumed contract surface."
+
+[[authority_surfaces]]
+concern = "mixed-runbook"
+surface = "docs/mixed.md"
+owner = "human+agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Mixed-audience documentation surface."
+
+[[authority_surfaces]]
+concern = "human-owned-agent-aid"
+surface = "aids/agent.md"
+owner = "human"
+audience = "agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Human-owned surface intended for agent consumption."
+""",
+    )
+    _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
+    _write(tmp_path / "strategy" / "human-plan.md", "# Strategy\n")
+    _write(tmp_path / "agent" / "runbook.md", "# Runbook\n")
+    _write(tmp_path / "contracts" / "schema.json", "{}\n")
+    _write(tmp_path / "docs" / "mixed.md", "# Mixed\n")
+    _write(tmp_path / "aids" / "agent.md", "# Agent aid\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/feature.py",
+                "strategy/human-plan.md",
+                "agent/runbook.md",
+                "contracts/schema.json",
+                "docs/mixed.md",
+                "aids/agent.md",
+                "--select",
+                "change_impact",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
+    assert impact["optimization_posture"]["status"] == "review-required"
+    assert impact["optimization_posture"]["active_path_count"] == 5
+    assert impact["optimization_posture"]["owner_boundary_path_count"] == 0
+    assert impact["optimization_posture"]["review_required_path_count"] == 1
+    assert impact["optimization_posture"]["audience_override_count"] == 5
+    assert impact["optimization_posture"]["effective_target"] == "mixed"
+    assert impact["optimization_posture"]["review_required"] is True
+    by_path = {item["path"]: item for item in impact["paths"]}
+    source_posture = by_path["src/feature.py"]["optimization_posture"]
+    assert source_posture["status"] == "active"
+    assert source_posture["improvement_latitude"] == "proactive"
+    assert source_posture["optimization_bias"] == "agent-efficiency"
+    assert source_posture["effective_optimization_bias"] == "agent-efficiency"
+    assert source_posture["audience"] == "unknown"
+    assert source_posture["effective_target"] == "agent-efficiency"
+    assert "agent-efficiency" in source_posture["signals"]
+    human_posture = by_path["strategy/human-plan.md"]["optimization_posture"]
+    assert human_posture["status"] == "active"
+    assert human_posture["exempt_from_optimization_pressure"] is False
+    assert human_posture["owner"] == "human"
+    assert human_posture["audience"] == "human"
+    assert human_posture["audience_source"] == "owner-inferred"
+    assert human_posture["effective_target"] == "human-readability-control-review"
+    assert human_posture["effective_optimization_bias"] == "human-readability-control-review"
+    assert "human-readability" in human_posture["signals"]
+    agent_posture = by_path["agent/runbook.md"]["optimization_posture"]
+    assert agent_posture["status"] == "active"
+    assert agent_posture["exempt_from_optimization_pressure"] is False
+    assert agent_posture["owner"] == "agent"
+    assert agent_posture["audience"] == "agent"
+    assert agent_posture["audience_source"] == "owner-inferred"
+    assert agent_posture["effective_target"] == "agent-efficiency"
+    assert agent_posture["effective_optimization_bias"] == "agent-efficiency"
+    assert "machine-readable-structure" in agent_posture["signals"]
+    machine_posture = by_path["contracts/schema.json"]["optimization_posture"]
+    assert machine_posture["status"] == "active"
+    assert machine_posture["audience"] == "machine"
+    assert machine_posture["audience_source"] == "owner-inferred"
+    assert machine_posture["effective_target"] == "stable-contract-validation"
+    assert "stable-contract" in machine_posture["signals"]
+    mixed_posture = by_path["docs/mixed.md"]["optimization_posture"]
+    assert mixed_posture["status"] == "review-required"
+    assert mixed_posture["audience"] == "mixed"
+    assert mixed_posture["audience_source"] == "owner-inferred"
+    assert mixed_posture["effective_target"] == "mixed-audience-review"
+    assert "tradeoff-review" in mixed_posture["signals"]
+    explicit_agent_posture = by_path["aids/agent.md"]["optimization_posture"]
+    assert explicit_agent_posture["status"] == "active"
+    assert explicit_agent_posture["owner"] == "human"
+    assert explicit_agent_posture["audience"] == "agent"
+    assert explicit_agent_posture["audience_source"] == "explicit"
+    assert explicit_agent_posture["effective_target"] == "agent-efficiency"
+    assert "agent-efficiency" in explicit_agent_posture["signals"]
 
 
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
@@ -1918,6 +2145,11 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert payload["context"]["optimization_posture"] == {
+        "status": "active",
+        "effective_target": "balanced",
+        "configured_posture": "conservative/balanced",
+    }
     planning_gate = payload["context"]["planning_safety_gate"]
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"
@@ -3749,7 +3981,7 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write_architecture_principles(tmp_path)
-    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
 
     assert (
         cli.main(
@@ -3758,7 +3990,7 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "src/agentic_workspace/workspace_runtime_core.py",
                 "--task",
                 "Refactor runtime routing",
                 "--format",
@@ -3780,8 +4012,8 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     assert packet["matched_principles"][0]["guardrails"][0]["id"] == "non-enum-keyword-routing"
     assert packet["matched_principles"][0]["matched_paths"] == [
         {
-            "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-            "pattern": "src/agentic_workspace/workspace_runtime_primitives.py",
+            "path": "src/agentic_workspace/workspace_runtime_core.py",
+            "pattern": "src/agentic_workspace/workspace_runtime*.py",
         }
     ]
     assert packet["matched_principles"][0]["guardrail_refs"] == ["docs/maintainer/non-enum-keyword-routing-audit.json"]

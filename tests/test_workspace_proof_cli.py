@@ -2085,7 +2085,10 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
         "cli_authority",
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
+        "assurance-requirement:subsystem:workspace-cli-runtime",
+        "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
+        "verification:requirement_grounding_delegation",
     ]
     authority_review = answer["cli_authority_review"]
     assert authority_review["status"] == "blocked-direct-edit-route-to-source"
@@ -2129,7 +2132,10 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         "cli_authority",
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
+        "assurance-requirement:subsystem:workspace-cli-runtime",
+        "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
+        "verification:requirement_grounding_delegation",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     assert "make test-workspace" in answer["required_commands"]
@@ -2160,7 +2166,10 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
         "planning_source_typecheck_ci_parity",
+        "assurance-requirement:subsystem:workspace-cli-runtime",
+        "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
+        "verification:requirement_grounding_delegation",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     assert "make typecheck-planning" in answer["required_commands"]
