@@ -13467,6 +13467,22 @@ def _operating_loop_planning_state(
         return {"state": "closeout_required", "plan_ref": plan_ref, "blocks_full_closure": True}
     if gate.get("workflow_sufficient") is False:
         return {"state": "active", "plan_ref": plan_ref, "blocks_full_closure": True}
+    custody = _as_dict(gate.get("custody_planning"))
+    custody_effect = _as_dict(custody.get("action_effect"))
+    if str(custody_effect.get("force") or custody.get("force") or "") == "required_before_claim":
+        return {
+            "state": "closeout_required",
+            "plan_ref": plan_ref or _first_ref(custody.get("issue_refs"), custody.get("reason_codes")),
+            "blocks_full_closure": True,
+            "custody": "required-before-parent-closeout",
+        }
+    if str(custody.get("status") or "") == "recommended":
+        return {
+            "state": "continuation",
+            "plan_ref": plan_ref or _first_ref(custody.get("issue_refs"), custody.get("reason_codes")),
+            "blocks_full_closure": True,
+            "custody": "recommended",
+        }
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
         return {"state": "continuation", "plan_ref": plan_ref, "blocks_full_closure": True}
     if active_record.get("status") == "present":
@@ -21252,6 +21268,25 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
     if "work_shape_guidance" in gate:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
+    custody_planning = gate.get("custody_planning")
+    if isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable"):
+        compact["custody_planning"] = {
+            key: custody_planning.get(key)
+            for key in (
+                "kind",
+                "status",
+                "force",
+                "implementation_allowed",
+                "planning_roles",
+                "reason_codes",
+                "purpose",
+                "slice_boundary",
+                "action_effect",
+                "follow_up_route",
+                "rule",
+            )
+            if key in custody_planning
+        }
     active_delegation_requirement = gate.get("active_delegation_requirement")
     if isinstance(active_delegation_requirement, dict) and active_delegation_requirement.get("required"):
         compact["active_delegation_requirement"] = active_delegation_requirement
@@ -21565,7 +21600,9 @@ def _start_tiny_payload_fast(
     )
     payload["planning_revision"] = planning_safety_gate.get("planning_revision", {})
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
-    if planning_safety_gate["status"] not in {"satisfied", "clear"}:
+    custody_planning = planning_safety_gate.get("custody_planning", {})
+    custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
+    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
         payload["planning_safety_gate"] = planning_safety_gate
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
@@ -29904,6 +29941,32 @@ def _knowledge_gates_payload(
             record_resolution_to=".agentic-workspace/planning/state.toml",
             closeout_boundaries=["full_intent_complete", "issue_closure"],
             fallback="Use preflight or summary to repair or promote Planning ownership before editing.",
+        )
+
+    custody = _as_dict(planning_safety_gate.get("custody_planning"))
+    custody_effect = _as_dict(custody.get("action_effect"))
+    if str(custody.get("status") or "") in {"recommended", "required-reconciliation"}:
+        force = str(custody_effect.get("force") or custody.get("force") or "advisory")
+        add_gate(
+            gate_id="planning-intent-custody",
+            route_id="planning-custody-only",
+            trigger="broad lane, parent issue, multi-issue, or closure-sensitive custody evidence applies",
+            force="required_before_claim" if force == "required_before_claim" else "informational",
+            reason=str(
+                custody.get("purpose") or "Planning is relevant for shared intent custody, not necessarily step-by-step sequencing."
+            ),
+            next_allowed_action="reconcile custody before parent closeout"
+            if force == "required_before_claim"
+            else "continue direct slice; do not claim parent completion",
+            forbidden_actions=["claim parent lane complete or use PR closing keywords before custody is reconciled"]
+            if force == "required_before_claim"
+            else [],
+            required_actions=["record custody evidence or equivalent checked-in parent-scope reconciliation"]
+            if force == "required_before_claim"
+            else [],
+            record_resolution_to=".agentic-workspace/planning/ or equivalent checked-in custody evidence",
+            closeout_boundaries=["useful_slice_complete", "full_parent_satisfaction", "issue_closure"],
+            fallback="If cheap custody creation is unavailable, route creation to #1706 and keep parent completion claims partial.",
         )
 
     for index, obligation in enumerate(relevant_obligations, start=1):

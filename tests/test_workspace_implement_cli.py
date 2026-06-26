@@ -3671,6 +3671,199 @@ candidates = [
     assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
 
 
+def test_start_surfaces_custody_only_planning_for_parent_lane_without_blocking_direct_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2200",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "parent-lane",
+                        "title": "Parent lane: API migration",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #2200",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+    custody = gate["custody_planning"]
+    assert gate["implementation_allowed"] is True
+    assert custody["status"] == "recommended"
+    assert custody["planning_roles"]["implementation_gate"] == "not-required"
+    assert custody["planning_roles"]["sequencing_aid"] == "not-required-for-current-slice"
+    assert custody["planning_roles"]["intent_custody"] == "recommended"
+    assert "parent-lane" in custody["reason_codes"]
+    assert "shared lane intent" in custody["purpose"]
+    assert custody["slice_boundary"]["full_parent_satisfaction"] == "requires-custody-or-equivalent-reconciliation"
+    assert custody["follow_up_route"]["refs"] == ["#1706"]
+
+
+def test_start_default_output_surfaces_custody_only_planning_for_parent_lane(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2200",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "parent-lane",
+                        "title": "Parent lane: API migration",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #2200",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    custody = gate["custody_planning"]
+    assert gate["implementation_allowed"] is True
+    assert custody["status"] == "recommended"
+    assert custody["planning_roles"]["intent_custody"] == "recommended"
+    assert "parent-lane" in custody["reason_codes"]
+
+
+def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "docs" / "note.md", "# Note\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2200",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "parent-lane",
+                        "title": "Parent lane: API migration",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/note.md",
+                "--task",
+                "Implement issue #2200 and close parent issue",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    custody = gate["custody_planning"]
+    assert gate["implementation_allowed"] is True
+    assert custody["status"] == "required-reconciliation"
+    assert custody["action_effect"]["force"] == "required_before_claim"
+    assert "use-pr-closing-keywords" in custody["action_effect"]["blocked_until_reconciled"]
+    assert custody["slice_boundary"]["useful_slice_completion"] == "allowed-after-normal-proof"
+    assert custody["slice_boundary"]["full_parent_satisfaction"] == "requires-custody-or-equivalent-reconciliation"
+    assert payload["operating_loop"]["planning"]["state"] == "closeout_required"
+
+
+def test_start_keeps_narrow_direct_issue_quiet_without_custody_noise(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2201",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "issue",
+                        "title": "Fix typo in README",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #2201",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["next_safe_action"]["implementation_allowed"] is True
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+
+
 def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

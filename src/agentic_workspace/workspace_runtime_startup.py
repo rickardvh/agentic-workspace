@@ -689,7 +689,9 @@ def _start_payload(
     )
     payload["planning_revision"] = planning_safety_gate.get("planning_revision", {})
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
-    if planning_safety_gate["status"] not in {"satisfied", "clear"}:
+    custody_planning = planning_safety_gate.get("custody_planning", {})
+    custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
+    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
         payload["planning_safety_gate"] = planning_safety_gate
     if not planning_safety_gate["workflow_sufficient"] and (not _is_config_posture_task(task_text)):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
