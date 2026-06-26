@@ -24,7 +24,7 @@
     },
     "pre_test_evidence_guardrail": {
       "type": "object",
-      "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or changed test paths indicate test-shape decisions.",
+      "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions.",
       "additionalProperties": true
     },
     "task_posture_packet": {

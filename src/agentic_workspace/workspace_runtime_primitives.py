@@ -26079,11 +26079,21 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
 def _test_strategy_check_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
 ) -> dict[str, Any]:
-    test_paths = [
-        path
-        for path in changed_paths
-        if Path(path).name.startswith("test_") and Path(path).suffix == ".py" and ("tests/" in path or path.startswith("tests/"))
-    ]
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    test_paths: list[str] = []
+    for protocol in _list_payload(verification.get("configured_protocols")):
+        if not isinstance(protocol, dict) or str(protocol.get("id", "")).strip() != "test_evidence_decision":
+            continue
+        for pattern in [str(item).strip() for item in _list_payload(protocol.get("applies_to_paths")) if str(item).strip()]:
+            for path in normalized_paths:
+                if _path_matches_subsystem_pattern(path=path, pattern=pattern) and path not in test_paths:
+                    test_paths.append(path)
+    if not test_paths:
+        test_paths = [
+            path
+            for path in normalized_paths
+            if Path(path).name.startswith("test_") and Path(path).suffix == ".py" and ("tests/" in path or path.startswith("tests/"))
+        ]
     if not test_paths:
         return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
     disposition_record = _load_test_strategy_dispositions(target_root)

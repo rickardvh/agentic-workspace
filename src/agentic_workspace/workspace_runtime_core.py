@@ -26113,6 +26113,82 @@ def _pre_test_evidence_requirement(requirement: dict[str, Any]) -> bool:
     return bool(required_evidence & _PRE_TEST_EVIDENCE_REQUIRED_LABELS)
 
 
+def _verification_protocol_is_test_evidence(protocol: dict[str, Any]) -> bool:
+    protocol_id = str(protocol.get("id", "")).strip()
+    proof_profiles = {str(item).strip() for item in _list_payload(protocol.get("proof_profiles")) if str(item).strip()}
+    expected_evidence = {str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()}
+    if protocol_id == "test_evidence_decision":
+        return True
+    if proof_profiles & _PRE_TEST_EVIDENCE_PROOF_PROFILES:
+        return True
+    return bool(expected_evidence & _PRE_TEST_EVIDENCE_REQUIRED_LABELS)
+
+
+def _test_evidence_path_classifications(
+    *, changed_paths: list[str], config: WorkspaceConfig | None, verification: dict[str, Any] | None
+) -> list[dict[str, Any]]:
+    classifications: list[dict[str, Any]] = []
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    for requirement in _assurance_requirement_payloads(config):
+        if not _pre_test_evidence_requirement(requirement):
+            continue
+        requirement_id = str(requirement.get("id", "")).strip()
+        for pattern in [str(item).strip() for item in _list_payload(requirement.get("applies_to_paths")) if str(item).strip()]:
+            for path in normalized_paths:
+                if not _path_matches_subsystem_pattern(path=path, pattern=pattern):
+                    continue
+                classifications.append(
+                    {
+                        "path": path,
+                        "source": f"assurance.requirements.{requirement_id}",
+                        "matched_by": "assurance.applies_to_paths",
+                        "pattern": pattern,
+                        "authority_refs": _list_payload(requirement.get("authority_refs")),
+                    }
+                )
+    verification_payload = _as_dict(verification)
+    for protocol in _list_payload(verification_payload.get("configured_protocols")):
+        if not isinstance(protocol, dict) or not _verification_protocol_is_test_evidence(protocol):
+            continue
+        protocol_id = str(protocol.get("id", "")).strip()
+        for pattern in [str(item).strip() for item in _list_payload(protocol.get("applies_to_paths")) if str(item).strip()]:
+            for path in normalized_paths:
+                if not _path_matches_subsystem_pattern(path=path, pattern=pattern):
+                    continue
+                classifications.append(
+                    {
+                        "path": path,
+                        "source": f"verification.protocols.{protocol_id}",
+                        "matched_by": "verification.applies_to_paths",
+                        "pattern": pattern,
+                        "authority_refs": _list_payload(protocol.get("authority_refs")),
+                    }
+                )
+    classified_paths = {str(item.get("path")) for item in classifications}
+    for path in normalized_paths:
+        if path in classified_paths or not _is_python_test_path_for_guardrail(path):
+            continue
+        classifications.append(
+            {
+                "path": path,
+                "source": "compatibility.python-test-path",
+                "matched_by": "compatibility-fallback",
+                "pattern": "tests/**/test_*.py",
+                "authority_refs": [],
+                "compatibility": True,
+            }
+        )
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for item in classifications:
+        key = (str(item.get("path")), str(item.get("source")), str(item.get("pattern")))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
 def _pre_test_evidence_requirement_matches(
     *, config: WorkspaceConfig | None, changed_paths: list[str] | None, task_text: str | None
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -26156,18 +26232,25 @@ def _pre_test_evidence_guardrail_payload(
     compact: bool = False,
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
-    changed_test_paths = [path for path in normalized_paths if _is_python_test_path_for_guardrail(path)]
     if config is None and target_root is not None:
         try:
             config = _load_workspace_config(target_root=target_root)
         except WorkspaceUsageError:
             config = None
+    path_classifications = _test_evidence_path_classifications(
+        changed_paths=normalized_paths,
+        config=config,
+        verification=verification,
+    )
+    changed_test_paths = _dedupe([str(item.get("path")) for item in path_classifications if str(item.get("path", "")).strip()])
     configured_requirements, matched_requirements = _pre_test_evidence_requirement_matches(
         config=config,
         changed_paths=normalized_paths,
         task_text=task_text,
     )
-    trigger_sources = [f"changed test path {path}" for path in changed_test_paths]
+    trigger_sources = [
+        f"{item.get('source')}: changed evidence path {item.get('path')} matched {item.get('pattern')}" for item in path_classifications
+    ]
     for matched in matched_requirements:
         for reason in _list_payload(matched.get("matches")):
             trigger_sources.append(f"{matched.get('source')}: {reason}")
@@ -26177,6 +26260,7 @@ def _pre_test_evidence_guardrail_payload(
             "kind": "agentic-workspace/pre-test-evidence-guardrail/v1",
             "status": "not-applicable",
             "changed_test_paths": changed_test_paths,
+            "evidence_path_classifications": path_classifications,
             "configured_requirement_count": len(configured_requirements),
             "blocking": False,
         }
@@ -26213,6 +26297,7 @@ def _pre_test_evidence_guardrail_payload(
         "trigger_sources": trigger_sources,
         "activation_sources": matched_requirements,
         "changed_test_paths": changed_test_paths,
+        "evidence_path_classifications": path_classifications,
         "decision_prompt": (
             "Before adding or expanding ordinary regression tests, choose the evidence owner and the narrowest proof surface."
         ),
@@ -26222,10 +26307,14 @@ def _pre_test_evidence_guardrail_payload(
         "regression_sprawl_review_questions": sprawl_questions,
         "detail_selectors": ["test_strategy_check", "verification"],
         "source_boundary": {
-            "activation": "configured assurance requirement markers/paths or explicit changed test paths",
+            "activation": (
+                "declared assurance/Verification evidence path facts first; Python test filename conventions are a bounded "
+                "compatibility fallback, not package-wide policy"
+            ),
             "options": "verification.evidence_strategy.proof_governance",
             "review_questions": "verification.evidence_strategy.regression_sprawl",
             "no_universal_task_keyword_policy": True,
+            "no_universal_filename_policy": True,
         },
         "authority_boundary": _authority_boundary_payload(
             surface="pre_test_evidence_guardrail",
@@ -26254,6 +26343,7 @@ def _pre_test_evidence_guardrail_payload(
             "blocking",
             "trigger_sources",
             "changed_test_paths",
+            "evidence_path_classifications",
             "decision_prompt",
             "evidence_owner_options",
             "proof_decision_options",
@@ -26335,13 +26425,13 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
 def _test_strategy_check_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
 ) -> dict[str, Any]:
-    test_paths = [path for path in changed_paths if _is_python_test_path_for_guardrail(path)]
     pre_test_guardrail = _pre_test_evidence_guardrail_payload(
         target_root=target_root,
         changed_paths=changed_paths,
         task_text=task_text,
         verification=verification,
     )
+    test_paths = _list_payload(pre_test_guardrail.get("changed_test_paths"))
     if not test_paths:
         if pre_test_guardrail.get("status") == "advisory":
             return {

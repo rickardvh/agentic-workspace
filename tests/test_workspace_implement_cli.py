@@ -4669,6 +4669,66 @@ def test_runtime_warning_eta(): assert True
     assert check["files"][0]["parametrized_test_count"] == 1
 
 
+def test_implement_classifies_declared_non_python_evidence_path(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[workspace]
+cli_invoke = "uv run python scripts/run_agentic_workspace.py"
+
+[assurance.requirements.frontend_evidence_change]
+level = "high"
+applies_to_paths = ["web/specs/*.spec.ts"]
+required_evidence = ["verification_proof_decision_review"]
+proof_profile = "test_evidence_change"
+review_owner = "maintainer"
+force = "required-before-closeout"
+""",
+    )
+    _write(tmp_path / "web" / "specs" / "checkout.spec.ts", "test('checkout flow', () => expect(true).toBe(true));\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "web/specs/checkout.spec.ts",
+                "--task",
+                "Adjust frontend evidence",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["status"] == "advisory"
+    assert check["changed_test_paths"] == ["web/specs/checkout.spec.ts"]
+    guardrail = check["pre_test_evidence_guardrail"]
+    assert guardrail["status"] == "advisory"
+    assert guardrail["source_boundary"]["no_universal_filename_policy"] is True
+    assert guardrail["evidence_path_classifications"] == [
+        {
+            "path": "web/specs/checkout.spec.ts",
+            "source": "assurance.requirements.frontend_evidence_change",
+            "matched_by": "assurance.applies_to_paths",
+            "pattern": "web/specs/*.spec.ts",
+            "authority_refs": [],
+        }
+    ]
+    assert check["files"][0]["path"] == "web/specs/checkout.spec.ts"
+    assert check["files"][0]["test_function_count"] == 0
+
+
 def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
