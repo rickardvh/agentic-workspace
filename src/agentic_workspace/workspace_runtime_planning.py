@@ -228,6 +228,138 @@ def _active_execplan_record_payload(*, target_root: Path) -> tuple[str, dict[str
     return active_surface, loaded if isinstance(loaded, dict) else {}
 
 
+def _custody_only_planning_payload(
+    *,
+    active_planning_present: bool,
+    candidate_pressure: dict[str, Any],
+    issue_scope_evidence: dict[str, Any],
+    issue_refs: list[str],
+    work_shape: str | None,
+    task_text: str | None,
+    workflow_sufficient: bool,
+    planning_revision: dict[str, Any],
+    promotion_command: str,
+) -> dict[str, Any]:
+    reasons: list[str] = []
+    issue_kinds: list[str] = []
+    normalized_task = " ".join((task_text or "").lower().split())
+    closure_terms = (
+        "close ",
+        "closing ",
+        "closes ",
+        "closed ",
+        "fixes ",
+        "resolves ",
+        "parent closure",
+        "pr wording",
+        "closing keyword",
+    )
+    title_lane_terms = ("parent", "lane", "epic", "batch", "multi-issue", "roadmap", "closure", "closeout", "broad")
+    broad_issue_kinds = {
+        "parent-lane",
+        "lane",
+        "epic",
+        "roadmap",
+        "capability-lane",
+        "issue-batch",
+        "closure-sensitive",
+    }
+    for item in issue_scope_evidence.get("evidence", []) if isinstance(issue_scope_evidence.get("evidence"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind", "")).strip()
+        title = str(item.get("title", "")).strip().lower()
+        if kind:
+            issue_kinds.append(kind)
+        if kind in broad_issue_kinds:
+            reasons.append(kind if kind != "capability-lane" else "parent-lane")
+        if str(item.get("parent_id", "")).strip():
+            reasons.append("parent-lane")
+        if str(item.get("planning_residue_expected", "")).strip().lower() in {"required", "expected"}:
+            reasons.append("closure-sensitive")
+        if any(term in title for term in title_lane_terms):
+            reasons.append("parent-lane" if "parent" in title or "lane" in title else "broad-roadmap")
+    if len(issue_refs) > 1:
+        reasons.append("multi-issue")
+    if work_shape in {"lane", "epic"}:
+        reasons.append("parent-lane" if work_shape == "lane" else "broad-roadmap")
+    if int(candidate_pressure.get("matched_roadmap_candidate_count") or 0) > 0:
+        reasons.append("broad-roadmap")
+    if int(candidate_pressure.get("matched_decomposition_candidate_count") or 0) > 0:
+        reasons.append("parent-lane")
+    if issue_refs and any(term in f" {normalized_task} " for term in closure_terms):
+        reasons.append("closure-sensitive")
+
+    custody_reasons = sorted(set(reason for reason in reasons if reason))
+    if active_planning_present or not workflow_sufficient or not custody_reasons:
+        return {
+            "kind": "agentic-workspace/custody-only-planning/v1",
+            "status": "not-applicable",
+            "planning_roles": {
+                "implementation_gate": "not-required",
+                "sequencing_aid": "agent-owned",
+                "intent_custody": "not-needed",
+            },
+            "reason_codes": [],
+            "rule": "Narrow direct work stays quiet unless broad lane, issue-batch, closure-sensitive, or parent-intent evidence is present.",
+        }
+
+    force = "required_before_claim" if "closure-sensitive" in custody_reasons else "advisory"
+    blocked_claims = (
+        ["claim-full-parent-satisfaction", "use-pr-closing-keywords", "claim-lane-complete"]
+        if force == "required_before_claim"
+        else ["claim-full-parent-satisfaction", "claim-lane-complete"]
+    )
+    return {
+        "kind": "agentic-workspace/custody-only-planning/v1",
+        "status": "required-reconciliation" if force == "required_before_claim" else "recommended",
+        "force": force,
+        "implementation_allowed": True,
+        "planning_roles": {
+            "implementation_gate": "not-required",
+            "sequencing_aid": "not-required-for-current-slice",
+            "intent_custody": "required-before-parent-closeout" if force == "required_before_claim" else "recommended",
+        },
+        "reason_codes": custody_reasons,
+        "issue_refs": issue_refs,
+        "issue_kinds": sorted(set(kind for kind in issue_kinds if kind)),
+        "purpose": (
+            "Preserve shared lane intent, parent/child scope, closeout trust, continuation, and review evidence; "
+            "this is not necessarily a step-by-step execution plan."
+        ),
+        "slice_boundary": {
+            "useful_slice_completion": "allowed-after-normal-proof",
+            "full_parent_satisfaction": "requires-custody-or-equivalent-reconciliation",
+            "rule": "A useful direct slice can finish without claiming the parent lane or issue batch is complete.",
+        },
+        "minimal_record_shape": [
+            "parent intent",
+            "current useful slice",
+            "child issue or lane scope",
+            "non-goals",
+            "parent closure boundary",
+            "proof and review state",
+            "continuation owner/status",
+            "equivalent checked-in custody evidence",
+        ],
+        "action_effect": {
+            "force": force,
+            "allowed_now": "continue-direct-implementation",
+            "blocked_until_reconciled": blocked_claims if force == "required_before_claim" else [],
+            "claim_boundary": "direct-slice-completion-is-not-parent-lane-satisfaction",
+            "resolution_selector": "planning_safety_gate.custody_planning",
+            "resolution_command": promotion_command if force == "required_before_claim" else "",
+        },
+        "follow_up_route": {
+            "status": "creation-deferred",
+            "refs": ["#1706"],
+            "reason": "Cheap custody-record creation remains follow-up work; this packet only surfaces the route and claim boundary.",
+            "planning_revision": planning_revision,
+        },
+        "rule": "Custody-only Planning is shared intent custody, not an implementation gate, unless parent closeout or PR closing claims are being made.",
+    }
+
+
 def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
@@ -369,6 +501,17 @@ def _planning_safety_gate_payload(
         if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
         else []
     )
+    custody_planning = _custody_only_planning_payload(
+        active_planning_present=active_planning_present,
+        candidate_pressure=candidate_pressure,
+        issue_scope_evidence=issue_scope_evidence,
+        issue_refs=issue_refs,
+        work_shape=work_shape,
+        task_text=task_text,
+        workflow_sufficient=workflow_sufficient,
+        planning_revision=planning_revision,
+        promotion_command=promotion_command,
+    )
     authority_boundary = _authority_boundary_payload(
         surface="planning_safety_gate",
         enforced_by_aw=[decision] if not workflow_sufficient else [],
@@ -426,6 +569,7 @@ def _planning_safety_gate_payload(
         },
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
+        "custody_planning": custody_planning,
         "hierarchy_owner_requirement": hierarchy_owner_requirement,
         "repair_route": {
             "status": "available" if decision == "implementation-owner-missing" else "retired",

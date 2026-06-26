@@ -1353,6 +1353,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             active_plan_reliance = _as_dict(compact_gate.get("active_plan_reliance"))
             keep_active_plan_reliance = active_plan_reliance.get("permission_claim") != "direct-work-no-active-plan"
             candidate_pressure = _as_dict(compact_gate.get("candidate_pressure"))
+            custody_planning = _as_dict(compact_gate.get("custody_planning"))
             issue_scope_evidence = _as_dict(compact_gate.get("issue_scope_evidence"))
             changed_path_facts = _as_dict(compact_gate.get("changed_path_facts"))
             compact_changed_path_facts = {
@@ -1376,9 +1377,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "required_next_action",
                     "implementation_allowed",
                     "delegation_decision_required",
+                    "custody_planning",
                 )
                 if key in compact_gate
             }
+            if not custody_planning:
+                compact_gate.pop("custody_planning", None)
             if compact_changed_path_facts:
                 compact_gate["changed_path_facts"] = compact_changed_path_facts
             if candidate_pressure.get("status") == "observed":
