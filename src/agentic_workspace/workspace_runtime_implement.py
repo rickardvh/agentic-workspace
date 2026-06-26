@@ -224,22 +224,50 @@ def _optimization_posture_for_path(
         }
     )
     owner_key = owner.removeprefix("authority:").lower()
-    if owner_key in {"human", "humans", "person", "people"}:
-        optimization_target = "human-use"
+    owner_tokens = {token.strip() for token in owner_key.replace("+", ",").replace("/", ",").split(",") if token.strip()}
+    has_human = bool(owner_tokens & {"human", "humans", "person", "people"})
+    has_agent = bool(owner_tokens & {"agent", "agents"})
+    has_machine = bool(owner_tokens & {"machine", "machines"})
+    audience_conflict = sum((has_human, has_agent, has_machine)) > 1
+    if owner_key in {"mixed", "hybrid"} or audience_conflict:
+        audience = "mixed"
+        audience_source = "owner"
+        effective_target = "mixed-audience-review"
+        effective_optimization_bias = "preserve-human-and-agent-usability"
+        audience_reason = "mixed-audience surface needs review when human, agent, or machine targets trade off"
+        signals = ["mixed-audience", "reviewability", "machine-readable-structure", "tradeoff-review"]
+    elif has_human:
+        audience = "human"
+        audience_source = "owner"
+        effective_target = "human-readability-control-review"
         effective_optimization_bias = "human-readability-control-review"
         audience_reason = "human-use surface is optimised for human readability, control, and review"
         signals = ["human-readability", "human-control", "reviewability", "authority-boundary"]
-    elif owner_key in {"agent", "agents"}:
-        optimization_target = "agent-use"
+    elif has_agent:
+        audience = "agent"
+        audience_source = "owner"
+        effective_target = "agent-efficiency"
         effective_optimization_bias = "agent-efficiency"
         audience_reason = "agent-use surface is optimised for agent efficiency and machine-readable structure"
         signals = ["agent-efficiency", "machine-readable-structure", "low-residue", "authority-boundary"]
+    elif has_machine:
+        audience = "machine"
+        audience_source = "owner"
+        effective_target = "stable-contract-validation"
+        effective_optimization_bias = "stable-contract-validation"
+        audience_reason = "machine-use surface is optimised for stable contracts and validation"
+        signals = ["stable-contract", "validation", "machine-readable-structure"]
     else:
-        optimization_target = "configured-repo-posture"
+        audience = "unknown"
+        audience_source = "none"
+        effective_target = optimization_bias
         effective_optimization_bias = optimization_bias
         audience_reason = "configured repo optimisation posture applies to this implementation path"
         signals = ["agent-efficiency", "proactive-improvement", "reuse-pressure", "architecture-boundary", "residue-routing"]
-    status = "owner-boundary" if direct_edit_boundary else "active"
+    source_route = "source-or-owner-first" if direct_edit_boundary else "direct"
+    status = (
+        "review-required" if audience == "mixed" and not direct_edit_boundary else "owner-boundary" if direct_edit_boundary else "active"
+    )
     if hard_blocked:
         reason = "direct edit is blocked by authority or generated-surface routing"
     elif surface_origin == "generated":
@@ -257,6 +285,11 @@ def _optimization_posture_for_path(
         ]
         if direct_edit_boundary
         else [
+            "Which audience target wins if human, agent, or machine optimisation goals trade off?",
+            "Was review or escalation routed instead of silently guessing the effective target?",
+        ]
+        if audience == "mixed"
+        else [
             "Did the implementation improve or preserve the effective optimisation target for this surface?",
             "If the configured repo posture was retargeted for a human-use or agent-use surface, is that audience boundary explicit before completion claims?",
         ]
@@ -271,7 +304,15 @@ def _optimization_posture_for_path(
         "improvement_latitude": improvement_latitude,
         "optimization_bias": optimization_bias,
         "effective_optimization_bias": effective_optimization_bias,
-        "optimization_target": optimization_target,
+        "configured_posture": {
+            "improvement_latitude": improvement_latitude,
+            "optimization_bias": optimization_bias,
+        },
+        "audience": audience,
+        "audience_source": audience_source,
+        "effective_target": effective_target,
+        "optimization_target": effective_target,
+        "source_route": source_route,
         "owner": owner,
         "surface_origin": surface_origin,
         "authority": authority,
@@ -287,7 +328,23 @@ def _optimization_posture_summary(paths: list[dict[str, Any]]) -> dict[str, Any]
     posture_items = [_as_dict(path.get("optimization_posture")) for path in paths if isinstance(path, dict)]
     active_count = sum(1 for item in posture_items if item.get("status") == "active")
     exempt_count = sum(1 for item in posture_items if item.get("status") == "owner-boundary")
-    if active_count and exempt_count:
+    review_count = sum(1 for item in posture_items if item.get("status") == "review-required")
+    source_routed_count = sum(1 for item in posture_items if item.get("source_route") == "source-or-owner-first")
+    audience_overrides = [
+        item
+        for item in posture_items
+        if item.get("audience") in {"human", "agent", "machine", "mixed"} and item.get("status") != "owner-boundary"
+    ]
+    effective_targets = sorted(
+        {str(item.get("effective_target")) for item in posture_items if str(item.get("effective_target") or "").strip()}
+    )
+    configured_postures = [
+        _as_dict(item.get("configured_posture")) for item in posture_items if isinstance(item.get("configured_posture"), dict)
+    ]
+    configured_posture = configured_postures[0] if configured_postures else {}
+    if review_count:
+        status = "review-required"
+    elif active_count and exempt_count:
         status = "mixed"
     elif active_count:
         status = "active"
@@ -300,8 +357,15 @@ def _optimization_posture_summary(paths: list[dict[str, Any]]) -> dict[str, Any]
         "status": status,
         "active_path_count": active_count,
         "owner_boundary_path_count": exempt_count,
-        "closeout_required": bool(active_count or exempt_count),
-        "rule": "Configured improvement_latitude and optimization_bias apply to ordinary implementation paths; human-use and agent-use surfaces retarget optimisation by audience, while managed, generated, and direct-edit-blocked surfaces route through their source or owner path first.",
+        "review_required_path_count": review_count,
+        "source_routed_path_count": source_routed_count,
+        "audience_override_count": len(audience_overrides),
+        "effective_target": effective_targets[0] if len(effective_targets) == 1 else "mixed" if effective_targets else "unknown",
+        "configured_posture": configured_posture,
+        "closeout_required": bool(active_count or exempt_count or review_count),
+        "review_required": bool(review_count),
+        "review_guidance": "Review mixed or conflicting audience signals before choosing an optimisation target." if review_count else "",
+        "rule": "Configured improvement_latitude and optimization_bias apply to ordinary implementation paths; explicit audience retargets optimisation for human, agent, machine, or mixed use, while managed, generated, and direct-edit-blocked surfaces route through their source or owner path first.",
         "active_closeout_question": "Did the implementation improve or preserve the effective optimisation target for each active surface?",
         "owner_boundary_question": "Was optimisation routed through the source, generated owner, managed command, or authority path before changing an owner-boundary surface?",
     }
@@ -1034,9 +1098,22 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "reuse_pressure": context_reuse_pressure,
             "optimization_posture": {
                 "status": optimization_posture.get("status", "unavailable"),
-                "active_path_count": optimization_posture.get("active_path_count", 0),
-                "owner_boundary_path_count": optimization_posture.get("owner_boundary_path_count", 0),
-                "closeout_required": optimization_posture.get("closeout_required", False),
+                "effective_target": optimization_posture.get("effective_target", "unknown"),
+                "configured_posture": "/".join(
+                    str(optimization_posture.get("configured_posture", {}).get(key, ""))
+                    for key in ("improvement_latitude", "optimization_bias")
+                    if str(optimization_posture.get("configured_posture", {}).get(key, "")).strip()
+                ),
+                **(
+                    {"audience_overrides": optimization_posture.get("audience_override_count", 0)}
+                    if optimization_posture.get("audience_override_count", 0)
+                    else {}
+                ),
+                **(
+                    {"source_routed_paths": optimization_posture.get("source_routed_path_count", 0)}
+                    if optimization_posture.get("source_routed_path_count", 0)
+                    else {}
+                ),
             },
             "generated_surface_trust": {
                 "status": payload.get("generated_surface_trust", {}).get("status", "not-applicable")

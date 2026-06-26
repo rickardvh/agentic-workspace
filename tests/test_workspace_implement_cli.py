@@ -1525,7 +1525,9 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert source["surface_origin"] == "source-authored"
     assert source["optimization_posture"]["status"] == "active"
     assert source["optimization_posture"]["exempt_from_optimization_pressure"] is False
-    assert source["optimization_posture"]["optimization_target"] == "configured-repo-posture"
+    assert source["optimization_posture"]["audience"] == "unknown"
+    assert source["optimization_posture"]["source_route"] == "direct"
+    assert source["optimization_posture"]["effective_target"] == "balanced"
     assert source["optimization_posture"]["effective_optimization_bias"] == "balanced"
     assert "Subsystem-owned implementation surface" in source["optimization_posture"]["review_guidance"]
     assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
@@ -1533,6 +1535,8 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
 
     generated = by_path["generated/workspace/python/command_package.json"]
     assert generated["surface_origin"] == "generated"
+    assert generated["optimization_posture"]["status"] == "owner-boundary"
+    assert generated["optimization_posture"]["source_route"] == "source-or-owner-first"
     assert generated["signal"] == "hard_blocker"
     assert generated["safe_to_edit"] is False
     assert generated["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
@@ -1543,6 +1547,8 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert managed["owner"] == "planning"
     assert managed["surface_origin"] == "managed"
     assert managed["matched_by"] == "module_root"
+    assert managed["optimization_posture"]["status"] == "owner-boundary"
+    assert managed["optimization_posture"]["source_route"] == "source-or-owner-first"
     assert managed["signal"] == "warning"
     assert managed["safe_to_edit"] is True
     assert any("command-owned mutation" in warning for warning in managed["warnings"])
@@ -1554,11 +1560,14 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert "No explicit ownership ledger match" in unknown["warnings"][0]
     assert unknown["optimization_posture"]["status"] == "active"
     assert unknown["optimization_posture"]["optimization_bias"] == "balanced"
+    assert unknown["optimization_posture"]["audience"] == "unknown"
+    assert unknown["optimization_posture"]["effective_target"] == "balanced"
 
     assert impact["generated_path_count"] == 1
     assert impact["managed_path_count"] == 1
     assert impact["unknown_path_count"] == 1
     assert impact["hard_blocker_count"] == 1
+    assert impact["optimization_posture"]["source_routed_path_count"] == 2
     assert impact["proof_impact"]["required_commands"]
 
 
@@ -1593,11 +1602,29 @@ owner = "agent"
 ownership = "repo_owned"
 authority = "primary"
 summary = "Agent-owned runbook surface."
+
+[[authority_surfaces]]
+concern = "machine-contract"
+surface = "contracts/schema.json"
+owner = "machine"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Machine-consumed contract surface."
+
+[[authority_surfaces]]
+concern = "mixed-runbook"
+surface = "docs/mixed.md"
+owner = "human+agent"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Mixed-audience documentation surface."
 """,
     )
     _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
     _write(tmp_path / "strategy" / "human-plan.md", "# Strategy\n")
     _write(tmp_path / "agent" / "runbook.md", "# Runbook\n")
+    _write(tmp_path / "contracts" / "schema.json", "{}\n")
+    _write(tmp_path / "docs" / "mixed.md", "# Mixed\n")
 
     assert (
         cli.main(
@@ -1609,6 +1636,8 @@ summary = "Agent-owned runbook surface."
                 "src/feature.py",
                 "strategy/human-plan.md",
                 "agent/runbook.md",
+                "contracts/schema.json",
+                "docs/mixed.md",
                 "--select",
                 "change_impact",
                 "--format",
@@ -1619,31 +1648,48 @@ summary = "Agent-owned runbook surface."
     )
 
     impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
-    assert impact["optimization_posture"]["status"] == "active"
-    assert impact["optimization_posture"]["active_path_count"] == 3
+    assert impact["optimization_posture"]["status"] == "review-required"
+    assert impact["optimization_posture"]["active_path_count"] == 4
     assert impact["optimization_posture"]["owner_boundary_path_count"] == 0
+    assert impact["optimization_posture"]["review_required_path_count"] == 1
+    assert impact["optimization_posture"]["audience_override_count"] == 4
+    assert impact["optimization_posture"]["effective_target"] == "mixed"
+    assert impact["optimization_posture"]["review_required"] is True
     by_path = {item["path"]: item for item in impact["paths"]}
     source_posture = by_path["src/feature.py"]["optimization_posture"]
     assert source_posture["status"] == "active"
     assert source_posture["improvement_latitude"] == "proactive"
     assert source_posture["optimization_bias"] == "agent-efficiency"
     assert source_posture["effective_optimization_bias"] == "agent-efficiency"
-    assert source_posture["optimization_target"] == "configured-repo-posture"
+    assert source_posture["audience"] == "unknown"
+    assert source_posture["effective_target"] == "agent-efficiency"
     assert "agent-efficiency" in source_posture["signals"]
     human_posture = by_path["strategy/human-plan.md"]["optimization_posture"]
     assert human_posture["status"] == "active"
     assert human_posture["exempt_from_optimization_pressure"] is False
     assert human_posture["owner"] == "human"
-    assert human_posture["optimization_target"] == "human-use"
+    assert human_posture["audience"] == "human"
+    assert human_posture["effective_target"] == "human-readability-control-review"
     assert human_posture["effective_optimization_bias"] == "human-readability-control-review"
     assert "human-readability" in human_posture["signals"]
     agent_posture = by_path["agent/runbook.md"]["optimization_posture"]
     assert agent_posture["status"] == "active"
     assert agent_posture["exempt_from_optimization_pressure"] is False
     assert agent_posture["owner"] == "agent"
-    assert agent_posture["optimization_target"] == "agent-use"
+    assert agent_posture["audience"] == "agent"
+    assert agent_posture["effective_target"] == "agent-efficiency"
     assert agent_posture["effective_optimization_bias"] == "agent-efficiency"
     assert "machine-readable-structure" in agent_posture["signals"]
+    machine_posture = by_path["contracts/schema.json"]["optimization_posture"]
+    assert machine_posture["status"] == "active"
+    assert machine_posture["audience"] == "machine"
+    assert machine_posture["effective_target"] == "stable-contract-validation"
+    assert "stable-contract" in machine_posture["signals"]
+    mixed_posture = by_path["docs/mixed.md"]["optimization_posture"]
+    assert mixed_posture["status"] == "review-required"
+    assert mixed_posture["audience"] == "mixed"
+    assert mixed_posture["effective_target"] == "mixed-audience-review"
+    assert "tradeoff-review" in mixed_posture["signals"]
 
 
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
@@ -2079,9 +2125,8 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
     assert payload["context"]["optimization_posture"] == {
         "status": "active",
-        "active_path_count": 1,
-        "owner_boundary_path_count": 0,
-        "closeout_required": True,
+        "effective_target": "balanced",
+        "configured_posture": "conservative/balanced",
     }
     planning_gate = payload["context"]["planning_safety_gate"]
     assert planning_gate["status"] == "clear"
