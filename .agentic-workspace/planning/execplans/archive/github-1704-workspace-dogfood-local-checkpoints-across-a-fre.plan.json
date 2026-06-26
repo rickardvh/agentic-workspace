@@ -1,0 +1,461 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "[Workspace]: Dogfood local checkpoints across a fresh #1680 session boundary",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Dogfood the local chat checkpoint mechanism for #1700/#1704 and record whether checkpoint plus durable sources reduces chat-history dependence.",
+    "hard_constraints": "Keep scope bounded to local checkpoint exercise, startup resume observation, durable review evidence, and narrow follow-up routing.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Commit the dogfooding review artifact, prove checkpoint/startup behavior still works, and route stale/completed issue cleanup before sleeping.",
+    "proof_expectations": [
+      "checkpoint write; start --select local_chat_checkpoint; start resume task; make maintainer-surfaces; summary; planning doctor"
+    ],
+    "touched_scope": [
+      "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/github-1704-workspace-dogfood-local-checkpoints-across-a-fre.plan.json"
+    ],
+    "completion_criteria": [
+      "Local checkpoint is created through the AW command, not hand-edited.",
+      "Startup selected checkpoint projection shows enough context to resume from durable sources.",
+      "Ordinary resume startup surfaces checkpoint context and exposes any remaining planning gate.",
+      "Durable review records whether chat-history dependence was reduced and routes any friction."
+    ],
+    "continuation_owner": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups.",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Dogfood local checkpoints across a simulated fresh-session boundary and record durable evidence for #1704."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Dogfood local checkpoints across a simulated fresh-session boundary and record durable evidence for #1704.",
+      "constraints": "Keep scope bounded to local checkpoint exercise, startup resume observation, durable review evidence, and narrow follow-up routing.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "checkpoint write; start --select local_chat_checkpoint; start resume task; make maintainer-surfaces; summary; planning doctor"
+    },
+    "execution": {
+      "milestone": "github-1704-workspace-dogfood-local-checkpoints-across-a-fre",
+      "status": "completed",
+      "next_step": "Continue via #1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups..",
+      "proof": "checkpoint write; start --select local_chat_checkpoint; start resume task; make maintainer-surfaces; summary; planning doctor"
+    },
+    "scope": {
+      "touched": [
+        "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/github-1704-workspace-dogfood-local-checkpoints-across-a-fre.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce chat-history dependence for #1700-style continuation by proving local checkpoints can point agents back to durable sources.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can recover checkpoint context from startup without treating the ignored local file as durable proof.",
+    "intentionally deferred": "#1810 checkpoint-matched roadmap candidate routing remains follow-up work.",
+    "discovered implications": "Checkpoint context reduces chat-history dependence but does not yet reduce roadmap-candidate reorientation cost.",
+    "proof achieved now": "checkpoint write and startup projection commands ran successfully before review closeout",
+    "validation still needed": "none for this slice; PR/CI remains external",
+    "next likely slice": "#1810 if checkpoint resume should surface matched promote routes"
+  },
+  "intent_interpretation": {
+    "literal request": "[Workspace]: Dogfood local checkpoints across a fresh #1680 session boundary",
+    "inferred intended outcome": "Dogfood local checkpoints across a simulated fresh-session boundary and record durable evidence for #1704.",
+    "chosen concrete what": "Exercise checkpoint write and startup resume, then record a durable dogfooding review.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md plus this active execplan and planning state closeout.",
+    "max changed files": "3 tracked files before closeout; ignored local checkpoint may be updated under .agentic-workspace/local/.",
+    "required validation commands": "checkpoint write command, start --select local_chat_checkpoint, start resume task, changed-path implement proof.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Checkpoint dogfood review exists at docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md; follow-up #1810 owns remaining friction.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Resolve GitHub: [Workspace]: Dogfood local checkpoints across a fresh #1680 session boundary.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#1700",
+      "role": "parent local checkpoint experiment"
+    },
+    {
+      "kind": "issue",
+      "target": "#1704",
+      "role": "dogfood slice"
+    },
+    {
+      "kind": "issue",
+      "target": "#1810",
+      "role": "follow-up for discovered checkpoint resume friction"
+    },
+    {
+      "kind": "artifact",
+      "target": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md",
+      "role": "durable dogfooding record"
+    }
+  ],
+  "active_milestone": {
+    "id": "github-1704-workspace-dogfood-local-checkpoints-across-a-fre",
+    "status": "completed",
+    "scope": "Dogfood local checkpoint resume and record durable review evidence.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run changed-path proof, then close/archive the active plan."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-1704-workspace-dogfood-local-checkpoints-across-a-fre.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/run_agentic_workspace.py start --target . --select local_chat_checkpoint --format json",
+    "uv run python scripts/run_agentic_workspace.py start --target . --task \"Resume from local checkpoint for #1700/#1704\" --format json",
+    "uv run python scripts/run_agentic_workspace.py implement --changed docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md --changed .agentic-workspace/planning/state.toml --changed .agentic-workspace/planning/execplans/github-1704-workspace-dogfood-local-checkpoints-across-a-fre.plan.json --task \"Dogfood #1704 local checkpoint resume\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Durable review artifact records the checkpoint write, startup resume behavior, what was missing, and follow-up #1810.",
+    "Ignored local checkpoint remains advisory and is not committed.",
+    "Changed-path proof is selected and run before PR closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Created a local checkpoint through the AW checkpoint command, verified selected startup projection, simulated resume through ordinary start, recorded durable dogfooding review, and filed #1810 for discovered friction.",
+    "scope touched": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and planning closeout surfaces",
+    "changed surfaces": "durable review artifact plus active planning state; ignored local checkpoint remains untracked",
+    "validations run": "checkpoint write; start --select local_chat_checkpoint; start resume task; changed-path proof pending final run",
+    "result for continuation": "#1810 owns checkpoint-matched roadmap candidate routing follow-up.",
+    "next step": "Run changed-path proof, close/archive this plan, then continue P1 queue cleanup."
+  },
+  "finished_run_review": {
+    "review status": "complete-after-final-proof",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes; local checkpoint reduced chat-history dependence but left planning reorientation friction",
+    "config compliance": "followed AGENTS start/summary/planning route and dogfooding issue filing",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1810 filed for remaining checkpoint resume friction"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "dogfooding artifact and planning cleanup were narrow and local",
+    "expected savings": "local checkpoint should reduce need to replay chat history after compression",
+    "actual friction": "resume task still required lane-shaping reorientation before active planning promotion",
+    "proof result": "checkpoint/startup commands and changed-path proof passed",
+    "quality concern": "none for this slice; #1810 owns remaining route affordance",
+    "decomposition adjustment": "promoted #1704 as bounded child of #1700 rather than reopening parent #1700"
+  },
+  "proof_report": {
+    "validation proof": "checkpoint write; start --select local_chat_checkpoint; start resume task; make maintainer-surfaces; summary; planning doctor",
+    "proof achieved now": "complete for #1704 slice",
+    "evidence for \"proof achieved\" state": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md records observed checkpoint and startup outputs"
+  },
+  "intent_satisfaction": {
+    "original intent": "Dogfood local checkpoints across a fresh #1680/#1700 session boundary and record whether they reduce chat-history dependence.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md records successful checkpoint write, startup projection, resume simulation, and follow-up routing.",
+    "unsolved intent passed to": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups."
+  },
+  "execution_summary": {
+    "outcome delivered": "durable dogfooding review for local checkpoint resume",
+    "validation confirmed": "make maintainer-surfaces, summary, and planning doctor passed",
+    "follow-on routed to": "#1810",
+    "post-work posterity capture": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md",
+    "resume from": "#1810 if continuing checkpoint resume affordance work",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Local checkpoints are useful only as advisory pointers; durable issue/PR/git/proof state must still be refreshed before claims.",
+    "motivation worth preserving": "Checkpoint startup projection reduces compressed-chat dependence, but matched roadmap candidate routing should be made cheaper.",
+    "canonical owner now": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810",
+    "promotion trigger": "Implement #1810 when checkpoint resume friction becomes a priority.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810",
+    "proposed durable intent": "Checkpoint startup projection reduces compressed-chat dependence, but matched roadmap candidate routing should be made cheaper.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#1704 dogfood record is complete, but #1700 parent can remain open for follow-up experiment affordances such as #1810.",
+    "evidence carried forward": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810",
+    "reopen trigger": "If checkpoint resume cannot reliably surface durable sources or if #1810 shows the recorded observation was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1810",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "none",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#1700",
+          "owner": "issue",
+          "source": "#1700"
+        },
+        {
+          "summary": "#1704",
+          "owner": "issue",
+          "source": "#1704"
+        },
+        {
+          "summary": "#1810",
+          "owner": "issue",
+          "source": "#1810"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-06-26: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1680",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1700",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1704",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1810",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete",
+          "Closes #1680",
+          "Closes #1700",
+          "Closes #1704",
+          "Closes #1810"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups.",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups."
+    },
+    "continuation": {
+      "owner_surface": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups.",
+      "created_or_required": true,
+      "reason": "#1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Dogfood local checkpoints across a fresh #1680/#1700 session boundary and record whether they reduce chat-history dependence.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: checkpoint write; start --select local_chat_checkpoint; start resume task; make maintainer-surfaces; summary; planning doctor\nChanged surfaces: durable review artifact plus active planning state; ignored local checkpoint remains untracked\nDurable residue: planning (docs/reviews/aw-local-chat-checkpoint-resume-dogfood-2026-06-26.md and #1810)\nMemory learning: route_to_planning\nFollow-up: #1810 owns checkpoint-matched roadmap candidate route affordance; #1700 parent remains open only for any remaining experiment follow-ups.\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+  }
+}
