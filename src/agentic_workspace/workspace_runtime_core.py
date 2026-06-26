@@ -21527,6 +21527,9 @@ def _start_tiny_payload_fast(
     if read_only_response["status"] == "read-only-reporting":
         payload["read_only_response"] = read_only_response
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
+    task_path_references = _task_path_reference_payload(task_text=task_text, detected_paths=task_mentioned_paths)
+    if task_path_references["status"] == "present":
+        payload["task_path_references"] = task_path_references
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
@@ -21638,28 +21641,7 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
             "question_to_user": question,
         }
-    if not active_planning_present and task_mentioned_paths and (not changed_paths) and (not _is_config_posture_task(task_text)):
-        implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
-        if implement_command:
-            implement_command = implement_command.replace("<paths>", " ".join(task_mentioned_paths))
-        else:
-            implement_command = _command_with_cli_invoke(
-                command=f"agentic-workspace implement --changed {' '.join(task_mentioned_paths)} --format json",
-                cli_invoke=config.cli_invoke,
-            )
-        payload["immediate_next_allowed_action"] = {
-            "action": "inspect-known-task-paths",
-            "summary": "The task text names existing repo paths. Run the implement surface for those paths before broader startup or raw workspace reads.",
-            "command": implement_command,
-            "run": implement_command,
-            "risk": "read-only changed-path routing",
-            "required_inputs": ["target repo", "named path(s)"],
-            "next_proof": "use the proof.required_commands from implement output",
-            "read_first": [implement_command],
-            "open_execplan_only_when": startup_template["open_execplan_only_when"],
-            "detected_paths": task_mentioned_paths,
-        }
-    elif not active_planning_present and _is_prep_only_handoff_task(task_text):
+    if not active_planning_present and _is_prep_only_handoff_task(task_text):
         prep_only = _prep_only_handoff_payload(config=config)
         payload["prep_only_handoff"] = prep_only
         payload["immediate_next_allowed_action"] = {
@@ -23063,6 +23045,31 @@ def _task_mentioned_existing_paths(*, task_text: str | None, target_root: Path) 
         seen.add(key)
         found.append(normalized)
     return found[:6]
+
+
+def _task_path_reference_payload(*, task_text: str | None, detected_paths: list[str]) -> dict[str, Any]:
+    paths = _normalize_changed_paths(detected_paths)
+    if not paths:
+        return {
+            "kind": "agentic-workspace/task-path-references/v1",
+            "status": "absent",
+            "path_reference_kind": "none",
+            "detected_paths": [],
+        }
+    return {
+        "kind": "agentic-workspace/task-path-references/v1",
+        "status": "present",
+        "path_reference_kind": "conceptual-reference",
+        "detected_paths": paths,
+        "path_scoped_paths": [],
+        "agent_decision_required": True,
+        "rule": "Named repo paths in task text are observed facts, not changed-path routing authority. Use explicit --changed paths when path-scoped workflow is known.",
+        "limits": [
+            "Conceptual references to workflow/config/docs do not force implement --changed.",
+            "AW does not infer path-scoped work from prompt keywords, filenames, or prose markers.",
+            "Explicit --changed arguments remain authoritative changed-path routing.",
+        ],
+    }
 
 
 _TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 1200

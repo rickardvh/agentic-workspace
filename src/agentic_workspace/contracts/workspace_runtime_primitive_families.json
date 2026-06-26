@@ -491,6 +491,7 @@
           "_task_intent_carry_forward_payload",
           "_task_intent_evidence_payload",
           "_task_mentioned_existing_paths",
+          "_task_path_reference_payload",
           "_task_posture_packet_changes_routing",
           "_task_posture_packet_payload",
           "_task_posture_packet_relevant",

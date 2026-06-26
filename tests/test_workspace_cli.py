@@ -656,6 +656,65 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_treats_named_path_question_as_conceptual_reference(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Are you actively applying the dogfooding instructions in AGENTS.md?",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert payload["context"]["primary_action"]["command"] is None
+    path_refs = payload["context"]["task_path_references"]
+    assert path_refs["path_reference_kind"] == "conceptual-reference"
+    assert path_refs["detected_paths"] == ["AGENTS.md"]
+    assert path_refs["path_scoped_paths"] == []
+    assert path_refs["agent_decision_required"] is True
+    assert "implement --changed AGENTS.md" not in json.dumps(payload)
+
+
+def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "AGENTS.md",
+                "--task",
+                "Review AGENTS.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
+    assert payload["context"]["primary_action"]["command"].endswith("proof --changed AGENTS.md --format json")
+    assert payload["context"]["primary_action"]["read_first"] == [payload["context"]["primary_action"]["command"]]
+
+
 def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
