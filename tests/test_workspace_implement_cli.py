@@ -3387,13 +3387,72 @@ def test_implement_keeps_planning_gate_for_unfinished_archived_plan_residue(tmp_
     assert gate["implementation_allowed"] is False
     assert gate["repair_route"]["status"] == "available"
     assert gate["repair_route"]["route"] == "retrofit-active-owner-then-closeout"
+    assert gate["repair_route"]["work_context"] == "already-started-continuation-or-review-repair"
     assert "planning new-plan" in gate["repair_route"]["claim_current_slice_command"]
     assert "planning closeout" in gate["repair_route"]["closeout_command"]
+    assert "planning archive-plan" in gate["repair_route"]["archive_cleanup_command"]
+    assert "--prepare-closeout" in gate["repair_route"]["archive_cleanup_command"]
+    assert "--retain-archive" in gate["repair_route"]["archive_cleanup_command"]
+    assert "--apply-cleanup" in gate["repair_route"]["archive_cleanup_command"]
+    assert [step["stage"] for step in gate["repair_route"]["workflow"]] == [
+        "claim-current-slice",
+        "tighten-owner",
+        "record-closeout-evidence",
+        "remove-active-residue",
+    ]
     assert "Mixed planning plus implementation changes still need an owner" in gate["repair_route"]["safety_rule"]
     facts = gate["changed_path_facts"]
     assert facts["dirty_shape"] == "planning-plus-implementation"
     assert facts["archived_planning_residue"]["status"] == "incomplete-or-stale"
     assert facts["archived_planning_residue"]["records"][0]["eligible"] is False
+
+
+def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    archive_path = ".agentic-workspace/planning/execplans/archive/open-slice.plan.json"
+    _write(
+        tmp_path / archive_path,
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "open-slice",
+                "status": "completed",
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                archive_path,
+                "--task",
+                "Continue the already-started slice repair.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    action = payload["next_safe_action"]
+    repair_route = payload["context"]["planning"]["planning_safety_gate"]["repair_route"]
+    assert action["next_safe_action"] == "checkpoint-planning-before-implementation"
+    assert "planning new-plan" in action["preferred_cli"]
+    assert action["preferred_cli"] == repair_route["claim_current_slice_command"]
+    assert repair_route["work_context"] == "already-started-continuation-or-review-repair"
 
 
 def test_implement_blocks_epic_work_with_multiple_roadmap_candidates(tmp_path: Path, capsys) -> None:
