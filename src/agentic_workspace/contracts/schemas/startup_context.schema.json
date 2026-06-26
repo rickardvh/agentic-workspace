@@ -31,6 +31,11 @@
       "$ref": "#/$defs/task_posture_packet",
       "description": "Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing."
     },
+    "task_path_references": {
+      "type": "object",
+      "description": "Observed named repo paths from task text, classified as conceptual-reference or path-scoped-work. Conceptual references do not create changed-path routing authority; explicit path-work intent or --changed paths can route path-scoped workflow.",
+      "additionalProperties": true
+    },
     "memory_decision_packet": {
       "$ref": "#/$defs/memory_decision_packet",
       "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."

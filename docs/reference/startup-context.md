@@ -37,6 +37,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
 | `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
 | `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
+| `task_path_references` | object | no |  | Observed named repo paths from task text, classified as conceptual-reference or path-scoped-work. Conceptual references do not create changed-path routing authority; explicit path-work intent or --changed paths can route path-scoped workflow. |  |  |
 | `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent. |  |  |
 | `memory_decision_packet.kind` | const `"agentic-workspace/memory-decision-packet/v1"` | yes |  | Discriminator for the Memory decision packet. |  |  |
 | `memory_decision_packet.stage` | string | yes |  | Workflow stage that produced the packet. |  |  |

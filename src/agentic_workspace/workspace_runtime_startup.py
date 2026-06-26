@@ -87,6 +87,7 @@ from agentic_workspace.workspace_runtime_core import (
     _task_intent_carry_forward_payload,
     _task_intent_evidence_payload,
     _task_mentioned_existing_paths,
+    _task_path_reference_payload,
     _task_posture_packet_changes_routing,
     _task_posture_packet_payload,
     _task_posture_packet_relevant,
@@ -236,6 +237,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
+        **({"task_path_references": payload["task_path_references"]} if isinstance(payload.get("task_path_references"), dict) else {}),
         **({"pre_test_evidence_guardrail": payload["pre_test_evidence_guardrail"]} if "pre_test_evidence_guardrail" in payload else {}),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
@@ -655,6 +657,9 @@ def _start_payload(
     if read_only_response["status"] == "read-only-reporting":
         payload["read_only_response"] = read_only_response
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
+    task_path_references = _task_path_reference_payload(task_text=task_text, detected_paths=task_mentioned_paths)
+    if task_path_references["status"] == "present":
+        payload["task_path_references"] = task_path_references
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
@@ -802,18 +807,24 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
             "question_to_user": question,
         }
-    if not active_planning_present and task_mentioned_paths and (not changed_paths) and (not _is_config_posture_task(task_text)):
+    if (
+        not active_planning_present
+        and task_path_references.get("path_reference_kind") == "path-scoped-work"
+        and (not changed_paths)
+        and (not _is_config_posture_task(task_text))
+    ):
+        path_scoped_paths = _list_payload(task_path_references.get("path_scoped_paths")) or task_mentioned_paths
         implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
         if implement_command:
-            implement_command = implement_command.replace("<paths>", " ".join(task_mentioned_paths))
+            implement_command = implement_command.replace("<paths>", " ".join(path_scoped_paths))
         else:
             implement_command = _command_with_cli_invoke(
-                command=f"agentic-workspace implement --changed {' '.join(task_mentioned_paths)} --format json",
+                command=f"agentic-workspace implement --changed {' '.join(path_scoped_paths)} --format json",
                 cli_invoke=config.cli_invoke,
             )
         payload["immediate_next_allowed_action"] = {
             "action": "inspect-known-task-paths",
-            "summary": "The task text names existing repo paths. Run the implement surface for those paths before broader startup or raw workspace reads.",
+            "summary": "The task text explicitly asks for work on existing repo paths. Run the implement surface for those paths before broader startup or raw workspace reads.",
             "command": implement_command,
             "run": implement_command,
             "risk": "read-only changed-path routing",
@@ -821,7 +832,9 @@ def _start_payload(
             "next_proof": "use the proof.required_commands from implement output",
             "read_first": [implement_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
-            "detected_paths": task_mentioned_paths,
+            "detected_paths": path_scoped_paths,
+            "path_reference_kind": task_path_references.get("path_reference_kind"),
+            "matched_action_terms": _list_payload(task_path_references.get("matched_action_terms")),
         }
     elif not active_planning_present and _is_prep_only_handoff_task(task_text):
         prep_only = _prep_only_handoff_payload(config=config)
@@ -1194,6 +1207,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     pre_test_guardrail = payload.get("pre_test_evidence_guardrail", {})
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
         context["pre_test_evidence_guardrail"] = pre_test_guardrail
+    task_path_references = payload.get("task_path_references", {})
+    if isinstance(task_path_references, dict) and task_path_references.get("status") == "present":
+        context["task_path_references"] = task_path_references
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
         cli_invocation = payload.get("cli_invocation", {})
