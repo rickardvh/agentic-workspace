@@ -22,3 +22,6 @@ Boundaries:
 - Report repo-relative paths, not local absolute paths.
 - If the effective CLI is unavailable after trying it, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.
 <!-- agentic-workspace:workflow:end -->
+
+Repo-specific obligation:
+- Actively dogfood Agentic Workspace while using it: look for weak points, friction, ineffective or noisy features, missed routing, avoidable rereads, unclear claim/proof boundaries, and ways to make agent work safer, cheaper, quieter, or more effective. Fix immediate blockers when they are in scope. For durable findings, create narrow preliminary/draft GitHub issues with concrete evidence and the smallest useful intended outcome instead of leaving the learning in chat.

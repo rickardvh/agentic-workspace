@@ -23,7 +23,7 @@
       "id": "github-1740-ordinary-phase-questions",
       "title": "[Workspace]: Make ordinary phase questions the primary design unit",
       "status": "completed",
-      "execplan_ref": ".agentic-workspace/planning/execplans/github-1740-ordinary-phase-questions.plan.json",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/github-1740-ordinary-phase-questions.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Make ordinary phase questions the primary design unit before other child slices change visible surfaces, residue lifecycle, restart tests, or affordance/state-packet behavior.",
       "proof": "Delivered in SYSTEM_INTENT.md, docs/package/ordinary-continuity-loop.md, docs/package/overview.md, and report_profile.ordinary_agent_path; validated by focused pytest, maintainer surfaces, workspace tests, workspace lint, summary, and planning doctor.",
@@ -98,8 +98,8 @@
   "closeout_state": {
     "status": "closed",
     "summary": "All child slices for lane #1739 are implemented on PR #1805.",
-    "residual_work": "None for this lane; PR review and merge remain.",
-    "next_owner": "PR #1805 review"
+    "residual_work": "None in checked-in planning state; PR review and issue closure remain outside the archived lane record.",
+    "next_owner": "none"
   },
   "references": [
     {

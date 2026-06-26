@@ -30,7 +30,7 @@
     "hard_constraints": "Keep scope bounded to the active lane: phase questions, surface-value disposition, artifact lifecycle compression, restart/continuation validation, and affordance-first ordinary packets.",
     "agent_may_decide": "Bounded doc/runtime wording, compact report packet fields, focused tests, validation tightening, and lane closeout routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Review and merge PR #1805 for the completed lane #1739 implementation.",
+    "next_action": "Archived as PR #1805 lane evidence; no active continuation on master.",
     "proof_expectations": [
       "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the rest of lane lane-1739-cheapest-safe-ordinary-path on PR #1805\" --format json",
       "uv run pytest tests/test_workspace_cli.py -q",
@@ -74,8 +74,8 @@
     },
     "execution": {
       "milestone": "lane-1739-cheapest-safe-ordinary-path",
-      "status": "active",
-      "next_step": "Review and merge PR #1805 for the completed lane #1739 implementation.",
+      "status": "archived",
+      "next_step": "No active continuation; retained as PR #1805 lane evidence.",
       "proof": "Run implement context selection, focused runtime tests, maintainer surfaces, summary, and planning doctor before claiming completion."
     },
     "scope": {
@@ -139,7 +139,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Resume at PR #1805 review; lane #1739 implementation proof is complete and command selection is routed behind phase/lane packets.",
+    "tiny resumability note": "No active planning continuation; lane #1739 implementation proof is retained and command selection is routed behind phase/lane packets.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -178,7 +178,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Review and merge PR #1805 for the completed lane #1739 implementation."
+    "None; archived as PR #1805 lane evidence."
   ],
   "blockers": [
     "None."
@@ -222,8 +222,8 @@
     "scope touched": "planning records, package docs, ordinary report payload, and focused tests",
     "changed surfaces": "planning state, execplan scaffold, lane record, docs, reporting support, tests",
     "validations run": "implement --changed context for expanded lane; uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make maintainer-surfaces; summary; planning doctor; docs diff review",
-    "result for continuation": "PR #1805 now contains the completed #1739 lane; PR review and merge remain",
-    "next step": "Review and merge PR #1805."
+    "result for continuation": "PR #1805 contains the completed #1739 lane evidence without leaving active continuation state on master.",
+    "next step": "None in checked-in planning state."
   },
   "finished_run_review": {
     "review status": "completed",
@@ -232,7 +232,7 @@
     "intent served": "yes for #1739 active lane: #1740, #1741, #1743, #1744, and #1745 are all covered",
     "config compliance": "followed AGENTS start/implement route, selected proof, and dogfooding issue routing already created for earlier friction",
     "misinterpretation risk": "low: phase questions are explicit in durable docs and ordinary report guidance",
-    "follow-on decision": "keep PR #1805 in review; lane record archived after successful lane closeout"
+    "follow-on decision": "retain as archive evidence; do not make PR review an active master continuation"
   },
   "delegation_outcome_feedback": {
     "route chosen": "pending",
@@ -252,15 +252,15 @@
     "original intent": "GitHub #1739 via active lane lane-1739-cheapest-safe-ordinary-path",
     "was original intent fully satisfied?": "yes for #1739 active lane",
     "evidence of intent satisfaction": "docs/package/ordinary-continuity-loop.md, docs/package/overview.md, src/agentic_workspace/reporting_support.py, tests/test_workspace_cli.py, and archived lane proof now cover phase questions, surface visibility disposition, artifact lifecycle compression, restart scenarios, and affordance-first ordinary packets.",
-    "unsolved intent passed to": "GitHub PR #1805 review/merge; no unresolved child slice remains in lane #1739."
+    "unsolved intent passed to": "No checked-in active continuation; PR review/merge remains outside master planning state."
   },
   "execution_summary": {
     "outcome delivered": "The ordinary path now has phase-question and lane-completion packets covering visible-surface value, lifecycle compression, restart validation, and affordance-first output before legacy command fields.",
     "validation confirmed": "yes",
-    "follow-on routed to": "GitHub PR #1805 review",
+    "follow-on routed to": "none in checked-in planning state",
     "post-work posterity capture": "recorded in this execplan and lane proof aggregation",
     "knowledge promoted (Memory/Docs/Config)": "docs/package ordinary-loop/overview docs",
-    "resume from": "PR #1805 review"
+    "resume from": "none"
   },
   "durable_residue": {
     "status": "none",
@@ -304,7 +304,7 @@
         "diagnostic_only": true
       }
     },
-    "residual_intent": "PR review and merge remain; issue tracker closure should happen through PR/maintainer review.",
+    "residual_intent": "Issue tracker closure should happen through PR/maintainer review, not checked-in active planning state.",
     "self_review": {
       "question": "Does the delivered work satisfy the active lane intent?",
       "answer": "yes",
@@ -313,7 +313,7 @@
     "continuation": {
       "owner_surface": "GitHub PR #1805",
       "created_or_required": true,
-      "reason": "Review and merge remain outside the checked-in implementation proof."
+      "reason": "Review, merge, and issue closure remain outside the checked-in implementation proof."
     },
     "authority_boundary": {
       "aw_owns": [
