@@ -10,39 +10,41 @@
     "reason": "PR #1580 closure depends on explicit end-to-end Memory pull/capture dogfooding evidence, not only implementation tests.",
     "rule": "Full #1579 closure requires evidence that relevant Memory was pulled without exact surface wording and reusable learning was captured or routed before completion."
   },
-  "dogfooding_evidence": {
-    "memory_pull": {
-      "status": "passed",
-      "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --stage closeout --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py --task \"Finish the pull capture loop evidence\" --format json",
-      "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
-      "match_source": "surface",
-      "confidence": "high",
-      "task_used_for_matching": false,
-      "evidence_summary": "Structured stage/file context found the relevant Memory note without requiring exact prompt wording."
-    },
-    "surface_order_robustness": {
-      "status": "passed",
-      "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --files tests/test_workspace_summary_cli.py --stage closeout --task \"Equivalent context in another order\" --format json",
-      "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
-      "match_source": "surface",
-      "task_used_for_matching": false,
-      "evidence_summary": "Equivalent structured inputs in a different option order returned the same relevant Memory route."
-    },
-    "capture_or_route": {
-      "status": "captured-existing-memory-note",
-      "command": "uv run python scripts/run_agentic_workspace.py memory capture-note --target . --slug memory-decision-packet-closeout-state-evidence --summary \"Closeout Memory decision states are enforced by runtime contract and tests; no new Memory note is needed beyond existing agent-judgment guidance.\" --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py docs/reference/startup-context.md docs/reference/implementer-context.md --stage closeout --task \"Route reusable #1579 learning before completion\" --format json",
-      "recommended_action": "update-existing-note",
-      "owner_surface": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
-      "non_memory_owner_routes_visible": [
-        "planning",
-        "docs",
-        "tests",
-        "contracts",
-        "config",
-        "review",
-        "issue"
-      ],
-      "applied_change": "Updated the existing Memory note with the #1579 route/capture verification and last-confirmed date."
+  "closeout_distillation": {
+    "dogfooding_evidence": {
+      "memory_pull": {
+        "status": "passed",
+        "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --stage closeout --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py --task \"Finish the pull capture loop evidence\" --format json",
+        "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+        "match_source": "surface",
+        "confidence": "high",
+        "task_used_for_matching": false,
+        "evidence_summary": "Structured stage/file context found the relevant Memory note without requiring exact prompt wording."
+      },
+      "surface_order_robustness": {
+        "status": "passed",
+        "command": "uv run python scripts/run_agentic_workspace.py memory route --target . --files tests/test_workspace_summary_cli.py --stage closeout --task \"Equivalent context in another order\" --format json",
+        "matched_note": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+        "match_source": "surface",
+        "task_used_for_matching": false,
+        "evidence_summary": "Equivalent structured inputs in a different option order returned the same relevant Memory route."
+      },
+      "capture_or_route": {
+        "status": "captured-existing-memory-note",
+        "command": "uv run python scripts/run_agentic_workspace.py memory capture-note --target . --slug memory-decision-packet-closeout-state-evidence --summary \"Closeout Memory decision states are enforced by runtime contract and tests; no new Memory note is needed beyond existing agent-judgment guidance.\" --files src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_summary_cli.py docs/reference/startup-context.md docs/reference/implementer-context.md --stage closeout --task \"Route reusable #1579 learning before completion\" --format json",
+        "recommended_action": "update-existing-note",
+        "owner_surface": ".agentic-workspace/memory/repo/decisions/agent-judgment-over-keyword-matching-2026-06-16.md",
+        "non_memory_owner_routes_visible": [
+          "planning",
+          "docs",
+          "tests",
+          "contracts",
+          "config",
+          "review",
+          "issue"
+        ],
+        "applied_change": "Updated the existing Memory note with the #1579 route/capture verification and last-confirmed date."
+      }
     }
   },
   "closure_check": {

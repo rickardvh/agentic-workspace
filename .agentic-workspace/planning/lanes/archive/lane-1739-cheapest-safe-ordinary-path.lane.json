@@ -1,0 +1,143 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-1739-cheapest-safe-ordinary-path",
+  "title": "Architect AW around the cheapest safe ordinary path",
+  "status": "archived",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make AW's ordinary path the cheapest safe path by routing the #1739 parent direction into concrete child slices for phase questions, visible-surface value, residue lifecycle, continuation validation, and affordance-first state packets.",
+  "purpose_for_parent": "Promote GitHub #1739 from roadmap candidate into first-class lane ownership while preserving child issues as bounded implementation slices.",
+  "subsystems": [
+    "workspace ordinary loop",
+    "planning and closeout surfaces",
+    "startup and implement affordances",
+    "durable design guidance"
+  ],
+  "technical_strategy": "Start with #1740 so ordinary phase questions become the primary design unit, then use the remaining child issues to demote low-value visible surfaces, define artifact lifecycle compression, validate restart/continuation, and prefer affordance/state-packet outputs over prose-heavy instructions.",
+  "technology_choices": [
+    "checked-in Planning lane record",
+    "issue-linked child slices",
+    "summary and doctor proof before lane closeout"
+  ],
+  "slice_sequence": [
+    {
+      "id": "github-1740-ordinary-phase-questions",
+      "title": "[Workspace]: Make ordinary phase questions the primary design unit",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/github-1740-ordinary-phase-questions.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Make ordinary phase questions the primary design unit before other child slices change visible surfaces, residue lifecycle, restart tests, or affordance/state-packet behavior.",
+      "proof": "Delivered in SYSTEM_INTENT.md, docs/package/ordinary-continuity-loop.md, docs/package/overview.md, and report_profile.ordinary_agent_path; validated by focused pytest, maintainer surfaces, workspace tests, workspace lint, summary, and planning doctor.",
+      "residual_after_slice": "Visible-surface value, lifecycle compression, restart/continuation validation, and affordance/state-packet preference remain for later child slices."
+    },
+    {
+      "id": "github-1741-visible-surface-value",
+      "title": "[Workspace]: Audit and demote visible surfaces by action-changing value",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "github-1740-ordinary-phase-questions"
+      ],
+      "purpose_for_lane": "Use the phase-question model to decide which visible ordinary surfaces earn attention and which should move behind selectors, merge, or disappear.",
+      "proof": "Delivered by docs/package/ordinary-continuity-loop.md Visibility Disposition and report_profile.ordinary_agent_path.lane_completion_model.visibility_disposition. Low-risk demotion applied: ordinary report guidance starts from compact phase/lane packets while report detail remains behind selectors.",
+      "residual_after_slice": "None for #1741 in this lane; retained diagnostic, lifecycle, generated/reference, module, and maintainer surfaces are routed rather than first-contact."
+    },
+    {
+      "id": "github-1743-lifecycle-compression",
+      "title": "[Workspace]: Define lifecycle compression for AW artefacts and residue",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "github-1740-ordinary-phase-questions"
+      ],
+      "purpose_for_lane": "Make active artifacts compress into useful residue or disappear so the cheapest safe ordinary path is not burdened by stale planning state.",
+      "proof": "Delivered by docs/package/ordinary-continuity-loop.md Artifact Lifecycle and report_profile.ordinary_agent_path.lane_completion_model.artifact_lifecycle. Minimal survivor shape is claim boundary, proof summary, residue owner, remaining gap, and reopen trigger.",
+      "residual_after_slice": "None for #1743 in this lane; future class-specific cleanup should use the lifecycle classes instead of preserving raw active narrative."
+    },
+    {
+      "id": "github-1744-restart-continuation-validation",
+      "title": "[Workspace]: Validate restart and continuation as core product design tests",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "github-1740-ordinary-phase-questions"
+      ],
+      "purpose_for_lane": "Treat restart and continuation as product tests for whether the ordinary path is actually cheap and safe over time.",
+      "proof": "Delivered by docs/package/ordinary-continuity-loop.md Restart Scenarios and report_profile.ordinary_agent_path.lane_completion_model.restart_scenarios covering direct work, known changed paths, active lane continuation, takeover/recovery, and parent-lane closeout.",
+      "residual_after_slice": "None for #1744 in this lane; failures from future scenario runs should route to owner issues with read-cost evidence."
+    },
+    {
+      "id": "github-1745-affordances-state-packets",
+      "title": "[Workspace]: Prefer affordances and state packets over prose instructions",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "github-1740-ordinary-phase-questions"
+      ],
+      "purpose_for_lane": "Prefer typed posture, affordances, selectors, and state packets where they reduce agent choice and reading cost more reliably than prose instructions.",
+      "proof": "Delivered by report_profile.ordinary_agent_path.lane_completion_model.affordance_first_rules and test coverage proving the typed packet exposes owner, proof, restart, lifecycle, and closeout checks without relying on prose-first command selection.",
+      "residual_after_slice": "None for #1745 in this lane; reasoning skills remain for semantic judgment while CLI packets own facts, routes, selectors, proof commands, and claim boundaries."
+    }
+  ],
+  "current_slice": "lane-closeout-pr-1805",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Aggregate child-slice proof against #1739 acceptance: updated durable architecture/ordinary-loop surfaces, mapped child ownership, representative workflow review, and honest residual-intent closeout before parent closure.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "#1740 phase-question design unit implemented and validated in this branch.",
+      "#1741 visible-surface disposition implemented in ordinary-loop docs and lane_completion_model.visibility_disposition.",
+      "#1743 lifecycle compression rules implemented in ordinary-loop docs and lane_completion_model.artifact_lifecycle.",
+      "#1744 restart/continuation scenarios implemented in ordinary-loop docs and lane_completion_model.restart_scenarios.",
+      "#1745 affordance-first rules implemented in ordinary-loop docs and lane_completion_model.affordance_first_rules."
+    ],
+    "known_gaps": []
+  },
+  "residual_lane_work": "No unresolved child slices remain for this lane after PR #1805 validation; future refinements should use the recorded model and follow-up issues.",
+  "lane_to_epic_contribution": "Carries the #1739 product-architecture parent lane; no child slice may claim full parent satisfaction without lane-level proof aggregation.",
+  "parent_close_permission": "may-close-parent-after-human-confirmation",
+  "closeout_state": {
+    "status": "closed",
+    "summary": "All child slices for lane #1739 are implemented on PR #1805.",
+    "residual_work": "None for this lane; PR review and merge remain.",
+    "next_owner": "PR #1805 review"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1739",
+      "label": "GitHub #1739",
+      "role": "upstream parent lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1740",
+      "label": "GitHub #1740",
+      "role": "current slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1741",
+      "label": "GitHub #1741",
+      "role": "planned child slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1743",
+      "label": "GitHub #1743",
+      "role": "planned child slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1744",
+      "label": "GitHub #1744",
+      "role": "planned child slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1745",
+      "label": "GitHub #1745",
+      "role": "planned child slice"
+    }
+  ],
+  "notes": "Promoted after open-issue ingestion on branch codex/ingest-prioritise-open-issues. The first active slice is #1740 because it establishes the phase-question design unit that the remaining child slices should use."
+}

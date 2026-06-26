@@ -8,7 +8,7 @@ Use it when the question is:
 
 - what classes of structured agent configuration exist here?
 - which surface is authoritative for each class?
-- how do Planning, Memory, and Verification attach to the substrate?
+- how do planning and memory attach to the substrate?
 - which startup or handoff prose surfaces are adapters rather than primary authority?
 - which compact query should answer a configuration question first?
 
@@ -19,31 +19,21 @@ Treat Agentic Workspace as a repo-owned agent configuration system with four con
 | Class | Purpose | Primary owner | Compact query |
 | --- | --- | --- | --- |
 | Startup and adapter policy | Canonical startup entrypoint, prose adapter role, and runtime-artifact profile. | workspace config plus this contract | `agentic-workspace defaults --section startup --format json` |
-| Workspace policy | Repo-owned default preset, improvement latitude, optimization bias, advanced-feature opt-ins, and update intent. | `.agentic-workspace/config.toml` | `agentic-workspace config --target ./repo --format json` |
-| Local invocation and integration aids | Optional machine-local CLI invocation and vendor/runtime helpers that make local compliance cheaper without becoming shared truth. | `.agentic-workspace/config.local.toml` plus `.agentic-workspace/local/integrations/` | `agentic-workspace config --target ./repo --format json` |
-| Local-only memory | Optional machine-local continuity notes that stay advisory and outside shared repo authority. | `.agentic-workspace/local/memory.toml` | `agentic-workspace report --target ./repo --format json` |
+| Workspace policy | Repo-owned default preset, improvement latitude, optimization bias, and update intent. | `.agentic-workspace/config.toml` | `agentic-workspace config --target ./repo --format json` |
 | Module attachment | Which behavior modules exist, what they own, and how they compose without merging ownership. | module descriptors plus `.agentic-workspace/OWNERSHIP.toml` | `agentic-workspace ownership --target ./repo --format json`; `agentic-workspace modules --format json` |
-| Module state | Active planning state, durable memory state, and verification evidence state that consume the substrate but stay module-owned. | planning, memory, and verification surfaces | `agentic-workspace report --target ./repo --format json` |
+| Module state | Active planning state and durable memory state that consume the substrate but stay module-owned. | planning and memory surfaces | `agentic-workspace report --target ./repo --format json` |
 
 The workspace layer owns the substrate and composition logic.
-Planning, Memory, and Verification remain behavior modules inside that substrate rather than ambient prose branches.
-
-For field-level shape, defaults, examples, and schema annotations, use the generated reference at `../../docs/reference/workspace-config.md`.
-This contract explains authority and usage; the generated reference is derived from `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`.
+Planning and Memory remain behavior modules inside that substrate rather than ambient prose branches.
 
 ## Authority Map
 
 - **Repo-owned workspace policy** lives in `.agentic-workspace/config.toml`.
-- **Advanced host-repo diagnostics** are explicit opt-ins under `workspace.advanced_features`; source-checkout-only maintainer tooling such as codegen development, autopilot/self-improvement loops, package extraction, and heavy maintenance pressure is not a shipped feature tier.
-- **Machine-local invocation preferences** such as `workspace.cli_invoke` live in `.agentic-workspace/config.local.toml`, not checked-in repo config.
-- **Local-only integration aids** may live under `.agentic-workspace/local/integrations/<vendor-or-runtime>/`; they are ignored, optional, non-authoritative, and safe to delete.
-- **Local-only memory** may live at `.agentic-workspace/local/memory.toml` only when enabled by `.agentic-workspace/config.local.toml`; it is ignored, advisory, non-authoritative, and promoted to checked-in Memory only by deliberate manual action.
 - **Workspace-owned shared contract docs** live in `.agentic-workspace/docs/`.
 - **Ownership and authority lookup** live in `.agentic-workspace/OWNERSHIP.toml` and `agentic-workspace ownership --target ./repo --format json`.
 - **Module descriptors** define installed module capabilities, workflow surfaces, generated artifacts, dependencies, and conflicts.
 - **Planning** owns active execution state and near-term continuation.
 - **Memory** owns durable anti-rediscovery understanding.
-- **Verification** owns reusable verification protocols, bounded evidence, proof route hints, and known gaps.
 - **Repo-owned prose startup surfaces** remain useful, but they are adapters over the structured substrate once the workspace is installed.
 
 Do not treat prose surfaces as the primary authority once the structured substrate can answer the same question directly.
@@ -52,7 +42,7 @@ Do not treat prose surfaces as the primary authority once the structured substra
 
 Agentic Workspace surfaces use short headers to distinguish repo-owned policy from package-owned state.
 
-`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --format json` to inspect the resolved effective view before relying on a setting. Use `--select <field[,field...]>` for exact detail and `--verbose` only for broad diagnostics.
+`.agentic-workspace/config.toml` is repo-owned policy. Its installed header says agents may edit it directly only when changing repo policy, and should use `agentic-workspace config --target . --format json` to inspect the resolved effective view before relying on a setting. Use `--verbose` or `--verbose` only when the tiny answer is insufficient.
 
 Package-owned state surfaces, such as `.agentic-workspace/planning/state.toml`, use a stricter header. When the CLI is available, inspect them through `agentic-workspace summary --format json` and mutate through the package command named by that output instead of freehanding file structure.
 
@@ -88,30 +78,11 @@ The structured substrate should answer a small number of high-value questions ch
 
 | Query class | Ask first | Deeper only if needed |
 | --- | --- | --- |
-| Startup path | `agentic-workspace defaults --section startup --format json` | `agentic-workspace config --target ./repo --format json`, then `--select <field.path>` or `AGENTS.md` only if needed |
+| Startup path | `agentic-workspace defaults --section startup --format json` | `agentic-workspace config --target ./repo --format json`, then `--verbose` or `AGENTS.md` only if needed |
 | Active behavior modules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace modules --format json`, then `agentic-workspace report --target ./repo --format json` |
 | Proof and ownership rules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace defaults --section validation --format json`, then `agentic-workspace report --target ./repo --format json` |
 | Repo-local current work | `agentic-workspace summary --format json` | `agentic-workspace report --target ./repo --format json`, then the active execplan only if summary points there |
 | Relevant subinstructions | `agentic-workspace defaults --section agent_configuration_queries --format json` | `agentic-workspace report --target ./repo --format json`, then only the module-local docs or runbooks already in scope |
-
-## Operational Authority Ladder
-
-When multiple surfaces mention the same operating question, use this ladder to avoid adding another equivalent route.
-Command output owns the first live answer; docs explain the contract behind that answer; raw files are authoring or recovery surfaces only after a compact command points there.
-
-| Operating question | Canonical command first | Owning contract doc | Raw/detail surface only when routed |
-| --- | --- | --- | --- |
-| How should an agent start? | `agentic-workspace start --task "<task>" --format json` | `.agentic-workspace/docs/workspace-config-contract.md` | `AGENTS.md`, `.agentic-workspace/WORKFLOW.md` |
-| What active work or handoff exists? | `agentic-workspace summary --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | `.agentic-workspace/planning/state.toml`, active execplans |
-| Which proof should run? | `agentic-workspace proof --changed <paths> --format json` | `.agentic-workspace/docs/proof-surfaces-contract.md` | repo check scripts, package/module proof docs |
-| Which config or local invocation matters? | `agentic-workspace config --target ./repo --format json --select <field>` | `.agentic-workspace/docs/workspace-config-contract.md` | `.agentic-workspace/config.toml`, `.agentic-workspace/config.local.toml` |
-| Who owns a surface? | `agentic-workspace ownership --target ./repo --path <path> --format json` | `.agentic-workspace/docs/ownership-authority-contract.md` | `.agentic-workspace/OWNERSHIP.toml` |
-| Which durable memory is relevant? | `agentic-workspace memory route --task "<task>" --format json` | `.agentic-workspace/memory/WORKFLOW.md` | routed memory notes only |
-| How should a slice close out? | `agentic-workspace planning archive-plan <plan> --prepare-closeout --format json` | `.agentic-workspace/docs/execution-flow-contract.md` | active execplan closeout fields, issue comments |
-| Which module lifecycle repair is needed? | `agentic-workspace doctor --target ./repo --format json` | `.agentic-workspace/docs/lifecycle-and-config-contract.md` | module doctor reports and managed payload files |
-
-Before adding a new startup, routing, proof, closeout, or lifecycle surface, name which row it replaces, merges, demotes, or removes.
-If it cannot name one, keep the new material explanatory and link to the owning command/doc instead of making it a new first-step route.
 
 Selective loading means:
 
@@ -126,7 +97,7 @@ The structured substrate is authoritative.
 The following prose surfaces are compatibility adapters and routing bridges:
 
 - `AGENTS.md`
-- `docs/agentic-workspace-install.md`
+- `llms.txt`
 - generated helper guidance exposed through compact report/default surfaces
 
 They should:
@@ -161,8 +132,8 @@ Do not use this mechanism to create a scheduler, a giant static workflow catalog
 It is not itself the configuration substrate, active planning state, or enforcement layer.
 
 Use the substrate to make relevant system-intent hooks queryable and operational.
-Declare repo-owned intent sources in `.agentic-workspace/config.toml [system_intent]`, then let the workspace-owned compiled declaration at `.agentic-workspace/system-intent/intent.toml` carry the normalized system-intent view consumed by package operations.
-Refresh source discovery metadata with `agentic-workspace system-intent --target ./repo --sync --format json`, then refine the compiled declaration through `.agentic-workspace/system-intent/WORKFLOW.md`.
+Declare repo-owned intent sources in `.agentic-workspace/config.toml [system_intent]`, then let the workspace-owned mirrored declaration at `.agentic-workspace/system-intent/intent.toml` carry the normalized system-intent view consumed by package operations.
+Refresh source metadata with `agentic-workspace system-intent --target ./repo --sync --format json`, then refine the mirrored declaration through `.agentic-workspace/system-intent/WORKFLOW.md`.
 
 System intent should shape:
 
@@ -191,5 +162,3 @@ Do not treat the substrate as permission to encode arbitrary repo choreography o
 - Use [ownership-authority-contract.md](ownership-authority-contract.md) for current owner and authoritative-surface lookup.
 - Use [minimum-operating-model.md](minimum-operating-model.md) for the startup-facing boundary map.
 - Use [system-intent-contract.md](system-intent-contract.md) when the question is how higher-level system intent remains durable and recoverable.
-- Use [local-integration-area.md](local-integration-area.md) for the local-only vendor/runtime integration boundary.
-- Use [agent-aids-storage.md](agent-aids-storage.md) for reusable aid storage boundaries across local-only, checked-in candidate, promoted, package-owned, and source-checkout-only homes.

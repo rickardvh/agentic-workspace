@@ -188,47 +188,6 @@
       "items": {
         "type": "object"
       }
-    },
-    "pull_requests": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["system", "number", "state"],
-        "additionalProperties": false,
-        "properties": {
-          "system": {
-            "type": "string"
-          },
-          "number": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "title": {
-            "type": "string"
-          },
-          "state": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "head_ref": {
-            "type": "string"
-          },
-          "base_ref": {
-            "type": "string"
-          },
-          "is_draft": {
-            "type": "boolean"
-          },
-          "close_keyword_issue_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      }
     }
   }
 }

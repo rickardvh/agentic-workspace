@@ -1114,8 +1114,62 @@ def _ordinary_agent_path_payload(
         current_work = {}
     current_status = str(current_work.get("status", "unknown") or "unknown")
     warning_count = len(findings)
+    phase_questions = [
+        {
+            "phase": "startup",
+            "question": "What is the smallest safe context before acting?",
+            "primary_affordance": _command_with_cli_invoke(
+                'agentic-workspace start --target ./repo --task "<task>" --format json', cli_invoke=cli_invoke
+            ),
+            "boundary": "Do not browse command inventories or raw workspace files before compact routing.",
+        },
+        {
+            "phase": "work_shaping",
+            "question": "Is this direct, bounded, lane, epic, takeover, or continuation work?",
+            "primary_affordance": "start, summary, or routed Planning mutation",
+            "boundary": "Decide work shape before implementation; do not treat passing checks as intent closure.",
+        },
+        {
+            "phase": "governing_knowledge",
+            "question": "Which source can change interpretation, edits, proof, or closeout?",
+            "primary_affordance": "knowledge routes and gates in compact output",
+            "boundary": "Surface action-changing authority and freshness only.",
+        },
+        {
+            "phase": "implementation_context",
+            "question": "What narrow working set is safe to touch now?",
+            "primary_affordance": _command_with_cli_invoke(
+                'agentic-workspace implement --changed <paths> --task "<task>" --format json', cli_invoke=cli_invoke
+            ),
+            "boundary": "Known-path context does not select broad roadmap work or close parent intent.",
+        },
+        {
+            "phase": "proof",
+            "question": "What evidence is required for the claim I want to make?",
+            "primary_affordance": _command_with_cli_invoke(
+                "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
+            ),
+            "boundary": "Proof execution is separate from intent-satisfaction judgment.",
+        },
+        {
+            "phase": "closeout",
+            "question": "What must survive after this agent stops?",
+            "primary_affordance": "Planning closeout/archive, proof report fields, Memory capture, or follow-up issue",
+            "boundary": "Route durable residue to one owner instead of leaving it in chat.",
+        },
+        {
+            "phase": "continuation",
+            "question": "How can a future agent resume without replaying chat?",
+            "primary_affordance": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
+            "boundary": "Expose freshness, claim boundary, proof state, and next action before raw rereads.",
+        },
+    ]
     ordinary_path: dict[str, Any] = {
         "status": "ready",
+        "primary_design_unit": "phase_question",
+        "rule": "Answer the current phase question first; commands are routed affordances, not the workflow.",
+        "phase_questions": phase_questions,
+        "lane_completion_model": _ordinary_lane_completion_model_payload(cli_invoke=cli_invoke),
         "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
         "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
         "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
@@ -1140,6 +1194,81 @@ def _ordinary_agent_path_payload(
         "recover_by_default": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
     }
     return ordinary_path
+
+
+def _ordinary_lane_completion_model_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/ordinary-lane-completion-model/v1",
+        "status": "available",
+        "rule": "A lane is done only when visible surfaces, artifact lifecycle, restart economics, and prose-to-affordance pressure are resolved or explicitly owned.",
+        "visibility_disposition": {
+            "question": "Does this surface change the next safe action, working set, proof, owner, or continuation?",
+            "retained_first_contact": ["AGENTS.md", "start", "summary", "implement --changed", "proof --changed"],
+            "routed_detail": ["planning", "memory", "report --section <section>", "config", "defaults", "ownership", "modules"],
+            "diagnostic_or_recovery": ["preflight", "doctor", "status", "setup"],
+            "lifecycle": ["init", "install", "upgrade", "uninstall", "prompt"],
+            "generated_or_reference": ["docs/reference/", "generated command metadata"],
+            "demotion_applied": "ordinary_agent_path now exposes phase questions and this lane model before legacy command fields; report detail remains behind section selectors.",
+        },
+        "artifact_lifecycle": {
+            "active": "Owns current execution only while work is live; closeout must not preserve raw execution narrative.",
+            "durable": "Promote only reusable intent, invariants, proof boundaries, or anti-rediscovery facts to docs, Memory, or issues.",
+            "local_only": "Keep transient checkpoints and tool-local state outside canonical proof and package-owned residue.",
+            "generated": "Treat generated/reference artifacts as derived detail; route through selectors or maintainer checks.",
+            "promoted": "Once product output lands, it becomes normal repo output rather than AW residue.",
+            "archived_or_removable": "Archive, demote, or remove residue that no longer changes continuation, proof, owner, or review.",
+            "minimal_survivor_shape": ["claim_boundary", "proof_summary", "residue_owner", "remaining_gap", "reopen_trigger"],
+        },
+        "restart_scenarios": [
+            {
+                "id": "direct-work",
+                "compact_entry": _command_with_cli_invoke(
+                    'agentic-workspace start --target ./repo --task "<task>" --format json', cli_invoke=cli_invoke
+                ),
+                "must_recover": ["next_safe_action", "governing knowledge gate", "proof expectation"],
+            },
+            {
+                "id": "known-changed-paths",
+                "compact_entry": _command_with_cli_invoke(
+                    'agentic-workspace implement --changed <paths> --task "<task>" --format json', cli_invoke=cli_invoke
+                ),
+                "must_recover": ["working set", "owner boundary", "proof route"],
+            },
+            {
+                "id": "active-lane-continuation",
+                "compact_entry": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
+                "must_recover": ["active owner", "next slice or PR review action", "claim boundary", "remaining lane gaps"],
+            },
+            {
+                "id": "takeover-or-recovery",
+                "compact_entry": _command_with_cli_invoke("agentic-workspace preflight --format json", cli_invoke=cli_invoke),
+                "must_recover": ["health", "repair action", "safe drill-down"],
+            },
+            {
+                "id": "parent-lane-closeout",
+                "compact_entry": _command_with_cli_invoke(
+                    "agentic-workspace summary --select continuation_view,lanes --format json", cli_invoke=cli_invoke
+                ),
+                "must_recover": ["proof aggregation", "residue owner", "unresolved child slices", "closure permission"],
+            },
+        ],
+        "affordance_first_rules": [
+            "compact packet before explanation",
+            "selector before copied source text",
+            "next_safe_action before general guidance",
+            "owner surface before broad reading",
+            "proof route before proof advice",
+            "claim boundary before closeout prose",
+            "warning force before caution narrative",
+        ],
+        "reasoning_skill_boundary": "Use reasoning skills when semantic judgment is required; use CLI packets for facts, routes, selectors, proof commands, and claim boundaries.",
+        "closeout_checks": [
+            "surface disposition recorded",
+            "artifact lifecycle survivor shape recorded",
+            "restart scenarios reviewed or routed",
+            "selected prose-first paths converted or owned",
+        ],
+    }
 
 
 def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:

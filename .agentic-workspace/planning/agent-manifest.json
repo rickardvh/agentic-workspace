@@ -20,10 +20,9 @@
     ],
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
-      "`.agentic-workspace/planning/state.toml` is the planning-managed state file containing repo-owned active queue and candidate-lane content after the compact summary has shown raw detail is needed.",
+      "`.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.",
       "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
       "`AGENTS.md` is the agent entrypoint router.",
-      "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated static routing adapters, not doctrine or state owners.",
       "`.agentic-workspace/planning/agent-manifest.json` is the machine-readable routing mirror; changing operational truth belongs in compact queryable surfaces."
     ],
     "boundary_triggered_escalation": [
@@ -81,7 +80,7 @@
       }
     ],
     "conditional_reads": [
-      "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review; use `--select <field[,field...]>` for exact detail and `--verbose` only for broad diagnostics.",
+      "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review.",
       "Read `.agentic-workspace/planning/state.toml` only when the compact summary shows active work that still needs raw queue detail.",
       "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the task belongs to one.",
       "Read the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work, reprioritising, or reviewing candidate epics.",
@@ -93,13 +92,13 @@
     "small_task_mode": [
       "For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.",
       "Keep direct tasks in `.agentic-workspace/planning/state.toml` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.",
-      "Use `.agentic-workspace/docs/capability-aware-execution.md` when deciding whether the cheap direct path is still safe or whether medium reasoning is a better fit; prefer silent task shaping over repeated executor-selection prompts.",
+      "Use `agentic-workspace report --target ./repo --section execution_readiness --format json` when deciding whether the cheap direct path is still safe or whether stronger planning, delegation, or explicit escalation is warranted.",
       "Do not create a checked-in plan just because a stronger model could write one; escalate only when the artifact should save more rediscovery, restart cost, or coordination risk than it costs to produce."
     ],
     "plan_threshold": [
       "Create or update a plan when work spans multiple milestones, will be handed across threads or models, or carries enough ambiguity that implementation should not start from chat context alone.",
       "Promote a direct task once it picks up blocker handling, validation scope, rollback or migration detail, ownership reconciliation, enough context pressure that a smaller or less capable agent would need checked-in state, or enough narrative that the TODO row stops being self-sufficient.",
-      "If the task is no longer a good fit for the current execution capability, use `.agentic-workspace/docs/capability-aware-execution.md` to decide whether stronger planning, delegation, explicit escalation, or quieter task shaping is the right next step.",
+      "If the task is no longer a good fit for the current execution capability, use compact report and handoff queries to decide whether stronger planning, delegation, explicit escalation, or quieter task shaping is the right next step.",
       "If multi-agent or multi-model delegation is available, a more capable agent may write the compact plan first and hand implementation to a smaller one only when that is likely to save tokens without sacrificing quality.",
       "Use `.agentic-workspace/docs/execution-flow-contract.md` for orchestrator-worker handoff rules."
     ],
@@ -109,9 +108,7 @@
       "When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, the roadmap state in `.agentic-workspace/planning/state.toml`, or a promoted execplan."
     ],
     "generated_surfaces": [
-      "`tools/agent-manifest.json` is a generated mirror of `.agentic-workspace/planning/agent-manifest.json`.",
-      "`tools/AGENT_QUICKSTART.md` is a generated static routing adapter from `python scripts/render_agent_docs.py`.",
-      "`tools/AGENT_ROUTING.md` is a generated static routing adapter from `python scripts/render_agent_docs.py`."
+      "External compatibility adapters may be generated by workspace tooling, but they are not planning bootstrap payload and must not become doctrine."
     ],
     "validation_flow": [
       "Run the narrowest validation that proves the change.",
@@ -131,25 +128,17 @@
     ".agentic-workspace/planning/state.toml": "active-queue-and-roadmap",
     ".agentic-workspace/planning/execplans/README.md": "execplan-convention",
     ".agentic-workspace/planning/execplans/archive/README.md": "execplan-archive-convention",
-    ".agentic-workspace/planning/upstream-task-intake.md": "upstream-task-intake-contract",
-    ".agentic-workspace/planning/pre-ingestion-refinement.md": "pre-ingestion-refinement-templates",
     ".agentic-workspace/docs/execution-flow-contract.md": "execution-flow-contract",
     ".agentic-workspace/docs/routing-contract.md": "routing-contract",
     ".agentic-workspace/docs/lifecycle-and-config-contract.md": "lifecycle-and-config-contract",
-    ".agentic-workspace/docs/extraction-and-discovery-contract.md": "extraction-and-discovery-contract",
-    ".agentic-workspace/docs/capability-aware-execution.md": "capability-fit-contract",
     ".agentic-workspace/memory/repo/index.md": "memory-routing",
     ".agentic-workspace/memory/WORKFLOW.md": "shared-memory-workflow-policy",
-    ".agentic-workspace/planning/agent-manifest.json": "agent-manifest-source",
-    "tools/agent-manifest.json": "agent-manifest-generated-mirror",
-    "tools/AGENT_QUICKSTART.md": "agent-hot-paths",
-    "tools/AGENT_ROUTING.md": "agent-routing-reference"
+    ".agentic-workspace/planning/agent-manifest.json": "agent-manifest-source"
   },
   "skills": {
-    "repo_dev_source_dir": "tools/skills",
     "memory_source_dir": ".agentic-workspace/memory/skills",
-    "repo_memory_source_dir": "memory/skills",
-    "cache_note": "Checked-in repo skills are authoritative; local copies are a disposable cache."
+    "planning_source_dir": ".agentic-workspace/planning/skills",
+    "cache_note": "Checked-in package skills are declarative guidance and may be absent unless optional skills were installed."
   },
   "routing": {
     "review_workflow": {
@@ -157,8 +146,6 @@
       "prefer_when": "the request asks for a review, audit, or compact finding capture over one repo area or change.",
       "touches": [
         ".agentic-workspace/planning/reviews/",
-        ".agentic-workspace/docs/extraction-and-discovery-contract.md",
-        ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
         ".agentic-workspace/planning/skills/REGISTRY.json"
       ],
       "commands": [
@@ -181,8 +168,8 @@
         "scripts/check/check_maintainer_surfaces.py",
         "scripts/check/check_planning_surfaces.py",
         ".agentic-workspace/planning/agent-manifest.json",
-        "tools/AGENT_QUICKSTART.md",
-        "tools/AGENT_ROUTING.md"
+        "agentic-workspace summary --format json",
+        "agentic-workspace proof --changed <paths> --format json"
       ],
       "commands": [
         "make maintainer-surfaces",
@@ -191,10 +178,10 @@
     }
   },
   "invariants": [
-    ".agentic-workspace/planning/state.toml is the planning-managed state file containing repo-owned active queue content and lightweight direct tasks.",
+    ".agentic-workspace/planning/state.toml owns active queue state and lightweight direct tasks.",
     "Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.",
-    ".agentic-workspace/planning/state.toml also contains repo-owned inactive long-horizon candidate lanes and promotion signals under the Planning module lifecycle.",
-    "Planning-managed state belongs under `.agentic-workspace/planning/` and should be summarized before raw queue files are read.",
+    ".agentic-workspace/planning/state.toml also owns inactive long-horizon candidate lanes and promotion signals.",
+    "Package-owned planning state belongs under `.agentic-workspace/planning/` and should be summarized before root queue files are read.",
     "Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.",
     "Planning should remain useful without memory being installed.",
     "Direct execution is a valid success mode for small local work.",

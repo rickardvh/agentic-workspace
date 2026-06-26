@@ -4,10 +4,101 @@ This page is the reviewed target model for ordinary Agentic Workspace operation.
 It is the decision basis for simplifying agent-facing surfaces under #1389 and
 #1390.
 
-The guiding rule is skills first, CLI as aid. Skills and protocols shape the
-agent's reasoning when judgment is required. Compact CLI commands provide facts,
-checks, routing, proof selection, state writes, and safe drill-down. The command
-list is not the workflow.
+The guiding rule is phase questions first, CLI as aid. Skills and protocols
+shape the agent's reasoning when judgment is required. Compact CLI commands
+provide facts, checks, routing, proof selection, state writes, and safe
+drill-down. The command list is not the workflow.
+
+Each ordinary surface exists to answer one phase question cheaply enough that
+the next safe action is obvious. If a surface does not change the answer to a
+phase question, it should stay behind routing, become diagnostic, or be removed
+by a later simplification slice.
+
+## Phase Questions
+
+These questions are the primary product design unit for ordinary operation.
+Commands, skills, state files, docs, and diagnostics are affordances attached to
+the current question, not peers in a command-selection menu.
+
+| Phase | Question | Primary ordinary affordance | Boundary |
+| --- | --- | --- | --- |
+| startup | What is the smallest safe context before acting? | `AGENTS.md` to `start --task "<task>"` plus `next_safe_action` | Should not require browsing command inventories or raw workspace files. |
+| work shaping | Is this direct, bounded, lane, epic, takeover, or continuation work? | `start`, `summary`, or routed Planning mutation | Should decide work shape before implementation, not after checks pass. |
+| governing knowledge | Which source can change interpretation, edits, proof, or closeout? | knowledge gates in `start`, `implement`, `summary`, `config`, or `report` | Should surface only action-changing authority and freshness. |
+| implementation context | What narrow working set is safe to touch now? | `implement --changed <paths>` when paths are known; Planning execplan when active work owns scope | Should not expand into roadmap selection or parent-intent closure. |
+| proof | What evidence is required for the claim I want to make? | `proof --changed <paths>` and proof hints from `implement` | Should keep proof execution separate from intent-satisfaction judgment. |
+| closeout | What must survive after this agent stops? | Planning closeout/archive, proof report fields, Memory capture, or follow-up issue | Should route residue to one owner instead of leaving it in chat. |
+| continuation | How can a future agent resume without replaying chat? | `summary` continuation view and active Planning owner | Should expose freshness, claim boundary, and next action before raw rereads. |
+
+## Lane Completion Model
+
+The ordinary path is not complete merely because the first phase-question slice
+landed. A lane that aims to make AW cheaper in ordinary use must also resolve
+or explicitly own four product-cost questions:
+
+| Concern | Completion question | Ordinary owner |
+| --- | --- | --- |
+| surface visibility | Does this surface change the next safe action, working set, proof, owner, or continuation? | `report_profile.ordinary_agent_path.lane_completion_model.visibility_disposition` |
+| artifact lifecycle | What survives after active work, and why is that survivor cheaper than raw narrative? | `lane_completion_model.artifact_lifecycle` plus Planning closeout |
+| restart economics | Can a future agent recover intent, owner, next action, proof, claim boundary, and gaps from compact state? | `lane_completion_model.restart_scenarios` plus `summary` continuation view |
+| affordance-first output | Is prose guidance doing work that should be a typed action, selector, route, proof command, or claim boundary? | `lane_completion_model.affordance_first_rules` |
+
+This model is surfaced as one compact report packet instead of a new manual.
+It deliberately keeps generated references, diagnostics, lifecycle commands,
+module commands, and package docs behind routing unless they answer the current
+phase question.
+
+### Visibility Disposition
+
+Retained first-contact surfaces are `AGENTS.md`, `start`, `summary`,
+`implement --changed`, and `proof --changed`, because each can change the next
+safe action, working set, proof, or claim boundary. `planning`, `memory`,
+`report --section <section>`, `config`, `defaults`, `ownership`, and `modules`
+are routed detail. `preflight`, `doctor`, `status`, and `setup` are diagnostic
+or recovery. `init`, `install`, `upgrade`, `uninstall`, and `prompt` are
+lifecycle. `docs/reference/` and generated command metadata are derived
+reference surfaces.
+
+The concrete demotion in this lane is that ordinary report guidance now starts
+from `ordinary_agent_path` phase/lane packets while detailed report material
+stays behind selectors. That replaces a command-inventory mental model with a
+single next-action packet and keeps maintainer/generated/reference material out
+of first-contact flow.
+
+### Artifact Lifecycle
+
+AW artifacts use these lifecycle classes:
+
+| Class | Survivor rule |
+| --- | --- |
+| active | Own current execution only while work is live; do not preserve raw execution narrative after closeout. |
+| durable | Promote only reusable intent, invariants, proof boundaries, or anti-rediscovery facts to docs, Memory, or issues. |
+| local-only | Keep transient checkpoints and tool-local state outside canonical proof and package-owned residue. |
+| generated | Treat generated/reference artifacts as derived detail, routed through selectors or maintainer checks. |
+| promoted | Once product output lands, it becomes normal repo output rather than AW residue. |
+| archived/removable | Archive, demote, or remove residue that no longer changes continuation, proof, owner, or review. |
+
+The minimal survivor shape for completed work is claim boundary, proof summary,
+residue owner, remaining gap, and reopen trigger.
+
+### Restart Scenarios
+
+Restart and continuation are design tests, not only performance metrics. The
+representative scenarios are direct work, known changed-path work, active lane
+continuation, takeover/recovery, and parent-lane closeout. Each scenario must
+recover the governing intent, active owner or absence of one, next safe action,
+required sources/selectors, proof expectation, proof state, claim boundary,
+residue owner, and unresolved gaps from compact surfaces before broad raw
+rereads.
+
+### Affordance-First Rules
+
+Prefer compact packet before explanation, selector before copied source text,
+next-safe action before general guidance, owner surface before broad reading,
+proof route before proof advice, claim boundary before closeout prose, and
+warning force before caution narrative. Reasoning skills remain appropriate
+where semantic judgment is required; CLI packets own facts, routes, selectors,
+proof commands, and claim boundaries.
 
 ## Target Loop
 
@@ -16,10 +107,12 @@ Ordinary installed-repo work should feel like one compact loop:
 | Step | Ordinary question | Primary surface | Routed detail |
 | --- | --- | --- | --- |
 | startup | What is the smallest safe context before acting? | `AGENTS.md` to `agentic-workspace start --task "<task>" --format json` | `skills`, `defaults`, `config`, `WORKFLOW.md`, or repo docs only when routed |
-| active work | Is this direct, bounded, lane, epic, takeover, or continuation work? | `summary` and `implement --changed <paths>` | Planning execplans, decompositions, state, or issue evidence when ownership is required |
+| work shaping | Is this direct, bounded, lane, epic, takeover, or continuation work? | `start`, `summary`, and routed Planning mutation | Planning execplans, decompositions, state, or issue evidence when ownership is required |
 | governing knowledge | Which source can change interpretation, work shape, proof, or closeout? | knowledge routes and gates in `start`, `implement`, `summary`, or `report` | Memory notes, docs, issue/PR evidence, external freshness checks, or module-owned sources |
+| implementation context | What narrow working set is safe to touch now? | `implement --changed <paths>` | changed-path gates, subsystem profiles, ownership hints, proof hints, or active-plan scope |
 | proof | What evidence is required before a claim? | `proof --changed <paths>` and proof commands emitted by `implement` | Verification protocols, proof receipts, test commands, or manual review aids |
 | closeout | What must survive after this agent stops? | Planning closeout/archive plus `summary` claim boundaries | Memory capture, follow-up issues, docs/config promotion, proof receipts, or parent-lane residue |
+| continuation | How can the next agent resume without chat replay? | `summary` continuation view | source freshness, claim boundary, proof state, active owner, and stale projections |
 
 The intended ordinary path is:
 
@@ -27,10 +120,12 @@ The intended ordinary path is:
 AGENTS.md
   -> agentic-workspace start --task "<task>" --format json
        -> direct action, or exactly one routed next phase:
-          active work: summary / implement-context
+          work shaping: summary / Planning mutation / implement-context
           governing knowledge: compact route or gate
+          implementation context: implement --changed
           proof: proof --changed
           closeout: Planning closeout / residue decision
+          continuation: summary continuation_view
           recovery: preflight / doctor / config / ownership / defaults
 ```
 

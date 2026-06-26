@@ -61,6 +61,13 @@ Active work should be:
 - easy to review against intent and scope
 - easy to finish cleanly without dangling ends
 
+The ordinary product shape should be phase-question first: smallest safe
+startup context, work shape, governing knowledge, implementation context,
+proof, closeout, and continuation. Commands, skills, state files, docs, and
+diagnostics are valuable when they answer the current phase question or expose
+the next safe action; they should not become a command inventory the agent must
+understand before repository work can begin.
+
 ### 4. Reduce total interaction cost, not just prompt size
 The system should lower the total cost of getting a tranche done correctly.
 

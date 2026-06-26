@@ -7,7 +7,7 @@ Use raw `TODO.md` and execplan prose after that only when the compact summary is
 Use raw `.agentic-workspace/planning/state.toml` when you need direct maintenance access to canonical machine-readable planning state.
 Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execplan state when a machine-first plan sidecar is present; the adjacent `.md` file is the derived human view.
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
-Use `.agentic-workspace/docs/routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
+Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
 Use `agentic-workspace doctor --target ./repo --format json` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract. `archive-plan` is the compatibility command name for closeout: by default it distills reusable information and removes the completed execplan from Planning. Retaining an archive is legacy/audit-only.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
@@ -16,29 +16,13 @@ Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
 
-After `agentic-workspace planning new-plan`, treat the result as a valid scaffold, not an implementation-ready plan. Before editing product or package files, tighten the concrete goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and `adaptive_assurance` when risk or scope requires it.
-
-For behavior-preserving refactors, modernization, extraction, migration, dependency upgrades, or "safe/no behavior changed" work, use existing plan fields before broad code changes when the boundary is not obvious. Put preservation invariants in `invariants`, allowed changes and stop conditions in `execution_bounds`/`stop_conditions`, and expected preservation proof in `validation_commands`. Mirror closeout evidence into `proof_report.intent_proof` using its `preservation_claims`, `allowed_behavior_changes`, `unknown_behavior`, `proof_classes`, `preservation_evidence`, and `human_confirmation_needed` fields so reports can distinguish ordinary test pass from preservation evidence and can caveat unsupported no-behavior-change claims.
-
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
-
-## Source And Projection Roles
-
-Keep the three planning roles separate:
-
-- `.agentic-workspace/planning/state.toml` is the planning-managed state file containing repo-owned active queue and roadmap content. It answers what is active, queued, deferred, and worth promoting.
-- `.agentic-workspace/planning/execplans/*.plan.json` are canonical slice records. They carry the bounded goal, next action, proof, escalation boundaries, and closeout state for active planned work.
-- CLI outputs such as `summary`, `report`, `start`, `implement --changed`, and compact contract projections are worker-facing views. They should be the first surface a weaker or task-focused implementer consumes.
-
-Do not make a worker infer the whole workflow from raw execplan detail when a compact projection answers the question. Use raw plans for authoring and maintenance; use compact CLI views for startup, handoff, proof selection, and bounded implementation.
-
-Flexible fields such as maps and notes are escape hatches for slice-specific residue, not permission to freehand a different planning concept. If a worker needs new standing structure to complete a class of work, route that as a planning contract improvement instead of hiding it in one plan.
 
 ## Layout
 
 - Keep active plans at the top level of `.agentic-workspace/planning/execplans/`.
 - Keep only active plans plus `README.md`, `TEMPLATE.md`, and `TEMPLATE.plan.json` at the top level.
-- Close completed plans with `agentic-workspace planning archive-plan <plan> --target . --format json`; default closeout removes the completed execplan after distillation.
+- Close completed plans with `agentic-planning archive-plan <plan> --target . --format json`; default closeout removes the completed execplan after distillation.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
 - Before archive, fill `## Proof Report`, `## Intent Satisfaction`, `## Closure Check`, and `## Durable Residue` so proof, intent closure, and future-relevant residue routing are explicit.
 - Keep exactly one active milestone and one immediate next action by default.
@@ -47,7 +31,6 @@ Flexible fields such as maps and notes are escape hatches for slice-specific res
 - Do not treat `todo.active_items`, `roadmap`, or active execplans as long-form completion logs; once a plan is complete, close it and remove the completed-work detail from forward-looking planning surfaces.
 - When a completed slice came from `todo.active_items` or `roadmap`, remove or archive the matched queue residue in the same pass rather than leaving stale completed candidates behind.
 - Do not confuse slice completion with lane completion; a slice can ship while the larger intent remains open, and archive should wait until the lane-level proof is explicit.
-- Do not combine unrelated roadmap lanes into one umbrella execplan. Promote and complete ordered lanes sequentially; use multiple execplans under one lane only when that lane itself needs multiple bounded slices.
 - Do not add sections such as `Added In This Pass`, `Completed Work`, or similar retrospective logs to `todo.active_items`; completed detail belongs in archived execplans, workflow-change notes, or git history.
 - Treat active plan state as branch-local and low half-life: archive, replace, or prune it rather than mutating it forever.
 
@@ -96,6 +79,7 @@ Each active plan should stay compact and include:
 - execution bounds and stop conditions when the slice may benefit from bounded delegated execution
 - context budget
 - delegated judgment
+- adaptive assurance only when the slice needs refs, gates, blockers, proof profiles, or stricter closeout
 - active milestone
 - immediate next action
 - touched paths
@@ -110,6 +94,8 @@ Each active plan should stay compact and include:
 - execution summary
 - closure check
 - drift log
+
+Adaptive assurance is optional and generic. Use it when a slice needs host-owned authority refs, review gates, risk/invariant routing, proof concerns, test-data policy, do-not-implement-yet blockers, layer scaffolding, architecture-decision promotion, or threat/failure-mode aids. Keep the package out of domain truth: fields such as `traceability_refs`, `control_gates`, `proof_profiles`, `risk_registry_refs`, `invariant_refs`, `test_data_policy`, and `threat_failure_aids` should point at project-owned docs, schemas, registries, checks, or review owners instead of copying regulated or domain-specific content into the plan.
 
 Readiness fields belong under `## Active Milestone` for active plans:
 
@@ -216,7 +202,7 @@ Closure checks belong under `## Closure Check` for completed or nearly-complete 
 - `Evidence carried forward`
 - `Reopen trigger`
 
-Prefer `agentic-workspace planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
+Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields; it writes a valid closeout patch from the current record.
 When hand-editing, use the same terminal values archive validation accepts:
 
 - `Slice status`: one of `complete`, `completed`, or `bounded slice complete`

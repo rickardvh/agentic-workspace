@@ -5,15 +5,15 @@ This contract defines how the workspace is initialized, configured, and recovere
 ## 1. Initialization Lifecycle
 
 ### Default Behavior
-- `agentic-workspace init`: Bootstraps the repo with selected modules such as `memory`, `planning`, `verification`, or `planning,memory`.
+- `agentic-workspace init`: Bootstraps the repo with selected modules (`memory`, `planning`, or `full`).
 - [`.agentic-workspace/docs/installer-behavior.md`](installer-behavior.md) for payload resolution and development mirroring rules.
 - [`.agentic-workspace/docs/capability-aware-execution.md`](capability-aware-execution.md) for how the installer configures model-specific execution.
-- **User Intent**: The selected module set (`--modules`) determines the initial module set and configuration.
+- **User Intent**: The selected preset (`--preset`) determines the initial module set and configuration.
 - **Mode Selection**: The CLI automatically chooses a lifecycle mode (Clean install, Conservative adopt, or High-ambiguity adopt) based on existing repo state.
 
 ### High-Ambiguity Signals
 Reconciliation is required when:
-- Multiple root startup files overlap or conflict.
+- Multiple root startup files (e.g. `AGENTS.md`, `llms.txt`) overlap or conflict.
 - Partial or placeholder state exists in module directories.
 - Existing workflow surfaces conflict with product-managed contracts.
 
@@ -27,7 +27,7 @@ Reconciliation is required when:
 - **`.agentic-workspace/`**: Product-managed module state. This directory should not be edited directly; use the owning package or CLI.
 
 ### Configuration Fields
-- `default_preset`: Legacy config field for the default module set used by `init`; prefer explicit `--modules` in current commands.
+- `default_preset`: The default module set for `init`.
 - `agent_instructions_file`: The filename for the canonical startup entrypoint (default `AGENTS.md`).
 - `optimization_bias`: The effective output posture (e.g. `agent-efficiency`, `token-saving`).
 
@@ -45,7 +45,7 @@ When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or e
 5. **Package-local fallback**: Use module bootstrap CLIs only for package-local debugging or when the root command cannot run.
 
 ### Interrupted Handoff
-- **`docs/agentic-workspace-install.md`**: Public source-repo install/adopt handoff.
+- **`llms.txt`**: Canonical external-agent entry surface.
 - **`.agentic-workspace/bootstrap-handoff.md`**: Post-bootstrap next-action brief when judgment is still needed.
 - **`.agentic-workspace/bootstrap-handoff.json`**: Compact structured sibling to the handoff brief.
 
@@ -53,7 +53,7 @@ When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or e
 
 ## 4. Relationship to Tooling
 
-- `agentic-workspace config --target ./repo --format json`: Inspect effective posture and configuration; use `--select <field.path>` when one field is needed or `--verbose` for broad diagnostics.
+- `agentic-workspace config --target ./repo --format json`: Inspect effective posture and configuration; use compact/full only when the tiny answer is insufficient.
 - `agentic-workspace doctor --target ./repo`: Identify and remediate environment drift.
 - `agentic-workspace status --target ./repo`: Check module and repo-state health.
 - `agentic-workspace upgrade --target ./repo --dry-run --format json`: Ordinary safe first step for host-repo updates.
