@@ -33,7 +33,7 @@
     },
     "task_path_references": {
       "type": "object",
-      "description": "Observed named repo paths from task text. These references are conceptual by default and do not create changed-path routing authority; explicit --changed paths remain the path-scoped workflow input.",
+      "description": "Observed named repo paths from task text, classified as conceptual-reference or path-scoped-work. Conceptual references do not create changed-path routing authority; explicit path-work intent or --changed paths can route path-scoped workflow.",
       "additionalProperties": true
     },
     "memory_decision_packet": {
