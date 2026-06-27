@@ -16,7 +16,6 @@ from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, 
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
-    _active_planning_record_for_report_section,
     _applicable_intent_status_payload,
     _apply_lane_shaping_gate_to_start_payload,
     _assurance_requirements_report_payload,
@@ -74,7 +73,6 @@ from agentic_workspace.workspace_runtime_core import (
     _parent_intent_status_payload,
     _pre_test_evidence_guardrail_payload,
     _prep_only_handoff_payload,
-    _raw_active_planning_record_for_closeout,
     _read_only_response_posture_payload,
     _repo_posture_payload,
     _resolve_target_root,
@@ -116,7 +114,9 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _normalize_changed_paths,
 )
 from agentic_workspace.workspace_runtime_planning import (
+    _active_planning_record_for_report_section,
     _planning_safety_gate_payload,
+    _raw_active_planning_record_for_closeout,
 )
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,

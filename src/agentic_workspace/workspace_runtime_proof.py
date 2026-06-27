@@ -20,7 +20,6 @@ from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
     _active_planning_assurance_for_proof,
-    _active_planning_record_for_report_section,
     _adapt_make_proof_command_for_target,
     _applicable_intent_status_payload,
     _apply_learned_route_hints_to_capabilities,
@@ -100,6 +99,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _list_payload,
     _tiny_surface_compatibility_review,
 )
+from agentic_workspace.workspace_runtime_planning import _active_planning_record_for_report_section
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:

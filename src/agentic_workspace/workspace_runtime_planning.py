@@ -6,6 +6,7 @@ compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from pathlib import Path
@@ -29,6 +30,7 @@ from agentic_workspace.workspace_runtime_core import (
     _command_with_expected_planning_revision,
     _external_intent_status_by_ref,
     _fast_planning_active_summary,
+    _fast_planning_lane_records,
     _issue_scope_evidence_payload,
     _planning_hierarchy_owner_requirement,
     _planning_revision_payload,
@@ -43,6 +45,49 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
     _command_with_cli_invoke,
 )
+
+
+def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str, Any]:
+    return _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
+
+
+def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
+    surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+    if not surface:
+        active_summary = _fast_planning_active_summary(target_root=target_root)
+        surface = str(active_summary.get("active_execplan", "")).strip()
+    if not surface:
+        return {}
+    try:
+        target_resolved = target_root.resolve()
+        record_path = (target_root / surface).resolve()
+        record_path.relative_to(target_resolved)
+    except (OSError, ValueError):
+        return {}
+    if record_path.suffix.lower() != ".json" or not record_path.is_file():
+        return {}
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    payload = copy.deepcopy(payload)
+    payload["_target_root"] = str(target_root)
+    payload["_record_surface"] = surface
+    parent_lane = _as_dict(payload.get("parent_lane"))
+    lane_id = str(parent_lane.get("id") or parent_lane.get("lane_id") or "").strip()
+    if lane_id:
+        matching_record = next(
+            (record for record in _fast_planning_lane_records(target_root=target_root) if str(record.get("id") or "").strip() == lane_id),
+            None,
+        )
+        if isinstance(matching_record, dict):
+            payload["_lane_owner_record"] = matching_record
+    return payload
 
 
 def _planning_candidate_pressure_payload(
