@@ -18,15 +18,15 @@
     {
       "id": "workspace-lifecycle-provider-boundaries",
       "title": "Audit workspace lifecycle and provider runtime boundaries",
-      "status": "ready",
-      "execplan_ref": "",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Satisfy #1656 with symbol-level dispositions and safe lifecycle/report extraction only where mutation/provider trust remains explicit."
     },
     {
       "id": "planning-runtime-boundaries",
       "title": "Audit Planning package runtime boundaries",
-      "status": "planned",
+      "status": "ready",
       "execplan_ref": "",
       "depends_on": [
         "workspace-lifecycle-provider-boundaries"
@@ -44,12 +44,14 @@
       "purpose_for_lane": "Satisfy #1658 with semantic-owner-after-split disposition and safe view/scaffold decompositions."
     }
   ],
-  "current_slice": "workspace-lifecycle-provider-boundaries",
+  "current_slice": "planning-runtime-boundaries",
   "acceptance_boundary": "The lane is complete when #1656, #1657, and #1658 each have symbol dispositions, retained-owner rationale, safe decompositions or explicit blockers, updated inventories, and proof evidence.",
   "proof_strategy": "Run generated command package checks, package-focused tests for affected runtime behavior, operation conformance for changed commands, and make test-workspace for cross-package changes.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
+    "status": "partial",
+    "evidence": [
+      "#1656 workspace-lifecycle-provider-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json and included focused reconcile owner tests, tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, maintainer surfaces, generated command boundary and AW primitive ownership checks, planning summary/doctor, and git diff --check."
+    ],
     "known_gaps": []
   },
   "residual_lane_work": "The lane may leave unresolved CG primitive/control-operation follow-ups open when safe decomposition requires new generic support.",
@@ -57,8 +59,8 @@
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "Ready after the runtime packet owner-boundary lane.",
-    "residual_work": "Implement #1656, #1657, and #1658 in order with disposition tables and proof.",
+    "summary": "#1656 workspace lifecycle/provider boundary disposition and safe reconcile owner split are complete.",
+    "residual_work": "Implement #1657 and #1658 in order with disposition tables and proof.",
     "next_owner": "current agent"
   },
   "references": [

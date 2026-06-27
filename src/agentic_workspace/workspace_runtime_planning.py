@@ -6,6 +6,7 @@ compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import re
@@ -28,6 +29,8 @@ from agentic_workspace.workspace_runtime_core import (
     _candidate_with_canonical_route,
     _capability_structural_hints,
     _command_with_expected_planning_revision,
+    _emit_payload,
+    _ensure_external_intent_cache_if_available,
     _external_intent_status_by_ref,
     _fast_planning_active_summary,
     _fast_planning_lane_records,
@@ -39,12 +42,35 @@ from agentic_workspace.workspace_runtime_core import (
     _planning_safety_promotion_command,
     _pr_context_refs_from_task,
     _read_only_allowance_packet,
+    _resolve_target_root,
+    _rewrite_module_cli_commands,
+    _validate_target_root,
     _work_shape_guidance_payload,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
     _command_with_cli_invoke,
 )
+
+
+def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="reconcile", target_root=target_root)
+    from repo_planning_bootstrap.installer import planning_reconcile
+    from repo_planning_bootstrap.runtime_projection import _print_reconcile
+
+    _ensure_external_intent_cache_if_available(target_root=target_root)
+    payload = planning_reconcile(
+        target=target_root,
+        apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
+        dry_run=bool(getattr(args, "dry_run", False)),
+    )
+    payload = _rewrite_module_cli_commands(payload)
+    if args.format == "json":
+        _emit_payload(payload=payload, format_name=args.format)
+    else:
+        _print_reconcile(payload)
+    return 0
 
 
 def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str, Any]:
