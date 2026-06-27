@@ -20,7 +20,7 @@ from collections.abc import Mapping
 
 
 def run(args: argparse.Namespace) -> int:
-    from ..primitives.workspace_runtime import _run_start_context_adapter
+    from ..primitives.workspace_startup_runtime import _run_start_context_adapter
 
     return _run_start_context_adapter(args)
 

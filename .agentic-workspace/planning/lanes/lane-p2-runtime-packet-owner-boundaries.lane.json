@@ -16,8 +16,8 @@
     {
       "id": "startup-packets",
       "title": "Extract startup runtime packets",
-      "status": "ready",
-      "execplan_ref": "",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/p2-startup-runtime-packets.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Satisfy #1770 without changing start payload contracts."
     },
@@ -52,21 +52,27 @@
       "purpose_for_lane": "Satisfy #1773 without weakening proof or closeout blocking."
     }
   ],
-  "current_slice": "startup-packets",
+  "current_slice": "implement-packets",
   "acceptance_boundary": "The lane is complete when #1770 through #1773 each have owner-scoped runtime modules, stable compatibility imports, updated inventories, and focused tests proving unchanged emitted packet contracts.",
   "proof_strategy": "Run focused start/implement/planning/proof tests for each slice, generated command package checks when inventories change, and make test-workspace for cross-runtime extraction.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      "#1770 startup-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-startup-runtime-packets.plan.json and included make test-workspace, make lint-workspace, generated command package checks, operation conformance, contract tooling, structured file inventory, ruff, maintainer surfaces, schema reference docs, AW defaults/summary/doctor, full tests/test_workspace_cli.py, generator --check, AW primitive ownership, and git diff --check."
+    ],
+    "known_gaps": [
+      "#1771 implement runtime packets",
+      "#1772 Planning runtime packets",
+      "#1773 proof and closeout runtime packets"
+    ]
   },
   "residual_lane_work": "The lane does not replace the runtime architecture; it only moves packet ownership out of primitives by declared owner boundary.",
   "lane_to_epic_contribution": "Turns the P2 #1764 decomposition issues into ordered stack work with explicit owner boundaries.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "Ready after the workflow-routing base lane.",
-    "residual_work": "Implement #1770, #1771, #1772, and #1773 in order.",
+    "summary": "#1770 startup runtime packet extraction is complete in the first lane slice.",
+    "residual_work": "Implement #1771, #1772, and #1773 in order.",
     "next_owner": "current agent"
   },
   "references": [

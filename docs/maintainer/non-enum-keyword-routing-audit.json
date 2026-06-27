@@ -335,6 +335,78 @@
       "authority": "The table gates visibility of an advisory task-posture packet; it does not decide task ownership.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_is_open_issue_intake_task",
+      "variable": "intake_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table recognizes likely issue-intake phrasing for startup guidance; it does not select a package owner or close an issue.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface issue-intake hints; the agent still owns provider lookup, semantic grouping, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_is_open_issue_intake_task",
+      "variable": "issue_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table recognizes likely issue-intake phrasing for startup guidance; it does not select a package owner or close an issue.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface issue-intake hints; the agent still owns provider lookup, semantic grouping, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_selective_surfacing_evaluation_payload",
+      "variable": "required_fields",
+      "classification": "structured-field-projection",
+      "authority": "The table names expected projection fields for contract coverage diagnostics; it does not route tasks or choose owner behavior.",
+      "decision_authority": "checker-only",
+      "agent_judgment_boundary": "The table may flag missing fields; the agent owns whether the projection satisfies the requested intent and required proof."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_planning.py",
+      "function": "_custody_only_planning_payload",
+      "variable": "closure_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table recognizes closure-shaped wording for Planning custody guidance; it does not decide issue closure or implementation scope.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface custody hints; the agent still owns semantic scope, provider state, and closeout proof."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_planning.py",
+      "function": "_custody_only_planning_payload",
+      "variable": "title_lane_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table recognizes lane-title wording for Planning custody guidance; it does not decide issue grouping or implementation order.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface lane hints; the agent still owns semantic grouping, priority, provider state, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_is_open_issue_intake_task",
+      "variable": "intake_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The legacy mirror table recognizes likely issue-intake phrasing for startup guidance; it does not select a package owner or close an issue.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface issue-intake hints; the agent still owns provider lookup, semantic grouping, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_is_open_issue_intake_task",
+      "variable": "issue_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The legacy mirror table recognizes likely issue-intake phrasing for startup guidance; it does not select a package owner or close an issue.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface issue-intake hints; the agent still owns provider lookup, semantic grouping, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_selective_surfacing_evaluation_payload",
+      "variable": "required_fields",
+      "classification": "structured-field-projection",
+      "authority": "The legacy mirror table names expected projection fields for contract coverage diagnostics; it does not route tasks or choose owner behavior.",
+      "decision_authority": "checker-only",
+      "agent_judgment_boundary": "The table may flag missing fields; the agent owns whether the projection satisfies the requested intent and required proof."
     }
   ]
 }

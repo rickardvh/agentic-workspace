@@ -85,7 +85,7 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_reconcile_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_reconcile_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_report_combined_adapter|agentic_workspace.workspace_runtime_primitives|_run_report_combined_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_setup_guidance_adapter|agentic_workspace.workspace_runtime_primitives|_run_setup_guidance_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_start_context_adapter|agentic_workspace.workspace_runtime_primitives|_run_start_context_adapter",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_startup_runtime.py|_run_start_context_adapter|agentic_workspace.workspace_runtime_startup|_run_start_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_summary_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_summary_report_adapter"
     ],
     "entries": [
@@ -2134,9 +2134,9 @@
       },
       {
         "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_path": "generated/workspace/python/primitives/workspace_startup_runtime.py",
         "facade_symbol": "_run_start_context_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_module": "agentic_workspace.workspace_runtime_startup",
         "source_symbol": "_run_start_context_adapter",
         "owner_package": "workspace package runtime boundary",
         "operation_ids": [

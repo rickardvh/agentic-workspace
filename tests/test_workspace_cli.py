@@ -53,6 +53,18 @@ def test_lifecycle_guidance_uses_canonical_modules_option(tmp_path: Path, capsys
     assert "--module planning --module memory" not in command_text
 
 
+def test_start_context_adapter_routes_through_startup_owner_facade() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    start_command = (repo_root / "generated" / "workspace" / "python" / "commands" / "start_context.py").read_text(encoding="utf-8")
+    startup_facade = (repo_root / "generated" / "workspace" / "python" / "primitives" / "workspace_startup_runtime.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "from ..primitives.workspace_startup_runtime import _run_start_context_adapter" in start_command
+    assert "from agentic_workspace.workspace_runtime_startup import _run_start_context_adapter" in startup_facade
+    assert workspace_runtime_primitives._run_start_context_adapter is workspace_runtime_startup._run_start_context_adapter
+
+
 def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
