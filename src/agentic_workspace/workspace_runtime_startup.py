@@ -1191,6 +1191,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "local_notes",
                 "proof_state",
                 "resume_checklist",
+                "planning_candidate_routes",
                 "detail_command",
                 "authority",
             )
