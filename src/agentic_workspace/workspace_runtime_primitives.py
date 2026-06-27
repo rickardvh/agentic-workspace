@@ -143,14 +143,15 @@ from agentic_workspace.workspace_output import (
 from agentic_workspace.workspace_runtime_generated_surface import (
     _generated_cli_freshness_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _generated_surface_trust_payload,  # noqa: F401 - compatibility re-export for runtime inventory
-    _selector_requests_generated_surface_trust,
+    _selector_requests_generated_surface_trust,  # noqa: F401 - compatibility re-export for implement owner boundary
     _tiny_surface_compatibility_review,  # noqa: F401 - compatibility re-export for runtime inventory
 )
 from agentic_workspace.workspace_runtime_implement import (
     _change_impact_payload,  # noqa: F401 - compatibility re-export for runtime inventory
-    _implement_payload,
+    _implement_payload,  # noqa: F401 - compatibility re-export for implement owner boundary
     _objective_drift_payload,  # noqa: F401 - compatibility re-export for runtime inventory
-    _tiny_implement_payload,
+    _run_implement_context_adapter,  # noqa: F401 - compatibility re-export for generated/runtime callers
+    _tiny_implement_payload,  # noqa: F401 - compatibility re-export for implement owner boundary
 )
 from agentic_workspace.workspace_runtime_planning import (
     _active_execplan_record_payload,  # noqa: F401 - compatibility re-export for runtime inventory
@@ -33707,80 +33708,6 @@ def _selector_requests_plan_delegation_packet(select: str | None) -> bool:
 
 def _selector_requests_test_strategy_check(select: str | None) -> bool:
     return any(token == "test_strategy_check" or token.startswith("test_strategy_check.") for token in _selector_tokens(select))
-
-
-def _run_implement_context_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="implement", target_root=target_root)
-    task_text = getattr(args, "task", None)
-    if task_text and getattr(args, "task_file", None):
-        raise WorkspaceUsageError("Use either --task or --task-file, not both.")
-    if not task_text:
-        task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
-    profile = _diagnostic_profile(args, default="tiny")
-    selected_fields = getattr(args, "select", None)
-    change_impact_selected = _selector_requests_change_impact(selected_fields)
-    generated_surface_trust_selected = _selector_requests_generated_surface_trust(selected_fields)
-    task_contract_selected = _selector_requests_task_contract(selected_fields)
-    assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
-    verification_selected = _selector_requests_verification(selected_fields)
-    routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
-    reuse_pressure_selected = _selector_requests_reuse_pressure(selected_fields)
-    architecture_principles_selected = _selector_requests_architecture_principles(selected_fields)
-    requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
-    plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
-    test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
-    full_payload = _implement_payload(
-        target_root=target_root,
-        changed_paths=list(getattr(args, "changed", []) or []),
-        task_text=task_text,
-        include_change_impact=(profile != "tiny" or change_impact_selected),
-        include_task_contract=(profile != "tiny" or task_contract_selected),
-        include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
-        include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
-        include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
-        include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
-    )
-    payload = full_payload
-    if profile == "tiny":
-        payload = _tiny_implement_payload(full_payload)
-        if task_contract_selected:
-            payload["task_contract"] = full_payload["task_contract"]
-        if change_impact_selected:
-            payload["change_impact"] = full_payload["change_impact"]
-        if generated_surface_trust_selected:
-            payload["generated_surface_trust"] = full_payload["generated_surface_trust"]
-        if assurance_requirements_selected:
-            payload["assurance_requirements"] = full_payload["assurance_requirements"]
-        if verification_selected:
-            payload["verification"] = full_payload["verification"]
-        if routine_work_context_selected:
-            payload["routine_work_context"] = full_payload["routine_work_context"]
-        if _selector_requests(getattr(args, "select", None), "proof.proof_adequacy") and isinstance(full_payload.get("proof"), dict):
-            payload.setdefault("proof", {})["proof_adequacy"] = full_payload["proof"].get("proof_adequacy", {})
-        if _selector_requests(getattr(args, "select", None), "active_intent_contract"):
-            payload["active_intent_contract"] = full_payload["active_intent_contract"]
-        if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
-            payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
-        if requirement_grounding_selected:
-            payload["requirement_grounding"] = full_payload["requirement_grounding"]
-        if architecture_principles_selected:
-            payload["architecture_principles"] = full_payload["architecture_principles"]
-        if plan_delegation_packet_selected:
-            payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
-        if test_strategy_check_selected:
-            payload["test_strategy_check"] = full_payload["test_strategy_check"]
-        if reuse_pressure_selected:
-            payload["reuse_pressure"] = _reuse_pressure_payload(
-                target_root=target_root,
-                changed_paths=list(getattr(args, "changed", []) or []),
-                compact=True,
-                cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
-            )
-    if getattr(args, "select", None):
-        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
-    _emit_payload(payload=payload, format_name=args.format)
-    return 0
 
 
 def _run_checkpoint_write_adapter(args: argparse.Namespace) -> int:

@@ -78,7 +78,7 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_resolve_workspace_operation_selection|agentic_workspace.workspace_runtime_primitives|_resolve_workspace_operation_selection",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_checkpoint_write_adapter|agentic_workspace.workspace_runtime_primitives|_run_checkpoint_write_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_external_intent_refresh_github_adapter|agentic_workspace.workspace_runtime_primitives|_run_external_intent_refresh_github_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_implement_context_adapter|agentic_workspace.workspace_runtime_primitives|_run_implement_context_adapter",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_implement_runtime.py|_run_implement_context_adapter|agentic_workspace.workspace_runtime_implement|_run_implement_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_init_lifecycle_adapter|agentic_workspace.workspace_runtime_primitives|_run_init_lifecycle_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_lifecycle_mutation_adapter|agentic_workspace.workspace_runtime_primitives|_run_lifecycle_mutation_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_lifecycle_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_lifecycle_report_adapter",
@@ -1932,9 +1932,9 @@
       },
       {
         "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_path": "generated/workspace/python/primitives/workspace_implement_runtime.py",
         "facade_symbol": "_run_implement_context_adapter",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_module": "agentic_workspace.workspace_runtime_implement",
         "source_symbol": "_run_implement_context_adapter",
         "owner_package": "workspace package runtime boundary",
         "operation_ids": [

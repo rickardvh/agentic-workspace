@@ -1,0 +1,409 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Extract implement runtime packets by owner boundary",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1771 by moving implement-context packet builders and implement tiny/compact projections behind the implement runtime module without changing emitted implement payloads or selector behavior.",
+    "hard_constraints": "Do not implement #1772 or #1773 in this slice; preserve implement payload schema fields, selector names, generated command semantics, and shared projection helper ownership.",
+    "agent_may_decide": "Exact compatibility alias shape, inventory wording, and focused implement tests for owner-boundary parity.",
+    "escalate_when": "A correct extraction requires changing implement payload schema fields, selector behavior, generated parser behavior, proof selection policy, or non-implement runtime ownership.",
+    "next_action": "Extract implement packet construction into workspace_runtime_implement.py, update generated/inventory parity, and run focused implement proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_implement_cli.py -q -k \"implement_payload or tiny_implement or objective_drift or change_impact or runtime_source_edit_review\"",
+      "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "make lint-workspace",
+      "make test-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+      "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/workspace/python/command_package.json",
+      "generated/workspace/python/commands/implement_context.py",
+      "generated/workspace/python/primitives/workspace_implement_runtime.py",
+      "generated/workspace/python/primitives/workspace_runtime.py",
+      "tests/test_workspace_implement_cli.py"
+    ],
+    "completion_criteria": [
+      "Implement-context adapter implementation lives in workspace_runtime_implement.py.",
+      "Generated facade and inventory name the implement owner surface or explicitly preserve compatibility aliases.",
+      "Implement CLI payload/selector behavior is unchanged under focused proof.",
+      "No circular import is introduced."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "GitHub #1771"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "GitHub #1771",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "p2-implement-runtime-packets",
+      "status": "completed",
+      "next_step": "Continue via .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "closeout scope recorded in closure_check and generated_closeout."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #1771",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "activation trigger": "when the continuation owner promotes the next slice"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json."
+  },
+  "intent_interpretation": {
+    "literal request": "Extract implement runtime packets by owner boundary",
+    "inferred intended outcome": "GitHub #1771",
+    "chosen concrete what": "#1771 slice delivered; lane remains open with next slice #1772 Planning runtime packets.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "See proof_report.validation proof.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "GitHub #1771",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Implement owner-boundary extraction couples runtime source, command IR, generated facade, inventory, and focused implement proof; keeping one local owner reduces parity risk.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "ebe66e59ffd04373",
+    "recorded at": "2026-06-27T15:09:21+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #1771",
+      "label": "GitHub #1771",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "p2-implement-runtime-packets",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No required continuation remains for this archived slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "closeout scope recorded in closure_check and generated_closeout."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "See proof_report.validation proof."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Extract implement runtime packets by owner boundary is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1771 implement runtime packet owner-boundary extraction: implement.context now routes through workspace_runtime_implement, generated implement facade/inventory/checker contracts were updated, and primitives keeps compatibility re-exports without owning the adapter body.",
+    "scope touched": "Implement runtime adapter ownership, generated workspace command package, runtime projection inventory/schema, primitive family contract, focused implement CLI routing test, and P2 lane planning state.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; generated/workspace/python/commands/implement_context.py; generated/workspace/python/primitives/workspace_implement_runtime.py; tests/test_workspace_implement_cli.py",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed bounded to #1771; #1772-#1773 remain lane residue. Core/primitives mirror drift is reduced by removing the implement adapter implementation from both core and primitives while retaining primitives compatibility imports.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Implement owner-boundary extraction couples runtime source, command IR, generated facade, inventory, and focused implement proof; keeping one local owner reduces parity risk.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: make test-workspace; make lint-workspace; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make schema-reference-docs; uv run python scripts/generate/generate_command_packages.py --check; git diff --check",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1771",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1771 slice delivered; lane remains open with next slice #1772 Planning runtime packets.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+          "owner": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-27: Scaffolded by agentic-planning new-plan.",
+    "2026-06-27: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1771",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete",
+          "Closes #1771"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+      "created_or_required": true,
+      "reason": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1771\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Passed: make test-workspace; make lint-workspace; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make schema-reference-docs; uv run python scripts/generate/generate_command_packages.py --check; git diff --check\nChanged surfaces: src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; generated/workspace/python/commands/implement_context.py; generated/workspace/python/primitives/workspace_implement_runtime.py; tests/test_workspace_implement_cli.py\nDurable residue: planning (.agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json\nCompletion gate: continue-required\nCompletion claim allowed: partial-progress"
+  }
+}

@@ -489,7 +489,7 @@
           },
           {
             "operation_id": "implement.context",
-            "import_module": "agentic_workspace.workspace_runtime_primitives",
+            "import_module": "agentic_workspace.workspace_runtime_implement",
             "function": "_run_implement_context_adapter"
           },
           {
@@ -1293,6 +1293,11 @@
           {
             "source_import_module": "agentic_workspace.workspace_runtime_startup",
             "module_file": "primitives.workspace_startup_runtime",
+            "generated_function_overrides": []
+          },
+          {
+            "source_import_module": "agentic_workspace.workspace_runtime_implement",
+            "module_file": "primitives.workspace_implement_runtime",
             "generated_function_overrides": []
           }
         ]

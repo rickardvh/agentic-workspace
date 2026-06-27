@@ -282,6 +282,7 @@ RUNTIME_SOURCE_EDIT_REJECTED_VAGUE_REASONS = (
 )
 PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
     "generated/workspace/python/primitives/workspace_runtime.py",
+    "generated/workspace/python/primitives/workspace_implement_runtime.py",
     "generated/workspace/python/primitives/workspace_startup_runtime.py",
     "generated/planning/python/primitives/planning_installer.py",
     "generated/planning/python/primitives/planning_runtime.py",
@@ -1916,6 +1917,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
     accepted_keys: set[tuple[str, str, str, str, str]] = set()
     source_path_by_module = {
         "agentic_workspace.workspace_runtime_primitives": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "agentic_workspace.workspace_runtime_implement": "src/agentic_workspace/workspace_runtime_implement.py",
         "agentic_workspace.workspace_runtime_startup": "src/agentic_workspace/workspace_runtime_startup.py",
         "agentic_workspace.doctor": "src/agentic_workspace/doctor.py",
         "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
@@ -3071,6 +3073,7 @@ def _validate_lifecycle_dry_run_generation() -> list[str]:
 def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
     allowed_modules = {
         "agentic_workspace.workspace_runtime_primitives",
+        "agentic_workspace.workspace_runtime_implement",
         "agentic_workspace.workspace_runtime_startup",
         "agentic_workspace.doctor",
         "repo_planning_bootstrap.installer",
@@ -3111,6 +3114,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
 def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
     allowed_modules = {
         "agentic_workspace.workspace_runtime_primitives",
+        "agentic_workspace.workspace_runtime_implement",
         "agentic_workspace.workspace_runtime_startup",
         "agentic_workspace.doctor",
         "repo_planning_bootstrap.installer",
