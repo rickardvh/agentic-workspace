@@ -53,10 +53,10 @@
     "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
   "intent_satisfaction": {
-    "original intent": "current diff retrofit",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "See proof_report.validation proof.",
-    "unsolved intent passed to": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+    "original intent": "Implement GitHub #1697 and #1698 as the base P2 workflow-routing lane, then group the remaining P2 issues into follow-up lanes for stacked PRs.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The execution_run and execution_summary record the #1697/#1698 runtime symbol working-set routing, compact proof payload routing, external shaping guidance, fresh-session guidance, and grouped follow-up P2 lane records; proof_report.validation proof lists the validation commands used for this closeout.",
+    "unsolved intent passed to": "None for #1697/#1698. Remaining P2 stack continuation starts at .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json."
   },
   "closure_check": {
     "closeout scope": "slice",
