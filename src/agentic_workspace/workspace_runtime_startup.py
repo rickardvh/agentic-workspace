@@ -373,6 +373,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["intent_evidence"] = _compact_intent_evidence(payload.get("intent_evidence", {}))
     if "issue_reference_intent" in payload:
         projected["issue_reference_intent"] = payload["issue_reference_intent"]
+    if "open_issue_intake" in payload:
+        projected["open_issue_intake"] = payload["open_issue_intake"]
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
         read_only_response = payload.get("read_only_response", {})
@@ -1394,6 +1396,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "vague_outcome_orientation",
         "intent_acknowledgement",
         "lane_shaping_gate",
+        "open_issue_intake",
         "pre_test_evidence_guardrail",
     ):
         if optional_key in payload:
