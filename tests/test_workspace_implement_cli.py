@@ -2354,7 +2354,237 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
     assert review["accepted_direct_edit_reasons"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
     assert "package-domain boundary" in review["rejected_vague_reasons"]
     assert "inventory-backed symbol/primitive" in review["completion_claim_rule"]
+    assert "mirror_drift_review" not in review
     assert "proof.runtime_source_edit_review" in payload["drill_down"]["available_selectors"]
+
+
+_RUNTIME_MIRROR_CONTRACT_SNIPPET = """
+def _planning_candidate_suggestions_from_external_items():
+    return {"candidates": []}
+
+
+def _external_issue_grouping_hints():
+    return {"kind": "external-issue-grouping-hints/v1", "status": "present"}
+
+
+def _toml_inline_string(value):
+    return value
+
+
+def _planning_candidate_toml_row(candidate):
+    return ""
+
+
+def _append_planning_candidate_rows():
+    return {"status": "applied"}
+
+
+def _candidate_refs(candidate):
+    return set()
+
+
+def _candidate_has_local_continuation(candidate):
+    return False
+
+
+def _stale_planning_candidate_reconciliation():
+    return {"status": "no-stale-candidates"}
+
+
+def _refresh_github_external_intent_evidence():
+    planning_candidate_grouping = _external_issue_grouping_hints()
+    return {"planning_candidate_grouping": planning_candidate_grouping}
+
+
+def _open_issue_intake_payload():
+    grouping = _external_issue_grouping_hints()
+    return {"grouping_hints": grouping}
+
+
+def _unrelated_runtime_helper():
+    return "old"
+"""
+
+
+def _seed_runtime_mirror_contract_repo(target_root: Path) -> None:
+    _write_empty_planning_state(target_root)
+    _write(target_root / "src" / "agentic_workspace" / "workspace_runtime_core.py", _RUNTIME_MIRROR_CONTRACT_SNIPPET)
+    _write(target_root / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", _RUNTIME_MIRROR_CONTRACT_SNIPPET)
+    subprocess.run(["git", "init"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=target_root, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=target_root, check=True)
+    subprocess.run(["git", "add", "."], cwd=target_root, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=target_root, check=True, capture_output=True, text=True)
+
+
+def _replace_text(path: Path, old: str, new: str) -> None:
+    path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
+
+
+def test_implement_surfaces_runtime_mirror_warning_for_primitives_payload_helper_change(tmp_path: Path, capsys) -> None:
+    _seed_runtime_mirror_contract_repo(tmp_path)
+    _replace_text(
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+        '    return {"kind": "external-issue-grouping-hints/v1", "status": "present"}',
+        '    return {"kind": "external-issue-grouping-hints/v1", "status": "present", "child_slice_count": 0}',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Fix an existing primitive bug under the generated CLI boundary.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["status"] == "mirror-drift-warning"
+    mirror_review = review["mirror_drift_review"]
+    assert mirror_review["status"] == "warning"
+    mirror_record = mirror_review["records"][0]
+    assert mirror_record["status"] == "warning-asymmetric-mirror-change"
+    assert mirror_record["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert mirror_record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_core.py"
+    assert mirror_record["paired_file_changed"] is False
+    assert mirror_record["region_id"] == "external-issue-intake-helper-region"
+    assert (
+        "declared_region:src/agentic_workspace/workspace_runtime_primitives.py:external-issue-intake-helper-region"
+        in mirror_record["trigger_evidence"]
+    )
+    assert mirror_record["changed_regions"][0]["kind"] == "declared-region"
+    assert mirror_record["paired_regions"][0]["path"] == "src/agentic_workspace/workspace_runtime_core.py"
+    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in mirror_record["smallest_parity_proof_command"]
+    assert "--aw-primitive-ownership" in mirror_record["maintainer_check_command"]
+    assert "#1802-style" in mirror_record["represented_regression"]
+
+
+def test_implement_surfaces_runtime_mirror_warning_for_core_only_payload_helper_change(tmp_path: Path, capsys) -> None:
+    _seed_runtime_mirror_contract_repo(tmp_path)
+    _replace_text(
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
+        '    return {"planning_candidate_grouping": planning_candidate_grouping}',
+        '    return {"planning_candidate_grouping": planning_candidate_grouping, "source": "refresh"}',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Terse runtime refactor.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["status"] == "mirror-drift-warning"
+    assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_core.py"]
+    assert "review_items" not in review
+    mirror_review = review["mirror_drift_review"]
+    assert mirror_review["kind"] == "agentic-workspace/runtime-mirror-drift-review/v1"
+    assert mirror_review["status"] == "warning"
+    record = mirror_review["records"][0]
+    assert record["mirror_pair_id"] == "workspace-runtime-core-primitives-payload-helpers"
+    assert record["region_id"] == "external-intent-refresh-payload"
+    assert record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_primitives.py"
+    assert record["paired_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert record["changed_regions"][0]["symbol"] == "_refresh_github_external_intent_evidence"
+    assert "mirror the payload/helper change" in record["expected_action"]
+    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in record["smallest_parity_proof_command"]
+
+
+def test_implement_runtime_mirror_review_accepts_paired_core_and_primitives_changes(tmp_path: Path, capsys) -> None:
+    _seed_runtime_mirror_contract_repo(tmp_path)
+    for runtime_path in (
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+    ):
+        _replace_text(
+            runtime_path,
+            '    return {"grouping_hints": grouping}',
+            '    return {"grouping_hints": grouping, "source": "intake"}',
+        )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Terse runtime refactor.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["status"] == "classification-required"
+    assert review["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+    ]
+    record = review["mirror_drift_review"]["records"][0]
+    assert record["status"] == "paired-change-requires-parity-proof"
+    assert record["region_id"] == "open-issue-intake-payload"
+    assert record["paired_file_changed"] is True
+    assert record["likely_paired_file"] == ""
+    assert "--aw-primitive-ownership" in record["maintainer_check_command"]
+
+
+def test_implement_runtime_mirror_review_stays_off_for_unrelated_core_file_changes(tmp_path: Path, capsys) -> None:
+    _seed_runtime_mirror_contract_repo(tmp_path)
+    _replace_text(
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
+        '    return "old"',
+        '    return "new"',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Terse runtime refactor.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "runtime_source_edit_review" not in payload["proof"]
+    assert "proof.runtime_source_edit_review" not in payload["drill_down"]["available_selectors"]
 
 
 def test_implement_keeps_active_intent_packets_selector_only(tmp_path: Path, capsys) -> None:
