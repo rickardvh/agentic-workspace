@@ -277,12 +277,6 @@ def _run_external_intent_refresh_github_adapter(*args: Any, **kwargs: Any) -> An
     return source_function(*args, **kwargs)
 
 
-def _run_implement_context_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_implement_context_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def _run_init_lifecycle_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _run_init_lifecycle_adapter as source_function
 
@@ -351,7 +345,6 @@ __all__ = [
     '_resolve_workspace_operation_target_root',
     '_run_checkpoint_write_adapter',
     '_run_external_intent_refresh_github_adapter',
-    '_run_implement_context_adapter',
     '_run_init_lifecycle_adapter',
     '_run_lifecycle_mutation_adapter',
     '_run_lifecycle_report_adapter',

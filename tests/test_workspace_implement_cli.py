@@ -32,6 +32,18 @@ def _implement_context(payload: dict[str, object]) -> dict[str, object]:
     return context if isinstance(context, dict) else payload
 
 
+def test_implement_context_adapter_routes_through_implement_owner_facade() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    implement_command = (repo_root / "generated" / "workspace" / "python" / "commands" / "implement_context.py").read_text(encoding="utf-8")
+    implement_facade = (repo_root / "generated" / "workspace" / "python" / "primitives" / "workspace_implement_runtime.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "from ..primitives.workspace_implement_runtime import _run_implement_context_adapter" in implement_command
+    assert "from agentic_workspace.workspace_runtime_implement import _run_implement_context_adapter" in implement_facade
+    assert workspace_runtime_primitives._run_implement_context_adapter is workspace_runtime_implement._run_implement_context_adapter
+
+
 def _write_architecture_principles(target_root: Path) -> None:
     _write(
         target_root / ".agentic-workspace" / "system-intent" / "intent.toml",

@@ -6,10 +6,12 @@ compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import argparse
 import copy
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,
@@ -38,6 +40,8 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_tiny_required_proof_commands,
     _completion_boundary_payload,
     _delegation_decision_requires_attention,
+    _diagnostic_profile,
+    _emit_payload,
     _execution_posture_payload,
     _extract_requested_outcomes,
     _intent_acknowledgement_payload,
@@ -56,12 +60,26 @@ from agentic_workspace.workspace_runtime_core import (
     _parent_intent_status_payload,
     _plan_delegation_packet_payload,
     _read_changed_surface_text,
+    _read_task_text_from_file,
     _replacement_or_removal_intent,
     _requested_outcome_present,
     _requirement_grounding_payload,
+    _resolve_target_root,
     _reuse_pressure_payload,
     _routine_work_context_payload,
+    _select_payload_fields,
     _selector_first_planning_safety_gate,
+    _selector_requests,
+    _selector_requests_architecture_principles,
+    _selector_requests_assurance_requirements,
+    _selector_requests_change_impact,
+    _selector_requests_plan_delegation_packet,
+    _selector_requests_requirement_grounding,
+    _selector_requests_reuse_pressure,
+    _selector_requests_routine_work_context,
+    _selector_requests_task_contract,
+    _selector_requests_test_strategy_check,
+    _selector_requests_verification,
     _task_acceptance_payload,
     _task_contract_payload,
     _task_intent_carry_forward_payload,
@@ -83,6 +101,7 @@ from agentic_workspace.workspace_runtime_core import (
     _tiny_workflow_sufficiency,
     _unplanned_parent_intent_status_payload,
     _vague_outcome_orientation_payload,
+    _validate_target_root,
     _verification_report_payload,
     _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
@@ -93,6 +112,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _command_with_cli_invoke,
     _generated_surface_trust_payload,
     _normalize_changed_paths,
+    _selector_requests_generated_surface_trust,
 )
 from agentic_workspace.workspace_runtime_planning import (
     _planning_safety_gate_payload,
@@ -100,6 +120,80 @@ from agentic_workspace.workspace_runtime_planning import (
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
+
+
+def _run_implement_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="implement", target_root=target_root)
+    task_text = getattr(args, "task", None)
+    if task_text and getattr(args, "task_file", None):
+        raise WorkspaceUsageError("Use either --task or --task-file, not both.")
+    if not task_text:
+        task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
+    profile = _diagnostic_profile(args, default="tiny")
+    selected_fields = getattr(args, "select", None)
+    change_impact_selected = _selector_requests_change_impact(selected_fields)
+    generated_surface_trust_selected = _selector_requests_generated_surface_trust(selected_fields)
+    task_contract_selected = _selector_requests_task_contract(selected_fields)
+    assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
+    verification_selected = _selector_requests_verification(selected_fields)
+    routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
+    reuse_pressure_selected = _selector_requests_reuse_pressure(selected_fields)
+    architecture_principles_selected = _selector_requests_architecture_principles(selected_fields)
+    requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
+    plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
+    test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
+    full_payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=task_text,
+        include_change_impact=(profile != "tiny" or change_impact_selected),
+        include_task_contract=(profile != "tiny" or task_contract_selected),
+        include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
+        include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
+        include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
+        include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+    )
+    payload = full_payload
+    if profile == "tiny":
+        payload = _tiny_implement_payload(full_payload)
+        if task_contract_selected:
+            payload["task_contract"] = full_payload["task_contract"]
+        if change_impact_selected:
+            payload["change_impact"] = full_payload["change_impact"]
+        if generated_surface_trust_selected:
+            payload["generated_surface_trust"] = full_payload["generated_surface_trust"]
+        if assurance_requirements_selected:
+            payload["assurance_requirements"] = full_payload["assurance_requirements"]
+        if verification_selected:
+            payload["verification"] = full_payload["verification"]
+        if routine_work_context_selected:
+            payload["routine_work_context"] = full_payload["routine_work_context"]
+        if _selector_requests(getattr(args, "select", None), "proof.proof_adequacy") and isinstance(full_payload.get("proof"), dict):
+            payload.setdefault("proof", {})["proof_adequacy"] = full_payload["proof"].get("proof_adequacy", {})
+        if _selector_requests(getattr(args, "select", None), "active_intent_contract"):
+            payload["active_intent_contract"] = full_payload["active_intent_contract"]
+        if _selector_requests(getattr(args, "select", None), "intent_satisfaction_matrix"):
+            payload["intent_satisfaction_matrix"] = full_payload["intent_satisfaction_matrix"]
+        if requirement_grounding_selected:
+            payload["requirement_grounding"] = full_payload["requirement_grounding"]
+        if architecture_principles_selected:
+            payload["architecture_principles"] = full_payload["architecture_principles"]
+        if plan_delegation_packet_selected:
+            payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
+        if test_strategy_check_selected:
+            payload["test_strategy_check"] = full_payload["test_strategy_check"]
+        if reuse_pressure_selected:
+            payload["reuse_pressure"] = _reuse_pressure_payload(
+                target_root=target_root,
+                changed_paths=list(getattr(args, "changed", []) or []),
+                compact=True,
+                cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
+            )
+    if getattr(args, "select", None):
+        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
 
 
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
