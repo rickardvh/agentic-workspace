@@ -841,6 +841,130 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
     assert "local_chat_checkpoint=present" in startup["action_signals"]["changed_signals"]
 
 
+def test_local_chat_checkpoint_surfaces_matching_planning_candidate_routes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1700-local-checkpoints", kind = "lane", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1700", title = "Local checkpoints", outcome = "Experiment with checkpoints.", promotion_signal = "Promote before parent closeout.", suggested_first_slice = "Shape checkpoint work." },
+  { id = "github-1704-checkpoint-dogfood", kind = "slice", parent_id = "#1700", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1704", title = "Checkpoint dogfood", outcome = "Dogfood checkpoint resume.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Run checkpoint dogfood." },
+  { id = "github-9999-unrelated", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #9999", title = "Unrelated", outcome = "Do something else." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Dogfood #1700 checkpoint resume",
+                "--issue",
+                "#1700",
+                "--issue",
+                "#1704",
+                "--durable-source",
+                "https://github.com/rickardvh/agentic-workspace/issues/1704",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    routes = selected["planning_candidate_routes"]
+    assert routes["status"] == "matched"
+    assert routes["issue_refs"] == ["#1700", "#1704"]
+    assert routes["candidate_ids"] == ["github-1700-local-checkpoints", "github-1704-checkpoint-dogfood"]
+    assert routes["matched_candidate_count"] == 2
+    assert routes["route_options"][0]["id"] == "github-1700-local-checkpoints"
+    assert routes["route_options"][0]["title"] == "Local checkpoints"
+    assert routes["route_options"][0]["matched_issue_refs"] == ["#1700"]
+    assert routes["route_options"][0]["route_kind"] == "parent-lane"
+    assert routes["route_options"][0]["next_action"] == "promote-roadmap-candidate-to-durable-planning-owner"
+    assert routes["route_options"][1]["route_kind"] == "child-slice"
+    assert routes["route_options"][1]["parent_id"] == "#1700"
+    assert "planning promote-to-plan --item-id github-1700-local-checkpoints" in routes["route_options"][0]["command"]
+    assert "--expect-planning-revision" in routes["route_options"][0]["command"]
+    assert "github-9999-unrelated" not in json.dumps(routes)
+    assert routes["authority"] == "advisory-from-local-checkpoint-and-checked-in-planning"
+    assert "Verify checkpoint refs against durable sources" in routes["claim_boundary"]
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume checkpoint slice", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    context_routes = startup["context"]["local_chat_checkpoint"]["planning_candidate_routes"]
+    assert context_routes["candidate_ids"] == routes["candidate_ids"]
+    assert context_routes["route_options"][1]["id"] == "github-1704-checkpoint-dogfood"
+
+
+def test_local_chat_checkpoint_omits_route_suggestions_when_no_candidate_matches(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1700-local-checkpoints", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1700", title = "Local checkpoints" },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Resume unrelated checkpoint",
+                "--issue",
+                "#1801",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert selected["status"] == "present"
+    assert "planning_candidate_routes" not in selected
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume unrelated checkpoint", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    assert "planning_candidate_routes" not in startup["context"]["local_chat_checkpoint"]
+
+
 def test_local_chat_checkpoint_write_preserves_and_replaces_values(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
