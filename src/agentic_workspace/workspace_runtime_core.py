@@ -29,13 +29,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, cast, overload
 
-from repo_verification_bootstrap.runtime_primitives import (
-    VerificationUsageError,
-)
-from repo_verification_bootstrap.runtime_primitives import (
-    verification_report_payload as verification_module_report_payload,
-)
-
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
@@ -234,6 +227,30 @@ def _proof_payload(*args: Any, **kwargs: Any) -> Any:
 
 def _proof_selection_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths as owner
+
+    return owner(*args, **kwargs)
+
+
+def _active_planning_record_for_proof(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _active_planning_record_for_proof as owner
+
+    return owner(*args, **kwargs)
+
+
+def _tiny_proof_obligations_payload(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _tiny_proof_obligations_payload as owner
+
+    return owner(*args, **kwargs)
+
+
+def _tiny_proof_payload(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _tiny_proof_payload as owner
+
+    return owner(*args, **kwargs)
+
+
+def _verification_report_payload(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _verification_report_payload as owner
 
     return owner(*args, **kwargs)
 
@@ -2143,26 +2160,6 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
         ],
         "detail_command": "agentic-workspace report --target ./repo --section assurance_requirements --format json",
     }
-
-
-def _verification_report_payload(
-    *,
-    target_root: Path | None,
-    changed_paths: list[str] | None = None,
-    task_text: str | None = None,
-    active_planning_record: dict[str, Any] | None = None,
-    assurance_requirements: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    try:
-        return verification_module_report_payload(
-            target_root=target_root,
-            changed_paths=changed_paths,
-            task_text=task_text,
-            active_planning_record=active_planning_record,
-            assurance_requirements=assurance_requirements,
-        )
-    except VerificationUsageError as exc:
-        raise WorkspaceUsageError(str(exc)) from exc
 
 
 def _compact_verification(value: Any) -> dict[str, Any]:
@@ -33379,144 +33376,6 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
     return _compact_tiny_required_proof_commands(non_verification_commands or required_commands)
 
 
-def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
-    if not isinstance(intent_proof, dict):
-        return {}
-    compact = dict(intent_proof)
-    compact.pop("behavior_preservation_prompt", None)
-    compact.pop("rule", None)
-    for key in ("intended_behavior", "unproven_after_tests"):
-        if compact.get(key) == []:
-            compact.pop(key, None)
-    return compact
-
-
-def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
-    if payload.get("profile") == "compact-contract-answer/v1":
-        answer = payload.get("answer", {})
-        tiny_required_commands = _tiny_required_proof_commands(answer) if isinstance(answer, dict) else []
-        include_intent_proof = False
-        if isinstance(answer, dict) and answer.get("intent_proof"):
-            required_for_intent = tiny_required_commands
-            include_intent_proof = not required_for_intent or not all(command.startswith("git diff --") for command in required_for_intent)
-        if isinstance(answer, dict) and isinstance(answer.get("proof_next_decision"), dict):
-            next_decision = dict(answer["proof_next_decision"])
-            next_decision["required_commands"] = tiny_required_commands
-            next_decision.setdefault("target", payload.get("target"))
-            next_decision.setdefault("selector", payload.get("selector", {}))
-            next_decision.setdefault("sufficiency", _tiny_workflow_sufficiency(answer.get("sufficiency", {})))
-            if answer.get("proof_route_decision"):
-                route_decision = dict(answer["proof_route_decision"])
-                route_decision.pop("next_action", None)
-                route_decision.pop("required_commands", None)
-                next_decision["proof_route_selection"] = route_decision
-            if answer.get("proof_command_adjustments"):
-                next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
-            if answer.get("unavailable_proof_commands"):
-                next_decision["unavailable_proof_commands"] = answer["unavailable_proof_commands"]
-            if answer.get("target_proof_capabilities") and (
-                answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")
-            ):
-                next_decision["target_proof_capabilities"] = answer["target_proof_capabilities"]
-            if answer.get("proof_strategy") and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands")):
-                next_decision["proof_strategy"] = {
-                    "kind": answer.get("proof_strategy", {}).get("kind"),
-                    "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
-                }
-            if include_intent_proof:
-                next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
-            next_decision.setdefault(
-                "detail_command",
-                _command_with_cli_invoke(
-                    command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
-                ),
-            )
-            next_decision = _guidance_with_cli_invoke(value=next_decision, cli_invoke=cli_invoke)
-            return next_decision
-        required_commands = tiny_required_commands
-        validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
-        primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
-        if isinstance(answer, dict) and (not required_commands) and answer.get("unavailable_proof_commands"):
-            primary = {"action": "select-proof-scope", "command": None, "run": None, "required": False}
-        elif not isinstance(primary, dict):
-            primary = {
-                "action": "run-validation-command" if required_commands else "select-proof-scope",
-                "command": required_commands[0] if required_commands else None,
-                "run": required_commands[0] if required_commands else None,
-            }
-        surface_value = answer.get("surface_value_review") if isinstance(answer, dict) else None
-        warnings: list[dict[str, Any]] = []
-        if isinstance(surface_value, dict) and surface_value.get("status") in {"blocked", "needs-review"}:
-            warnings.append({"status": surface_value.get("status"), "summary": surface_value.get("summary") or surface_value.get("rule")})
-        next_payload = {
-            "kind": "proof-next-decision/v1",
-            "target": payload.get("target"),
-            "selector": payload.get("selector", {}),
-            "sufficiency": _tiny_workflow_sufficiency(answer.get("sufficiency", {})) if isinstance(answer, dict) else {},
-            "next": {
-                "action": primary.get("action", "run-validation-command"),
-                "command": primary.get("command"),
-                "run": primary.get("run"),
-                "required": primary.get("required", bool(required_commands)),
-            },
-            "required_commands": required_commands,
-            **({"intent_proof": _compact_tiny_intent_proof(answer["intent_proof"])} if include_intent_proof else {}),
-            **(
-                {"proof_command_adjustments": answer["proof_command_adjustments"]}
-                if isinstance(answer, dict) and answer.get("proof_command_adjustments")
-                else {}
-            ),
-            **(
-                {"unavailable_proof_commands": answer["unavailable_proof_commands"]}
-                if isinstance(answer, dict) and answer.get("unavailable_proof_commands")
-                else {}
-            ),
-            **(
-                {
-                    "proof_strategy": {
-                        "kind": answer.get("proof_strategy", {}).get("kind"),
-                        "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
-                    }
-                }
-                if isinstance(answer, dict)
-                and answer.get("proof_strategy")
-                and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands"))
-                else {}
-            ),
-            **(
-                {"target_proof_capabilities": answer["target_proof_capabilities"]}
-                if isinstance(answer, dict)
-                and answer.get("target_proof_capabilities")
-                and (answer.get("proof_command_adjustments") or answer.get("unavailable_proof_commands"))
-                else {}
-            ),
-            **(
-                {"manual_verification": answer["manual_verification"]}
-                if isinstance(answer, dict) and answer.get("manual_verification")
-                else {}
-            ),
-            "warnings": warnings,
-            "detail_command": _command_with_cli_invoke(
-                command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
-            ),
-        }
-        return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)
-    return {
-        "kind": "proof-next-decision/v1",
-        "target": payload.get("target"),
-        "selector": {},
-        "next": {
-            "action": "select-proof-scope",
-            "command": _command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
-            "run": None,
-            "required": False,
-        },
-        "required_commands": [],
-        "warnings": [],
-        "detail_command": _command_with_cli_invoke(command="agentic-workspace proof --verbose --format json", cli_invoke=cli_invoke),
-    }
-
-
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 
 
@@ -36591,50 +36450,6 @@ def _active_planning_assurance_for_proof(*, target_root: Path | None) -> dict[st
     }
 
 
-def _active_planning_record_for_proof(*, target_root: Path) -> dict[str, Any]:
-    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
-    try:
-        state = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return {"status": "unavailable", "reason": "planning state unavailable"}
-    todo = state.get("todo", {})
-    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
-    active_item = next((item for item in active_items if isinstance(item, dict)), None)
-    if not isinstance(active_item, dict):
-        return {"status": "unavailable", "reason": "no active planning item"}
-    surface = str(active_item.get("surface") or "").strip()
-    record_path = target_root / surface if surface else None
-    raw_record: dict[str, Any] = {}
-    if record_path is not None and record_path.is_file() and record_path.suffix == ".json":
-        try:
-            loaded_record = json.loads(record_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            loaded_record = {}
-        raw_record = loaded_record if isinstance(loaded_record, dict) else {}
-    canonical = raw_record.get("canonical_core", {}) if isinstance(raw_record.get("canonical_core"), dict) else {}
-    machine = raw_record.get("machine_readable_contract", {}) if isinstance(raw_record.get("machine_readable_contract"), dict) else {}
-    execution = machine.get("execution", {}) if isinstance(machine.get("execution"), dict) else {}
-    proof_expectations = _list_payload(canonical.get("proof_expectations")) or _list_payload(active_item.get("proof"))
-    validation_commands = _list_payload(raw_record.get("validation_commands")) or _list_payload(execution.get("proof"))
-    return {
-        "status": "present",
-        "task": {"id": active_item.get("id", ""), "title": active_item.get("title", ""), "surface": surface},
-        "validation_commands": validation_commands,
-        "proof_expectations": proof_expectations,
-        "adaptive_assurance": raw_record.get("adaptive_assurance", {}),
-        "traceability_refs": raw_record.get("traceability_refs", {}),
-        "control_gates": raw_record.get("control_gates", []),
-        "implementation_blockers": raw_record.get("implementation_blockers", []),
-        "risk_registry_refs": raw_record.get("risk_registry_refs", []),
-        "invariant_refs": raw_record.get("invariant_refs", []),
-        "test_data_policy": raw_record.get("test_data_policy", {}),
-        "layer_scaffold": raw_record.get("layer_scaffold", {}),
-        "architecture_decision_promotion": raw_record.get("architecture_decision_promotion", {}),
-        "threat_failure_aids": raw_record.get("threat_failure_aids", []),
-        "proof_report": raw_record.get("proof_report", {}),
-    }
-
-
 def _assurance_item_state(
     *, item_id: str, declared_status: str, blocking: bool = False, evidence: list[Any] | None = None, reason: str | None = None
 ) -> dict[str, Any]:
@@ -37082,29 +36897,6 @@ def _proof_adequacy_payload(
             "whether extra task-specific validation is needed",
         ],
         "rule": "Proof Adequacy judges evidence against a claim boundary; closeout owns completion permission and intent satisfaction.",
-    }
-
-
-def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands: list[str] | None = None) -> dict[str, Any]:
-    required = value.get("required_proof", {}) if isinstance(value.get("required_proof"), dict) else {}
-    recommended = value.get("recommended_confidence_checks", {}) if isinstance(value.get("recommended_confidence_checks"), dict) else {}
-    visible_required_commands = list(required_commands) if required_commands is not None else required.get("commands", [])
-    return {
-        "kind": value.get("kind", "agentic-workspace/proof-obligations/v1"),
-        "required_proof": {
-            "status": required.get("status", "unknown"),
-            "commands": visible_required_commands,
-            "manual_verification_required": bool(required.get("manual_verification_required", False)),
-            "action_effect": _tiny_action_effect(
-                required.get("action_effect", {}), include_allowed=False, include_resolution_commands=False
-            ),
-        },
-        "recommended_confidence_checks": {
-            "status": recommended.get("status", "unknown"),
-            "commands": recommended.get("commands", []),
-            "rule": recommended.get("rule", ""),
-        },
-        "completion_claim_rule": value.get("completion_claim_rule", ""),
     }
 
 

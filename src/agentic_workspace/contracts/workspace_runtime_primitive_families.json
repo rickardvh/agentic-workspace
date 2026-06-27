@@ -119,7 +119,6 @@
       "owner_surface": "src/agentic_workspace/contracts/schemas/* plus future generated projection helpers",
       "runtime_role": "workspace_runtime_primitives.py still contains many compact projection helpers that shape live payloads and selector responses.",
       "source_symbols": [
-        "_tiny_proof_payload",
         "_compact_start_delegation_decision",
         "_compact_status_payload",
         "_tiny_config_payload"
@@ -246,7 +245,11 @@
         "_proof_payload",
         "_proof_selection_for_changed_paths",
         "_proof_obligations_payload",
-        "_closeout_report_payload"
+        "_closeout_report_payload",
+        "_verification_report_payload",
+        "_active_planning_record_for_proof",
+        "_tiny_proof_payload",
+        "_tiny_proof_obligations_payload"
       ],
       "generated_or_contract_refs": [
         "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
@@ -339,7 +342,6 @@
       "runtime_role": "Package-specific Planning, Memory, and Verification behavior is already tracked in package-owned runtime inventories and related issues.",
       "source_symbols": [
         "_module_operations",
-        "_verification_report_payload",
         "_selected_module_reports"
       ],
       "generated_or_contract_refs": [
@@ -438,7 +440,6 @@
           "_tiny_adaptive_routing_payload",
           "_tiny_generated_surface_trust",
           "_tiny_objective_drift",
-          "_tiny_proof_obligations_payload",
           "_tiny_required_proof_commands",
           "_tiny_work_shape_guidance",
           "_transient_validation_retry_guidance",
@@ -611,8 +612,7 @@
           "_startup_closeout_report_route",
           "_supplemental_proof_lanes_for_changed_paths",
           "_surface_value_review_for_changed_paths",
-          "_validation_plan_for_proof",
-          "_verification_report_payload"
+          "_validation_plan_for_proof"
         ],
         "core_role": "Shared core may expose proof route facts, validation command discovery, and closeout evidence helpers used by implement and proof packets.",
         "exclusion_rule": "Do not add proof packet assembly, closeout report layout, or final completion decisions here; those belong in workspace_runtime_proof.py."

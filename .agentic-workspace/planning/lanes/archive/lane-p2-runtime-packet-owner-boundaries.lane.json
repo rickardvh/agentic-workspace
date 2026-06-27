@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "lane-p2-runtime-packet-owner-boundaries",
   "title": "P2 runtime packet owner-boundary extraction",
-  "status": "ready",
+  "status": "archived",
   "parent_decomposition_ref": "GitHub P2 roadmap candidate batch 2026-06-27",
   "lane_outcome": "Startup, implement, Planning, proof, verification, and closeout packet construction live behind owner-scoped runtime modules without payload contract drift.",
   "purpose_for_parent": "Shrink the workspace runtime monolith by owner boundary while preserving generated/runtime caller compatibility.",
@@ -44,36 +44,35 @@
     {
       "id": "proof-closeout-packets",
       "title": "Extract proof and closeout runtime packets",
-      "status": "planned",
-      "execplan_ref": "",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/closeout-evidence/p2-proof-closeout-runtime-packets.closeout.json",
       "depends_on": [
         "planning-packets"
       ],
       "purpose_for_lane": "Satisfy #1773 without weakening proof or closeout blocking."
     }
   ],
-  "current_slice": "proof-closeout-packets",
+  "current_slice": "",
   "acceptance_boundary": "The lane is complete when #1770 through #1773 each have owner-scoped runtime modules, stable compatibility imports, updated inventories, and focused tests proving unchanged emitted packet contracts.",
   "proof_strategy": "Run focused start/implement/planning/proof tests for each slice, generated command package checks when inventories change, and make test-workspace for cross-runtime extraction.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "complete",
     "evidence": [
       "#1770 startup-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-startup-runtime-packets.plan.json and included make test-workspace, make lint-workspace, generated command package checks, operation conformance, contract tooling, structured file inventory, ruff, maintainer surfaces, schema reference docs, AW defaults/summary/doctor, full tests/test_workspace_cli.py, generator --check, AW primitive ownership, and git diff --check.",
       "#1771 implement-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-implement-runtime-packets.plan.json and included make test-workspace, make lint-workspace, generated command package checks, operation conformance, contract tooling, structured file inventory, ruff, schema reference docs, AW defaults/summary/doctor, full tests/test_workspace_cli.py, generator --check, AW primitive ownership, and git diff --check.",
-      "#1772 planning-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-planning-runtime-packets.plan.json and included focused active planning owner-boundary regression, full tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, AW primitive ownership, ruff contract check, AW summary/doctor, and git diff --check."
+      "#1772 planning-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-planning-runtime-packets.plan.json and included focused active planning owner-boundary regression, full tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, AW primitive ownership, ruff contract check, AW summary/doctor, and git diff --check.",
+      "#1773 proof-closeout-packets completed; proof is recorded in .agentic-workspace/planning/closeout-evidence/p2-proof-closeout-runtime-packets.closeout.json and included focused proof owner-boundary regression, proof/implement/summary tests, full tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, AW primitive ownership, ruff contract check, AW summary/doctor, stale-reference sweep, and git diff --check."
     ],
-    "known_gaps": [
-      "#1773 proof and closeout runtime packets"
-    ]
+    "known_gaps": []
   },
   "residual_lane_work": "The lane does not replace the runtime architecture; it only moves packet ownership out of primitives by declared owner boundary.",
   "lane_to_epic_contribution": "Turns the P2 #1764 decomposition issues into ordered stack work with explicit owner boundaries.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "#1770 startup, #1771 implement, and #1772 Planning runtime packet extractions are complete.",
-    "residual_work": "Implement #1773 proof and closeout runtime packets.",
-    "next_owner": "current agent"
+    "status": "closed",
+    "summary": "#1770 startup, #1771 implement, #1772 Planning, and #1773 proof/closeout runtime packet extractions are complete.",
+    "residual_work": "none for this lane",
+    "next_owner": "none"
   },
   "references": [
     {

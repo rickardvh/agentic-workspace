@@ -4,6 +4,19 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_proof_runtime_helpers_route_through_proof_owner(tmp_path: Path) -> None:
+    assert workspace_runtime_primitives._verification_report_payload is workspace_runtime_proof._verification_report_payload
+    assert workspace_runtime_primitives._tiny_proof_payload is workspace_runtime_proof._tiny_proof_payload
+    assert workspace_runtime_primitives._tiny_proof_obligations_payload is workspace_runtime_proof._tiny_proof_obligations_payload
+    assert workspace_runtime_primitives._active_planning_record_for_proof is workspace_runtime_proof._active_planning_record_for_proof
+    assert workspace_runtime_implement._verification_report_payload is workspace_runtime_proof._verification_report_payload
+    assert workspace_runtime_implement._tiny_proof_obligations_payload is workspace_runtime_proof._tiny_proof_obligations_payload
+    assert workspace_runtime_core._active_planning_record_for_proof(target_root=tmp_path) == {
+        "status": "unavailable",
+        "reason": "planning state unavailable",
+    }
+
+
 def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

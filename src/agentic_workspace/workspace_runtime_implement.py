@@ -93,7 +93,6 @@ from agentic_workspace.workspace_runtime_core import (
     _tiny_adaptive_routing_payload,
     _tiny_generated_surface_trust,
     _tiny_objective_drift,
-    _tiny_proof_obligations_payload,
     _tiny_required_proof_commands,
     _tiny_task_intent_promotion_guidance,
     _tiny_work_shape_guidance,
@@ -101,7 +100,6 @@ from agentic_workspace.workspace_runtime_core import (
     _unplanned_parent_intent_status_payload,
     _vague_outcome_orientation_payload,
     _validate_target_root,
-    _verification_report_payload,
     _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
 )
@@ -119,6 +117,8 @@ from agentic_workspace.workspace_runtime_planning import (
 )
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
+    _tiny_proof_obligations_payload,
+    _verification_report_payload,
 )
 
 
