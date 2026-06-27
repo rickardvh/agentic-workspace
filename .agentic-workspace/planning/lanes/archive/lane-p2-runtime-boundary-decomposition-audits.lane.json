@@ -1,0 +1,179 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-p2-runtime-boundary-decomposition-audits",
+  "title": "P2 runtime boundary decomposition audits",
+  "status": "archived",
+  "parent_decomposition_ref": "GitHub P2 roadmap candidate batch 2026-06-27",
+  "lane_outcome": "Workspace lifecycle/provider, Planning, Memory, and Verification runtime boundaries have symbol-by-symbol disposition tables, safe decompositions applied, and retained semantic owners recorded.",
+  "purpose_for_parent": "Continue #1649 decomposition without hiding mutation, provider, Planning, Memory, or Verification judgment inside generic command-generation primitives.",
+  "subsystems": [
+    "workspace-runtime",
+    "planning",
+    "memory",
+    "verification",
+    "command-generation"
+  ],
+  "technical_strategy": "Treat #1656, #1657, and #1658 as audit-plus-safe-extraction slices. First record disposition tables by symbol group and semantic owner, then only implement high-confidence decompositions with existing CG support; file or reference narrower CG follow-ups for unresolved control-operation shapes.",
+  "slice_sequence": [
+    {
+      "id": "workspace-lifecycle-provider-boundaries",
+      "title": "Audit workspace lifecycle and provider runtime boundaries",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Satisfy #1656 with symbol-level dispositions and safe lifecycle/report extraction only where mutation/provider trust remains explicit."
+    },
+    {
+      "id": "planning-runtime-boundaries",
+      "title": "Audit Planning package runtime boundaries",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/p2-planning-runtime-boundaries.plan.json",
+      "depends_on": [
+        "workspace-lifecycle-provider-boundaries"
+      ],
+      "purpose_for_lane": "Satisfy #1657 with grouped Planning disposition and safe value-map/default/coercion decompositions."
+    },
+    {
+      "id": "memory-verification-runtime-boundaries",
+      "title": "Audit Memory and Verification runtime boundaries",
+      "status": "ready",
+      "execplan_ref": "",
+      "depends_on": [
+        "planning-runtime-boundaries"
+      ],
+      "purpose_for_lane": "Satisfy #1658 with semantic-owner-after-split disposition and safe view/scaffold decompositions."
+    }
+  ],
+  "current_slice": "memory-verification-runtime-boundaries",
+  "acceptance_boundary": "The lane is complete when #1656, #1657, and #1658 each have symbol dispositions, retained-owner rationale, safe decompositions or explicit blockers, updated inventories, and proof evidence.",
+  "proof_strategy": "Run generated command package checks, package-focused tests for affected runtime behavior, operation conformance for changed commands, and make test-workspace for cross-package changes.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "#1656 workspace-lifecycle-provider-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json and included focused reconcile owner tests, tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, maintainer surfaces, generated command boundary and AW primitive ownership checks, planning summary/doctor, and git diff --check.",
+      "#1657 planning-runtime-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-planning-runtime-boundaries.plan.json and included packages/planning/tests/test_runtime_projection.py, make test-planning, make lint-planning, make typecheck-planning, contract tooling, structured file inventory, maintainer surfaces, generated command package checks, and git diff --check.",
+      "#1656, #1657, and #1658 completed with archived execplans, disposition docs, updated inventories, focused tests, generated command package checks, and package/runtime proof recorded in each slice closeout."
+    ],
+    "known_gaps": [
+      "No remaining work inside this P2 lane. Parent #1649 remains open for any future boundary minimization after command-generation#72, #73, #74, and #75."
+    ]
+  },
+  "residual_lane_work": "No remaining work inside this P2 lane. Parent #1649 remains open for any future boundary minimization after command-generation#72, #73, #74, and #75.",
+  "lane_to_epic_contribution": "Provides symbol-by-symbol runtime boundary disposition, safe decomposition, retained-owner rationale, and explicit command-generation blockers for workspace, Planning, Memory, and Verification package boundaries.",
+  "parent_close_permission": "may-advance-parent",
+  "closeout_state": {
+    "status": "blocked",
+    "summary": "Provides symbol-by-symbol runtime boundary disposition, safe decomposition, retained-owner rationale, and explicit command-generation blockers for workspace, Planning, Memory, and Verification package boundaries.",
+    "residual_work": "No remaining work inside this P2 lane. Parent #1649 remains open for any future boundary minimization after command-generation#72, #73, #74, and #75.",
+    "next_owner": "parent #1649 owner"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1656",
+      "label": "Investigate decomposition of workspace lifecycle and provider runtime boundaries",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1656"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1657",
+      "label": "Audit and decompose planning package runtime boundaries for #1649",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1657"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1658",
+      "label": "Audit and decompose Memory and Verification runtime boundaries for #1649",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1658"
+    }
+  ],
+  "notes": "Third lane in the P2 stack.",
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "continue-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "lane-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "create-follow-on-plan",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete"
+      ],
+      "blocked_claim_classes": [
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#1656",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1657",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#1658",
+          "authorized": false,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete",
+          "Closes #1656",
+          "Closes #1657",
+          "Closes #1658"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "parent #1649 owner",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "parent #1649 owner"
+    },
+    "continuation": {
+      "owner_surface": "parent #1649 owner",
+      "created_or_required": true,
+      "reason": "parent #1649 owner"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  }
+}
