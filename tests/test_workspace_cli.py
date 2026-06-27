@@ -65,6 +65,25 @@ def test_start_context_adapter_routes_through_startup_owner_facade() -> None:
     assert workspace_runtime_primitives._run_start_context_adapter is workspace_runtime_startup._run_start_context_adapter
 
 
+def test_active_planning_record_helpers_route_through_planning_owner(tmp_path: Path) -> None:
+    assert workspace_runtime_primitives._active_planning_record_for_report_section is (
+        workspace_runtime_planning._active_planning_record_for_report_section
+    )
+    assert workspace_runtime_primitives._raw_active_planning_record_for_closeout is (
+        workspace_runtime_planning._raw_active_planning_record_for_closeout
+    )
+    assert workspace_runtime_startup._active_planning_record_for_report_section is (
+        workspace_runtime_planning._active_planning_record_for_report_section
+    )
+    assert workspace_runtime_implement._active_planning_record_for_report_section is (
+        workspace_runtime_planning._active_planning_record_for_report_section
+    )
+    assert workspace_runtime_proof._active_planning_record_for_report_section is (
+        workspace_runtime_planning._active_planning_record_for_report_section
+    )
+    assert workspace_runtime_core._active_planning_record_for_report_section(target_root=tmp_path) == {}
+
+
 def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

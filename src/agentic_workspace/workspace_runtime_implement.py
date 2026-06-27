@@ -21,7 +21,6 @@ from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _acceptance_reconciliation_prompt_payload,
     _active_intent_contract_payload,
-    _active_planning_record_for_report_section,
     _adaptive_routing_payload,
     _applicable_intent_status_payload,
     _architecture_principles_payload,
@@ -115,6 +114,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _selector_requests_generated_surface_trust,
 )
 from agentic_workspace.workspace_runtime_planning import (
+    _active_planning_record_for_report_section,
     _planning_safety_gate_payload,
 )
 from agentic_workspace.workspace_runtime_proof import (

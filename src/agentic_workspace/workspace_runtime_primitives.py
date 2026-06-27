@@ -156,8 +156,10 @@ from agentic_workspace.workspace_runtime_implement import (
 from agentic_workspace.workspace_runtime_planning import (
     _active_execplan_record_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _active_planning_record,
+    _active_planning_record_for_report_section,  # noqa: F401 - compatibility re-export for planning owner boundary
     _planning_candidate_pressure_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _planning_safety_gate_payload,
+    _raw_active_planning_record_for_closeout,  # noqa: F401 - compatibility re-export for planning owner boundary
 )
 from agentic_workspace.workspace_runtime_projection import (
     _authority_boundary_payload,
@@ -8471,10 +8473,6 @@ def _report_section_base_payload(
         "config": {"workspace": {"cli_invoke": config.cli_invoke}},
         "findings": [],
     }
-
-
-def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str, Any]:
-    return _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
 
 
 def _contract_bool(value: Any) -> bool | None:
@@ -17506,45 +17504,6 @@ def _acceptance_criteria_reconciliation_payload(*, planning_report: dict[str, An
             "planning.active.planning_record.closure_check",
         ],
     }
-
-
-def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
-    if target_root is None:
-        return {}
-    task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
-    surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
-    if not surface:
-        active_summary = _fast_planning_active_summary(target_root=target_root)
-        surface = str(active_summary.get("active_execplan", "")).strip()
-    if not surface:
-        return {}
-    try:
-        target_resolved = target_root.resolve()
-        record_path = (target_root / surface).resolve()
-        record_path.relative_to(target_resolved)
-    except (OSError, ValueError):
-        return {}
-    if record_path.suffix.lower() != ".json" or not record_path.is_file():
-        return {}
-    try:
-        payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    payload = copy.deepcopy(payload)
-    payload["_target_root"] = str(target_root)
-    payload["_record_surface"] = surface
-    parent_lane = _as_dict(payload.get("parent_lane"))
-    lane_id = str(parent_lane.get("id") or parent_lane.get("lane_id") or "").strip()
-    if lane_id:
-        matching_record = next(
-            (record for record in _fast_planning_lane_records(target_root=target_root) if str(record.get("id") or "").strip() == lane_id),
-            None,
-        )
-        if isinstance(matching_record, dict):
-            payload["_lane_owner_record"] = matching_record
-    return payload
 
 
 def _target_root_from_record(active_planning_record: dict[str, Any]) -> Path | None:

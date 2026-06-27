@@ -218,9 +218,11 @@
       "runtime_role": "Planning continuation, active-state, safety-gate, candidate-pressure, and active execplan projections are owned by the Planning runtime packet module.",
       "source_symbols": [
         "_active_planning_record",
+        "_active_planning_record_for_report_section",
         "_planning_safety_gate_payload",
         "_active_execplan_record_payload",
-        "_planning_candidate_pressure_payload"
+        "_planning_candidate_pressure_payload",
+        "_raw_active_planning_record_for_closeout"
       ],
       "generated_or_contract_refs": [
         "src/agentic_workspace/contracts/workspace_runtime_primitive_families.json",
@@ -535,7 +537,6 @@
         "source_symbols": [
           "_active_plan_reliance_payload",
           "_active_planning_assurance_for_proof",
-          "_active_planning_record_for_report_section",
           "_allow_ancillary_memory_feedback_path",
           "_allow_completed_archive_publication_residue",
           "_allow_issue_scoped_planning_state_reconciliation",
@@ -548,13 +549,13 @@
           "_capability_structural_hints",
           "_command_with_expected_planning_revision",
           "_fast_planning_active_summary",
+          "_fast_planning_lane_records",
           "_learned_route_reliance_payload",
           "_planning_hierarchy_owner_requirement",
           "_planning_revision_payload",
           "_planning_roadmap_candidates",
           "_planning_safety_path_classification",
-          "_planning_safety_promotion_command",
-          "_raw_active_planning_record_for_closeout"
+          "_planning_safety_promotion_command"
         ],
         "core_role": "Shared core may expose Planning state readers and route classifiers used by startup, implement, and Planning packets to avoid conflicting planning-safety interpretations.",
         "exclusion_rule": "Do not add Planning packet assembly or Planning-owner decisions here; those belong in workspace_runtime_planning.py."
