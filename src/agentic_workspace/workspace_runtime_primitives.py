@@ -22244,6 +22244,10 @@ def _planning_roadmap_candidates(target_root: Path) -> list[dict[str, Any]]:
                 "priority": str(candidate.get("priority", "")).strip(),
                 "status": status or "unknown",
                 "maturity": maturity or "unknown",
+                "route_kind": str(candidate.get("kind") or candidate.get("route_kind") or "").strip(),
+                "parent_id": str(candidate.get("parent_id") or candidate.get("parent") or "").strip(),
+                "lane_id": str(candidate.get("lane_id") or "").strip(),
+                "owner_surface": str(candidate.get("owner_surface") or "").strip(),
                 "outcome": str(candidate.get("outcome", "")).strip(),
                 "promotion_signal": str(candidate.get("promotion_signal", "")).strip(),
                 "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
@@ -24185,6 +24189,97 @@ def _checkpoint_resume_checklist() -> list[dict[str, str]]:
     ]
 
 
+def _local_checkpoint_issue_refs(*, checkpoint: dict[str, Any], durable_sources: list[Any]) -> list[str]:
+    raw_values: list[Any] = [
+        *_list_payload(checkpoint.get("current_issue_refs")),
+        *durable_sources,
+        checkpoint.get("task"),
+    ]
+    volatile_refs = _as_dict(_as_dict(checkpoint.get("volatile_observations")).get("current_issue_refs")).get("value")
+    raw_values.extend(_list_payload(volatile_refs))
+    refs: set[str] = set()
+    for raw in raw_values:
+        text = str(raw or "")
+        refs.update(f"#{match}" for match in re.findall(r"#(\d+)\b", text))
+        refs.update(f"#{match}" for match in re.findall(r"/issues/(\d+)\b", text))
+    return sorted(refs, key=lambda value: int(value.lstrip("#")) if value.lstrip("#").isdigit() else value)
+
+
+def _checkpoint_route_kind(candidate: dict[str, Any]) -> str:
+    route_kind = str(candidate.get("route_kind", "")).strip().lower()
+    if route_kind in {"parent-lane", "parent", "lane"}:
+        return "parent-lane"
+    if route_kind in {"child-slice", "child", "slice"}:
+        return "child-slice"
+    if str(candidate.get("parent_id", "")).strip() or str(candidate.get("lane_id", "")).strip():
+        return "child-slice"
+    return "standalone"
+
+
+def _checkpoint_candidate_matched_refs(relevance: dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+    for item in _list_payload(relevance.get("strong_evidence")):
+        text = str(item)
+        if text.startswith("issue_ref:"):
+            refs.append(text.removeprefix("issue_ref:"))
+    return _dedupe(refs)
+
+
+def _local_checkpoint_planning_candidate_routes(
+    *, target_root: Path, cli_invoke: str, checkpoint: dict[str, Any], durable_sources: list[Any]
+) -> dict[str, Any]:
+    issue_refs = _local_checkpoint_issue_refs(checkpoint=checkpoint, durable_sources=durable_sources)
+    if not issue_refs:
+        return {"status": "no-issue-refs"}
+    candidates = []
+    for candidate in _planning_roadmap_candidates(target_root):
+        relevance = _candidate_relevance_payload(candidate, issue_refs=issue_refs, task_text=str(checkpoint.get("task", "")))
+        if not relevance.get("strong_evidence"):
+            continue
+        candidates.append((candidate, relevance))
+    if not candidates:
+        return {"status": "no-matches", "issue_refs": issue_refs}
+    planning_revision = _planning_revision_payload(target_root=target_root)
+    route_options: list[dict[str, Any]] = []
+    for candidate, relevance in candidates[:3]:
+        candidate_id = str(candidate.get("id", "")).strip()
+        if not candidate_id:
+            continue
+        route_options.append(
+            {
+                "id": candidate_id,
+                "title": str(candidate.get("title", "")).strip(),
+                "refs": str(candidate.get("refs", "")).strip(),
+                "matched_issue_refs": _checkpoint_candidate_matched_refs(relevance),
+                "route_kind": _checkpoint_route_kind(candidate),
+                "parent_id": str(candidate.get("parent_id", "")).strip(),
+                "lane_id": str(candidate.get("lane_id", "")).strip(),
+                "priority": str(candidate.get("priority", "")).strip(),
+                "evidence": relevance.get("strong_evidence", [])[:3],
+                "next_action": "promote-roadmap-candidate-to-durable-planning-owner",
+                "command": _command_with_expected_planning_revision(
+                    _command_with_cli_invoke(
+                        command=f"agentic-workspace planning promote-to-plan --item-id {candidate_id} --target . --format json",
+                        cli_invoke=cli_invoke,
+                    ),
+                    planning_revision=planning_revision,
+                ),
+            }
+        )
+    return {
+        "kind": "agentic-workspace/local-checkpoint-planning-candidate-routes/v1",
+        "status": "matched",
+        "issue_refs": issue_refs,
+        "matched_candidate_count": len(candidates),
+        "candidate_ids": [option["id"] for option in route_options],
+        "route_options": route_options,
+        "planning_revision": planning_revision,
+        "authority": "advisory-from-local-checkpoint-and-checked-in-planning",
+        "claim_boundary": "Verify checkpoint refs against durable sources before claims; priority and intent judgment remain agent/human-owned.",
+        "rule": "Local checkpoint issue refs can point at checked-in Planning candidates, but the checkpoint remains advisory and local-only.",
+    }
+
+
 def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
     path = _local_chat_checkpoint_path(target_root)
     relative_path = LOCAL_CHAT_CHECKPOINT_PATH.as_posix()
@@ -24219,7 +24314,7 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
         }
     durable_sources = _list_payload(checkpoint.get("durable_sources"))
     status = "present" if checkpoint.get("kind") == LOCAL_CHAT_CHECKPOINT_KIND else "stale"
-    return {
+    payload = {
         **base,
         "status": status,
         "checkpoint_kind": str(checkpoint.get("kind", "")).strip(),
@@ -24245,6 +24340,15 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
         "limits": _as_dict(checkpoint.get("limits")),
         "rule": "Local checkpoints are advisory continuity hints; fresh local/remote truth and durable sources remain authoritative.",
     }
+    candidate_routes = _local_checkpoint_planning_candidate_routes(
+        target_root=target_root,
+        cli_invoke=cli_invoke,
+        checkpoint=checkpoint,
+        durable_sources=durable_sources,
+    )
+    if candidate_routes.get("status") == "matched":
+        payload["planning_candidate_routes"] = candidate_routes
+    return payload
 
 
 def _local_chat_checkpoint_record(
