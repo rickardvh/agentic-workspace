@@ -24,6 +24,7 @@ Use this page when you need the canonical command to run, not the broader routin
 | `python scripts/check/check_source_payload_operational_install.py` | Run advisory checks for source/payload/root-install boundary drift |
 | `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, packaged payload contracts, and source/payload/root-install boundary drift |
 | `make planning-surfaces` | Run the underlying planning-surface audit directly |
+| `uv run python scripts/release/promote_command_generation_release.py --version <version>` | Promote the AW `command-generation` dependency pin to a released wheel, verify the wheel SHA-256, update generated conformance Dockerfile refs, and refresh `uv.lock` |
 
 ## Validation Lanes
 

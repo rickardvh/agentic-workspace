@@ -124,6 +124,24 @@ its `Requires-Dist` entries for `agentic-memory`, `agentic-planning`, and
 hashes. Host repositories should be able to depend on the public root wheel as a
 single normal dependency and let `uv sync` resolve the coordinated stack.
 
+## Command-Generation Pin Promotion
+
+`command-generation` is consumed as a hash-pinned maintainer dependency for
+generated CLI package rendering and proof. When promoting a temporary immutable
+git ref or older released wheel to a command-generation release, use:
+
+```bash
+uv run python scripts/release/promote_command_generation_release.py --version <version>
+```
+
+The helper discovers the GitHub release wheel, verifies or computes its SHA-256
+digest, updates `pyproject.toml`, refreshes the generated conformance Dockerfile
+install URLs, and runs `uv lock` unless `--no-lock` is supplied. Explicit
+`--wheel-url --sha256` input still verifies the downloaded wheel bytes by
+default; use the deliberately named `--trust-supplied-sha256` escape hatch only
+for offline/no-network maintenance. Use `--check` to fail when the checked-in pin
+or Dockerfile refs do not match the selected release.
+
 ## All-Or-Nothing Invariant
 
 Coordinated releases are all-or-nothing. If any Python package version,
