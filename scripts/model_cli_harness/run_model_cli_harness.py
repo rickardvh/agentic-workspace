@@ -1512,7 +1512,7 @@ def _full_response_text(result: dict[str, Any]) -> str:
 
 _LOCAL_ABSOLUTE_PATH_PATTERNS = (
     re.compile(r"\b[A-Za-z]:[\\/][^\s)`>\"']+"),
-    re.compile(r"\b/(?:Users|home|tmp|var/tmp|private/tmp)/[^\s)`>\"']+"),
+    re.compile(r"(?<![\w/.-])/(?:Users|home|tmp|var/tmp|private/tmp)/[^\s)`>\"']+"),
 )
 
 
