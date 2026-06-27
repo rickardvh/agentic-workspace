@@ -5155,6 +5155,7 @@ def _workspace_repair_payload(
                     "Do not replace unfenced repo instructions while restoring the workspace pointer.",
                     "Do not widen the pointer into a second workflow handbook.",
                 ],
+                repair_affordance=_workspace_pointer_repair_affordance(cli_invoke=cli_invoke),
             )
         )
     if contract_drift_surfaces:
@@ -5365,6 +5366,7 @@ def _workspace_manual_review_action(
     risk: str,
     do_not: list[str],
     package_command_bug_signal: dict[str, Any] | None = None,
+    repair_affordance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     proof_after = [
         _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=cli_invoke)
@@ -5395,7 +5397,27 @@ def _workspace_manual_review_action(
     }
     if package_command_bug_signal is not None:
         payload["package_command_bug_signal"] = package_command_bug_signal
+    if repair_affordance is not None:
+        payload["repair_affordance"] = repair_affordance
     return payload
+
+
+def _workspace_pointer_repair_affordance(*, cli_invoke: str) -> dict[str, Any]:
+    return {
+        "kind": "workspace-startup-pointer-repair/v1",
+        "expected_managed_fence": {
+            "start": "<!-- agentic-workspace:workflow:start -->",
+            "end": "<!-- agentic-workspace:workflow:end -->",
+            "block": workspace_pointer_block(cli_invoke=cli_invoke),
+        },
+        "safe_patch_target": "AGENTS.md managed workflow pointer fence only",
+        "repo_specific_content_rule": "Keep repo-specific obligations outside the managed agentic-workspace workflow fence.",
+        "preferred_check_command": "agentic-workspace doctor --target . --format json",
+        "smallest_safe_next_step": (
+            "Restore exactly one managed workflow pointer block in AGENTS.md; move repo-specific dogfooding or project policy "
+            "lines outside the fence instead of editing the managed block body."
+        ),
+    }
 
 
 _MERGE_CONFLICT_MARKERS = ("<<<<<<< ", "=======", ">>>>>>> ")

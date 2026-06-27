@@ -52,6 +52,14 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     assert manual_action["safe_to_apply"] is False
     assert manual_action["command"] is None
     assert manual_action["proof_after"][0].startswith("agentic-workspace doctor --target ")
+    pointer_repair = manual_action["repair_affordance"]
+    assert pointer_repair["kind"] == "workspace-startup-pointer-repair/v1"
+    assert pointer_repair["expected_managed_fence"]["start"] == "<!-- agentic-workspace:workflow:start -->"
+    assert pointer_repair["expected_managed_fence"]["end"] == "<!-- agentic-workspace:workflow:end -->"
+    assert "Ordinary route:" in pointer_repair["expected_managed_fence"]["block"]
+    assert pointer_repair["safe_patch_target"] == "AGENTS.md managed workflow pointer fence only"
+    assert "outside the managed" in pointer_repair["repo_specific_content_rule"]
+    assert pointer_repair["preferred_check_command"] == "agentic-workspace doctor --target . --format json"
 
     repair_plan = workspace_report["repair_plan"]
     assert repair_plan["status"] == "safe-action-available"

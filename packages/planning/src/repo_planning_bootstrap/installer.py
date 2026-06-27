@@ -3650,9 +3650,9 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
     }
 
 
-def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[str, Any] | None = None) -> list[dict[str, str]]:
+def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     projection = lane_projection if lane_projection is not None else _planning_lane_projection(target_root=target_root)
-    warnings: list[dict[str, str]] = []
+    warnings: list[dict[str, Any]] = []
     invalid_records = projection.get("invalid_records", []) if isinstance(projection, dict) else []
     if isinstance(invalid_records, list):
         for record in invalid_records:
@@ -3682,6 +3682,26 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                         "Repair the lane record against planning-lane.schema.json before relying on summary or lane closeout; "
                         "accepted status values are exposed at lanes.invalid_records[].status_details."
                     ),
+                    "repair_affordance": {
+                        "kind": "planning-lane-schema-repair/v1",
+                        "owner_surface": path,
+                        "schema": LANE_RECORD_SCHEMA_PATH.as_posix(),
+                        "reference_shape": {"kind": "artifact", "path": "<repo-relative-path>", "role": "context"},
+                        "slice_sequence_entry_shape": {
+                            "id": "<stable-slice-id>",
+                            "title": "<slice title>",
+                            "status": list(LANE_SLICE_STATUS_VALUES),
+                            "execplan_ref": ".agentic-workspace/planning/execplans/<slice>.plan.json",
+                            "depends_on": [],
+                            "purpose_for_lane": "<how this slice advances the lane>",
+                        },
+                        "status_details": status_details if isinstance(status_details, list) else [],
+                        "smallest_safe_next_step": (
+                            "Edit only the named lane record so references are objects and each slice has execplan_ref, "
+                            "depends_on, and purpose_for_lane; then rerun summary or doctor."
+                        ),
+                        "proof_after": "agentic-workspace summary --target . --format json",
+                    },
                 }
             )
     records = projection.get("records", []) if isinstance(projection, dict) else []
@@ -5414,20 +5434,22 @@ def _planning_surface_health(
     *,
     collaboration_pressure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    health_warnings: list[dict[str, str]] = []
+    health_warnings: list[dict[str, Any]] = []
     for warning in warnings:
         warning_class = str(warning.get("warning_class", "")).strip()
         path = str(warning.get("path", "")).strip()
         message = str(warning.get("message", "")).strip()
         suggested_fix = str(warning.get("suggested_fix", "")).strip() or _warning_remediation(warning_class) or ""
-        health_warnings.append(
-            {
-                "warning_class": warning_class,
-                "path": path,
-                "message": message,
-                "suggested_fix": suggested_fix,
-            }
-        )
+        health_warning: dict[str, Any] = {
+            "warning_class": warning_class,
+            "path": path,
+            "message": message,
+            "suggested_fix": suggested_fix,
+        }
+        repair_affordance = warning.get("repair_affordance")
+        if isinstance(repair_affordance, dict) and repair_affordance:
+            health_warning["repair_affordance"] = repair_affordance
+        health_warnings.append(health_warning)
     if not health_warnings:
         return {
             "status": "clean",
@@ -5705,13 +5727,13 @@ def _stale_completed_active_execplan_warnings(
     return warnings
 
 
-def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | None) -> list[dict[str, str]]:
+def _planning_state_v1_warnings(*, target_root: Path, state: dict[str, Any] | None) -> list[dict[str, Any]]:
     del target_root
     if not isinstance(state, dict):
         return []
     if state.get("schema_version") != PLANNING_STATE_SCHEMA_VERSION:
         return []
-    warnings: list[dict[str, str]] = []
+    warnings: list[dict[str, Any]] = []
     if state.get("kind") != PLANNING_STATE_KIND:
         warnings.append(_planning_state_v1_warning("kind", 'planning-state/v1 requires kind = "agentic-planning-state".'))
 
@@ -5943,8 +5965,8 @@ def _is_reconstructable_closed_state_history(*, bucket_path: str, item: dict[str
     return True
 
 
-def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: dict[str, Any], maturity: str) -> list[dict[str, str]]:
-    warnings: list[dict[str, str]] = []
+def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: dict[str, Any], maturity: str) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = []
     for role_field in PLANNING_STATE_ROLE_FIELDS:
         if role_field in item and not _non_empty_string(item.get(role_field)):
             warnings.append(
@@ -5966,7 +5988,26 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
     if maturity == "active":
         surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
         if not surface or not _surface_execplan_reference(surface):
-            warnings.append(_planning_state_v1_warning(bucket_path, f"active item {item_id} requires an execplan or execplan surface."))
+            warnings.append(
+                _planning_state_v1_warning(
+                    bucket_path,
+                    f"active item {item_id} requires an execplan or execplan surface.",
+                    repair_affordance={
+                        "kind": "planning-active-owner-repair/v1",
+                        "missing_owner": "execplan surface",
+                        "owner_surface": f"{PLANNING_STATE_PATH.as_posix()}#{bucket_path}",
+                        "item_id": item_id,
+                        "observed_surface": surface,
+                        "expected_state_field": "execplan or surface",
+                        "expected_shape": ".agentic-workspace/planning/execplans/<id>.plan.json",
+                        "command_owned_repair": (
+                            f"agentic-planning new-plan --id {item_id} --title <title> --target . --activate --format json"
+                        ),
+                        "stale_closeout_repair": f"agentic-planning close-item {item_id} --target . --format json",
+                        "field_absent_after_closeout": "todo.active_items[] entry",
+                    },
+                )
+            )
     return warnings
 
 
@@ -6146,14 +6187,22 @@ def _next_role_needed_from_metadata(role_metadata: dict[str, Any]) -> str:
     return ""
 
 
-def _planning_state_v1_warning(path: str, message: str, *, suggested_fix: str = "") -> dict[str, str]:
-    warning = {
+def _planning_state_v1_warning(
+    path: str,
+    message: str,
+    *,
+    suggested_fix: str = "",
+    repair_affordance: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    warning: dict[str, Any] = {
         "warning_class": "planning_state_v1_schema",
         "path": f"{PLANNING_STATE_PATH.as_posix()}#{path}",
         "message": message,
     }
     if suggested_fix:
         warning["suggested_fix"] = suggested_fix
+    if repair_affordance:
+        warning["repair_affordance"] = repair_affordance
     return warning
 
 
