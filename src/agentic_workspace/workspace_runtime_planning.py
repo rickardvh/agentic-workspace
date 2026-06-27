@@ -360,6 +360,49 @@ def _custody_only_planning_payload(
     }
 
 
+def _retrofit_active_owner_commands(*, config: WorkspaceConfig, planning_revision: dict[str, Any]) -> dict[str, str]:
+    claim_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command=(
+                'agentic-workspace planning new-plan --id <slice-id> --title "<bounded current slice>" '
+                '--source "current diff retrofit" --target . --activate --format json'
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    summary_command = _command_with_cli_invoke(
+        command="agentic-workspace summary --target . --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    closeout_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command=(
+                "agentic-workspace planning closeout <slice-id> --target . --claim-level slice "
+                "--intent-status satisfied --residue none --proof-from last --format json"
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    archive_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command=(
+                "agentic-workspace planning archive-plan --plan <slice-id> --target . "
+                "--prepare-closeout --retain-archive --apply-cleanup --format json"
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    return {
+        "claim": claim_command,
+        "summary": summary_command,
+        "closeout": closeout_command,
+        "archive": archive_command,
+    }
+
+
 def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
@@ -547,6 +590,7 @@ def _planning_safety_gate_payload(
         gate_result=decision,
         required_next_action=required_next_action,
     )
+    retrofit_commands = _retrofit_active_owner_commands(config=config, planning_revision=planning_revision)
     return {
         "kind": "agentic-workspace/planning-safety-gate/v1",
         "status": status,
@@ -574,6 +618,9 @@ def _planning_safety_gate_payload(
         "repair_route": {
             "status": "available" if decision == "implementation-owner-missing" else "retired",
             "route": "retrofit-active-owner-then-closeout" if decision == "implementation-owner-missing" else "work-shape-guidance-only",
+            "work_context": "already-started-continuation-or-review-repair"
+            if decision == "implementation-owner-missing"
+            else "new-or-direct-work-shape-guidance",
             "fit_criteria": [
                 "mixed Planning and implementation paths already exist",
                 "the slice is bounded and can be honestly described from the current diff",
@@ -584,31 +631,35 @@ def _planning_safety_gate_payload(
                 "use work_shape_guidance instead of prompt phrase exceptions",
                 "agent decides whether a repair is small enough when hard_blockers is empty",
             ],
-            "claim_current_slice_command": _command_with_expected_planning_revision(
-                _command_with_cli_invoke(
-                    command='agentic-workspace planning new-plan --id <slice-id> --title "<bounded slice title>" --source "current diff retrofit" --target . --activate --format json',
-                    cli_invoke=config.cli_invoke,
-                ),
-                planning_revision=planning_revision,
-            )
+            "claim_current_slice_command": retrofit_commands["claim"] if decision == "implementation-owner-missing" else "",
+            "after_claim_command": retrofit_commands["summary"] if decision == "implementation-owner-missing" else "",
+            "closeout_command": retrofit_commands["closeout"] if decision == "implementation-owner-missing" else "",
+            "archive_cleanup_command": retrofit_commands["archive"] if decision == "implementation-owner-missing" else "",
+            "workflow": [
+                {
+                    "stage": "claim-current-slice",
+                    "command": retrofit_commands["claim"],
+                    "purpose": "Create an active owner for bounded WIP without treating it as prep-only planning.",
+                },
+                {
+                    "stage": "tighten-owner",
+                    "command": retrofit_commands["summary"],
+                    "purpose": "Use the active plan as the current owner and replace generic scaffold text with current-diff scope.",
+                },
+                {
+                    "stage": "record-closeout-evidence",
+                    "command": retrofit_commands["closeout"],
+                    "purpose": "Record proof, claim level, intent status, and residue before cleanup.",
+                },
+                {
+                    "stage": "remove-active-residue",
+                    "command": retrofit_commands["archive"],
+                    "purpose": "Retain closeout evidence while removing active execplan state from a slice-closing PR.",
+                },
+            ]
             if decision == "implementation-owner-missing"
-            else "",
-            "after_claim_command": _command_with_cli_invoke(
-                command="agentic-workspace summary --target . --format json",
-                cli_invoke=config.cli_invoke,
-            )
-            if decision == "implementation-owner-missing"
-            else "",
-            "closeout_command": _command_with_expected_planning_revision(
-                _command_with_cli_invoke(
-                    command="agentic-workspace planning closeout --target . --proof-from last --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-                planning_revision=planning_revision,
-            )
-            if decision == "implementation-owner-missing"
-            else "",
-            "cleanup_rule": "After proof and closeout evidence are recorded, archive or remove active residue before publishing a slice-closing PR."
+            else [],
+            "cleanup_rule": "After proof and closeout evidence are recorded, run archive_cleanup_command before publishing a slice-closing PR."
             if decision == "implementation-owner-missing"
             else "",
             "safety_rule": "Mixed planning plus implementation changes still need an owner before broad completion claims.",

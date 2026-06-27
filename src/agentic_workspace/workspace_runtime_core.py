@@ -21850,6 +21850,13 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     if not planning_safety_gate["workflow_sufficient"] and (not _is_config_posture_task(task_text)):
+        repair_route = planning_safety_gate.get("repair_route", {})
+        repair_command = (
+            str(repair_route.get("claim_current_slice_command") or "")
+            if isinstance(repair_route, dict) and repair_route.get("status") == "available"
+            else ""
+        )
+        next_command = repair_command or planning_safety_gate["promotion_command"]
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -21860,12 +21867,12 @@ def _start_tiny_payload_fast(
         payload["immediate_next_allowed_action"] = {
             "action": planning_safety_gate["required_next_action"],
             "summary": planning_safety_gate["reason"],
-            "command": planning_safety_gate["promotion_command"],
-            "run": planning_safety_gate["promotion_command"],
+            "command": next_command,
+            "run": next_command,
             "risk": "planning-required-before-implementation",
             "required_inputs": ["target repo", "current task"],
             "next_proof": "run summary after creating or promoting the active execplan",
-            "read_first": [planning_safety_gate["promotion_command"]],
+            "read_first": [next_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     issue_reference_intent = _issue_reference_intent_payload(
@@ -21940,17 +21947,18 @@ def _start_tiny_payload_fast(
                 cli_invoke=config.cli_invoke,
             )
         )
-        payload["immediate_next_allowed_action"] = {
-            "action": "select-changed-path-proof",
-            "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
-            "command": proof_command,
-            "run": proof_command,
-            "risk": "read-only proof routing",
-            "required_inputs": ["target repo", "changed path(s)"],
-            "next_proof": proof_command,
-            "read_first": [proof_command],
-            "open_execplan_only_when": startup_template["open_execplan_only_when"],
-        }
+        if planning_safety_gate["workflow_sufficient"]:
+            payload["immediate_next_allowed_action"] = {
+                "action": "select-changed-path-proof",
+                "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
+                "command": proof_command,
+                "run": proof_command,
+                "risk": "read-only proof routing",
+                "required_inputs": ["target repo", "changed path(s)"],
+                "next_proof": proof_command,
+                "read_first": [proof_command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
