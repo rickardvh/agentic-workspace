@@ -99,6 +99,61 @@ def test_memory_promotion_report_defaults_to_primary_next_action(tmp_path: Path,
     assert payload["drill_down"]["detail_command"] == "agentic-memory promotion-report --target . --mode remediation --format json"
 
 
+def test_memory_compact_result_uses_shared_action_view_policy() -> None:
+    class Result:
+        def to_dict(self) -> dict[str, object]:
+            return {
+                "target_root": "repo",
+                "dry_run": True,
+                "mode": "status",
+                "message": "Status report",
+                "actions": [
+                    {
+                        "kind": "present",
+                        "path": "AGENTS.md",
+                        "detail": "ok",
+                        "category": "",
+                        "ignored": "not exported",
+                    },
+                    "not-a-dict",
+                    {"kind": "warning", "memory_action": "review"},
+                ],
+            }
+
+    payload = runtime_primitives._compact_result_dict(Result(), detail_command="agentic-memory status --verbose")
+
+    assert payload["action_count"] == 3
+    assert payload["actions"] == [
+        {"kind": "present", "path": "AGENTS.md", "detail": "ok"},
+        {"kind": "warning", "memory_action": "review"},
+    ]
+    assert payload["detail_command"] == "agentic-memory status --verbose"
+
+
+def test_memory_promotion_report_uses_shared_action_view_policy() -> None:
+    class Result:
+        def to_dict(self) -> dict[str, object]:
+            return {
+                "target_root": "repo",
+                "dry_run": True,
+                "mode": "remediation",
+                "message": "Promotion report",
+                "actions": [
+                    {"kind": "candidate", "path": "memory/repo/a.md", "detail": "review", "extra": "hidden"},
+                    {"kind": "candidate", "remediation_kind": "docs", "memory_action": "promote"},
+                ],
+            }
+
+    payload = runtime_primitives._compact_promotion_report(Result(), requested_mode="remediation")
+
+    assert payload["context"]["action_count"] == 2
+    assert payload["context"]["actions"] == [
+        {"kind": "candidate", "path": "memory/repo/a.md", "detail": "review"},
+        {"kind": "candidate", "remediation_kind": "docs", "memory_action": "promote"},
+    ]
+    assert payload["next_action"]["action"] == "review-promotion-candidates"
+
+
 def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

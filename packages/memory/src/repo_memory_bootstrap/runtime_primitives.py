@@ -24,21 +24,27 @@ from repo_memory_bootstrap.installer import (
     show_current_memory,
 )
 
+MEMORY_COMPACT_ACTION_KEYS = ("kind", "path", "detail", "category", "remediation_kind", "memory_action")
+
+
+def _memory_action_count(actions: Any) -> int:
+    return len(actions) if isinstance(actions, list) else 0
+
+
+def _compact_memory_actions(actions: Any, *, limit: int = 5) -> list[dict[str, object]]:
+    if not isinstance(actions, list):
+        return []
+    compact_actions: list[dict[str, object]] = []
+    for action in actions[:limit]:
+        if isinstance(action, dict):
+            compact_actions.append({key: action.get(key) for key in MEMORY_COMPACT_ACTION_KEYS if action.get(key) not in (None, "")})
+    return compact_actions
+
 
 def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
     payload = result.to_dict()
     actions = payload.get("actions", [])
-    compact_actions: list[dict[str, object]] = []
-    if isinstance(actions, list):
-        for action in actions[:5]:
-            if isinstance(action, dict):
-                compact_actions.append(
-                    {
-                        key: action.get(key)
-                        for key in ("kind", "path", "detail", "category", "remediation_kind", "memory_action")
-                        if action.get(key) not in (None, "")
-                    }
-                )
+    action_count = _memory_action_count(actions)
     return {
         "target_root": payload.get("target_root", ""),
         "dry_run": payload.get("dry_run", False),
@@ -46,8 +52,8 @@ def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
         "message": payload.get("message", ""),
         "detected_version": payload.get("detected_version"),
         "bootstrap_version": payload.get("bootstrap_version"),
-        "action_count": len(actions) if isinstance(actions, list) else 0,
-        "actions": compact_actions,
+        "action_count": action_count,
+        "actions": _compact_memory_actions(actions),
         "route_summary": payload.get("route_summary", {}),
         "missing_note_hint": payload.get("missing_note_hint", ""),
         "review_summary": payload.get("review_summary", {}),
@@ -59,18 +65,8 @@ def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
 def _compact_promotion_report(result, *, requested_mode: object = None) -> dict[str, object]:
     payload = result.to_dict()
     actions = payload.get("actions", [])
-    action_count = len(actions) if isinstance(actions, list) else 0
-    compact_actions: list[dict[str, object]] = []
-    if isinstance(actions, list):
-        for action in actions[:5]:
-            if isinstance(action, dict):
-                compact_actions.append(
-                    {
-                        key: action.get(key)
-                        for key in ("kind", "path", "detail", "category", "remediation_kind", "memory_action")
-                        if action.get(key) not in (None, "")
-                    }
-                )
+    action_count = _memory_action_count(actions)
+    compact_actions = _compact_memory_actions(actions)
     no_candidate_actions = bool(
         action_count
         and all(
