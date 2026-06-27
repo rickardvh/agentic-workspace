@@ -434,6 +434,29 @@ def test_model_cli_harness_scores_local_absolute_path_leak_with_owner(tmp_path: 
     assert leak["evidence"].startswith(f"{drive}\\Users\\agent")
 
 
+def test_model_cli_harness_scores_posix_tmp_path_leak_with_owner(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    leaked_path = "/".join(["", "tmp", "pytest-of-runner", "pytest-0", "popen-gw1", "session.md"])
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "memory-consult-before-edit"},
+        result={
+            "status": "success",
+            "final_message": f"Updated README.md and wrote notes at {leaked_path}",
+        },
+        mutation_summary={"created": [], "modified": ["README.md"], "deleted": []},
+        repo_path=repo,
+    )
+
+    leak = next(warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak")
+    assert leak["failure_id"] == "LOCAL_ABSOLUTE_PATH_LEAK"
+    assert leak["owner_surface"] == "harness"
+    assert leak["remediation_ref"] == "#1616"
+    assert leak["evidence"].startswith("/".join(["", "tmp", "pytest-of-runner"]))
+
+
 def test_model_cli_harness_repairs_exported_final_message_without_suppressing_warning(tmp_path: Path) -> None:
     module = _load_harness_module()
     repo = tmp_path / "repo"
