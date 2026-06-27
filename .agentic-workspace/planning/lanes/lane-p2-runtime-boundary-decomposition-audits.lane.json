@@ -26,8 +26,8 @@
     {
       "id": "planning-runtime-boundaries",
       "title": "Audit Planning package runtime boundaries",
-      "status": "ready",
-      "execplan_ref": "",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/archive/p2-planning-runtime-boundaries.plan.json",
       "depends_on": [
         "workspace-lifecycle-provider-boundaries"
       ],
@@ -36,7 +36,7 @@
     {
       "id": "memory-verification-runtime-boundaries",
       "title": "Audit Memory and Verification runtime boundaries",
-      "status": "planned",
+      "status": "ready",
       "execplan_ref": "",
       "depends_on": [
         "planning-runtime-boundaries"
@@ -44,13 +44,14 @@
       "purpose_for_lane": "Satisfy #1658 with semantic-owner-after-split disposition and safe view/scaffold decompositions."
     }
   ],
-  "current_slice": "planning-runtime-boundaries",
+  "current_slice": "memory-verification-runtime-boundaries",
   "acceptance_boundary": "The lane is complete when #1656, #1657, and #1658 each have symbol dispositions, retained-owner rationale, safe decompositions or explicit blockers, updated inventories, and proof evidence.",
   "proof_strategy": "Run generated command package checks, package-focused tests for affected runtime behavior, operation conformance for changed commands, and make test-workspace for cross-package changes.",
   "proof_aggregation": {
     "status": "partial",
     "evidence": [
-      "#1656 workspace-lifecycle-provider-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json and included focused reconcile owner tests, tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, maintainer surfaces, generated command boundary and AW primitive ownership checks, planning summary/doctor, and git diff --check."
+      "#1656 workspace-lifecycle-provider-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-workspace-lifecycle-provider-boundaries.plan.json and included focused reconcile owner tests, tests/test_workspace_cli.py, make test-workspace, make lint-workspace, contract tooling, structured file inventory, maintainer surfaces, generated command boundary and AW primitive ownership checks, planning summary/doctor, and git diff --check.",
+      "#1657 planning-runtime-boundaries completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-planning-runtime-boundaries.plan.json and included packages/planning/tests/test_runtime_projection.py, make test-planning, make lint-planning, make typecheck-planning, contract tooling, structured file inventory, maintainer surfaces, generated command package checks, and git diff --check."
     ],
     "known_gaps": []
   },
@@ -59,8 +60,8 @@
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "#1656 workspace lifecycle/provider boundary disposition and safe reconcile owner split are complete.",
-    "residual_work": "Implement #1657 and #1658 in order with disposition tables and proof.",
+    "summary": "#1656 workspace lifecycle/provider and #1657 Planning boundary dispositions and safe decompositions are complete.",
+    "residual_work": "Implement #1658 with Memory and Verification disposition tables and proof.",
     "next_owner": "current agent"
   },
   "references": [

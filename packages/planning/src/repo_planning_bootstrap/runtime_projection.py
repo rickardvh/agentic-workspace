@@ -4,6 +4,8 @@ import contextlib
 import io
 import json
 import shutil
+from collections.abc import Callable
+from typing import Any
 
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
@@ -76,172 +78,245 @@ def render_planning_prompt_operation(values: dict, _arguments: dict, _context) -
     return _build_prompt(str(values.get("prompt_command") or ""), values.get("target"))
 
 
+def _planning_operation_value(values: dict, source: str, coerce: str = "raw", default: Any = None) -> Any:
+    if coerce == "str":
+        return str(values.get(source) or default or "")
+    if coerce == "bool":
+        return bool(values.get(source))
+    if coerce == "not_bool":
+        return not bool(values.get(source))
+    value = values.get(source)
+    if value is None and default is not None:
+        return default
+    return value
+
+
+def _call_planning_operation(
+    function: Callable[..., Any],
+    values: dict,
+    *,
+    positional: tuple[tuple[str, str, Any], ...] = (),
+    keywords: tuple[tuple[str, str, str, Any], ...] = (),
+) -> Any:
+    args = [_planning_operation_value(values, source, coerce, default) for source, coerce, default in positional]
+    kwargs = {target: _planning_operation_value(values, source, coerce, default) for target, source, coerce, default in keywords}
+    return function(*args, **kwargs)
+
+
 def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
-    return create_execplan_scaffold(
-        plan_id=str(values.get("id") or ""),
-        title=str(values.get("title") or ""),
-        source=str(values.get("source") or ""),
-        target=values.get("target"),
-        activate=bool(values.get("activate")),
-        queue=bool(values.get("queue")),
-        switch_active=bool(values.get("switch_active")),
-        prep_only=bool(values.get("prep_only")),
-        overwrite=bool(values.get("overwrite")),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        create_execplan_scaffold,
+        values,
+        keywords=(
+            ("plan_id", "id", "str", ""),
+            ("title", "title", "str", ""),
+            ("source", "source", "str", ""),
+            ("target", "target", "raw", None),
+            ("activate", "activate", "bool", None),
+            ("queue", "queue", "bool", None),
+            ("switch_active", "switch_active", "bool", None),
+            ("prep_only", "prep_only", "bool", None),
+            ("overwrite", "overwrite", "bool", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_intake_artifact_operation(values: dict, _arguments: dict, _context):
-    return intake_planning_artifact(
-        artifact=str(values.get("artifact") or ""),
-        target=values.get("target"),
-        route=str(values.get("route") or "auto"),
-        artifact_id=str(values.get("id") or ""),
-        title=str(values.get("title") or ""),
-        activate=bool(values.get("activate")),
-        queue=bool(values.get("queue")),
-        switch_active=bool(values.get("switch_active")),
-        remove_source=bool(values.get("remove_source")),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        intake_planning_artifact,
+        values,
+        keywords=(
+            ("artifact", "artifact", "str", ""),
+            ("target", "target", "raw", None),
+            ("route", "route", "str", "auto"),
+            ("artifact_id", "id", "str", ""),
+            ("title", "title", "str", ""),
+            ("activate", "activate", "bool", None),
+            ("queue", "queue", "bool", None),
+            ("switch_active", "switch_active", "bool", None),
+            ("remove_source", "remove_source", "bool", None),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_promote_to_plan_operation(values: dict, _arguments: dict, _context):
-    return promote_todo_item_to_execplan(
-        str(values.get("item_id") or ""),
-        target=values.get("target"),
-        plan_slug=values.get("plan_slug"),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        promote_todo_item_to_execplan,
+        values,
+        positional=(("item_id", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("plan_slug", "plan_slug", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_lane_create_operation(values: dict, _arguments: dict, _context):
-    return create_lane_record(
-        lane_id=str(values.get("id") or ""),
-        title=str(values.get("title") or ""),
-        target=values.get("target"),
-        parent_decomposition=str(values.get("parent_decomposition") or ""),
-        outcome=str(values.get("outcome") or ""),
-        purpose=str(values.get("purpose") or ""),
-        proof_strategy=str(values.get("proof_strategy") or ""),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        create_lane_record,
+        values,
+        keywords=(
+            ("lane_id", "id", "str", ""),
+            ("title", "title", "str", ""),
+            ("target", "target", "raw", None),
+            ("parent_decomposition", "parent_decomposition", "str", ""),
+            ("outcome", "outcome", "str", ""),
+            ("purpose", "purpose", "str", ""),
+            ("proof_strategy", "proof_strategy", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_lane_promote_operation(values: dict, _arguments: dict, _context):
-    return promote_decomposition_lane_to_lane_record(
-        str(values.get("lane") or ""),
-        target=values.get("target"),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        promote_decomposition_lane_to_lane_record,
+        values,
+        positional=(("lane", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_lane_activate_operation(values: dict, _arguments: dict, _context):
-    return activate_lane_record(
-        str(values.get("lane") or ""),
-        target=values.get("target"),
-        current_slice=str(values.get("current_slice") or ""),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        activate_lane_record,
+        values,
+        positional=(("lane", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("current_slice", "current_slice", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_lane_close_operation(values: dict, _arguments: dict, _context):
-    return close_lane_record(
-        str(values.get("lane") or ""),
-        target=values.get("target"),
-        proof=str(values.get("proof") or ""),
-        residual_work=str(values.get("residual_work") or ""),
-        parent_contribution=str(values.get("parent_contribution") or ""),
-        parent_close_permission=str(values.get("parent_close_permission") or "may-advance-parent"),
-        next_owner=str(values.get("next_owner") or ""),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        close_lane_record,
+        values,
+        positional=(("lane", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("proof", "proof", "str", ""),
+            ("residual_work", "residual_work", "str", ""),
+            ("parent_contribution", "parent_contribution", "str", ""),
+            ("parent_close_permission", "parent_close_permission", "str", "may-advance-parent"),
+            ("next_owner", "next_owner", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_lane_archive_operation(values: dict, _arguments: dict, _context):
-    return archive_lane_record(
-        str(values.get("lane") or ""),
-        target=values.get("target"),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        archive_lane_record,
+        values,
+        positional=(("lane", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 
 def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _context):
     if values.get("parent_lane_closeout"):
-        return archive_parent_lane_closeout(
-            str(values.get("parent_lane_closeout")),
-            target=values.get("target"),
-            dry_run=bool(values.get("dry_run")),
-            expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-            intent_satisfied=values.get("intent_satisfied"),
-            intent_evidence=values.get("intent_evidence"),
-            closure_reason=values.get("closure_reason"),
-            closure_evidence=values.get("closure_evidence"),
-            reopen_trigger=values.get("reopen_trigger"),
-            discard_summary=values.get("discard_summary"),
-            continuation_summary=values.get("continuation_summary"),
+        return _call_planning_operation(
+            archive_parent_lane_closeout,
+            values,
+            positional=(("parent_lane_closeout", "str", ""),),
+            keywords=(
+                ("target", "target", "raw", None),
+                ("dry_run", "dry_run", "bool", None),
+                ("expected_planning_revision", "expect_planning_revision", "str", ""),
+                ("intent_satisfied", "intent_satisfied", "raw", None),
+                ("intent_evidence", "intent_evidence", "raw", None),
+                ("closure_reason", "closure_reason", "raw", None),
+                ("closure_evidence", "closure_evidence", "raw", None),
+                ("reopen_trigger", "reopen_trigger", "raw", None),
+                ("discard_summary", "discard_summary", "raw", None),
+                ("continuation_summary", "continuation_summary", "raw", None),
+            ),
         )
-    return archive_execplan(
-        str(values.get("plan") or ""),
-        target=values.get("target"),
-        dry_run=bool(values.get("dry_run")),
-        apply_cleanup=bool(values.get("apply_cleanup")),
-        prepare_closeout=bool(values.get("prepare_closeout")),
-        closure_decision=values.get("closure_decision"),
-        intent_satisfied=values.get("intent_satisfied"),
-        unsolved_intent=values.get("unsolved_intent"),
-        intent_evidence=values.get("intent_evidence"),
-        closure_reason=values.get("closure_reason"),
-        closure_evidence=values.get("closure_evidence"),
-        reopen_trigger=values.get("reopen_trigger"),
-        discard_summary=values.get("discard_summary"),
-        continuation_summary=values.get("continuation_summary"),
-        retain_archive=bool(values.get("retain_archive")),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+    return _call_planning_operation(
+        archive_execplan,
+        values,
+        positional=(("plan", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("dry_run", "dry_run", "bool", None),
+            ("apply_cleanup", "apply_cleanup", "bool", None),
+            ("prepare_closeout", "prepare_closeout", "bool", None),
+            ("closure_decision", "closure_decision", "raw", None),
+            ("intent_satisfied", "intent_satisfied", "raw", None),
+            ("unsolved_intent", "unsolved_intent", "raw", None),
+            ("intent_evidence", "intent_evidence", "raw", None),
+            ("closure_reason", "closure_reason", "raw", None),
+            ("closure_evidence", "closure_evidence", "raw", None),
+            ("reopen_trigger", "reopen_trigger", "raw", None),
+            ("discard_summary", "discard_summary", "raw", None),
+            ("continuation_summary", "continuation_summary", "raw", None),
+            ("retain_archive", "retain_archive", "bool", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+        ),
     )
 
 
 def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
-    return closeout_execplan(
-        str(values.get("plan") or ""),
-        target=values.get("target"),
-        dry_run=bool(values.get("dry_run")),
-        claim_level=str(values.get("claim_level") or "slice"),
-        intent_status=str(values.get("intent_status") or "satisfied"),
-        residue=str(values.get("residue") or "none"),
-        proof_from=str(values.get("proof_from") or "last"),
-        proof_file=values.get("proof_file"),
-        residue_owner=values.get("residue_owner"),
-        retain_archive=not bool(values.get("discard_archive")),
-        what_happened=values.get("what_happened"),
-        scope_touched=values.get("scope_touched"),
-        changed_surfaces=values.get("changed_surfaces"),
-        review_summary=values.get("review_summary"),
-        outcome_summary=values.get("outcome_summary"),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
+    return _call_planning_operation(
+        closeout_execplan,
+        values,
+        positional=(("plan", "str", ""),),
+        keywords=(
+            ("target", "target", "raw", None),
+            ("dry_run", "dry_run", "bool", None),
+            ("claim_level", "claim_level", "str", "slice"),
+            ("intent_status", "intent_status", "str", "satisfied"),
+            ("residue", "residue", "str", "none"),
+            ("proof_from", "proof_from", "str", "last"),
+            ("proof_file", "proof_file", "raw", None),
+            ("residue_owner", "residue_owner", "raw", None),
+            ("retain_archive", "discard_archive", "not_bool", None),
+            ("what_happened", "what_happened", "raw", None),
+            ("scope_touched", "scope_touched", "raw", None),
+            ("changed_surfaces", "changed_surfaces", "raw", None),
+            ("review_summary", "review_summary", "raw", None),
+            ("outcome_summary", "outcome_summary", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+        ),
     )
 
 
 def apply_planning_delegation_decision_operation(values: dict, _arguments: dict, _context):
-    return record_delegation_decision(
-        target=values.get("target"),
-        plan=values.get("plan"),
-        route=str(values.get("route") or ""),
-        skipped_reason=str(values.get("skipped_reason") or ""),
-        expected_savings=str(values.get("expected_savings") or ""),
-        actual_friction=str(values.get("actual_friction") or ""),
-        proof_result=str(values.get("proof_result") or ""),
-        quality_concern=str(values.get("quality_concern") or ""),
-        decomposition_adjustment=str(values.get("decomposition_adjustment") or ""),
-        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
-        dry_run=bool(values.get("dry_run")),
+    return _call_planning_operation(
+        record_delegation_decision,
+        values,
+        keywords=(
+            ("target", "target", "raw", None),
+            ("plan", "plan", "raw", None),
+            ("route", "route", "str", ""),
+            ("skipped_reason", "skipped_reason", "str", ""),
+            ("expected_savings", "expected_savings", "str", ""),
+            ("actual_friction", "actual_friction", "str", ""),
+            ("proof_result", "proof_result", "str", ""),
+            ("quality_concern", "quality_concern", "str", ""),
+            ("decomposition_adjustment", "decomposition_adjustment", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
     )
 
 

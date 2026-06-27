@@ -779,7 +779,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning lifecycle operations own managed-surface safety and payload mutation policy; generated runtime must keep these package primitives explicit."
     },
     {
       "operation_id": "planning.archive-plan.lifecycle",
@@ -799,8 +799,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning state mutation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.archive-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#73 for declared conditional dispatch and command-generation#72 for branch call mapping, without moving archive or parent-lane closeout mutation semantics out of Planning.",
+      "generic_behavior_audit": "#1657 group: conditional dispatch plus branch value mapping. Generated operation IR owns dataflow; Planning runtime_projection now declares branch call mappings locally, while branch selection and semantic mutation functions remain package-owned pending command-generation#73 and command-generation#72."
     },
     {
       "operation_id": "planning.closeout.lifecycle",
@@ -820,8 +820,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning closeout policy, archive validation, residue routing, and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain closeout primitive with schema-backed codegen-owned primitives once closeout policy is deterministic file/data/template/schema/output work rather than Planning lifecycle judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.closeout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.close-item.lifecycle",
@@ -842,7 +842,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain lifecycle mutation primitives still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "planning.create-review.lifecycle",
@@ -863,7 +863,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain lifecycle mutation primitives still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "planning.delegation-decision.lifecycle",
@@ -883,8 +883,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning state mutation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.delegation-decision.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.doctor.report",
@@ -905,7 +905,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "planning.front-door",
@@ -943,7 +943,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning handoff payload assembly still owns package-specific planning judgment.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "planning.init.lifecycle",
@@ -964,7 +964,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning lifecycle operations own managed-surface safety and payload mutation policy; generated runtime must keep these package primitives explicit."
     },
     {
       "operation_id": "planning.install.lifecycle",
@@ -985,7 +985,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning lifecycle operations own managed-surface safety and payload mutation policy; generated runtime must keep these package primitives explicit."
     },
     {
       "operation_id": "planning.list-files.report",
@@ -1023,8 +1023,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning state mutation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.new-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.intake-artifact.lifecycle",
@@ -1044,8 +1044,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning artifact routing, state mutation policy, and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.intake-artifact.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.promote-to-plan.lifecycle",
@@ -1065,8 +1065,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning state mutation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.promote-to-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.lane-create.lifecycle",
@@ -1086,8 +1086,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane state mutation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain primitive with schema-backed codegen-owned primitives only once lane file/state mutation is represented as deterministic file/data/template/schema/output work rather than package policy.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.lane-create.apply) remain explicit package-boundary calls."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.lane-promote.lifecycle",
@@ -1107,8 +1107,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane promotion policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain primitive with schema-backed codegen-owned primitives only once lane promotion is represented as deterministic file/data/template/schema/output work rather than package policy.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.lane-promote.apply) remain explicit package-boundary calls."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.lane-activate.lifecycle",
@@ -1128,8 +1128,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane activation policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain primitive with schema-backed codegen-owned primitives only once lane activation is represented as deterministic file/data/template/schema/output work rather than package policy.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.lane-activate.apply) remain explicit package-boundary calls."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.lane-close.lifecycle",
@@ -1149,8 +1149,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane closeout policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain primitive with schema-backed codegen-owned primitives only once lane closeout is represented as deterministic file/data/template/schema/output work rather than package policy.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.lane-close.apply) remain explicit package-boundary calls."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.lane-archive.lifecycle",
@@ -1170,8 +1170,8 @@
       ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane archive policy and provenance updates remain package-specific runtime behavior.",
-      "what_would_make_portable_later": "Replace the package-domain primitive with schema-backed codegen-owned primitives only once lane archive is represented as deterministic file/data/template/schema/output work rather than package policy.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.lane-archive.apply) remain explicit package-boundary calls."
+      "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
+      "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
       "operation_id": "planning.prompt.render",
@@ -1192,7 +1192,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning prompt wording and upgrade-source selection remain package-specific guidance.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: view/output formatting. Generated operation IR owns transport/dataflow, but Planning owns report, summary, prompt, and compatibility view policy; this is retained as package runtime behavior."
     },
     {
       "operation_id": "planning.reconcile.report",
@@ -1211,7 +1211,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning reconcile inspects live planning state and safe-prune recovery policy, so the runtime boundary is retained."
     },
     {
       "operation_id": "planning.report.report",
@@ -1232,7 +1232,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow and tiny report text are generated; package-domain primitive steps still own planning report payload source and verbose compatibility output.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: view/output formatting. Generated operation IR owns transport/dataflow, but Planning owns report, summary, prompt, and compatibility view policy; this is retained as package runtime behavior."
     },
     {
       "operation_id": "planning.status.report",
@@ -1253,7 +1253,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "planning.summary.report",
@@ -1271,7 +1271,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      "generic_behavior_audit": "#1657 group: view/output formatting. Generated operation IR owns transport/dataflow, but Planning owns report, summary, prompt, and compatibility view policy; this is retained as package runtime behavior."
     },
     {
       "operation_id": "planning.uninstall.lifecycle",
@@ -1292,7 +1292,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning lifecycle operations own managed-surface safety and payload mutation policy; generated runtime must keep these package primitives explicit."
     },
     {
       "operation_id": "planning.upgrade.lifecycle",
@@ -1313,7 +1313,7 @@
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: mutation transaction/safety owner. Planning lifecycle operations own managed-surface safety and payload mutation policy; generated runtime must keep these package primitives explicit."
     },
     {
       "operation_id": "planning.verify-payload.report",
@@ -1334,7 +1334,7 @@
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning payload verification still owns package-specific payload judgment.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "#1657 group: irreducible planning judgment. Generated operation IR owns transport/dataflow, but Planning owns the package-specific judgment for this operation."
     },
     {
       "operation_id": "preflight.report",
