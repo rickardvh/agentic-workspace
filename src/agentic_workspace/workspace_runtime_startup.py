@@ -936,7 +936,7 @@ def _start_payload(
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
         proof_payload = _proof_selection_for_changed_paths(
-            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False, task_text=task_text
         )
         proof_command = str(
             _command_with_cli_invoke(
@@ -965,7 +965,7 @@ def _start_payload(
         ]
     elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
-            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False, task_text=task_text
         )
         payload["proof"] = _compact_start_proof_payload(proof_payload)
         repair_profile = _compact_repair_plan_profile(

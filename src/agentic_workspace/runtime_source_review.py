@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+import subprocess
+from pathlib import Path
 from typing import Any
 
 from agentic_workspace.contract_tooling import python_runtime_projection_inventory_manifest
@@ -46,6 +49,18 @@ MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS = [
         "represented_regression": (
             "#1802-style startup path passed while external-intent refresh used the unsynced primitives runtime path"
         ),
+        "region_terms": [
+            "payload",
+            "projection",
+            "context",
+            "packet",
+            "review",
+            "route",
+            "candidate",
+            "checkpoint",
+            "external_intent",
+            "planning_candidate",
+        ],
     }
 ]
 
@@ -59,6 +74,44 @@ def _dedupe(values: list[str]) -> list[str]:
         seen.add(value)
         deduped.append(value)
     return deduped
+
+
+def _normalized_region_terms(pair: dict[str, Any]) -> list[str]:
+    return [str(term).strip().lower().replace("-", "_") for term in _list_payload(pair.get("region_terms")) if str(term).strip()]
+
+
+def _changed_python_symbols_from_git_diff(*, target_root: Path | None, path: str) -> list[str]:
+    if target_root is None:
+        return []
+    try:
+        command = ["git", "-C", str(target_root), "diff", "--unified=0", "--", path]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+    symbols: list[str] = []
+    for line in result.stdout.splitlines():
+        candidate = ""
+        if line.startswith("@@"):
+            candidate = line.rsplit("@@", 1)[-1]
+        elif line.startswith("+") and not line.startswith("+++"):
+            candidate = line[1:]
+        match = re.search(r"\b(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)", candidate)
+        if match:
+            symbols.append(match.group(1))
+    return _dedupe(symbols)
+
+
+def _runtime_mirror_region_signal(
+    *, pair: dict[str, Any], touched_paths: list[str], target_root: Path | None, task_text: str | None
+) -> tuple[bool, list[str]]:
+    terms = _normalized_region_terms(pair)
+    symbols = [symbol for path in touched_paths for symbol in _changed_python_symbols_from_git_diff(target_root=target_root, path=path)]
+    matched = [f"symbol:{symbol}" for symbol in symbols if any(term in symbol.lower() for term in terms)]
+    task_haystack = str(task_text or "").lower().replace("-", "_")
+    matched.extend(f"task_term:{term}" for term in terms if term in task_haystack)
+    return bool(matched), _dedupe(matched)
 
 
 def _list_payload(value: Any) -> list[Any]:
@@ -169,6 +222,7 @@ def tiny_runtime_source_edit_review_payload(value: dict[str, Any]) -> dict[str, 
                     "paired_paths": record.get("paired_paths", []),
                     "paired_file_changed": record.get("paired_file_changed", False),
                     "likely_paired_file": record.get("likely_paired_file", ""),
+                    "trigger_evidence": record.get("trigger_evidence", []),
                     "smallest_parity_proof_command": record.get("smallest_parity_proof_command", ""),
                     "maintainer_check_command": record.get("maintainer_check_command", ""),
                     "expected_action": record.get("expected_action", ""),
@@ -185,13 +239,20 @@ def tiny_runtime_source_edit_review_payload(value: dict[str, Any]) -> dict[str, 
     return payload
 
 
-def runtime_mirror_drift_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+def runtime_mirror_drift_review_for_changed_paths(
+    changed_paths: list[str], *, target_root: Path | None = None, task_text: str | None = None
+) -> dict[str, Any]:
     changed_set = set(changed_paths)
     records: list[dict[str, Any]] = []
     for pair in MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS:
         pair_paths = [str(path) for path in _list_payload(pair.get("paths")) if str(path).strip()]
         touched = [path for path in pair_paths if path in changed_set]
         if not touched:
+            continue
+        has_region_signal, trigger_evidence = _runtime_mirror_region_signal(
+            pair=pair, touched_paths=touched, target_root=target_root, task_text=task_text
+        )
+        if not has_region_signal:
             continue
         paired_paths = [path for path in pair_paths if path not in set(touched)]
         paired_file_changed = not paired_paths
@@ -203,6 +264,7 @@ def runtime_mirror_drift_review_for_changed_paths(changed_paths: list[str]) -> d
                 "paired_paths": paired_paths,
                 "paired_file_changed": paired_file_changed,
                 "likely_paired_file": paired_paths[0] if len(paired_paths) == 1 else "",
+                "trigger_evidence": trigger_evidence,
                 "why": str(pair.get("why", "")),
                 "smallest_parity_proof_command": str(pair.get("smallest_parity_proof_command", "")),
                 "maintainer_check_command": str(pair.get("maintainer_check_command", "")),
@@ -268,8 +330,10 @@ def runtime_source_inventory_entries_for_path(changed_path: str) -> list[dict[st
     return sorted(matched, key=lambda item: (str(item["source_module"]), str(item["source_symbol"])))
 
 
-def runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
-    mirror_drift_review = runtime_mirror_drift_review_for_changed_paths(changed_paths)
+def runtime_source_edit_review_for_changed_paths(
+    changed_paths: list[str], *, target_root: Path | None = None, task_text: str | None = None
+) -> dict[str, Any]:
+    mirror_drift_review = runtime_mirror_drift_review_for_changed_paths(changed_paths, target_root=target_root, task_text=task_text)
     mirror_paths = [
         str(path)
         for record in _list_payload(mirror_drift_review.get("records"))
