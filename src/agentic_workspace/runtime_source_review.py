@@ -26,6 +26,40 @@ GENERATED_CLI_RUNTIME_SOURCE_MODULE_PATHS = {
     "repo_verification_bootstrap.runtime_primitives": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 }
 
+MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS = [
+    {
+        "id": "workspace-runtime-core-primitives-payload-helpers",
+        "paths": [
+            "src/agentic_workspace/workspace_runtime_core.py",
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+        ],
+        "why": (
+            "workspace runtime payload/helper behavior is currently mirrored between the hand-owned core surface "
+            "and the generated-CLI primitive runtime surface"
+        ),
+        "smallest_parity_proof_command": (
+            'uv run pytest tests/test_workspace_summary_cli.py -q -k "external_intent_refresh_applies_stale_candidate_reconciliation"'
+        ),
+        "maintainer_check_command": (
+            "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
+        ),
+        "represented_regression": (
+            "#1802-style startup path passed while external-intent refresh used the unsynced primitives runtime path"
+        ),
+    }
+]
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
 
 def _list_payload(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
@@ -121,7 +155,81 @@ def tiny_runtime_source_edit_review_payload(value: dict[str, Any]) -> dict[str, 
     }
     if review_items:
         payload["review_items"] = review_items
+    mirror_review = value.get("mirror_drift_review")
+    if isinstance(mirror_review, dict) and mirror_review.get("status") != "not-applicable":
+        records = []
+        for record in _list_payload(mirror_review.get("records"))[:3]:
+            if not isinstance(record, dict):
+                continue
+            records.append(
+                {
+                    "id": record.get("id", ""),
+                    "status": record.get("status", "unknown"),
+                    "changed_paths": record.get("changed_paths", []),
+                    "paired_paths": record.get("paired_paths", []),
+                    "paired_file_changed": record.get("paired_file_changed", False),
+                    "likely_paired_file": record.get("likely_paired_file", ""),
+                    "smallest_parity_proof_command": record.get("smallest_parity_proof_command", ""),
+                    "maintainer_check_command": record.get("maintainer_check_command", ""),
+                    "expected_action": record.get("expected_action", ""),
+                    "represented_regression": record.get("represented_regression", ""),
+                }
+            )
+        payload["mirror_drift_review"] = {
+            "kind": mirror_review.get("kind", "agentic-workspace/runtime-mirror-drift-review/v1"),
+            "status": mirror_review.get("status", "unknown"),
+            "record_count": mirror_review.get("record_count", len(records)),
+            "records": records,
+            "rule": mirror_review.get("rule", ""),
+        }
     return payload
+
+
+def runtime_mirror_drift_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    changed_set = set(changed_paths)
+    records: list[dict[str, Any]] = []
+    for pair in MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS:
+        pair_paths = [str(path) for path in _list_payload(pair.get("paths")) if str(path).strip()]
+        touched = [path for path in pair_paths if path in changed_set]
+        if not touched:
+            continue
+        paired_paths = [path for path in pair_paths if path not in set(touched)]
+        paired_file_changed = not paired_paths
+        records.append(
+            {
+                "id": str(pair.get("id", "")),
+                "status": "paired-change-requires-parity-proof" if paired_file_changed else "warning-asymmetric-mirror-change",
+                "changed_paths": touched,
+                "paired_paths": paired_paths,
+                "paired_file_changed": paired_file_changed,
+                "likely_paired_file": paired_paths[0] if len(paired_paths) == 1 else "",
+                "why": str(pair.get("why", "")),
+                "smallest_parity_proof_command": str(pair.get("smallest_parity_proof_command", "")),
+                "maintainer_check_command": str(pair.get("maintainer_check_command", "")),
+                "expected_action": (
+                    "mirror the payload/helper change, prove it is intentionally one-sided, "
+                    "or run the named parity proof before claiming completion"
+                ),
+                "represented_regression": str(pair.get("represented_regression", "")),
+            }
+        )
+    if not records:
+        return {"kind": "agentic-workspace/runtime-mirror-drift-review/v1", "status": "not-applicable", "records": []}
+    status = (
+        "warning"
+        if any(record["status"] == "warning-asymmetric-mirror-change" for record in records)
+        else "paired-change-requires-parity-proof"
+    )
+    return {
+        "kind": "agentic-workspace/runtime-mirror-drift-review/v1",
+        "status": status,
+        "record_count": len(records),
+        "records": records,
+        "rule": (
+            "Known mirrored runtime payload/helper surfaces must be reviewed for pair drift before completion claims; "
+            "this is an early signal, not a claim that all file edits are mirrored behavior."
+        ),
+    }
 
 
 def runtime_source_inventory_entries_for_path(changed_path: str) -> list[dict[str, Any]]:
@@ -161,8 +269,17 @@ def runtime_source_inventory_entries_for_path(changed_path: str) -> list[dict[st
 
 
 def runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    mirror_drift_review = runtime_mirror_drift_review_for_changed_paths(changed_paths)
+    mirror_paths = [
+        str(path)
+        for record in _list_payload(mirror_drift_review.get("records"))
+        if isinstance(record, dict)
+        for path in _list_payload(record.get("changed_paths"))
+        if str(path).strip()
+    ]
     runtime_paths = [path for path in changed_paths if path in GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS]
-    if not runtime_paths:
+    review_changed_paths = _dedupe([*runtime_paths, *mirror_paths])
+    if not review_changed_paths:
         return {"kind": "agentic-workspace/runtime-source-edit-review/v1", "status": "not-applicable", "changed_paths": []}
     inventory_by_path = {path: runtime_source_inventory_entries_for_path(path) for path in runtime_paths}
     review_items = [
@@ -182,14 +299,20 @@ def runtime_source_edit_review_for_changed_paths(changed_paths: list[str]) -> di
         for path in runtime_paths
     ]
     missing_inventory = [item["changed_path"] for item in review_items if item["status"] == "inventory-missing"]
-    status = "blocked-missing-inventory" if missing_inventory else "classification-required"
+    if missing_inventory:
+        status = "blocked-missing-inventory"
+    elif mirror_drift_review.get("status") == "warning":
+        status = "mirror-drift-warning"
+    else:
+        status = "classification-required"
     return {
         "kind": "agentic-workspace/runtime-source-edit-review/v1",
         "status": status,
-        "changed_paths": runtime_paths,
+        "changed_paths": review_changed_paths,
         "review_items": review_items,
         "inventory_source": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
         "missing_inventory_paths": missing_inventory,
+        "mirror_drift_review": mirror_drift_review,
         "accepted_direct_edit_reasons": [
             "existing-primitive-bugfix",
             "new-primitive-implementation",

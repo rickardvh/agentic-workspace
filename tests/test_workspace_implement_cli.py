@@ -2339,7 +2339,7 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
     payload = json.loads(capsys.readouterr().out)
     review = payload["proof"]["runtime_source_edit_review"]
     assert review["kind"] == "agentic-workspace/runtime-source-edit-review/v1"
-    assert review["status"] == "classification-required"
+    assert review["status"] == "mirror-drift-warning"
     assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
     assert review["inventory_source"] == "src/agentic_workspace/contracts/python_runtime_projection_inventory.json"
     assert review["missing_inventory_paths"] == []
@@ -2354,7 +2354,121 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
     assert review["accepted_direct_edit_reasons"] == ["existing-primitive-bugfix", "new-primitive-implementation"]
     assert "package-domain boundary" in review["rejected_vague_reasons"]
     assert "inventory-backed symbol/primitive" in review["completion_claim_rule"]
+    mirror_review = review["mirror_drift_review"]
+    assert mirror_review["status"] == "warning"
+    mirror_record = mirror_review["records"][0]
+    assert mirror_record["status"] == "warning-asymmetric-mirror-change"
+    assert mirror_record["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert mirror_record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_core.py"
+    assert mirror_record["paired_file_changed"] is False
+    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in mirror_record["smallest_parity_proof_command"]
+    assert "--aw-primitive-ownership" in mirror_record["maintainer_check_command"]
+    assert "#1802-style" in mirror_record["represented_regression"]
     assert "proof.runtime_source_edit_review" in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_surfaces_runtime_mirror_warning_for_core_only_payload_helper_change(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Add a runtime payload helper.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["status"] == "mirror-drift-warning"
+    assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_core.py"]
+    assert "review_items" not in review
+    mirror_review = review["mirror_drift_review"]
+    assert mirror_review["kind"] == "agentic-workspace/runtime-mirror-drift-review/v1"
+    assert mirror_review["status"] == "warning"
+    record = mirror_review["records"][0]
+    assert record["id"] == "workspace-runtime-core-primitives-payload-helpers"
+    assert record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_primitives.py"
+    assert record["paired_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert "mirror the payload/helper change" in record["expected_action"]
+    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in record["smallest_parity_proof_command"]
+
+
+def test_implement_runtime_mirror_review_accepts_paired_core_and_primitives_changes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Mirror a runtime payload helper across core and primitives.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["proof"]["runtime_source_edit_review"]
+    assert review["status"] == "classification-required"
+    assert review["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+    ]
+    record = review["mirror_drift_review"]["records"][0]
+    assert record["status"] == "paired-change-requires-parity-proof"
+    assert record["paired_file_changed"] is True
+    assert record["likely_paired_file"] == ""
+    assert "--aw-primitive-ownership" in record["maintainer_check_command"]
+
+
+def test_implement_runtime_mirror_review_stays_off_for_unrelated_changes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime_source_review.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime_source_review.py",
+                "--task",
+                "Refactor runtime source review internals.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "runtime_source_edit_review" not in payload["proof"]
+    assert "proof.runtime_source_edit_review" not in payload["drill_down"]["available_selectors"]
 
 
 def test_implement_keeps_active_intent_packets_selector_only(tmp_path: Path, capsys) -> None:
