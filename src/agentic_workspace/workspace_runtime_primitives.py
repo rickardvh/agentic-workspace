@@ -131,6 +131,7 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
+from agentic_workspace.runtime_symbol_working_set import tiny_runtime_symbol_working_set_payload
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -20280,6 +20281,9 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
             "classifications": cli_authority_review.get("classifications", []),
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         }
+    runtime_symbol_working_set = proof.get("runtime_symbol_working_set", {})
+    if isinstance(runtime_symbol_working_set, dict) and runtime_symbol_working_set.get("status") == "present":
+        compact["runtime_symbol_working_set"] = tiny_runtime_symbol_working_set_payload(runtime_symbol_working_set)
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"

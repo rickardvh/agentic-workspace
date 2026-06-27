@@ -77,6 +77,17 @@ For mixed-agent work:
 - prefer resumability notes plus minimal refs over broad rereads
 - reload only the live bundle needed for the next bounded step
 
+## External Shaping
+
+Long shaping input belongs in chat-external artifacts when it needs to outlive one bounded turn.
+
+- Put large issue analysis, design notes, and review residue in GitHub comments, checked-in docs, or review artifacts.
+- Paste only short pointers or decision summaries into chat.
+- Start a fresh session for each new lane or major PR stack when prior chat context would become a long-term cost.
+- Use a lane/session digest as first-read context instead of replaying long prior messages.
+
+See `docs/maintainer/external-shaping-and-fresh-sessions.md` for the operator-facing guidance.
+
 ## Interaction-Cost Rule
 
 Optimize for total costly interactions per successful tranche, not for one narrow proxy.

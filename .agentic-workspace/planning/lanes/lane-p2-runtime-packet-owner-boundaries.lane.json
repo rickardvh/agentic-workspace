@@ -1,0 +1,103 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-p2-runtime-packet-owner-boundaries",
+  "title": "P2 runtime packet owner-boundary extraction",
+  "status": "ready",
+  "parent_decomposition_ref": "GitHub P2 roadmap candidate batch 2026-06-27",
+  "lane_outcome": "Startup, implement, Planning, proof, verification, and closeout packet construction live behind owner-scoped runtime modules without payload contract drift.",
+  "purpose_for_parent": "Shrink the workspace runtime monolith by owner boundary while preserving generated/runtime caller compatibility.",
+  "subsystems": [
+    "workspace-runtime",
+    "planning",
+    "verification"
+  ],
+  "technical_strategy": "Work issue-by-issue in stacked PRs: inventory retained primitives symbols, move owner-scoped builders into the existing startup, implement, planning, and proof modules, keep compatibility aliases, and update inventories/tests after each extraction.",
+  "slice_sequence": [
+    {
+      "id": "startup-packets",
+      "title": "Extract startup runtime packets",
+      "status": "ready",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Satisfy #1770 without changing start payload contracts."
+    },
+    {
+      "id": "implement-packets",
+      "title": "Extract implement runtime packets",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "startup-packets"
+      ],
+      "purpose_for_lane": "Satisfy #1771 without changing implement selector or tiny payload contracts."
+    },
+    {
+      "id": "planning-packets",
+      "title": "Extract Planning runtime packets",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "implement-packets"
+      ],
+      "purpose_for_lane": "Satisfy #1772 while preserving Planning package semantics and live planning-state inspection."
+    },
+    {
+      "id": "proof-closeout-packets",
+      "title": "Extract proof and closeout runtime packets",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "planning-packets"
+      ],
+      "purpose_for_lane": "Satisfy #1773 without weakening proof or closeout blocking."
+    }
+  ],
+  "current_slice": "startup-packets",
+  "acceptance_boundary": "The lane is complete when #1770 through #1773 each have owner-scoped runtime modules, stable compatibility imports, updated inventories, and focused tests proving unchanged emitted packet contracts.",
+  "proof_strategy": "Run focused start/implement/planning/proof tests for each slice, generated command package checks when inventories change, and make test-workspace for cross-runtime extraction.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "The lane does not replace the runtime architecture; it only moves packet ownership out of primitives by declared owner boundary.",
+  "lane_to_epic_contribution": "Turns the P2 #1764 decomposition issues into ordered stack work with explicit owner boundaries.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "Ready after the workflow-routing base lane.",
+    "residual_work": "Implement #1770, #1771, #1772, and #1773 in order.",
+    "next_owner": "current agent"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1770",
+      "label": "Extract startup runtime packets by owner boundary",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1770"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1771",
+      "label": "Extract implement runtime packets by owner boundary",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1771"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1772",
+      "label": "Extract Planning runtime packets by owner boundary",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1772"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1773",
+      "label": "Extract proof and closeout runtime packets by owner boundary",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1773"
+    }
+  ],
+  "notes": "Second lane in the P2 stack."
+}

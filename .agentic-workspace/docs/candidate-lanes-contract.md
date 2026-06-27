@@ -34,6 +34,8 @@ When a user asks to implement several ordered lanes, keep the lane boundary inta
 
 Do not create one combined execplan for unrelated lanes. A lane is the broader intent owner; execplans are bounded implementation slices under one lane.
 
+For a new lane or major stacked PR group, prefer a fresh session seeded by the lane refs and a compact digest. Keep long shaping in issue comments, docs, or review artifacts; chat should carry current decisions, not durable lane storage.
+
 ## Shape
 
 Keep candidate lanes under `roadmap.lanes` in `.agentic-workspace/planning/state.toml`.

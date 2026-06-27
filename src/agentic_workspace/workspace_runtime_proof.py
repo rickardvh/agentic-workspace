@@ -15,6 +15,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
+from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
@@ -1434,6 +1435,9 @@ def _proof_selection_for_changed_paths(
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
+    runtime_symbol_working_set = runtime_symbol_working_set_for_changed_paths(changed_paths, target_root=target_root)
+    if runtime_symbol_working_set.get("status") == "present":
+        proof_selection["runtime_symbol_working_set"] = runtime_symbol_working_set
     runtime_source_review = runtime_source_edit_review_for_changed_paths(changed_paths, target_root=target_root, task_text=task_text)
     if runtime_source_review["changed_paths"]:
         proof_selection["runtime_source_edit_review"] = runtime_source_review

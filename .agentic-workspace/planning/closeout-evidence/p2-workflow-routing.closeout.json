@@ -1,0 +1,114 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "P2 workflow routing and fresh-session guidance",
+  "plan_id": "p2-workflow-routing",
+  "created_at": "2026-06-27T14:32:56.134326+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/p2-workflow-routing.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/p2-workflow-routing.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails."
+  },
+  "active_milestone": {
+    "id": "p2-workflow-routing",
+    "status": "completed",
+    "scope": "Implement the #1697/#1698 workflow-routing lane and grouped P2 lane records.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1697/#1698 and group remaining P2 issues into lanes.",
+    "hard constraints": "Do not broaden into runtime packet extraction or decomposition audit implementation.",
+    "agent may decide locally": "Compact packet shape, tests, docs wording, and lane record grouping.",
+    "escalate when": "A correct fix requires changing generated command behavior or runtime owner-boundary architecture."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the base P2 workflow-routing slice for #1697/#1698: runtime symbol working-set projection for large runtime files, compact proof payload routing, durable external shaping guidance, and grouped follow-up P2 lane records.",
+    "scope touched": "#1697/#1698 plus P2 lane grouping records for #1770-#1773 and #1656-#1658.",
+    "changed surfaces": "src/agentic_workspace/runtime_symbol_working_set.py; src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_implement_cli.py; docs/maintainer/external-shaping-and-fresh-sessions.md; .agentic-workspace/docs/context-budget-contract.md; .agentic-workspace/docs/candidate-lanes-contract.md; .agentic-workspace/planning/*",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Acceptance satisfied for the base P2 slice. Remaining P2 issue groups are recorded as ready lanes and intentionally deferred to stacked follow-up PRs.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; make maintainer-surfaces; git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "current diff retrofit",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Large-runtime edits now expose an AST/inventory-backed symbol working set and proof selector; operator guidance now routes long shaping into durable artifacts and fresh sessions; follow-up P2 lanes are grouped and ordered.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+          "owner": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Record operator guidance for external shaping and fresh-session lanes",
+          "owner": "github-issue",
+          "source": "#1698"
+        }
+      ]
+    }
+  }
+}

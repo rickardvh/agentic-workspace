@@ -1,0 +1,70 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-p2-workflow-routing",
+  "title": "P2 workflow routing and fresh-session guidance",
+  "status": "archived",
+  "parent_decomposition_ref": "GitHub P2 roadmap candidate batch 2026-06-27",
+  "lane_outcome": "Large runtime edits expose compact symbol-level working sets and operators have durable guidance for external shaping and fresh-session lane work.",
+  "purpose_for_parent": "Reduce P2 dogfooding friction before the broader runtime-boundary stack by making large-file changes cheaper to orient and long shaping cheaper to carry.",
+  "subsystems": [
+    "workspace-runtime",
+    "planning",
+    "docs"
+  ],
+  "technical_strategy": "Add an advisory proof/implement packet derived from git diff hunks, AST symbol spans, explicit proof hints, and runtime inventories; document the chat-external shaping pattern in maintainer and planning docs.",
+  "slice_sequence": [
+    {
+      "id": "symbol-routing-and-fresh-session-guidance",
+      "title": "Surface runtime symbol working sets and external shaping guidance",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Satisfy #1697 and #1698 as the base PR for the P2 stack.",
+      "proof": "implement/proof focused tests, docs lint, make test-workspace",
+      "residual_after_slice": "None expected for this lane; later lanes may add more symbol proof hints as runtime boundaries are extracted."
+    }
+  ],
+  "current_slice": "symbol-routing-and-fresh-session-guidance",
+  "acceptance_boundary": "The lane is complete when #1697 symbol working-set routing is visible in ordinary implement/proof output for large runtime files and #1698 guidance is in a durable repo-owned surface linked from lane/context-budget docs.",
+  "proof_strategy": "Run focused implement/proof tests for the symbol packet, docs lint through workspace lint, and workspace test proof before closeout.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "make test-workspace",
+      "make lint-workspace",
+      "make maintainer-surfaces",
+      "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+      "uv run pytest tests/test_workspace_cli.py -q",
+      ".agentic-workspace/planning/closeout-evidence/p2-workflow-routing.closeout.json"
+    ],
+    "known_gaps": []
+  },
+  "residual_lane_work": "No planned residual work after this slice unless review asks for additional symbol hint coverage.",
+  "lane_to_epic_contribution": "Provides the routing and context-cost foundation for the remaining P2 runtime-boundary lanes.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "closed",
+    "summary": "Base P2 workflow-routing slice completed and routed through closeout evidence.",
+    "residual_work": "No residual work for #1697/#1698; continue the P2 stack from the runtime packet owner-boundary lane.",
+    "next_owner": ".agentic-workspace/planning/lanes/lane-p2-runtime-packet-owner-boundaries.lane.json"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1697",
+      "label": "Route giant runtime edits by symbol-level working set",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1697"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1698",
+      "label": "Record operator guidance for external shaping and fresh-session lanes",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1698"
+    }
+  ],
+  "notes": "Base lane for the P2 stack."
+}
