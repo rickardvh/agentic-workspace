@@ -14,6 +14,7 @@ from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,
 )
+from agentic_workspace.runtime_symbol_working_set import tiny_runtime_symbol_working_set_payload
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _acceptance_reconciliation_prompt_payload,
@@ -1006,6 +1007,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     else []
                 ),
                 *(
+                    [f"runtime_symbol_working_set={payload.get('proof', {}).get('runtime_symbol_working_set', {}).get('file_count')}"]
+                    if isinstance(payload.get("proof"), dict)
+                    and isinstance(payload.get("proof", {}).get("runtime_symbol_working_set"), dict)
+                    and payload.get("proof", {}).get("runtime_symbol_working_set", {}).get("status") == "present"
+                    else []
+                ),
+                *(
                     [f"reuse_pressure={reuse_pressure.get('state')}"]
                     if isinstance(reuse_pressure, dict) and reuse_pressure.get("state") not in {None, "", "none_found"}
                     else []
@@ -1047,6 +1055,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("runtime_source_edit_review", {})
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("runtime_source_edit_review"), dict)
+            else {},
+            "runtime_symbol_working_set": tiny_runtime_symbol_working_set_payload(
+                payload.get("proof", {}).get("runtime_symbol_working_set", {})
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("runtime_symbol_working_set"), dict)
             else {},
             "proof_obligations": _tiny_proof_obligations_payload(
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
@@ -1254,6 +1267,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "change_impact",
                 "generated_surface_trust",
                 "proof.runtime_source_edit_review",
+                "proof.runtime_symbol_working_set",
                 "architecture_principles",
                 "assurance_requirements",
                 "verification",
@@ -1339,6 +1353,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     ):
         projected["proof"].pop("runtime_source_edit_review", None)
         remove_available_selector("proof.runtime_source_edit_review")
+    runtime_symbol_working_set = projected["proof"].get("runtime_symbol_working_set", {})
+    if not (
+        isinstance(runtime_symbol_working_set, dict)
+        and runtime_symbol_working_set.get("status") == "present"
+        and runtime_symbol_working_set.get("files")
+    ):
+        projected["proof"].pop("runtime_symbol_working_set", None)
+        remove_available_selector("proof.runtime_symbol_working_set")
     task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
     intent_proof = payload.get("proof", {}).get("intent_proof") if isinstance(payload.get("proof"), dict) else None
     acceptance_reconciliation = payload.get("acceptance_reconciliation", {})

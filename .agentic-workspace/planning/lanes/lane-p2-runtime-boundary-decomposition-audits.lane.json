@@ -1,0 +1,88 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "lane-p2-runtime-boundary-decomposition-audits",
+  "title": "P2 runtime boundary decomposition audits",
+  "status": "ready",
+  "parent_decomposition_ref": "GitHub P2 roadmap candidate batch 2026-06-27",
+  "lane_outcome": "Workspace lifecycle/provider, Planning, Memory, and Verification runtime boundaries have symbol-by-symbol disposition tables, safe decompositions applied, and retained semantic owners recorded.",
+  "purpose_for_parent": "Continue #1649 decomposition without hiding mutation, provider, Planning, Memory, or Verification judgment inside generic command-generation primitives.",
+  "subsystems": [
+    "workspace-runtime",
+    "planning",
+    "memory",
+    "verification",
+    "command-generation"
+  ],
+  "technical_strategy": "Treat #1656, #1657, and #1658 as audit-plus-safe-extraction slices. First record disposition tables by symbol group and semantic owner, then only implement high-confidence decompositions with existing CG support; file or reference narrower CG follow-ups for unresolved control-operation shapes.",
+  "slice_sequence": [
+    {
+      "id": "workspace-lifecycle-provider-boundaries",
+      "title": "Audit workspace lifecycle and provider runtime boundaries",
+      "status": "ready",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Satisfy #1656 with symbol-level dispositions and safe lifecycle/report extraction only where mutation/provider trust remains explicit."
+    },
+    {
+      "id": "planning-runtime-boundaries",
+      "title": "Audit Planning package runtime boundaries",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "workspace-lifecycle-provider-boundaries"
+      ],
+      "purpose_for_lane": "Satisfy #1657 with grouped Planning disposition and safe value-map/default/coercion decompositions."
+    },
+    {
+      "id": "memory-verification-runtime-boundaries",
+      "title": "Audit Memory and Verification runtime boundaries",
+      "status": "planned",
+      "execplan_ref": "",
+      "depends_on": [
+        "planning-runtime-boundaries"
+      ],
+      "purpose_for_lane": "Satisfy #1658 with semantic-owner-after-split disposition and safe view/scaffold decompositions."
+    }
+  ],
+  "current_slice": "workspace-lifecycle-provider-boundaries",
+  "acceptance_boundary": "The lane is complete when #1656, #1657, and #1658 each have symbol dispositions, retained-owner rationale, safe decompositions or explicit blockers, updated inventories, and proof evidence.",
+  "proof_strategy": "Run generated command package checks, package-focused tests for affected runtime behavior, operation conformance for changed commands, and make test-workspace for cross-package changes.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "The lane may leave unresolved CG primitive/control-operation follow-ups open when safe decomposition requires new generic support.",
+  "lane_to_epic_contribution": "Provides the audit and safe-migration continuation for #1649 after the owner-boundary packet extraction lane.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "Ready after the runtime packet owner-boundary lane.",
+    "residual_work": "Implement #1656, #1657, and #1658 in order with disposition tables and proof.",
+    "next_owner": "current agent"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1656",
+      "label": "Investigate decomposition of workspace lifecycle and provider runtime boundaries",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1656"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1657",
+      "label": "Audit and decompose planning package runtime boundaries for #1649",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1657"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1658",
+      "label": "Audit and decompose Memory and Verification runtime boundaries for #1649",
+      "role": "source_intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/1658"
+    }
+  ],
+  "notes": "Third lane in the P2 stack."
+}

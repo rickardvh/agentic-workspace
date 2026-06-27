@@ -2587,6 +2587,61 @@ def test_implement_runtime_mirror_review_stays_off_for_unrelated_core_file_chang
     assert "proof.runtime_source_edit_review" not in payload["drill_down"]["available_selectors"]
 
 
+def test_implement_surfaces_runtime_symbol_working_set_for_large_runtime_change(tmp_path: Path, capsys) -> None:
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+        """
+def _run_external_intent_refresh_github_adapter(args):
+    return {"status": "old"}
+
+
+def _unrelated_runtime_helper():
+    return "same"
+""",
+    )
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _replace_text(
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+        '    return {"status": "old"}',
+        '    return {"status": "new"}',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Fix external intent refresh behavior.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    working_set = payload["proof"]["runtime_symbol_working_set"]
+    assert working_set["kind"] == "agentic-workspace/runtime-symbol-working-set/v1"
+    assert working_set["status"] == "present"
+    assert working_set["files"][0]["path"] == "src/agentic_workspace/workspace_runtime_primitives.py"
+    symbol = working_set["files"][0]["symbols"][0]
+    assert symbol["name"] == "_run_external_intent_refresh_github_adapter"
+    assert symbol["inventory_status"] == "inventory-backed"
+    assert symbol["runtime_boundary_class"] == "provider-integration"
+    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in symbol["smallest_focused_proof"]
+    assert "proof.runtime_symbol_working_set" in payload["drill_down"]["available_selectors"]
+    assert any("runtime_symbol_working_set=1" == signal for signal in payload["action_signals"]["changed_signals"])
+
+
 def test_implement_keeps_active_intent_packets_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
