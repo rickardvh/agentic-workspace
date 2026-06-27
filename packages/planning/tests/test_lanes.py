@@ -286,6 +286,74 @@ def test_summary_and_doctor_validate_invalid_active_lane_schema(tmp_path: Path) 
     assert "done_when" in doctor_warning["message"]
 
 
+def test_summary_warns_when_invalid_lane_status_makes_record_unprojectable(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="review-lane", title="Review Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "review-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["slice_sequence"] = [
+        {
+            "id": "review-slice",
+            "title": "Review Slice",
+            "status": "ready-for-review",
+            "execplan_ref": ".agentic-workspace/planning/execplans/review-slice.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Prove unsupported status values do not disappear silently.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+
+    summary = planning_summary(target=tmp_path, profile="tiny")
+
+    assert summary["lanes"]["status"] == "attention"
+    assert summary["lanes"]["record_count"] == 0
+    assert summary["lanes"]["invalid_record_count"] == 1
+    invalid = summary["lanes"]["invalid_records"][0]
+    assert invalid["path"].endswith("review-lane.lane.json")
+    status_detail = invalid["status_details"][0]
+    assert status_detail["field"] == "slice_sequence.0.status"
+    assert status_detail["value"] == "ready-for-review"
+    assert "completed" in status_detail["accepted_values"]
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    warning = next(warning for warning in summary["planning_surface_health"]["warnings"] if warning["path"] == invalid["path"])
+    assert warning["warning_class"] == "planning_lane_schema_invalid"
+    assert "ready-for-review" in warning["message"]
+    assert "accepted values" in warning["message"]
+
+
+def test_summary_projects_lane_records_with_accepted_status_values(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="accepted-lane", title="Accepted Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "accepted-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["slice_sequence"] = [
+        {
+            "id": "accepted-slice",
+            "title": "Accepted Slice",
+            "status": "completed",
+            "execplan_ref": ".agentic-workspace/planning/execplans/accepted-slice.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Prove accepted status values still project.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(
+        tmp_path / ".agentic-workspace/planning/execplans/accepted-slice.plan.json",
+        item_id="accepted-slice",
+        status="planned",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="tiny")
+
+    assert summary["lanes"]["status"] == "present"
+    assert summary["lanes"]["record_count"] == 1
+    assert summary["lanes"]["invalid_record_count"] == 0
+    assert not summary["lanes"].get("invalid_records")
+    assert not [
+        warning for warning in summary["planning_surface_health"]["warnings"] if warning["warning_class"] == "planning_lane_schema_invalid"
+    ]
+
+
 def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:
     create_lane_record(lane_id="report-lane", title="Report Lane", target=tmp_path)
 

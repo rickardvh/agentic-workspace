@@ -184,6 +184,8 @@ TODO_EMPTY_STATE_LINE = "- No active work right now."
 _COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
 EXECPLAN_RECORD_KIND = "planning-execplan/v1"
 LANE_RECORD_KIND = "planning-lane/v1"
+LANE_STATUS_VALUES = ("shaping", "ready", "active", "blocked", "closed", "archived")
+LANE_SLICE_STATUS_VALUES = ("planned", "ready", "active", "blocked", "completed", "skipped")
 REVIEW_RECORD_KIND = "planning-review/v1"
 PLANNING_REFERENCE_KIND_DEFAULT = "artifact"
 PLANNING_REFERENCE_ROLE_DEFAULT = "context"
@@ -477,6 +479,38 @@ def _json_schema_findings(*, payload: dict[str, Any], schema_path: Path) -> list
         location = ".".join(str(part) for part in error.path) or "<root>"
         findings.append(f"{location}: {error.message}")
     return findings
+
+
+def _lane_status_schema_details(record: dict[str, Any]) -> list[dict[str, Any]]:
+    details: list[dict[str, Any]] = []
+    status = str(record.get("status", "")).strip()
+    if status and status not in LANE_STATUS_VALUES:
+        details.append(
+            {
+                "field": "status",
+                "value": status,
+                "accepted_values": list(LANE_STATUS_VALUES),
+                "repair_selector": "lanes.invalid_records[].status_details",
+            }
+        )
+    slices = record.get("slice_sequence", [])
+    if not isinstance(slices, list):
+        return details
+    for index, item in enumerate(slices):
+        if not isinstance(item, dict):
+            continue
+        slice_status = str(item.get("status", "")).strip()
+        if not slice_status or slice_status in LANE_SLICE_STATUS_VALUES:
+            continue
+        details.append(
+            {
+                "field": f"slice_sequence.{index}.status",
+                "value": slice_status,
+                "accepted_values": list(LANE_SLICE_STATUS_VALUES),
+                "repair_selector": "lanes.invalid_records[].status_details",
+            }
+        )
+    return details
 
 
 def _write_schema_backed_planning_record(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:
@@ -3514,7 +3548,7 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
     lane_dir = target_root / PLANNING_MANAGED_ROOT / "lanes"
     archive_dir = lane_dir / "archive"
     records: list[dict[str, Any]] = []
-    invalid_records: list[dict[str, str]] = []
+    invalid_records: list[dict[str, Any]] = []
     if lane_dir.exists():
         for path in sorted(lane_dir.glob("*.lane.json")):
             if path.name == "TEMPLATE.lane.json":
@@ -3530,7 +3564,14 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
                 continue
             findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
             if findings:
-                invalid_records.append({"path": path.relative_to(target_root).as_posix(), "reason": "; ".join(findings)})
+                invalid_record: dict[str, Any] = {
+                    "path": path.relative_to(target_root).as_posix(),
+                    "reason": "; ".join(findings),
+                }
+                status_details = _lane_status_schema_details(record)
+                if status_details:
+                    invalid_record["status_details"] = status_details
+                invalid_records.append(invalid_record)
                 continue
             proof = record.get("proof_aggregation", {}) if isinstance(record.get("proof_aggregation"), dict) else {}
             closeout = record.get("closeout_state", {}) if isinstance(record.get("closeout_state"), dict) else {}
@@ -3584,8 +3625,9 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
     active_records = [record for record in records if record.get("status") == "active"]
     open_records = [record for record in records if record.get("status") not in {"closed", "archived"}]
     return {
-        "status": "present" if records else "none",
+        "status": "present" if records else "attention" if invalid_records else "none",
         "record_count": len(records),
+        "invalid_record_count": len(invalid_records),
         "active_count": len(active_records),
         "open_count": len(open_records),
         "closed_count": sum(1 for record in records if record.get("status") == "closed"),
@@ -3618,12 +3660,28 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                 continue
             path = str(record.get("path", "")).strip() or (PLANNING_MANAGED_ROOT / "lanes").as_posix()
             reason = str(record.get("reason", "")).strip() or "lane record failed schema validation"
+            status_details = record.get("status_details", [])
+            status_hint = ""
+            if isinstance(status_details, list) and status_details:
+                first_detail = next((item for item in status_details if isinstance(item, dict)), {})
+                if isinstance(first_detail, dict):
+                    field = str(first_detail.get("field", "")).strip()
+                    value = str(first_detail.get("value", "")).strip()
+                    accepted = [str(item) for item in first_detail.get("accepted_values", []) if str(item).strip()]
+                    status_hint = (
+                        f" Offending field {field} has unsupported value {value!r}; accepted values: {', '.join(accepted)}."
+                        if field and value and accepted
+                        else ""
+                    )
             warnings.append(
                 {
                     "warning_class": "planning_lane_schema_invalid",
                     "path": path,
-                    "message": f"Planning lane record is invalid: {reason}",
-                    "suggested_fix": "Repair the lane record against planning-lane.schema.json before relying on summary or lane closeout.",
+                    "message": f"Planning lane record is invalid: {reason}.{status_hint}",
+                    "suggested_fix": (
+                        "Repair the lane record against planning-lane.schema.json before relying on summary or lane closeout; "
+                        "accepted status values are exposed at lanes.invalid_records[].status_details."
+                    ),
                 }
             )
     records = projection.get("records", []) if isinstance(projection, dict) else []
@@ -3924,7 +3982,8 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             status = _execplan_status(path)
             if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
                 active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
-    planning_warnings = _planning_state_v1_warnings(target_root=target_root, state=state if state else None)
+    planning_warnings = _planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection)
+    planning_warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state if state else None))
     planning_surface_health = _planning_surface_health(planning_warnings)
     warning_count = int(planning_surface_health.get("warning_count", 0) or 0)
     health_status = str(planning_surface_health.get("status") or "clean")
@@ -4007,6 +4066,8 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "open_count": lane_projection.get("open_count", 0),
                 "closed_count": lane_projection.get("closed_count", 0),
                 "record_count": lane_projection.get("record_count", 0),
+                "invalid_record_count": lane_projection.get("invalid_record_count", 0),
+                "invalid_records": lane_projection.get("invalid_records", [])[:3],
             },
             "residue_governance": residue_governance,
             "roadmap": {
@@ -4562,6 +4623,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     compact_lanes = {
         "status": lanes.get("status", "none"),
         "record_count": lanes.get("record_count", 0),
+        "invalid_record_count": lanes.get("invalid_record_count", 0),
         "active_count": lanes.get("active_count", 0),
         "open_count": lanes.get("open_count", 0),
         "closed_count": lanes.get("closed_count", 0),
@@ -4588,6 +4650,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             for record in lanes.get("records", [])
             if isinstance(record, dict)
         ],
+        "invalid_records": lanes.get("invalid_records", [])[:3],
         "migration": lanes.get("migration", {}),
         "rule": lanes.get("rule", ""),
     }
