@@ -319,12 +319,6 @@ def _run_setup_guidance_adapter(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _run_start_context_adapter(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _run_start_context_adapter as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def _run_summary_report_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _run_summary_report_adapter as source_function
 
@@ -364,7 +358,6 @@ __all__ = [
     '_run_reconcile_report_adapter',
     '_run_report_combined_adapter',
     '_run_setup_guidance_adapter',
-    '_run_start_context_adapter',
     '_run_summary_report_adapter',
     '_select_workspace_operation_defaults',
 ]

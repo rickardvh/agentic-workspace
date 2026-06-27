@@ -100,6 +100,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `maintainer_mode` | object | yes |  | Package-maintainer dogfooding report routes enabled by workspace.maintainer_mode. |  |  |
 | `config_enforcement` | object | yes |  | How repo config expectations are applied and reported. |  |  |
 | `config_effect_audit` | object | yes |  | Audit of each config setting's concrete force, affected output routes, and agent dependency. |  |  |
+| `configuration_projection` | object | yes |  | Config-to-runtime projection coverage, suppression rules, owner exceptions, and verification probes. |  |  |
+| `selective_surfacing_evaluation` | object | yes |  | Cheap contract checks for positive config surfacing, non-applicable suppression, and compact-output bounds. |  |  |
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
 | `local_memory` | object | yes |  | Machine-local memory configuration and advisory state. |  |  |
 | `memory_consult` | object | yes |  | Recommended checked-in Memory lookup route for the current report. |  |  |

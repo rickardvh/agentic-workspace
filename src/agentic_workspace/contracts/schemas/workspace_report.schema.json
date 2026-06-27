@@ -23,6 +23,8 @@
     "maintainer_mode",
     "config_enforcement",
     "config_effect_audit",
+    "configuration_projection",
+    "selective_surfacing_evaluation",
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
@@ -194,6 +196,14 @@
     "config_effect_audit": {
       "type": "object",
       "description": "Audit of each config setting's concrete force, affected output routes, and agent dependency."
+    },
+    "configuration_projection": {
+      "type": "object",
+      "description": "Config-to-runtime projection coverage, suppression rules, owner exceptions, and verification probes."
+    },
+    "selective_surfacing_evaluation": {
+      "type": "object",
+      "description": "Cheap contract checks for positive config surfacing, non-applicable suppression, and compact-output bounds."
     },
     "branch_workflow_posture": {
       "type": "object",

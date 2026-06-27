@@ -6,11 +6,13 @@ compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import argparse
 import copy
+import tomllib
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.config import WorkspaceConfig
+from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
@@ -42,6 +44,7 @@ from agentic_workspace.workspace_runtime_core import (
     _completion_closeout_inspection_payload,
     _context_router_family_payload,
     _continuation_reorientation_payload,
+    _emit_payload,
     _execution_posture_payload,
     _fast_installed_modules,
     _feature_tier_payload,
@@ -74,11 +77,14 @@ from agentic_workspace.workspace_runtime_core import (
     _raw_active_planning_record_for_closeout,
     _read_only_response_posture_payload,
     _repo_posture_payload,
+    _resolve_target_root,
     _routine_work_context_payload,
     _run_preflight_command,
+    _select_payload_fields,
     _selector_first_planning_safety_gate,
     _selector_requests,
     _sibling_repo_aw_freshness_payload,
+    _start_profile_for_select,
     _start_tiny_payload_fast,
     _startup_closeout_report_route,
     _startup_continuation_view_payload,
@@ -99,6 +105,7 @@ from agentic_workspace.workspace_runtime_core import (
     _tiny_workflow_sufficiency,
     _uv_cache_guidance_payload,
     _vague_outcome_orientation_payload,
+    _validate_target_root,
     _workflow_sufficiency_payload,
     _workspace_absence_startup_review,
 )
@@ -1421,3 +1428,110 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
     return selected
+
+
+def _run_start_context_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="start", target_root=target_root)
+    if args.format == "json":
+        if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
+            _emit_payload(payload=recovery_payload, format_name=args.format)
+            return 0
+    start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
+    task_text = getattr(args, "task", None)
+    selected_fields = getattr(args, "select", None)
+    payload = _start_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=task_text,
+        profile=_start_profile_for_select(requested_profile=start_profile, select=selected_fields),
+    )
+    if selected_fields:
+        config = _load_workspace_config(target_root=target_root)
+        _hydrate_selected_start_advisory_payloads(
+            payload=payload,
+            select=selected_fields,
+            target_root=target_root,
+            task_text=task_text,
+            config=config,
+        )
+        payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _raw_config_cli_invoke(*, target_root: Path, config_payload: dict[str, Any]) -> str:
+    cli_invoke = DEFAULT_CLI_INVOKE
+    raw_workspace = config_payload.get("workspace", {})
+    if isinstance(raw_workspace, dict) and isinstance(raw_workspace.get("cli_invoke"), str) and raw_workspace["cli_invoke"].strip():
+        cli_invoke = raw_workspace["cli_invoke"].strip()
+    local_config_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    if local_config_path.exists():
+        try:
+            local_payload = tomllib.loads(local_config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            return cli_invoke
+        local_workspace = local_payload.get("workspace", {})
+        if (
+            isinstance(local_workspace, dict)
+            and isinstance(local_workspace.get("cli_invoke"), str)
+            and local_workspace["cli_invoke"].strip()
+        ):
+            cli_invoke = local_workspace["cli_invoke"].strip()
+    return cli_invoke
+
+
+def _obsolete_default_preset_start_recovery_payload(*, target_root: Path) -> dict[str, Any] | None:
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if not config_path.exists():
+        return None
+    try:
+        payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    raw_workspace = payload.get("workspace", {})
+    if not isinstance(raw_workspace, dict) or "default_preset" not in raw_workspace:
+        return None
+    preset = raw_workspace.get("default_preset")
+    modules = payload.get("modules", {})
+    has_replacement = isinstance(modules, dict) and isinstance(modules.get("enabled"), list)
+    repair_safe = has_replacement
+    cli_invoke = _raw_config_cli_invoke(target_root=target_root, config_payload=payload)
+    return {
+        "kind": "agentic-workspace/start-recovery/v1",
+        "status": "recovery-required",
+        "target": ".",
+        "problem": {
+            "kind": "agentic-workspace/config-migration/v1",
+            "config_path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "obsolete_field": "workspace.default_preset",
+            "observed_value": preset,
+            "reason": "workspace.default_preset is no longer accepted by Agentic Workspace config loading.",
+            "replacement": "[modules] enabled = [...]",
+            "config_valid": False,
+        },
+        "automated_repair": {
+            "safe": repair_safe,
+            "reason": "replacement modules.enabled is already present" if repair_safe else "module selection cannot be inferred safely",
+        },
+        "next_safe_action": {
+            "next_safe_action": "repair-config-before-work",
+            "implementation_allowed": False,
+            "read_only_allowed": True,
+            "proof_required": False,
+            "closure_blockers": ["stale workspace config blocks ordinary startup routing"],
+            "recommended_action": (
+                f"Edit {WORKSPACE_CONFIG_PATH.as_posix()} to remove [workspace].default_preset and declare [modules] enabled = [...]."
+            ),
+        },
+        "recovery_packet": {
+            "kind": "agentic-workspace/config-recovery-packet/v1",
+            "source": WORKSPACE_CONFIG_PATH.as_posix(),
+            "blocked_because": "ordinary start cannot load authoritative workspace config while obsolete fields remain",
+            "next_safe_command": _command_with_cli_invoke(
+                command="agentic-workspace config --target . --format json", cli_invoke=cli_invoke
+            ),
+            "agent_owns": ["choose the correct module list from repo context or ask the maintainer when unclear"],
+            "human_owns": ["confirm module intent when the stale preset cannot be mapped safely"],
+        },
+    }

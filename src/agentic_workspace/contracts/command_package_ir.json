@@ -1218,7 +1218,7 @@
           },
           {
             "operation_id": "start.context",
-            "import_module": "agentic_workspace.workspace_runtime_primitives",
+            "import_module": "agentic_workspace.workspace_runtime_startup",
             "function": "_run_start_context_adapter"
           },
           {
@@ -1289,6 +1289,11 @@
                 "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
+          },
+          {
+            "source_import_module": "agentic_workspace.workspace_runtime_startup",
+            "module_file": "primitives.workspace_startup_runtime",
+            "generated_function_overrides": []
           }
         ]
       },

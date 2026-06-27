@@ -5149,6 +5149,11 @@
         ],
         "module_file": "primitives.workspace_runtime",
         "source_import_module": "agentic_workspace.workspace_runtime_primitives"
+      },
+      {
+        "generated_function_overrides": [],
+        "module_file": "primitives.workspace_startup_runtime",
+        "source_import_module": "agentic_workspace.workspace_runtime_startup"
       }
     ],
     "operation_executor": {
@@ -6086,7 +6091,7 @@
       },
       {
         "function": "_run_start_context_adapter",
-        "import_module": "agentic_workspace.workspace_runtime_primitives",
+        "import_module": "agentic_workspace.workspace_runtime_startup",
         "operation_id": "start.context"
       },
       {

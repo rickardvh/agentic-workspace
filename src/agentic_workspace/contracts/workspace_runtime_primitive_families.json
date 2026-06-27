@@ -411,10 +411,13 @@
           "_compact_start_proof_payload",
           "_compact_tiny_required_proof_commands",
           "_context_router_family_payload",
+          "_emit_payload",
           "_guidance_with_cli_invoke",
           "_local_chat_checkpoint_projection",
           "_selector_first_planning_safety_gate",
           "_selector_requests",
+          "_select_payload_fields",
+          "_start_profile_for_select",
           "_start_tiny_payload_fast",
           "_startup_skill_routing_payload",
           "_startup_skills_projection",
@@ -659,8 +662,10 @@
           "_package_boundary_payload",
           "_package_json_scripts",
           "_package_scripts_without_negative_routes",
+          "_resolve_target_root",
           "_subsystem_matches_for_changed_paths",
-          "_target_proof_capabilities"
+          "_target_proof_capabilities",
+          "_validate_target_root"
         ],
         "core_role": "Shared core may expose stable config, contract, module, and command-environment lookups used by multiple packet owners. These helpers do not decide a packet owner entrypoint; they normalize repository and contract facts for owners.",
         "exclusion_rule": "Do not add packet assembly, owner-specific selector behavior, or command entrypoint dispatch here; keep those in the runtime owner module or generated surface."

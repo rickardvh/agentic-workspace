@@ -215,7 +215,7 @@
         },
         "facade_path": {
           "type": "string",
-          "pattern": "^generated/(workspace/python/primitives/workspace_runtime|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime)\\.py$",
+          "pattern": "^generated/(workspace/python/primitives/(workspace_runtime|workspace_startup_runtime)|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime)\\.py$",
           "description": "Generated runtime facade path containing the wrapper."
         },
         "facade_symbol": {
@@ -236,6 +236,7 @@
         "source_module": {
           "enum": [
             "agentic_workspace.workspace_runtime_primitives",
+            "agentic_workspace.workspace_runtime_startup",
             "agentic_workspace.doctor",
             "repo_planning_bootstrap.installer",
             "repo_planning_bootstrap.runtime_projection",
