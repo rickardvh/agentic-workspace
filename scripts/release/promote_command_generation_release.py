@@ -63,6 +63,13 @@ def _sha256_url(url: str) -> str:
     return digest.hexdigest()
 
 
+def _normalize_sha256(value: str) -> str:
+    digest = value.removeprefix("sha256:").lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError(f"invalid sha256 digest {value!r}")
+    return digest
+
+
 def _release_from_payload(payload: dict[str, Any], *, requested_version: str | None = None) -> CommandGenerationRelease:
     tag_name = str(payload.get("tag_name") or "").strip()
     version = requested_version or tag_name.removeprefix("v")
@@ -81,9 +88,7 @@ def _release_from_payload(payload: dict[str, Any], *, requested_version: str | N
             digest = digest.removeprefix("sha256:")
         if not digest:
             digest = _sha256_url(wheel_url)
-        if not re.fullmatch(r"[0-9a-f]{64}", digest):
-            raise ValueError(f"{expected_asset} has invalid sha256 digest {digest!r}")
-        return CommandGenerationRelease(version=version, wheel_url=wheel_url, sha256=digest)
+        return CommandGenerationRelease(version=version, wheel_url=wheel_url, sha256=_normalize_sha256(digest))
     raise ValueError(f"command-generation release {tag_name or version!r} has no {expected_asset} asset")
 
 
@@ -166,6 +171,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--version", help="command-generation release version to promote, for example 1.1.0. Defaults to latest.")
     parser.add_argument("--wheel-url", help="Explicit wheel URL. Use with --sha256 to skip GitHub release discovery.")
     parser.add_argument("--sha256", help="Explicit wheel SHA-256. Use with --wheel-url to skip GitHub release discovery.")
+    parser.add_argument(
+        "--trust-supplied-sha256",
+        action="store_true",
+        help="Offline escape hatch: trust --sha256 without downloading and verifying the explicit --wheel-url bytes.",
+    )
     parser.add_argument("--check", action="store_true", help="Fail if pyproject or generated Dockerfile refs do not match the release.")
     parser.add_argument("--no-lock", action="store_true", help="Do not run uv lock after updating pyproject.toml.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -182,7 +192,15 @@ def _release_from_args(args: argparse.Namespace) -> CommandGenerationRelease:
             version = match.group("version") if match else ""
         if not version:
             raise SystemExit("--version is required when --wheel-url does not contain the wheel version")
-        return CommandGenerationRelease(version=version, wheel_url=str(args.wheel_url), sha256=str(args.sha256))
+        supplied_digest = _normalize_sha256(str(args.sha256))
+        if not args.trust_supplied_sha256:
+            computed_digest = _sha256_url(str(args.wheel_url))
+            if computed_digest != supplied_digest:
+                raise SystemExit(
+                    "explicit command-generation wheel SHA-256 mismatch: "
+                    f"supplied {supplied_digest}, computed {computed_digest}"
+                )
+        return CommandGenerationRelease(version=version, wheel_url=str(args.wheel_url), sha256=supplied_digest)
     return discover_release(version=args.version)
 
 

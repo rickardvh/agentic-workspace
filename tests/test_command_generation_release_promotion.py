@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -111,3 +112,36 @@ def test_release_from_payload_rejects_missing_wheel_asset() -> None:
 
     with pytest.raises(ValueError, match="has no command_generation-1.2.3-py3-none-any.whl asset"):
         module._release_from_payload({"tag_name": "v1.2.3", "assets": []})
+
+
+def test_explicit_wheel_url_rejects_sha_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "_sha256_url", lambda _url: "b" * 64)
+    args = SimpleNamespace(
+        version="1.2.3",
+        wheel_url="https://github.com/rickardvh/command-generation/releases/download/v1.2.3/command_generation-1.2.3-py3-none-any.whl",
+        sha256="a" * 64,
+        trust_supplied_sha256=False,
+    )
+
+    with pytest.raises(SystemExit, match="SHA-256 mismatch"):
+        module._release_from_args(args)
+
+
+def test_explicit_wheel_url_can_trust_supplied_sha_for_offline_use(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+
+    def fail_if_called(_url: str) -> str:
+        raise AssertionError("offline trust mode must not download the wheel")
+
+    monkeypatch.setattr(module, "_sha256_url", fail_if_called)
+    args = SimpleNamespace(
+        version="1.2.3",
+        wheel_url="https://github.com/rickardvh/command-generation/releases/download/v1.2.3/command_generation-1.2.3-py3-none-any.whl",
+        sha256="A" * 64,
+        trust_supplied_sha256=True,
+    )
+
+    release = module._release_from_args(args)
+
+    assert release.sha256 == "a" * 64

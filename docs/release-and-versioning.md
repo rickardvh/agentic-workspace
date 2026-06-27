@@ -136,9 +136,11 @@ uv run python scripts/release/promote_command_generation_release.py --version <v
 
 The helper discovers the GitHub release wheel, verifies or computes its SHA-256
 digest, updates `pyproject.toml`, refreshes the generated conformance Dockerfile
-install URLs, and runs `uv lock` unless `--no-lock` is supplied. Use `--check`
-to fail when the checked-in pin or Dockerfile refs do not match the selected
-release.
+install URLs, and runs `uv lock` unless `--no-lock` is supplied. Explicit
+`--wheel-url --sha256` input still verifies the downloaded wheel bytes by
+default; use the deliberately named `--trust-supplied-sha256` escape hatch only
+for offline/no-network maintenance. Use `--check` to fail when the checked-in pin
+or Dockerfile refs do not match the selected release.
 
 ## All-Or-Nothing Invariant
 
