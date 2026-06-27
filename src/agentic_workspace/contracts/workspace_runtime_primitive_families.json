@@ -314,9 +314,12 @@
       "id": "provider-mutation-safety",
       "title": "Provider integration and mutation safety behavior",
       "owner_class": "covered-by-other-issue",
-      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py plus package lifecycle runtimes",
-      "runtime_role": "Lifecycle mutation, payload provenance, subprocess/provider behavior, and destructive safety checks stay runtime-owned while issue #1656 covers provider/mutation boundary work.",
+      "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py plus src/agentic_workspace/workspace_runtime_planning.py and package lifecycle runtimes",
+      "runtime_role": "Lifecycle mutation, payload provenance, subprocess/provider behavior, and destructive safety checks stay runtime-owned. The #1656 reconcile adapter implementation is split to the Planning runtime owner while generated/private compatibility imports remain available.",
       "source_symbols": [
+        "_run_init_lifecycle_adapter",
+        "_run_lifecycle_mutation_adapter",
+        "_run_reconcile_report_adapter",
         "_lifecycle_apply_command",
         "_workspace_init_or_upgrade_report",
         "_record_delegation_outcome",
@@ -324,15 +327,18 @@
       ],
       "generated_or_contract_refs": [
         "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
-        "src/agentic_workspace/contracts/preflight_policy.json"
+        "src/agentic_workspace/contracts/preflight_policy.json",
+        "docs/reviews/workspace-lifecycle-provider-boundary-disposition-2026-06-27.md"
       ],
       "proof_refs": [
-        "uv run pytest tests/test_workspace_cli.py tests/test_workspace_config_cli.py -q"
+        "uv run pytest tests/test_workspace_cli.py::test_reconcile_report_adapter_routes_through_planning_owner tests/test_workspace_summary_cli.py::test_workspace_reconcile_json_exposes_provider_agnostic_planning_state tests/test_workspace_summary_cli.py::test_workspace_reconcile_apply_safe_prune_removes_exact_closed_items -q",
+        "uv run pytest tests/test_workspace_cli.py tests/test_workspace_config_cli.py tests/test_workspace_summary_cli.py -q"
       ],
       "blocked_by": [
-        "#1656"
+        "transaction.envelope contract with dry-run equivalence and provenance hooks",
+        "provider.envelope contract with host-neutral provider fixture"
       ],
-      "remaining_hand_owned_reason": "Mutation safety and provider truth require live side-effect policy and cannot be replaced by declarative command metadata alone."
+      "remaining_hand_owned_reason": "Mutation safety and provider truth require live side-effect policy and cannot be replaced by declarative command metadata alone. Reconcile payload semantics are now Planning-owned; root generated bindings still import the compatibility symbol until a Planning runtime facade is introduced."
     },
     {
       "id": "planning-memory-verification-package-boundaries",
@@ -377,6 +383,7 @@
         "allowed_owner_modules": [
           "src/agentic_workspace/workspace_runtime_startup.py",
           "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
           "src/agentic_workspace/workspace_runtime_proof.py"
         ],
         "source_symbols": [
@@ -562,6 +569,19 @@
         "exclusion_rule": "Do not add Planning packet assembly or Planning-owner decisions here; those belong in workspace_runtime_planning.py."
       },
       {
+        "id": "planning-reconcile-runtime-support",
+        "title": "Planning reconcile runtime support",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_planning.py"
+        ],
+        "source_symbols": [
+          "_ensure_external_intent_cache_if_available",
+          "_rewrite_module_cli_commands"
+        ],
+        "core_role": "Shared core may expose the external-intent cache refresh shim and workspace command rewrite helper for the Planning-owned root reconcile adapter while Planning owns reconciliation semantics.",
+        "exclusion_rule": "Do not add provider interpretation, issue filtering, safe-prune policy, or Planning reconciliation payload assembly here; those stay in provider or Planning owner modules."
+      },
+      {
         "id": "proof-validation-and-closeout-routing",
         "title": "Proof, validation, and closeout routing",
         "allowed_owner_modules": [
@@ -651,6 +671,7 @@
         "allowed_owner_modules": [
           "src/agentic_workspace/workspace_runtime_startup.py",
           "src/agentic_workspace/workspace_runtime_implement.py",
+          "src/agentic_workspace/workspace_runtime_planning.py",
           "src/agentic_workspace/workspace_runtime_proof.py"
         ],
         "source_symbols": [

@@ -153,6 +153,7 @@ from agentic_workspace.workspace_runtime_planning import (
     _planning_candidate_pressure_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _planning_safety_gate_payload,
     _raw_active_planning_record_for_closeout,  # noqa: F401 - compatibility re-export for planning owner boundary
+    _run_reconcile_report_adapter,  # noqa: F401 - compatibility re-export for planning owner boundary
 )
 from agentic_workspace.workspace_runtime_projection import (
     _authority_boundary_payload,
@@ -33833,24 +33834,6 @@ def _run_planning_decision_adapter(args: argparse.Namespace) -> int:
     else:
         raise WorkspaceUsageError("planning decision support requires decision-scaffold or decision-promote.")
     _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
-    return 0
-
-
-def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="reconcile", target_root=target_root)
-    from repo_planning_bootstrap.installer import planning_reconcile
-    from repo_planning_bootstrap.runtime_projection import _print_reconcile
-
-    _ensure_external_intent_cache_if_available(target_root=target_root)
-    payload = planning_reconcile(
-        target=target_root, apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)), dry_run=bool(getattr(args, "dry_run", False))
-    )
-    payload = _rewrite_module_cli_commands(payload)
-    if args.format == "json":
-        _emit_payload(payload=payload, format_name=args.format)
-    else:
-        _print_reconcile(payload)
     return 0
 
 

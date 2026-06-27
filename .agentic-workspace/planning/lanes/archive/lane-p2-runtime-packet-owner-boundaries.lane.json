@@ -56,7 +56,7 @@
   "acceptance_boundary": "The lane is complete when #1770 through #1773 each have owner-scoped runtime modules, stable compatibility imports, updated inventories, and focused tests proving unchanged emitted packet contracts.",
   "proof_strategy": "Run focused start/implement/planning/proof tests for each slice, generated command package checks when inventories change, and make test-workspace for cross-runtime extraction.",
   "proof_aggregation": {
-    "status": "complete",
+    "status": "satisfied",
     "evidence": [
       "#1770 startup-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-startup-runtime-packets.plan.json and included make test-workspace, make lint-workspace, generated command package checks, operation conformance, contract tooling, structured file inventory, ruff, maintainer surfaces, schema reference docs, AW defaults/summary/doctor, full tests/test_workspace_cli.py, generator --check, AW primitive ownership, and git diff --check.",
       "#1771 implement-packets completed; proof is recorded in .agentic-workspace/planning/execplans/archive/p2-implement-runtime-packets.plan.json and included make test-workspace, make lint-workspace, generated command package checks, operation conformance, contract tooling, structured file inventory, ruff, schema reference docs, AW defaults/summary/doctor, full tests/test_workspace_cli.py, generator --check, AW primitive ownership, and git diff --check.",

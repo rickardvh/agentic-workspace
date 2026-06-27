@@ -84,6 +84,11 @@ def test_active_planning_record_helpers_route_through_planning_owner(tmp_path: P
     assert workspace_runtime_core._active_planning_record_for_report_section(target_root=tmp_path) == {}
 
 
+def test_reconcile_report_adapter_routes_through_planning_owner() -> None:
+    assert workspace_runtime_primitives._run_reconcile_report_adapter is workspace_runtime_planning._run_reconcile_report_adapter
+    assert workspace_runtime_core._run_reconcile_report_adapter.__module__ == "agentic_workspace.workspace_runtime_core"
+
+
 def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
