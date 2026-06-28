@@ -1292,6 +1292,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "new_comment_count",
                 "stack_member_count",
                 "stack",
+                "stack_discovery",
                 "recommended_command",
                 "selector",
                 "degraded_explicitly",

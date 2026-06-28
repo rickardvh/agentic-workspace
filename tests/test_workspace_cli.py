@@ -819,6 +819,35 @@ def test_start_report_meta_task_keeps_routine_context_selector_only_with_backgro
     assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
 
 
+def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "How should we implement the runtime proof selector?",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "routine_work_context" in payload["context"]
+    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+
+
 def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -833,6 +862,37 @@ def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_
 
     assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
     assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "installed_state_drift_triage" not in payload["context"]
+
+
+def test_start_unrelated_changed_path_does_not_make_payload_drift_actionable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/typo.md",
+                "--task",
+                "Fix one docs typo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
     assert "installed_state_drift_triage" not in payload["context"]
 
 
@@ -863,6 +923,7 @@ def test_start_installed_state_drift_triage_is_actionable_for_payload_claims(tmp
 
     triage = payload["context"]["installed_state_drift_triage"]
     assert triage["status"] == "actionable_now"
+    assert triage["claim_relevant"] is True
     assert "agentic-workspace upgrade" in triage["repair_command"]
     assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
 
@@ -1834,6 +1895,27 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     capsys.readouterr()
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    unavailable = json.loads(capsys.readouterr().out)
+    unavailable_attention = unavailable["context"]["pr_comment_attention"]
+    assert unavailable_attention["status"] == "stack_comment_status_unavailable"
+    assert unavailable_attention["stack_discovery"]["status"] == "unavailable"
+    assert unavailable_attention["stack_member_count"] == 0
+
     fresh_stack = {
         "repository": "rickardvh/agentic-workspace",
         "stack_members": [
@@ -1951,18 +2033,36 @@ def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path
     unknown = json.loads(capsys.readouterr().out)["answer"]
     assert unknown["status"] == "reuse_unknown"
 
-    cache_path.write_text(
-        json.dumps(
+    minimal_receipt = {
+        "prior_head": "abc123",
+        "prior_base": "base123",
+        "changed_paths": ["src/app.py"],
+        "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
+        "proof_groups": [{"command": "uv run pytest tests/test_app.py -q", "status": "passed"}],
+    }
+    cache_path.write_text(json.dumps(minimal_receipt), encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    under_evidenced = json.loads(capsys.readouterr().out)["answer"]
+    assert under_evidenced["status"] == "reuse_unknown"
+    assert "parent_proof_reference" in under_evidenced["missing_reuse_evidence"]
+    assert "command_identity" in under_evidenced["proof_groups"][0]["missing_reuse_evidence"]
+
+    safe_receipt = {
+        **minimal_receipt,
+        "parent_proof_reference": "proof-receipt:abc123",
+        "proof_selection_fingerprint": "selection:runtime-tests",
+        "dependency_config_fingerprint": "deps:locked",
+        "generated_surface_freshness": {"status": "verified"},
+        "proof_groups": [
             {
-                "prior_head": "abc123",
-                "prior_base": "base123",
-                "changed_paths": ["src/app.py"],
-                "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
-                "proof_groups": [{"command": "uv run pytest tests/test_app.py -q", "status": "passed"}],
+                "command": "uv run pytest tests/test_app.py -q",
+                "command_fingerprint": "cmd:test-app",
+                "status": "passed",
             }
-        ),
-        encoding="utf-8",
-    )
+        ],
+    }
+    cache_path.write_text(json.dumps(safe_receipt), encoding="utf-8")
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
     safe = json.loads(capsys.readouterr().out)["answer"]
@@ -1972,13 +2072,16 @@ def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path
     cache_path.write_text(
         json.dumps(
             {
-                "prior_head": "abc123",
-                "prior_base": "base123",
+                **safe_receipt,
                 "changed_paths": ["src/app.py"],
                 "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
                 "proof_groups": [
-                    {"command": "uv run pytest tests/test_app.py -q", "status": "passed"},
-                    {"command": "make lint-workspace", "status": "failed"},
+                    {
+                        "command": "uv run pytest tests/test_app.py -q",
+                        "command_fingerprint": "cmd:test-app",
+                        "status": "passed",
+                    },
+                    {"command": "make lint-workspace", "command_fingerprint": "cmd:lint", "status": "failed"},
                 ],
             }
         ),

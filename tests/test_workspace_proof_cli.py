@@ -320,6 +320,9 @@ review_aids = ["Confirm data minimisation and retention assumptions."]
 
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    script_path = tmp_path / "scripts" / "run_agentic_workspace.py"
+    script_path.parent.mkdir(parents=True, exist_ok=True)
+    script_path.write_text("print('ok')\n", encoding="utf-8")
 
     assert (
         cli.main(
@@ -344,6 +347,12 @@ def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> Non
         "src/agentic_workspace/workspace_runtime_primitives.py",
         "tests/test_workspace_proof_cli.py",
     ]
+    lanes = {lane["id"]: lane for lane in payload["answer"]["selected_lanes"]}
+    assert "runtime_mirror_consistency" in lanes
+    assert (
+        "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"
+        in lanes["runtime_mirror_consistency"]["required_commands"]
+    )
 
 
 def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:

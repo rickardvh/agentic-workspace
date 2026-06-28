@@ -21853,9 +21853,36 @@ def _read_only_meta_task(task_text: str | None) -> bool:
     )
     if any(term in task for term in meta_terms):
         return True
-    return bool(re.search(r"\b(?:what|why|how|which|do|does|did|are|is)\b", task)) and not any(
-        term in task for term in ("implement", "fix", "edit", "change", "add", "remove", "create pr")
+    return False
+
+
+def _installed_state_drift_relevant_changed_paths(changed_paths: Sequence[str]) -> list[str]:
+    exact = {
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/payload-provenance.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+    }
+    prefixes = (
+        "generated/",
+        "scripts/generate/",
+        "scripts/release/",
+        "src/agentic_workspace/contracts/",
     )
+    suffixes = (
+        "/pyproject.toml",
+        "/package.json",
+        "/package-lock.json",
+        "/pnpm-lock.yaml",
+    )
+    relevant: list[str] = []
+    for path in _normalize_changed_paths(changed_paths):
+        if path in exact or path.startswith(prefixes) or path.endswith(suffixes):
+            relevant.append(path)
+    return relevant
 
 
 def _installed_state_drift_triage_payload(
@@ -21879,7 +21906,8 @@ def _installed_state_drift_triage_payload(
         "adapter compatibility",
         "source checkout parity",
     )
-    claim_relevant = bool(changed_paths) or any(term in task for term in freshness_terms)
+    claim_relevant_paths = _installed_state_drift_relevant_changed_paths(changed_paths)
+    claim_relevant = bool(claim_relevant_paths) or any(term in task for term in freshness_terms)
     if status == "compatible":
         triage = "not_applicable"
     elif force == "required_before_execution":
@@ -21899,6 +21927,7 @@ def _installed_state_drift_triage_payload(
         "installed_state_status": status,
         "force": force,
         "claim_relevant": claim_relevant,
+        "claim_relevant_paths": claim_relevant_paths,
         "repair_command": resolution_command,
         "selector": "installed_state_compatibility",
         "claim_boundary": action_effect.get(
@@ -21920,6 +21949,7 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
             "installed_state_status",
             "force",
             "claim_relevant",
+            "claim_relevant_paths",
             "repair_command",
             "selector",
             "claim_boundary",
@@ -22021,6 +22051,40 @@ def _pr_comment_attention_relevant(*, task_text: str | None, branch: str, cache:
     return branch.startswith("codex/")
 
 
+def _pr_stack_comment_context_relevant(*, task_text: str | None, branch: str) -> bool:
+    task = str(task_text or "").lower()
+    if any(token in task for token in ("stack", "stacked", "stacked pr", "stacked pull request")):
+        return True
+    return any(token in branch.lower() for token in ("stack", "stacked"))
+
+
+def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
+    cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
+    recommended_command = _command_with_cli_invoke(
+        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/pr-stack-comment-attention/v1",
+        "status": "stack_comment_status_unavailable",
+        "repository": repo,
+        "branch": branch,
+        "stack_member_count": 0,
+        "stack_members": [],
+        "cache_path": cache_path,
+        "stack_discovery": {
+            "status": "unavailable",
+            "degraded_because": "missing-stack-cache-or-branch-pr-metadata",
+            "branch": branch,
+            "repository": repo,
+            "cache_path": cache_path,
+            "refresh_command": recommended_command,
+        },
+        "claim_boundary": "A broad stack-ready claim is blocked until stack members are discovered or the stack scope is explicitly narrowed.",
+        "degraded_because": "missing-stack-discovery-evidence",
+    }
+
+
 def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/pr-comment-delta.json"
     cache = _read_local_cache_json(target_root, cache_path)
@@ -22034,6 +22098,8 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "status": "not_applicable",
             "reason": "No PR context detected; ordinary direct work does not scan GitHub comments.",
         }
+    if not stack and _pr_stack_comment_context_relevant(task_text=task_text, branch=branch):
+        stack = _pr_stack_comment_unavailable_payload(repo=repo, branch=branch, pr_number=pr_number, cli_invoke=cli_invoke)
     if stack:
         status = str(stack.get("status") or "stack_comment_status_unavailable")
         return {
@@ -22043,6 +22109,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "pr_number": pr_number,
             "branch": branch,
             "stack": stack,
+            "stack_discovery": stack.get("stack_discovery", {}),
             "stack_member_count": stack.get("stack_member_count", 0),
             "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
             if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
@@ -22264,6 +22331,35 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
         }
     path_fingerprints = receipt.get("path_fingerprints", {}) if isinstance(receipt.get("path_fingerprints"), dict) else {}
     changed_paths = [str(item) for item in _list_payload(receipt.get("changed_paths")) if str(item).strip()]
+    parent_proof_reference = str(receipt.get("parent_proof_reference") or receipt.get("parent_proof_ref") or "").strip()
+    proof_selection_identity = str(
+        receipt.get("proof_selection_identity")
+        or receipt.get("proof_selection_fingerprint")
+        or receipt.get("selected_proof_fingerprint")
+        or ""
+    ).strip()
+    dependency_config_state = str(
+        receipt.get("dependency_config_state")
+        or receipt.get("dependency_config_fingerprint")
+        or receipt.get("dependency_fingerprint")
+        or receipt.get("config_fingerprint")
+        or ""
+    ).strip()
+    generated_surface_freshness = receipt.get("generated_surface_freshness")
+    generated_surface_status = (
+        str(generated_surface_freshness.get("status") or "").strip()
+        if isinstance(generated_surface_freshness, dict)
+        else str(generated_surface_freshness or "").strip()
+    )
+    missing_reuse_evidence: list[str] = []
+    if not parent_proof_reference:
+        missing_reuse_evidence.append("parent_proof_reference")
+    if not proof_selection_identity:
+        missing_reuse_evidence.append("proof_selection_identity")
+    if not dependency_config_state:
+        missing_reuse_evidence.append("dependency_config_state")
+    if generated_surface_status not in {"current", "fresh", "verified", "not_applicable"}:
+        missing_reuse_evidence.append("generated_surface_freshness")
     missing_paths: list[str] = []
     changed_fingerprints: list[str] = []
     for relative in changed_paths:
@@ -22282,26 +22378,38 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
         if not isinstance(raw, dict):
             continue
         command = str(raw.get("command") or raw.get("proof_command") or "").strip()
+        command_identity = str(
+            raw.get("command_identity") or raw.get("command_fingerprint") or raw.get("command_digest") or raw.get("command_sha256") or ""
+        ).strip()
         prior_status = str(raw.get("status") or "passed").strip()
+        group_missing_evidence = list(missing_reuse_evidence)
+        if not command_identity:
+            group_missing_evidence.append("command_identity")
         if missing_paths or changed_fingerprints:
             classification = "rerun_required"
             rationale = "changed proof input fingerprints"
         elif prior_status not in {"passed", "success", "ok"}:
             classification = "rerun_required"
             rationale = "prior proof did not pass"
-        elif not command:
+        elif not command or group_missing_evidence:
             classification = "reuse_unknown"
-            rationale = "proof command identity missing"
+            rationale = "explicit proof identity or gate-input evidence missing"
         else:
             classification = "reuse_safe_with_evidence"
-            rationale = "changed path fingerprints match the compact proof receipt"
+            rationale = "proof identity, gate inputs, command identity, generated freshness, and changed path fingerprints match"
         proof_groups.append(
             {
                 "command": command,
                 "classification": classification,
+                "missing_reuse_evidence": group_missing_evidence,
                 "evidence": {
                     "prior_head": receipt.get("prior_head") or receipt.get("head"),
                     "prior_base": receipt.get("prior_base") or receipt.get("base"),
+                    "parent_proof_reference": parent_proof_reference,
+                    "proof_selection_identity": proof_selection_identity,
+                    "dependency_config_state": dependency_config_state,
+                    "generated_surface_freshness": generated_surface_status,
+                    "command_identity": command_identity,
                     "changed_paths": changed_paths,
                     "fingerprint_count": len(path_fingerprints),
                 },
@@ -22314,6 +22422,9 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
     elif proof_groups and all(group["classification"] == "reuse_safe_with_evidence" for group in proof_groups):
         status = "reuse_safe_with_evidence"
         recommended = "Focused proof may reuse the named prior proof groups; record the reuse rationale in closeout."
+    elif proof_groups and all(group["classification"] == "reuse_unknown" for group in proof_groups):
+        status = "reuse_unknown"
+        recommended = "Run current changed-path proof selection; cached proof lacks explicit reuse evidence."
     elif proof_groups:
         status = "focused_rerun_required"
         recommended = "Rerun only proof groups without reuse evidence."
@@ -22327,6 +22438,7 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
         "observed_changed_paths": changed_paths,
         "missing_paths": missing_paths,
         "changed_fingerprints": changed_fingerprints,
+        "missing_reuse_evidence": missing_reuse_evidence,
         "proof_groups": proof_groups,
         "recommended_next_action": recommended,
         "detail_command": detail_command,
@@ -35829,6 +35941,29 @@ def _changed_paths_matching_contract_path_match(*, changed_paths: list[str], pat
 
 def _supplemental_proof_lanes_for_changed_paths(*, changed_paths: list[str]) -> list[dict[str, Any]]:
     supplemental_lanes: list[dict[str, Any]] = []
+    runtime_mirror_paths = [
+        path
+        for path in changed_paths
+        if path
+        in {
+            "src/agentic_workspace/workspace_runtime_core.py",
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+        }
+    ]
+    if runtime_mirror_paths:
+        supplemental_lanes.append(
+            {
+                "id": "runtime_mirror_consistency",
+                "when": "changed path edits mirrored runtime packet surfaces",
+                "enough_proof": [
+                    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"
+                ],
+                "recovery_signal": "runtime mirror mismatches should block closeout until core and primitives expose the same packet shape",
+                "proof_kind": "targeted-static-check",
+                "proof_responsibility": "local-closeout",
+                "matched_paths": runtime_mirror_paths,
+            }
+        )
     for raw_lane in _PROOF_SELECTION_RULES.get("supplemental_lanes", []):
         if not isinstance(raw_lane, dict):
             continue
