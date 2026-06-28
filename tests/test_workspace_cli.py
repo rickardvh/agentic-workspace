@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 # ruff: noqa: F403,F405
+import copy
+import hashlib
 import re
 from datetime import date
 
@@ -781,6 +783,149 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
     release = json.loads(capsys.readouterr().out)
     assert release["context"]["dogfooding_signal_status"]["status"] == "not_checked"
     assert "dogfooding_signal_status" in release["action_signals"]["advisory_detail"]["selectors"]
+
+
+def test_start_report_meta_task_keeps_routine_context_selector_only_with_background_drift(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Give me an in-chat dogfooding report about this session",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 10_000, label="start report/meta compact payload", sort_keys=False)
+    assert "routine_work_context" not in payload["context"]
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+    assert "installed_state_compatibility" not in payload
+    assert "installed_state_drift_triage" not in payload["context"]
+    assert "installed_state_drift_triage=background_advisory" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
+
+
+def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "How should we implement the runtime proof selector?",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "routine_work_context" in payload["context"]
+    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+
+
+def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "installed_state_drift_triage" not in payload["context"]
+
+
+def test_start_unrelated_changed_path_does_not_make_payload_drift_actionable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/typo.md",
+                "--task",
+                "Fix one docs typo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_drift_triage" not in payload["context"]
+
+
+def test_start_installed_state_drift_triage_is_actionable_for_payload_claims(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "payload-provenance.json").write_text(
+        json.dumps({"kind": "wrong-kind"}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Verify payload freshness before release",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    triage = payload["context"]["installed_state_drift_triage"]
+    assert triage["status"] == "actionable_now"
+    assert triage["claim_relevant"] is True
+    assert "agentic-workspace upgrade" in triage["repair_command"]
+    assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
 
 
 def test_start_treats_named_path_question_as_conceptual_reference(tmp_path: Path, capsys) -> None:
@@ -1742,6 +1887,255 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert fresh_empty["status"] == "no_actionable_pr_comments_detected"
     assert fresh_empty["actionable_count"] == 0
     assert fresh_empty["freshness"]["pr_head_sha"] == "abc123"
+
+
+def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_commands(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    unavailable = json.loads(capsys.readouterr().out)
+    unavailable_attention = unavailable["context"]["pr_comment_attention"]
+    assert unavailable_attention["status"] == "stack_comment_status_unavailable"
+    assert unavailable_attention["stack_discovery"]["status"] == "unavailable"
+    assert unavailable_attention["stack_member_count"] == 0
+
+    fresh_stack = {
+        "repository": "rickardvh/agentic-workspace",
+        "stack_members": [
+            {
+                "pr_number": 1840,
+                "branch": "codex/proof-reuse",
+                "head_sha": "aaa111",
+                "delta": {
+                    "category_counts": {
+                        "actionable_code_doc_body_change": 0,
+                        "pr_metadata_body_only_change": 0,
+                        "ci_label_only_issue": 0,
+                        "ambiguous_needs_human": 0,
+                    },
+                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": "aaa111"},
+                },
+            },
+            {
+                "pr_number": 1841,
+                "branch": "codex/stack-comments",
+                "head_sha": "bbb222",
+                "delta": {
+                    "category_counts": {
+                        "actionable_code_doc_body_change": 0,
+                        "pr_metadata_body_only_change": 0,
+                        "ci_label_only_issue": 0,
+                        "ambiguous_needs_human": 0,
+                    },
+                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": "bbb222"},
+                },
+            },
+        ],
+    }
+    cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    current = json.loads(capsys.readouterr().out)
+    assert current["context"]["pr_comment_attention"]["status"] == "stack_comments_current"
+
+    actionable_stack = copy.deepcopy(fresh_stack)
+    actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
+    cache_path.write_text(
+        json.dumps(actionable_stack),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    attention = payload["context"]["pr_comment_attention"]
+    assert attention["status"] == "actionable_stack_comments_present"
+    assert attention["stack_member_count"] == 2
+    assert attention["stack"]["stack_members"][0]["refresh_command"].endswith("--pr 1840 --format json")
+    assert attention["stack"]["stack_members"][1]["comment_status"] == "actionable_pr_comments_present"
+    assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
+
+    stale_stack = copy.deepcopy(fresh_stack)
+    stale_stack["stack_members"][0]["delta"].pop("freshness")
+    cache_path.write_text(json.dumps(stale_stack), encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    stale = json.loads(capsys.readouterr().out)
+    assert stale["context"]["pr_comment_attention"]["status"] == "stack_comment_status_unavailable"
+
+
+def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    changed_path = tmp_path / "src" / "app.py"
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("VALUE = 1\n", encoding="utf-8")
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    unknown = json.loads(capsys.readouterr().out)["answer"]
+    assert unknown["status"] == "reuse_unknown"
+
+    minimal_receipt = {
+        "prior_head": "abc123",
+        "prior_base": "base123",
+        "changed_paths": ["src/app.py"],
+        "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
+        "proof_groups": [{"command": "uv run pytest tests/test_app.py -q", "status": "passed"}],
+    }
+    cache_path.write_text(json.dumps(minimal_receipt), encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    under_evidenced = json.loads(capsys.readouterr().out)["answer"]
+    assert under_evidenced["status"] == "reuse_unknown"
+    assert "parent_proof_reference" in under_evidenced["missing_reuse_evidence"]
+    assert "command_identity" in under_evidenced["proof_groups"][0]["missing_reuse_evidence"]
+
+    safe_receipt = {
+        **minimal_receipt,
+        "parent_proof_reference": "proof-receipt:abc123",
+        "proof_selection_fingerprint": "selection:runtime-tests",
+        "dependency_config_fingerprint": "deps:locked",
+        "generated_surface_freshness": {"status": "verified"},
+        "proof_groups": [
+            {
+                "command": "uv run pytest tests/test_app.py -q",
+                "command_fingerprint": "cmd:test-app",
+                "status": "passed",
+            }
+        ],
+    }
+    cache_path.write_text(json.dumps(safe_receipt), encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    safe = json.loads(capsys.readouterr().out)["answer"]
+    assert safe["status"] == "reuse_safe_with_evidence"
+    assert safe["proof_groups"][0]["classification"] == "reuse_safe_with_evidence"
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                **safe_receipt,
+                "changed_paths": ["src/app.py"],
+                "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
+                "proof_groups": [
+                    {
+                        "command": "uv run pytest tests/test_app.py -q",
+                        "command_fingerprint": "cmd:test-app",
+                        "status": "passed",
+                    },
+                    {"command": "make lint-workspace", "command_fingerprint": "cmd:lint", "status": "failed"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    partial = json.loads(capsys.readouterr().out)["answer"]
+    assert partial["status"] == "focused_rerun_required"
+    assert partial["proof_groups"][1]["classification"] == "rerun_required"
+
+    changed_path.write_text("VALUE = 2\n", encoding="utf-8")
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "proof_reuse_guidance", "--format", "json"]) == 0
+    stale = json.loads(capsys.readouterr().out)["answer"]
+    assert stale["status"] == "rerun_required"
+    assert stale["changed_fingerprints"] == ["src/app.py"]
+
+
+def test_report_runtime_mirror_consistency_detects_missing_and_mismatched_shapes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    core = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py"
+    primitives = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
+    core.parent.mkdir(parents=True, exist_ok=True)
+    core.write_text(
+        """
+def _pr_comment_attention_payload():
+    return {"kind": "agentic-workspace/pr-comment-attention/v1", "status": "present", "extra": True}
+
+def _dogfooding_signal_status_payload():
+    return {"kind": "agentic-workspace/dogfooding-signal-status/v1", "status": "present"}
+""",
+        encoding="utf-8",
+    )
+    primitives.write_text(
+        """
+def _pr_comment_attention_payload():
+    return {"kind": "agentic-workspace/pr-comment-attention/v1", "status": "present"}
+""",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "runtime_mirror_consistency", "--format", "json"]) == 0
+    mirror = json.loads(capsys.readouterr().out)["answer"]
+
+    assert mirror["status"] == "shape_mismatch"
+    by_surface = {record["mirrored_surface"]: record for record in mirror["records"]}
+    assert by_surface["pr_comment_attention"]["status"] == "shape_mismatch"
+    assert by_surface["dogfooding_signal_status"]["status"] == "mirror_missing"
+
+    primitives.write_text(core.read_text(encoding="utf-8"), encoding="utf-8")
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "runtime_mirror_consistency", "--format", "json"]) == 0
+    in_sync = json.loads(capsys.readouterr().out)["answer"]
+    assert in_sync["status"] == "in_sync"
 
 
 def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, capsys) -> None:
