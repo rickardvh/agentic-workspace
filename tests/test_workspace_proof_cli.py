@@ -688,6 +688,53 @@ dependencies = ["pytest>=8"]
     ]
 
 
+def test_proof_changed_release_version_surface_exposes_named_release_profile(capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(repo_root),
+                "--changed",
+                "pyproject.toml",
+                "--select",
+                "selected_lanes,required_commands,release_proof_profile",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    lane_ids = [lane["id"] for lane in values["selected_lanes"]]
+    assert "coordinated_release_proof" in lane_ids
+    assert "make test-memory" in values["required_commands"]
+    assert "make test-planning" in values["required_commands"]
+    assert "make test-verification" in values["required_commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py" in values["required_commands"]
+    assert "uv run python scripts/check/run_operation_conformance_tests.py --target all" in values["required_commands"]
+    assert "uv run pytest tests/test_release_workflows.py -q" in values["required_commands"]
+
+    profile = values["release_proof_profile"]
+    assert profile["kind"] == "agentic-workspace/release-proof-profile/v1"
+    assert profile["id"] == "coordinated-release-proof"
+    assert profile["status"] == "required"
+    assert profile["matched_paths"] == ["pyproject.toml"]
+    groups = {group["id"]: group for group in profile["groups"]}
+    assert groups["workspace-runtime"]["proof_purpose"] == "behavioral"
+    assert groups["memory-package"]["commands"] == ["make test-memory", "make lint-memory"]
+    assert groups["planning-package"]["commands"] == ["make test-planning", "make lint-planning", "make typecheck-planning"]
+    assert groups["verification-package"]["commands"] == ["make test-verification", "make lint-verification"]
+    assert groups["generated-command-package-freshness"]["proof_purpose"] == "freshness-parity"
+    assert "uv run python scripts/check/check_generated_command_packages.py" in groups["generated-command-package-freshness"]["commands"]
+    assert groups["operation-conformance"]["commands"] == ["uv run python scripts/check/run_operation_conformance_tests.py --target all"]
+    assert groups["release-defaults-version-authority"]["proof_purpose"] == "release-authority"
+    assert "uv run pytest tests/test_release_workflows.py -q" in groups["release-defaults-version-authority"]["commands"]
+
+
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
