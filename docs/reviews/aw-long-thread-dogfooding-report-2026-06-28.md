@@ -27,7 +27,7 @@ What landed:
 - The command-generation release promotion helper landed in #1824, then its explicit wheel SHA verification review concern was fixed before merge.
 - The Linux release-runner local path leak failure was fixed in #1825.
 - A manual coordinated bump published `v0.6.3`: <https://github.com/rickardvh/agentic-workspace/releases/tag/v0.6.3>.
-- Durable dogfooding follow-up issues were filed from this report: #1826, #1827, #1828, #1829.
+- Durable dogfooding follow-up issues were filed from this report: #1826, #1827, #1828, #1829, #1830, #1831, #1832, #1833.
 
 What did not land:
 
@@ -41,7 +41,7 @@ Closure decision:
 Residue destination:
 
 - Checked-in review artifact: this file.
-- GitHub issues: #1826, #1827, #1828, #1829.
+- GitHub issues: #1826, #1827, #1828, #1829, #1830, #1831, #1832, #1833.
 
 ## Assurance And Proof
 
@@ -119,15 +119,16 @@ The fourth cost was source-checkout installed payload drift. AW reported the dri
 | Source-checkout payload drift is visible but easy to leave unrepaired. | `installed_state_compatibility.status = payload-upgrade-required`; payload provenance still `v0.6.2` after `v0.6.3` release. | product-general, install/upgrade flow | yes | make drift self-healing or harder to miss | #1827 |
 | Failed release recovery needed human knowledge of manual coordinated bump. | #1824 release failed; #1825 fix merged but skipped release; manual `Release v0.6.3` push was needed. | product-general, release workflow | yes | expose release recovery command or warning | #1828 |
 | Dogfooding issue creation obligation was missed until human reminder. | User asked whether `AGENTS.md` already required proactive dogfooding analysis and issue creation. | product-general, closeout/reporting | yes | surface dogfooding signal routing as closeout obligation | #1829 |
-| AW proof breadth was high for release identity changes. | Manual `0.6.3` bump required workspace, memory, planning, generated package, conformance, and defaults proof. | successful behavior | no immediate change | preserve; this matched release risk | none |
-| PR comment handling worked once comments were surfaced. | #1824 comment led to default SHA verification and focused mismatch test. | successful behavior | no | preserve GitHub comment-to-proof loop | none |
-| Release CI diagnosis required GitHub log work outside AW. | `gh run view` found failing `test_model_cli_harness_repairs_exported_final_message_without_suppressing_warning`. | maybe product-general | maybe | keep as evidence for future release recovery surfaces, but no separate issue beyond #1828 | #1828 |
+| AW proof breadth was high for release identity changes. | Manual `0.6.3` bump required workspace, memory, planning, generated package, conformance, and defaults proof. | product-general, proof explanation | yes | preserve breadth but explain it as a release-proof profile | #1830 |
+| PR comment handling worked once comments were surfaced. | #1824 comment led to default SHA verification and focused mismatch test, but the human had to prompt that a comment existed. | product-general, review continuation | yes | surface actionable PR comments during continuation | #1831 |
+| Release CI diagnosis required GitHub log work outside AW. | `gh run view` found failing `test_model_cli_harness_repairs_exported_final_message_without_suppressing_warning`. | product-general, release recovery | yes | expose compact release CI failure summaries | #1832 |
+| Low-risk direct-task output can still be costly to scan. | Startup for a docs/report task surfaced bulky checkpoint, installed-state, routine context, and selector detail. | product-general, workflow output | yes | keep low-risk direct-work output selector-first | #1833 |
 
 ## Operating-Cost Review
 
 | Work shape | Required fields | Inferred or optional fields | Default output impact | Decision |
 | --- | --- | --- | --- | --- |
-| Low-risk direct task | changed paths, next safe action, narrow proof | detailed planning candidate pressure, broad routine context | sometimes too large | keep selector-first output; continue hiding detail behind selectors |
+| Low-risk direct task | changed paths, next safe action, narrow proof | detailed planning candidate pressure, broad routine context | sometimes too large | keep selector-first output; continue hiding detail behind selectors (#1833) |
 | Medium-risk planned task | active lane, issue refs, intent satisfaction, proof obligations, PR/comment state | historical roadmap candidate counts | useful but still easy to miss dogfooding closeout | add explicit dogfooding signal status (#1829) |
 | High/release task | release ownership, version set, generated-surface trust, lockfile state, full proof, CI/release run links | broad local checkpoint history | high but justified | preserve proof breadth; improve release recovery affordance (#1828) |
 
@@ -166,13 +167,15 @@ Created package issues:
 - #1827: Make source-checkout payload drift harder to miss.
 - #1828: Make release recovery explicit after failed semver release.
 - #1829: Surface dogfooding signal routing as a closeout obligation.
+- #1830: Make release-proof breadth explain itself.
+- #1831: Surface actionable PR comments during continuation.
+- #1832: Expose release CI failure summaries for recovery.
+- #1833: Keep low-risk direct-work output selector-first.
 
 Dismissed as no new issue:
 
-- Proof breadth for release work: high cost but appropriate for release risk.
-- PR review comment loop: worked as intended once the comment was inspected.
-- GitHub Actions log inspection: handled by the GitHub CI-fix workflow; broader release recovery is covered by #1828.
+- No remaining review rows were intentionally left unissued after #1830-#1833. Positive observations are preserved in this report as impact evidence rather than separate work.
 
 ## Bottom Line
 
-AW was effective enough to carry a long, high-change thread through issue triage, stacked PRs, review comments, CI repair, and a successful coordinated release. The main current gap is not lack of state; it is making the right state unavoidable at the right moment. The best next work is to reduce missed obligations: stale proof paths, payload drift, release recovery commands, and dogfooding signal routing.
+AW was effective enough to carry a long, high-change thread through issue triage, stacked PRs, review comments, CI repair, and a successful coordinated release. The main current gap is not lack of state; it is making the right state unavoidable at the right moment. The best next work is to reduce missed obligations and scan cost: stale proof paths, payload drift, release recovery commands, dogfooding signal routing, PR comment attention, release-failure summaries, and low-risk output compression.
