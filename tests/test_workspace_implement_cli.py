@@ -468,6 +468,8 @@ def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tm
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path)]) == 0
     capsys.readouterr()
+    _write(tmp_path / "packages" / "planning" / "README.md", "# Planning\n")
+    _write(tmp_path / "packages" / "memory" / "README.md", "# Memory\n")
     _write(tmp_path / "docs" / "package" / "knowledge-gates.md", "# Pre-Work Knowledge Gates\n")
 
     assert (
@@ -495,7 +497,7 @@ def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tm
     assert "blocked_claims" not in packet
     assert all("blocked_claims" not in gate for gate in packet["knowledge_gates"])
     assert "change gate vocabulary without checking source authority" in packet["blocked_actions"]
-    assert "full_intent_complete" in packet["closeout_boundaries"]
+    assert "allowed-after-proof" in packet["closeout_boundaries"]
     assert packet["gate_summary"]["blocking_count"] >= 1
 
 
@@ -503,6 +505,12 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}")
+    _write(
+        tmp_path / "tests" / "test_workspace_proof_generated_packages_cli.py",
+        "def test_generated_package_fixture():\n    assert True\n",
+    )
+    _write(tmp_path / "scripts" / "check" / "check_generated_command_packages.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "run_operation_conformance_tests.py", "print('ok')\n")
 
     assert (
         cli.main(
@@ -1803,6 +1811,9 @@ def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) 
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / ".agentic-workspace" / "docs" / "guide.md", "# Guide\n")
+    _write(tmp_path / "packages" / "planning" / "README.md", "# Planning\n")
+    _write(tmp_path / "packages" / "memory" / "README.md", "# Memory\n")
     _write(tmp_path / "README.md", "hello\n")
 
     assert (
@@ -1852,6 +1863,9 @@ def test_implement_task_contract_names_missing_task_inputs(tmp_path: Path, capsy
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / ".agentic-workspace" / "docs" / "guide.md", "# Guide\n")
+    _write(tmp_path / "packages" / "planning" / "README.md", "# Planning\n")
+    _write(tmp_path / "packages" / "memory" / "README.md", "# Memory\n")
     _write(tmp_path / "README.md", "hello\n")
 
     assert (
@@ -2085,6 +2099,10 @@ blocking_claims = ["claim-work-complete"]
 def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / ".agentic-workspace" / "docs" / "guide.md", "# Guide\n")
+    _write(tmp_path / "packages" / "planning" / "README.md", "# Planning\n")
+    _write(tmp_path / "packages" / "memory" / "README.md", "# Memory\n")
     _write(tmp_path / "README.md", "hello\n")
 
     assert (
@@ -2200,6 +2218,12 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
     _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}")
+    _write(
+        tmp_path / "tests" / "test_workspace_proof_generated_packages_cli.py",
+        "def test_generated_package_fixture():\n    assert True\n",
+    )
+    _write(tmp_path / "scripts" / "check" / "check_generated_command_packages.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "run_operation_conformance_tests.py", "print('ok')\n")
 
     assert (
         cli.main(

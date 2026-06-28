@@ -73,7 +73,6 @@ from agentic_workspace.workspace_runtime_core import (
     _project_roots_for_changed_paths,
     _proof_adequacy_payload,
     _proof_command_for_target,
-    _proof_command_is_search_sweep,
     _proof_command_tiers,
     _proof_completion_options,
     _proof_confidence_payload,
@@ -1192,11 +1191,7 @@ def _proof_selection_for_changed_paths(
                     proof_command_adjustments.append(adjustment)
             if adapted_command is None:
                 continue
-            missing_path_refs = (
-                _missing_repo_path_references_in_command(command=adapted_command, target_root=target_root)
-                if lane.get("subsystem") and _proof_command_is_search_sweep(adapted_command)
-                else []
-            )
+            missing_path_refs = _missing_repo_path_references_in_command(command=adapted_command, target_root=target_root)
             if missing_path_refs:
                 unavailable_proof_commands.append(
                     {
