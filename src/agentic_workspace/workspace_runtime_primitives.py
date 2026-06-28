@@ -4566,6 +4566,8 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "claim_boundary": "No session signal source exists; broad repo-wide candidates stay behind explicit improvement_intake.",
         }
     outcome = _dogfooding_signal_status_outcome(cache)
+    signals = cast(list[str], outcome["signals"])
+    destinations = cast(list[str], outcome["destinations"])
     routing_decision = str(cache.get("routing_decision") or outcome["status"])
     session_signals = [
         {
@@ -4574,7 +4576,7 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "routing_decision": routing_decision,
             "durability": outcome["durability"],
         }
-        for signal in outcome["signals"]
+        for signal in signals
     ]
     status = "checked_none" if outcome["status"] == "checked_none" else "session_observed"
     return {
@@ -4587,7 +4589,7 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             {
                 "outcome": outcome["status"],
                 "decision": routing_decision,
-                "destinations": outcome["destinations"],
+                "destinations": destinations,
                 "durable_residue": outcome["durable_residue"],
                 "closeout_blocked": outcome["closeout_blocked"],
             }
@@ -22339,6 +22341,8 @@ def _dogfooding_signal_status_payload(
         status = outcome["status"]
         reason = str(cache.get("reason") or "").strip()
         closeout_blocked = bool(outcome["closeout_blocked"])
+    signals = cast(list[str], outcome["signals"])
+    destinations = cast(list[str], outcome["destinations"])
     payload = {
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
         "status": status,
@@ -22346,11 +22350,11 @@ def _dogfooding_signal_status_payload(
         "applies_to_current_work": True,
         "closeout_blocked": closeout_blocked,
         "reason": reason or ("Dogfooding review has not been recorded for this maintenance shape." if status == "not_checked" else ""),
-        "destinations": list(outcome["destinations"])[:5],
+        "destinations": destinations[:5],
         "dismissal_reason": str(outcome["dismissal_reason"]),
         "deferred_reason": str(outcome["deferred_reason"]),
-        "signal_count": len(outcome["signals"]),
-        "sample_signals": list(outcome["signals"])[:3],
+        "signal_count": len(signals),
+        "sample_signals": signals[:3],
         "durability": str(outcome["durability"]),
         "durable_residue": bool(outcome["durable_residue"]),
         "canonical_repo_history": bool(outcome["canonical_repo_history"]),
