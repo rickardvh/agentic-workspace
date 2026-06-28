@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -226,7 +227,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         **(
             {"local_chat_checkpoint": payload["local_chat_checkpoint"]}
             if isinstance(payload.get("local_chat_checkpoint"), dict)
-            and payload["local_chat_checkpoint"].get("status") in {"present", "stale", "unreadable"}
+            and _local_chat_checkpoint_default_visible(payload["local_chat_checkpoint"], payload=payload)
             else {}
         ),
         "memory_decision_packet": payload.get("memory_decision_packet", {}),
@@ -436,6 +437,20 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
     )
     return projected
+
+
+def _local_chat_checkpoint_default_visible(local_checkpoint: dict[str, Any], *, payload: dict[str, Any]) -> bool:
+    status = str(local_checkpoint.get("status") or "").strip()
+    if status in {"stale", "unreadable"}:
+        return True
+    if status != "present":
+        return False
+    routes = local_checkpoint.get("planning_candidate_routes", {})
+    if isinstance(routes, dict) and routes.get("status") == "matched":
+        return True
+    task_intent = payload.get("task_intent", {})
+    task_text = json.dumps(task_intent, sort_keys=True).lower() if isinstance(task_intent, dict) else ""
+    return any(token in task_text for token in ("resume", "checkpoint", "continue", "handoff", "takeover"))
 
 
 def _start_payload(
@@ -1189,7 +1204,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "memory": payload.get("memory_consult", {}),
     }
     local_checkpoint = payload.get("local_chat_checkpoint", {})
-    if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
+    if isinstance(local_checkpoint, dict) and _local_chat_checkpoint_default_visible(local_checkpoint, payload=payload):
         context["local_chat_checkpoint"] = {
             key: local_checkpoint.get(key)
             for key in (
@@ -1352,6 +1367,12 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
+    if (
+        target_root is not None
+        and "local_chat_checkpoint" not in available_selectors
+        and (target_root / ".agentic-workspace" / "local" / "chat-checkpoint.json").is_file()
+    ):
+        available_selectors.append("local_chat_checkpoint")
     if "read_only_response" in payload and "acceptance" not in available_selectors:
         insert_at = (
             available_selectors.index("durable_intent_promotion")
