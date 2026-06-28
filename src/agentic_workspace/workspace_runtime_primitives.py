@@ -4373,6 +4373,12 @@ def _improvement_intake_payload(
         "kind": "workspace-improvement-intake/v1",
         "role": "router-not-backlog",
         "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
+        "intake_scope": {
+            "status": "explicit_repo_wide_requested" if isinstance(repo_friction, dict) else "session_scoped_default",
+            "session_section": "session_improvement_intake",
+            "repo_wide_section": "improvement_intake",
+            "rule": "Fresh session signals stay in session_improvement_intake; repo-wide diagnostics are available when this section is requested explicitly.",
+        },
         "audience_boundary": {
             "status": "source-checkout" if source_checkout else "target-repo",
             "rule": "Reusable host-repo diagnostics are shipped; package-development signals stay source-checkout-only.",
@@ -4422,6 +4428,8 @@ def _improvement_intake_payload(
             "Preserve provenance and confidence when a signal is routed.",
         ],
         "improvement_signal_candidates": signal_candidates,
+        "repo_wide_existing_candidates": signal_candidates,
+        "session_observed_signals": [],
         "candidate_count": len(signal_candidates),
         "setup_findings": {
             "status": setup_findings.get("status"),
@@ -4446,6 +4454,155 @@ def _improvement_intake_payload(
             "hidden_subtype_count": len(source_checkout_only_subtypes),
         }
     return payload
+
+
+def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
+    signals = [str(item) for item in _list_payload(cache.get("signals")) if str(item).strip()]
+    destinations = [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()]
+    raw_status = str(cache.get("status") or cache.get("outcome") or "").strip()
+    dismissal_reason = str(cache.get("dismissal_reason") or cache.get("reason") or "").strip()
+    deferred_reason = str(cache.get("deferred_reason") or cache.get("reason") or "").strip()
+    durable_route_statuses = {
+        "routed_to_issue",
+        "routed_to_planning",
+        "routed_to_memory",
+        "routed_to_docs",
+    }
+    legacy_map = {
+        "no_signal_found": "checked_none",
+        "signals_routed": "routed_to_issue" if destinations else "unresolved",
+        "signals_dismissed_with_reason": "dismissed_with_reason",
+    }
+    status = legacy_map.get(raw_status, raw_status)
+    if status not in {
+        "not_checked",
+        "checked_none",
+        "recorded_chat_only",
+        "recorded_session_only",
+        "routed_to_issue",
+        "routed_to_planning",
+        "routed_to_memory",
+        "routed_to_docs",
+        "deferred_to_roadmap",
+        "dismissed_with_reason",
+        "unresolved",
+    }:
+        status = "unresolved" if signals else "not_checked"
+    if signals and status == "not_checked":
+        status = "unresolved"
+    if status in durable_route_statuses and not destinations:
+        status = "unresolved"
+    if status == "dismissed_with_reason" and not dismissal_reason:
+        status = "unresolved"
+    if status == "deferred_to_roadmap" and not (destinations or deferred_reason):
+        status = "unresolved"
+    closeout_blocked = status == "unresolved"
+    durable_residue = status in durable_route_statuses or status in {"deferred_to_roadmap", "unresolved"}
+    durability = (
+        "canonical_repo_history"
+        if status in durable_route_statuses
+        else "roadmap_or_future_work"
+        if status == "deferred_to_roadmap"
+        else "local_chat_only"
+        if status == "recorded_chat_only"
+        else "local_session_only"
+        if status == "recorded_session_only"
+        else "none"
+        if status in {"checked_none", "dismissed_with_reason"}
+        else "unresolved"
+        if status == "unresolved"
+        else "not_checked"
+    )
+    return {
+        "status": status,
+        "signals": signals,
+        "destinations": destinations,
+        "dismissal_reason": dismissal_reason,
+        "deferred_reason": deferred_reason,
+        "closeout_blocked": closeout_blocked,
+        "durable_residue": durable_residue,
+        "durability": durability,
+        "canonical_repo_history": durability == "canonical_repo_history",
+    }
+
+
+def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceConfig, cli_invoke: str) -> dict[str, Any]:
+    cache_path = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
+    cache = _read_local_cache_json(target_root, cache_path)
+    repo_wide_command = _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section improvement_intake --format json",
+        cli_invoke=cli_invoke,
+    )
+    if cache.get("_cache_error"):
+        return {
+            "kind": "workspace-session-improvement-intake/v1",
+            "status": "unavailable",
+            "scope": "session_observed",
+            "reason": str(cache["_cache_error"]),
+            "session_signal_source": {"status": "unavailable", "cache_path": cache_path},
+            "session_observed_signals": [],
+            "routing_decisions": [],
+            "repo_wide_existing": {
+                "status": "available_on_request",
+                "command": repo_wide_command,
+                "included_by_default": False,
+            },
+            "claim_boundary": "Session-scoped improvement state is unavailable; do not claim no dogfooding residue from this packet.",
+        }
+    if not cache:
+        return {
+            "kind": "workspace-session-improvement-intake/v1",
+            "status": "unavailable",
+            "scope": "session_observed",
+            "reason": "No local session dogfooding signal cache was found.",
+            "session_signal_source": {"status": "missing", "cache_path": cache_path},
+            "session_observed_signals": [],
+            "routing_decisions": [],
+            "repo_wide_existing": {
+                "status": "available_on_request",
+                "command": repo_wide_command,
+                "included_by_default": False,
+            },
+            "claim_boundary": "No session signal source exists; broad repo-wide candidates stay behind explicit improvement_intake.",
+        }
+    outcome = _dogfooding_signal_status_outcome(cache)
+    routing_decision = str(cache.get("routing_decision") or outcome["status"])
+    session_signals = [
+        {
+            "signal": signal,
+            "outcome": outcome["status"],
+            "routing_decision": routing_decision,
+            "durability": outcome["durability"],
+        }
+        for signal in outcome["signals"]
+    ]
+    status = "checked_none" if outcome["status"] == "checked_none" else "session_observed"
+    return {
+        "kind": "workspace-session-improvement-intake/v1",
+        "status": status,
+        "scope": "session_observed",
+        "session_signal_source": {"status": "present", "cache_path": cache_path},
+        "session_observed_signals": session_signals,
+        "routing_decisions": [
+            {
+                "outcome": outcome["status"],
+                "decision": routing_decision,
+                "destinations": outcome["destinations"],
+                "durable_residue": outcome["durable_residue"],
+                "closeout_blocked": outcome["closeout_blocked"],
+            }
+        ],
+        "repo_wide_existing": {
+            "status": "available_on_request",
+            "command": repo_wide_command,
+            "included_by_default": False,
+        },
+        "claim_boundary": (
+            "Unresolved session improvement signals remain closeout-visible."
+            if outcome["closeout_blocked"]
+            else "Session improvement signals have an explicit non-blocking outcome."
+        ),
+    }
 
 
 def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, source: str) -> WorkspaceConfig:
@@ -9618,8 +9775,14 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
     {
         "section": "dogfooding_signal_status",
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
-        "purpose": "compact closeout status for package dogfooding signals: not checked, none found, routed, or dismissed",
+        "purpose": "compact closeout status for package dogfooding signal outcomes and residue",
         "when_to_use": "for planned lanes, stacked PR sequences, release/recovery work, and non-trivial maintenance closeout",
+    },
+    {
+        "section": "session_improvement_intake",
+        "kind": "workspace-session-improvement-intake/v1",
+        "purpose": "cheap session-scoped dogfooding/improvement intake without repo-wide diagnostics",
+        "when_to_use": "for quick dogfooding reports or closeout when current-session signals should be routed, recorded, dismissed, deferred, or left visibly unresolved",
     },
     {
         "section": "closeout_trust",
@@ -11815,6 +11978,14 @@ def _run_lazy_report_section_command(
             task_text="planned lane or maintenance report section requested",
             cli_invoke=config.cli_invoke,
             active_planning_present=bool(active_planning_record),
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "session_improvement_intake":
+        payload["session_improvement_intake"] = _session_improvement_intake_payload(
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
@@ -22135,42 +22306,59 @@ def _dogfooding_signal_status_payload(
             "reason": "No planned lane, stacked PR, release/recovery, or maintainer dogfooding context detected.",
         }
     command = _command_with_cli_invoke(
-        command="agentic-workspace report --target ./repo --section improvement_intake --format json",
-        cli_invoke=cli_invoke,
+        command="agentic-workspace report --target ./repo --section session_improvement_intake --format json", cli_invoke=cli_invoke
     )
-    allowed_statuses = {"not_checked", "no_signal_found", "signals_routed", "signals_dismissed_with_reason"}
+    allowed_statuses = {
+        "not_checked",
+        "checked_none",
+        "recorded_chat_only",
+        "recorded_session_only",
+        "routed_to_issue",
+        "routed_to_planning",
+        "routed_to_memory",
+        "routed_to_docs",
+        "deferred_to_roadmap",
+        "dismissed_with_reason",
+        "unresolved",
+    }
     if cache.get("_cache_error"):
         status = "not_checked"
         reason = str(cache["_cache_error"])
         closeout_blocked = True
+        outcome = {
+            "signals": [],
+            "destinations": [],
+            "dismissal_reason": "",
+            "deferred_reason": "",
+            "durability": "not_checked",
+            "durable_residue": False,
+            "canonical_repo_history": False,
+        }
     else:
-        raw_status = str(cache.get("status") or "").strip()
-        signals = [item for item in _list_payload(cache.get("signals")) if str(item).strip()]
-        destinations = [item for item in _list_payload(cache.get("destinations")) if str(item).strip()]
-        dismissal_reason = str(cache.get("dismissal_reason") or "").strip()
-        if raw_status in allowed_statuses:
-            status = raw_status
-        elif signals:
-            status = "not_checked"
-        else:
-            status = "not_checked"
+        outcome = _dogfooding_signal_status_outcome(cache)
+        status = outcome["status"]
         reason = str(cache.get("reason") or "").strip()
-        closeout_blocked = bool(signals and not destinations and not dismissal_reason and status not in {"no_signal_found"})
+        closeout_blocked = bool(outcome["closeout_blocked"])
     payload = {
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
         "status": status,
+        "outcome": status,
         "applies_to_current_work": True,
         "closeout_blocked": closeout_blocked,
         "reason": reason or ("Dogfooding review has not been recorded for this maintenance shape." if status == "not_checked" else ""),
-        "destinations": [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()][:5],
-        "dismissal_reason": str(cache.get("dismissal_reason") or ""),
-        "signal_count": len([item for item in _list_payload(cache.get("signals")) if str(item).strip()]),
-        "sample_signals": [str(item) for item in _list_payload(cache.get("signals")) if str(item).strip()][:3],
+        "destinations": list(outcome["destinations"])[:5],
+        "dismissal_reason": str(outcome["dismissal_reason"]),
+        "deferred_reason": str(outcome["deferred_reason"]),
+        "signal_count": len(outcome["signals"]),
+        "sample_signals": list(outcome["signals"])[:3],
+        "durability": str(outcome["durability"]),
+        "durable_residue": bool(outcome["durable_residue"]),
+        "canonical_repo_history": bool(outcome["canonical_repo_history"]),
         "cache_path": cache_path,
         "detail_command": command,
         "selector": "dogfooding_signal_status",
         "allowed_statuses": sorted(allowed_statuses),
-        "claim_boundary": "A broad done claim is qualified until dogfooding signals are routed, dismissed with a reason, or recorded as no_signal_found.",
+        "claim_boundary": "A broad done claim is qualified until dogfooding signals are checked and routed, recorded locally, deferred, dismissed, or left visibly unresolved.",
     }
     return {key: value for key, value in payload.items() if value not in ("", [], {})}
 
