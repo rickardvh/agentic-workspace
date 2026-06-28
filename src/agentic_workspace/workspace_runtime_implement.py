@@ -989,6 +989,32 @@ def _implement_payload(
     return payload
 
 
+def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    suggestions = [
+        {
+            "reason": str(item.get("reason", "")),
+            "route_id": str(item.get("route_id", "")),
+            "target_surface": str(item.get("target_surface", "")),
+            "recommended_state": str(item.get("recommended_state", "")),
+        }
+        for item in value.get("suggested_updates", [])
+        if isinstance(item, dict)
+    ][:3]
+    return {
+        "kind": value.get("kind", "proof-route-maintenance/v1"),
+        "status": value.get("status", "unknown"),
+        "material_to_current_work": bool(value.get("material_to_current_work", False)),
+        "fallback_selected_count": int(value.get("fallback_selected_count", 0) or 0),
+        "stale_route_count": int(value.get("stale_route_count", 0) or 0),
+        "invalid_authority_count": int(value.get("invalid_authority_count", 0) or 0),
+        "manual_obligation_count": int(value.get("manual_obligation_count", 0) or 0),
+        "sample_suggested_updates": suggestions,
+        "closeout_rule": value.get("closeout_rule", ""),
+    }
+
+
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     target_root = Path(str(payload.get("target", ".")))
     config = _load_workspace_config(target_root=target_root)
@@ -1159,6 +1185,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
+            "proof_route_maintenance": _tiny_proof_route_maintenance_payload(payload.get("proof", {}).get("proof_route_maintenance", {}))
+            if isinstance(payload.get("proof"), dict)
+            and isinstance(payload.get("proof", {}).get("proof_route_maintenance"), dict)
+            and payload.get("proof", {}).get("proof_route_maintenance", {}).get("status") == "attention"
             else {},
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke

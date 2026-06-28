@@ -94,6 +94,27 @@
       "execution_mode": "parallel-ok",
       "ci_relationship": "Planning CI includes typecheck through the package check wrapper; local source closeout should prove that obligation directly.",
       "recovery_signal": "Planning source changes should not rely on tests and lint alone when type errors can fail CI."
+    },
+    {
+      "id": "workspace_runtime_typecheck_ci_parity",
+      "path_match": {
+        "prefixes": [
+          "src/agentic_workspace/workspace_runtime_"
+        ],
+        "extensions": [
+          ".py",
+          ".pyi"
+        ]
+      },
+      "when": "changed workspace runtime Python source can fail workspace CI typecheck even when tests and lint pass",
+      "enough_proof": [
+        "make typecheck"
+      ],
+      "proof_kind": "surface-check",
+      "proof_responsibility": "local-closeout",
+      "execution_mode": "parallel-ok",
+      "ci_relationship": "Workspace CI runs typecheck for typed runtime payload/report surfaces; local closeout should prove that typed-boundary obligation directly.",
+      "recovery_signal": "Workspace runtime payload/report/closeout changes should not rely on tests and lint alone when type errors can fail CI."
     }
   ],
   "rules": [

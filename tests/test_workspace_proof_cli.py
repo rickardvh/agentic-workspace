@@ -316,6 +316,46 @@ review_aids = ["Confirm data minimisation and retention assumptions."]
     status = answer["assurance_requirements"]["evidence_status"][0]
     assert status["verification_protocols"][0]["protocol_id"] == "privacy_manual_review"
     assert status["verification_missing_evidence"] == ["manual_privacy_review"]
+    obligations = answer["manual_proof_obligations"]
+    assert obligations[0]["id"] == "verification:privacy_manual_review"
+    assert obligations[0]["required"] is True
+    assert obligations[0]["missing_evidence"] == ["manual_privacy_review"]
+    assert obligations[0]["authority"]["authority"] == "verification-manual-protocol"
+    required = answer["proof_obligations"]["required_proof"]
+    assert required["manual_verification_required"] is True
+    assert required["manual_obligation_count"] == 1
+    assert required["manual_obligations"][0]["id"] == "verification:privacy_manual_review"
+
+
+def test_proof_routes_manual_verification_protocol_without_command(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.retention_policy_review]
+title = "Retention policy review"
+purpose = "Manual verification for retention-sensitive changes."
+applies_to_paths = ["privacy/**"]
+expected_evidence = ["manual_retention_review"]
+review_owner = "privacy-review"
+authority_refs = ["docs/privacy-policy.md#retention", "regulation:P.3"]
+steps = ["Read the retention rule", "Compare changed behavior to the rule"]
+review_aids = ["Record whether regulation P.3 remains satisfied."]
+""",
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "privacy/export.txt", "--verbose", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    obligation = answer["manual_proof_obligations"][0]
+    assert obligation["id"] == "verification:retention_policy_review"
+    assert obligation["reference_material"] == ["docs/privacy-policy.md#retention", "regulation:P.3"]
+    assert obligation["missing_evidence"] == ["manual_retention_review"]
+    assert obligation["claim_boundary"] == "completion-claims-qualified-until-manual-evidence-recorded-or-waived"
+    assert answer["proof_route_maintenance"]["status"] == "attention"
+    assert answer["proof_route_maintenance"]["manual_obligation_count"] == 1
 
 
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
@@ -397,7 +437,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
     assert "validation_plan" not in encoded
-    assert len(encoded) < 2700
+    assert len(encoded) < 2900
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -415,6 +455,9 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
         "command": "make test",
         "lane": "workspace_cli",
         "route_source": "live-adapted-target-capability",
+        "route_authority": "live-target-capability",
+        "fallback_status": "candidate-live-confirmed",
+        "authority_surface": "target repo command discovery",
         "intent_type": "behavior-test",
     }
     assert payload["proof_route_selection"]["route_source"] == "live-adapted-target-capability"
@@ -599,6 +642,9 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
         "command": "cd packages/planning && make test",
         "lane": "planning_package",
         "route_source": "live-adapted-target-capability",
+        "route_authority": "live-target-capability",
+        "fallback_status": "candidate-live-confirmed",
+        "authority_surface": "target repo command discovery",
         "intent_type": "behavior-test",
         "cwd": "packages/planning",
         "run": "make test",
@@ -2203,6 +2249,45 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(cap
     assert typecheck_step["lane_id"] == "planning_source_typecheck_ci_parity"
     typecheck_command = next(command for command in answer["selected_commands"] if command["command"] == "make typecheck-planning")
     assert typecheck_command["intent_type"] == "static-check"
+
+
+def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "workspace_cli" in lane_ids
+    assert "workspace_runtime_typecheck_ci_parity" in lane_ids
+    assert "make typecheck" in answer["required_commands"]
+    typecheck_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "workspace_runtime_typecheck_ci_parity")
+    assert typecheck_lane["matched_paths"] == ["src/agentic_workspace/workspace_runtime_proof.py"]
+    assert typecheck_lane["route_authority"]["fallback_status"] == "seed-fallback"
+    typecheck_command = next(command for command in answer["selected_commands"] if command["command"] == "make typecheck")
+    assert typecheck_command["lane"] == "workspace_runtime_typecheck_ci_parity"
+    assert typecheck_command["fallback_status"] == "seed-fallback"
+    authority = {item["command"]: item for item in answer["proof_obligations"]["required_proof"]["command_authority"]}
+    assert authority["make typecheck"]["route_authority"] == "package-seed-or-default-route"
+    assert answer["proof_route_maintenance"]["fallback_selected_count"] >= 1
+
+
+def test_proof_changed_selector_keeps_docs_only_work_off_workspace_runtime_typecheck(capsys) -> None:
+    assert cli.main(["proof", "--verbose", "--changed", "README.md", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "make typecheck" not in answer["required_commands"]
+    assert "workspace_runtime_typecheck_ci_parity" not in [lane["id"] for lane in answer["selected_lanes"]]
 
 
 def test_proof_changed_selector_flags_high_impact_skill_behavior_evidence(capsys) -> None:

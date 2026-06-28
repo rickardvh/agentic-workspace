@@ -336,6 +336,10 @@
       "type": "object",
       "description": "Derived validation-driven repair residue across Planning and Verification."
     },
+    "repair_route": {
+      "type": "object",
+      "description": "Planning repair-route guidance for already-started or recovery-shaped work."
+    },
     "structured_findings": {
       "type": "object",
       "description": "Structured finding residue shape for review and promotion routing."
@@ -1321,6 +1325,10 @@
           },
           "additionalProperties": false,
           "description": "Action and claim effect for the installed-state compatibility condition."
+        },
+        "repair_route": {
+          "type": "object",
+          "description": "Repair route for reconciling installed-state drift or payload upgrade conditions."
         },
         "rule": {
           "type": "string",
