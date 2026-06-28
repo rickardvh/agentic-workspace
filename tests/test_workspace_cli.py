@@ -1517,6 +1517,156 @@ def test_report_release_recovery_section_exposes_payload_and_semver_recovery_rou
     assert "required_version_paths" in recovery["coordinated_recovery"]["pr_shape"]
 
 
+def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    quiet_payload = json.loads(capsys.readouterr().out)
+    assert "pr_comment_attention" not in quiet_payload["context"]
+    assert "pr_comment_attention" not in quiet_payload["action_signals"]["advisory_detail"]["selectors"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue PR #1831 review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    attention = payload["context"]["pr_comment_attention"]
+    assert attention["status"] == "pr_comment_status_unavailable"
+    assert attention["pr_number"] == "1831"
+    assert "pr_comment_delta.py" in attention["recommended_command"]
+    assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
+    assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
+
+
+def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-delta.json"
+    cache_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/pr-comment-delta/v1",
+                "repository": "rickardvh/agentic-workspace",
+                "pr_number": 1831,
+                "pr_url": "https://github.com/rickardvh/agentic-workspace/pull/1831",
+                "new_comment_count": 1,
+                "category_counts": {
+                    "actionable_code_doc_body_change": 1,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                    "informational_no_local_change": 0,
+                },
+                "items": [
+                    {
+                        "kind": "review_thread_comment",
+                        "category": "actionable_code_doc_body_change",
+                        "path": "src/app.py",
+                        "line": 12,
+                        "url": "https://example.test/pr#thread",
+                        "proof_hint": "Run focused tests.",
+                    }
+                ],
+                "baseline": {"since": "2026-06-28T00:00:00Z"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
+    actionable = json.loads(capsys.readouterr().out)["answer"]
+    assert actionable["status"] == "actionable_pr_comments_present"
+    assert actionable["actionable_count"] == 1
+    assert actionable["sample"][0]["path"] == "src/app.py"
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/pr-comment-delta/v1",
+                "repository": "rickardvh/agentic-workspace",
+                "pr_number": 1831,
+                "new_comment_count": 0,
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                    "informational_no_local_change": 0,
+                },
+                "items": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
+    empty = json.loads(capsys.readouterr().out)["answer"]
+    assert empty["status"] == "no_actionable_pr_comments_detected"
+    assert empty["actionable_count"] == 0
+
+
+def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "dogfooding-signal-status.json"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    not_checked = json.loads(capsys.readouterr().out)["answer"]
+    assert not_checked["status"] == "not_checked"
+    assert not_checked["closeout_blocked"] is False
+
+    cache_path.write_text(json.dumps({"status": "no_signal_found", "reason": "reviewed; no durable signal"}), encoding="utf-8")
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    no_signal = json.loads(capsys.readouterr().out)["answer"]
+    assert no_signal["status"] == "no_signal_found"
+
+    cache_path.write_text(
+        json.dumps({"status": "signals_routed", "signals": ["startup missed PR comments"], "destinations": ["#1831"]}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    routed = json.loads(capsys.readouterr().out)["answer"]
+    assert routed["status"] == "signals_routed"
+    assert routed["destinations"] == ["#1831"]
+    assert routed["closeout_blocked"] is False
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                "status": "signals_dismissed_with_reason",
+                "signals": ["one-off shell typo"],
+                "dismissal_reason": "operator typo, not product friction",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    dismissed = json.loads(capsys.readouterr().out)["answer"]
+    assert dismissed["status"] == "signals_dismissed_with_reason"
+    assert dismissed["dismissal_reason"] == "operator typo, not product friction"
+
+    cache_path.write_text(json.dumps({"signals": ["unrouted friction"]}), encoding="utf-8")
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    blocked = json.loads(capsys.readouterr().out)["answer"]
+    assert blocked["status"] == "not_checked"
+    assert blocked["closeout_blocked"] is True
+
+
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
