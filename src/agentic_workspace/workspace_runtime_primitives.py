@@ -21751,6 +21751,26 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         items = [item for item in _list_payload(cache.get("items")) if isinstance(item, dict)]
         actionable_items = [item for item in items if str(item.get("category") or "") in actionable_categories]
         status = "actionable_pr_comments_present" if actionable_count else "no_actionable_pr_comments_detected"
+        freshness = cache.get("freshness", {}) if isinstance(cache.get("freshness"), dict) else {}
+        cache_is_fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
+        if actionable_count == 0 and not cache_is_fresh:
+            return {
+                "kind": "agentic-workspace/pr-comment-attention/v1",
+                "status": "pr_comment_status_unavailable",
+                "reason": "Cached PR comment delta has no PR-head freshness proof; refresh before readiness claims.",
+                "repository": repo,
+                "pr_number": str(cache.get("pr_number") or pr_number),
+                "cached_status": status,
+                "freshness": freshness
+                or {
+                    "status": "missing",
+                    "readiness_claim_rule": "Refresh PR comments before claiming there are no actionable comments.",
+                },
+                "cache_path": cache_path,
+                "recommended_command": command,
+                "selector": "pr_comment_attention",
+                "degraded_explicitly": True,
+            }
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": status,
@@ -21769,6 +21789,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
                 for item in actionable_items[:3]
             ],
             "baseline": cache.get("baseline", {}) if isinstance(cache.get("baseline"), dict) else {},
+            "freshness": freshness,
             "pagination": cache.get("pagination", {}) if isinstance(cache.get("pagination"), dict) else {},
             "cache_path": cache_path,
             "recommended_command": command,

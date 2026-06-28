@@ -1593,6 +1593,8 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert actionable["actionable_count"] == 1
     assert actionable["sample"][0]["path"] == "src/app.py"
 
+    # Legacy empty caches are not enough to support readiness claims because they
+    # do not prove which PR head was observed.
     cache_path.write_text(
         json.dumps(
             {
@@ -1614,9 +1616,41 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     )
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
-    empty = json.loads(capsys.readouterr().out)["answer"]
-    assert empty["status"] == "no_actionable_pr_comments_detected"
-    assert empty["actionable_count"] == 0
+    stale_empty = json.loads(capsys.readouterr().out)["answer"]
+    assert stale_empty["status"] == "pr_comment_status_unavailable"
+    assert stale_empty["cached_status"] == "no_actionable_pr_comments_detected"
+    assert stale_empty["degraded_explicitly"] is True
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/pr-comment-delta/v1",
+                "repository": "rickardvh/agentic-workspace",
+                "pr_number": 1831,
+                "new_comment_count": 0,
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                    "informational_no_local_change": 0,
+                },
+                "items": [],
+                "freshness": {
+                    "status": "current_at_observed_head",
+                    "pr_head_sha": "abc123",
+                    "observed_at": "2026-06-28T00:00:00Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
+    fresh_empty = json.loads(capsys.readouterr().out)["answer"]
+    assert fresh_empty["status"] == "no_actionable_pr_comments_detected"
+    assert fresh_empty["actionable_count"] == 0
+    assert fresh_empty["freshness"]["pr_head_sha"] == "abc123"
 
 
 def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, capsys) -> None:

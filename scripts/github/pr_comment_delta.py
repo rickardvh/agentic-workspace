@@ -147,6 +147,7 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
         "repository": payload.get("repository") or payload.get("repo"),
         "pr_number": payload.get("pr_number") or payload.get("number"),
         "pr_url": pr.get("url") or payload.get("pr_url"),
+        "pr_head_sha": pr.get("headRefOid") or payload.get("pr_head_sha") or payload.get("head_sha"),
         "comments": comments if comments else payload.get("comments", []),
         "pagination": {
             "truncated": bool(truncated_surfaces),
@@ -275,6 +276,17 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
         "repository": normalized.get("repository") or "",
         "pr_number": normalized.get("pr_number") or "",
         "pr_url": normalized.get("pr_url") or "",
+        "freshness": {
+            "observed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "pr_head_sha": normalized.get("pr_head_sha") or "",
+            "status": "current_at_observed_head" if normalized.get("pr_head_sha") else "baseline_only",
+            "source": "gh-graphql-pr-head" if normalized.get("pr_head_sha") else "fixture-or-legacy-cache",
+            "readiness_claim_rule": (
+                "A no-actionable-comments result may support readiness only for the recorded PR head."
+                if normalized.get("pr_head_sha")
+                else "Refresh PR comments before readiness claims; this packet has no PR-head freshness proof."
+            ),
+        },
         "baseline": {
             "since": since.isoformat().replace("+00:00", "Z") if since else "",
             "seen_comment_url_count": len(seen_urls),
@@ -334,9 +346,10 @@ def _fetch_with_gh(*, repo: str, pr_number: int) -> dict[str, Any]:
     owner, name = repo.split("/", 1)
     query = """
 query($owner: String!, $name: String!, $number: Int!) {
-  repository(owner: $owner, name: $name) {
+    repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       url
+      headRefOid
       comments(first: 100) {
         nodes { databaseId url body createdAt updatedAt author { login } }
         pageInfo { hasNextPage endCursor }
