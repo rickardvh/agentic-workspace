@@ -109,3 +109,96 @@ def test_release_recovery_cli_reads_fixture_inputs(tmp_path: Path) -> None:
     assert packet["semver_release_action"]["status"] == "repair-only-semver-pr"
     assert packet["release_ci_failure"]["status"] == "failed-release-run"
     assert packet["coordinated_recovery"]["status"] == "required"
+
+
+def test_live_release_failure_status_identifies_active_failed_run(monkeypatch) -> None:
+    module = _load_module()
+
+    def fake_gh_json(args: list[str]):
+        if args[:2] == ["run", "list"]:
+            return [
+                {
+                    "databaseId": 101,
+                    "url": "https://github.com/example/repo/actions/runs/101",
+                    "conclusion": "failure",
+                    "updatedAt": "2026-06-28T10:00:00Z",
+                    "workflowName": "Release From Semver Label",
+                    "headBranch": "main",
+                    "headSha": "abc123",
+                }
+            ]
+        if args[:2] == ["run", "view"]:
+            return {
+                "databaseId": 101,
+                "url": "https://github.com/example/repo/actions/runs/101",
+                "workflowName": "Release From Semver Label",
+                "updatedAt": "2026-06-28T10:00:00Z",
+                "jobs": [
+                    {
+                        "name": "release",
+                        "conclusion": "failure",
+                        "steps": [{"name": "Run proof", "conclusion": "failure"}],
+                    }
+                ],
+            }
+        raise AssertionError(args)
+
+    monkeypatch.setattr(module, "_run_gh_json", fake_gh_json)
+    monkeypatch.setattr(module, "_run_gh_text", lambda args, allow_failure=False: "AssertionError: release proof failed")
+
+    packet = module.live_release_failure_status(repo="example/repo")
+
+    assert packet["status"] == "failed-release-run"
+    assert packet["run_url"] == "https://github.com/example/repo/actions/runs/101"
+    assert packet["failed_job"] == "release"
+    assert packet["failed_step"] == "Run proof"
+    assert packet["freshness"]["status"] == "active_failed_release"
+    assert packet["error_summary"] == ["AssertionError: release proof failed"]
+
+
+def test_recovery_packet_marks_failed_release_superseded_by_newer_success(monkeypatch) -> None:
+    module = _load_module()
+
+    def fake_gh_json(args: list[str]):
+        if args[:2] == ["run", "list"]:
+            return [
+                {
+                    "databaseId": 202,
+                    "url": "https://github.com/example/repo/actions/runs/202",
+                    "conclusion": "success",
+                    "updatedAt": "2026-06-28T11:00:00Z",
+                    "workflowName": "Release From Semver Label",
+                },
+                {
+                    "databaseId": 201,
+                    "url": "https://github.com/example/repo/actions/runs/201",
+                    "conclusion": "failure",
+                    "updatedAt": "2026-06-28T10:00:00Z",
+                    "workflowName": "Release From Semver Label",
+                },
+            ]
+        if args[:2] == ["run", "view"]:
+            return {
+                "databaseId": 201,
+                "url": "https://github.com/example/repo/actions/runs/201",
+                "workflowName": "Release From Semver Label",
+                "updatedAt": "2026-06-28T10:00:00Z",
+                "jobs": [{"name": "release", "conclusion": "failure", "steps": []}],
+            }
+        raise AssertionError(args)
+
+    monkeypatch.setattr(module, "_run_gh_json", fake_gh_json)
+    monkeypatch.setattr(module, "_run_gh_text", lambda args, allow_failure=False: "ERROR old failure")
+
+    failure = module.live_release_failure_status(repo="example/repo")
+    packet = module.recovery_packet(
+        repo_root=REPO_ROOT,
+        labels=["semver:patch"],
+        changed_files=["packages/agentic-workspace/pyproject.toml"],
+        release_failure=failure,
+    )
+
+    assert failure["freshness"]["status"] == "superseded_by_newer_success"
+    assert failure["freshness"]["superseding_success"]["run_url"] == "https://github.com/example/repo/actions/runs/202"
+    assert packet["release_publication_state"]["status"] == "cleared-by-newer-success"
+    assert packet["coordinated_recovery"]["status"] == "not-required"

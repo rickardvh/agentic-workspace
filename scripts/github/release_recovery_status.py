@@ -82,6 +82,21 @@ def _timestamp(value: Any) -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _parse_timestamp(value: Any) -> datetime | None:
+    text = _text(value)
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _error_lines(text: str, *, limit: int = 8) -> list[str]:
     lines: list[str] = []
     for line in text.splitlines():
@@ -136,23 +151,126 @@ def release_failure_status(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _run_sort_key(run: dict[str, Any]) -> datetime:
+    return _parse_timestamp(run.get("updatedAt") or run.get("updated_at") or run.get("createdAt") or run.get("created_at")) or datetime.min.replace(
+        tzinfo=timezone.utc
+    )
+
+
+def _run_conclusion(run: dict[str, Any]) -> str:
+    return _text(run.get("conclusion") or run.get("status")).lower()
+
+
+def _run_identity(run: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run_id": _text(run.get("databaseId") or run.get("id")),
+        "run_url": _text(run.get("url") or run.get("html_url")),
+        "head_branch": _text(run.get("headBranch") or run.get("head_branch")),
+        "head_sha": _text(run.get("headSha") or run.get("head_sha")),
+        "updated_at": _timestamp(run.get("updatedAt") or run.get("updated_at") or run.get("createdAt") or run.get("created_at")),
+        "conclusion": _text(run.get("conclusion") or run.get("status")),
+    }
+
+
+def _run_gh_text(args: list[str], *, allow_failure: bool = False) -> str:
+    result = subprocess.run(["gh", *args], capture_output=True, text=True, encoding="utf-8", check=False)
+    if result.returncode != 0 and not allow_failure:
+        raise SystemExit(result.stderr.strip() or result.stdout.strip() or f"gh exited {result.returncode}")
+    return result.stdout if result.returncode == 0 else ""
+
+
+def live_release_failure_status(*, repo: str, workflow: str = DEFAULT_WORKFLOW, limit: int = 10) -> dict[str, Any]:
+    try:
+        runs = _run_gh_json(
+            [
+                "run",
+                "list",
+                "--repo",
+                repo,
+                "--workflow",
+                workflow,
+                "--limit",
+                str(limit),
+                "--json",
+                "databaseId,url,conclusion,status,updatedAt,createdAt,workflowName,headBranch,headSha,event",
+            ]
+        )
+    except SystemExit as exc:
+        return {
+            "kind": "agentic-workspace/release-ci-failure-summary/v1",
+            "status": "release_run_status_unavailable",
+            "workflow": workflow,
+            "reason": str(exc),
+            "freshness": {"status": "unavailable", "source": "gh-run-list-failed"},
+            "next_command": f"gh run list --repo {repo} --workflow {json.dumps(workflow)} --limit {limit}",
+        }
+    if not isinstance(runs, list):
+        runs = []
+    ordered_runs = sorted([run for run in runs if isinstance(run, dict)], key=_run_sort_key, reverse=True)
+    failed_run = next((run for run in ordered_runs if _run_conclusion(run) in {"failure", "failed", "error", "timed_out"}), None)
+    latest_success = next((run for run in ordered_runs if _run_conclusion(run) in {"success", "completed"}), None)
+    if failed_run is None:
+        return {
+            "kind": "agentic-workspace/release-ci-failure-summary/v1",
+            "status": "no-failed-release-run",
+            "workflow": workflow,
+            "latest_run": _run_identity(ordered_runs[0]) if ordered_runs else {},
+            "freshness": {
+                "status": "clear" if ordered_runs else "no-runs-found",
+                "source": "gh-run-list",
+                "observed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            },
+            "next_command": f"gh run list --repo {repo} --workflow {json.dumps(workflow)} --limit {limit}",
+        }
+    failed_id = _text(failed_run.get("databaseId") or failed_run.get("id"))
+    try:
+        detail = _run_gh_json(["run", "view", failed_id, "--repo", repo, "--json", "jobs,url,databaseId,workflowName,updatedAt,headBranch,headSha"])
+    except SystemExit:
+        detail = dict(failed_run)
+    log = _run_gh_text(["run", "view", failed_id, "--repo", repo, "--log-failed"], allow_failure=True)
+    run_payload = dict(failed_run)
+    if isinstance(detail, dict):
+        run_payload.update(detail)
+        if "jobs" not in run_payload and isinstance(detail.get("jobs"), list):
+            run_payload["jobs"] = detail["jobs"]
+    summary = release_failure_status({"run": run_payload, "log": log})
+    failed_at = _run_sort_key(failed_run)
+    superseding_success = None
+    if latest_success is not None and _run_sort_key(latest_success) > failed_at:
+        superseding_success = latest_success
+    summary["freshness"] = {
+        **summary.get("freshness", {}),
+        "status": "superseded_by_newer_success" if superseding_success else "active_failed_release",
+        "source": "gh-run-list + gh-run-view",
+        "observed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "superseding_success": _run_identity(superseding_success) if superseding_success else {},
+    }
+    summary["next_command"] = f"gh run view {failed_id} --repo {repo} --log-failed"
+    return summary
+
+
 def recovery_packet(
     *,
     repo_root: Path,
     labels: list[str],
     changed_files: list[str],
     run_payload: dict[str, Any] | None = None,
+    release_failure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ownership = _ownership_payload(repo_root)
     semver = semver_pr_status(labels=labels, changed_files=changed_files, ownership=ownership)
-    release_failure = release_failure_status(run_payload) if run_payload else {
+    release_failure = release_failure or (release_failure_status(run_payload) if run_payload else {
         "kind": "agentic-workspace/release-ci-failure-summary/v1",
         "status": "not-fetched",
         "workflow": DEFAULT_WORKFLOW,
         "next_command": "gh run list --workflow 'Release From Semver Label' --limit 5",
         "freshness": {"status": "unavailable", "source": "not-fetched"},
-    }
-    recovery_needed = semver["status"] == "repair-only-semver-pr" or release_failure["status"] == "failed-release-run"
+    })
+    active_failed_release = (
+        release_failure["status"] == "failed-release-run"
+        and release_failure.get("freshness", {}).get("status") != "superseded_by_newer_success"
+    )
+    recovery_needed = semver["status"] == "repair-only-semver-pr" or active_failed_release
     version_paths = [package["pyproject"] for package in ownership.get("packages", []) if isinstance(package, dict)] + [
         package["package_json"] for package in ownership.get("typescript_packages", []) if isinstance(package, dict)
     ]
@@ -160,6 +278,21 @@ def recovery_packet(
         "kind": PACKET_KIND,
         "semver_release_action": semver,
         "release_ci_failure": release_failure,
+        "release_publication_state": {
+            "status": "failed-release-unpublished"
+            if active_failed_release
+            else "repair-only-pr-does-not-publish"
+            if semver["status"] == "repair-only-semver-pr"
+            else "cleared-by-newer-success"
+            if release_failure.get("freshness", {}).get("status") == "superseded_by_newer_success"
+            else "no-active-failed-release",
+            "failed_run_url": release_failure.get("run_url", ""),
+            "superseding_run_url": release_failure.get("freshness", {}).get("superseding_success", {}).get("run_url", "")
+            if isinstance(release_failure.get("freshness"), dict)
+            else "",
+            "release_action": semver["status"],
+            "rule": "Repair-only PRs can fix blockers but do not publish; an active failed release needs a coordinated package-affecting release PR unless a newer successful run supersedes it.",
+        },
         "coordinated_recovery": {
             "status": "required" if recovery_needed else "not-required",
             "next_action": (
@@ -203,6 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--repo", help="GitHub repository in owner/name form for live PR reads.")
     parser.add_argument("--pr", type=int, help="Pull request number for live PR reads.")
+    parser.add_argument("--include-release-runs", action="store_true", help="Fetch recent release workflow runs through gh.")
+    parser.add_argument("--workflow", default=DEFAULT_WORKFLOW, help="Release workflow name for --include-release-runs.")
+    parser.add_argument("--run-limit", type=int, default=10, help="Number of release workflow runs to inspect.")
     parser.add_argument("--labels", nargs="*", default=[], help="Semver and other labels for fixture mode.")
     parser.add_argument("--changed-file", action="append", default=[], help="Changed file path for fixture mode.")
     parser.add_argument("--run-fixture", type=Path, help="Optional failed release run fixture JSON.")
@@ -212,17 +348,23 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if bool(args.repo) ^ bool(args.pr):
-        raise SystemExit("--repo and --pr must be supplied together")
+    if bool(args.repo) ^ bool(args.pr) and not (args.repo and args.include_release_runs):
+        raise SystemExit("--repo and --pr must be supplied together unless --include-release-runs is used")
     labels, changed_files = (args.labels, args.changed_file)
     if args.repo and args.pr:
         labels, changed_files = _live_pr_inputs(args.repo, args.pr)
     run_payload = _load_json(args.run_fixture) if args.run_fixture else None
+    release_failure = (
+        live_release_failure_status(repo=args.repo, workflow=args.workflow, limit=args.run_limit)
+        if args.repo and args.include_release_runs
+        else None
+    )
     packet = recovery_packet(
         repo_root=args.repo_root,
         labels=labels,
         changed_files=changed_files,
         run_payload=run_payload,
+        release_failure=release_failure,
     )
     print(json.dumps(packet, indent=2, sort_keys=True))
     return 0

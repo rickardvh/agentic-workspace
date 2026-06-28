@@ -9353,6 +9353,20 @@ def _release_recovery_payload(
         command=("python scripts/github/release_recovery_status.py --repo <owner/name> --pr <number> --format json"),
         cli_invoke=cli_invoke,
     )
+    release_state = _release_recovery_live_state(target_root=target_root, cli_invoke=cli_invoke)
+    release_ci_failure = release_state.get("release_ci_failure", {})
+    if not release_ci_failure:
+        release_ci_failure = {
+            "status": "not-fetched",
+            "workflow": "Release From Semver Label",
+            "command": _command_with_cli_invoke(
+                command="python scripts/github/release_recovery_status.py --repo <owner/name> --include-release-runs --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "deeper_log_command": "gh run view <run-id> --log-failed",
+            "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
+        }
+    release_publication_state = release_state.get("release_publication_state", {})
     return {
         "kind": "agentic-workspace/release-recovery/v1",
         "status": "available" if ownership else "unavailable",
@@ -9372,18 +9386,14 @@ def _release_recovery_payload(
                 "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not publish the failed release."
             ),
         },
-        "release_ci_failure": {
-            "status": "not-fetched",
-            "workflow": "Release From Semver Label",
-            "command": _command_with_cli_invoke(
-                command="python scripts/github/release_recovery_status.py --repo <owner/name> --pr <number> --run-fixture <run.json> --format json",
-                cli_invoke=cli_invoke,
-            ),
-            "deeper_log_command": "gh run view <run-id> --log-failed",
-            "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
-        },
+        "release_ci_failure": release_ci_failure,
+        "release_publication_state": release_publication_state,
         "coordinated_recovery": {
-            "status": "available",
+            "status": "required"
+            if release_publication_state.get("status") == "failed-release-unpublished"
+            else "not-required"
+            if release_publication_state.get("status") == "cleared-by-newer-success"
+            else "available",
             "next_action": "When a failed release remains unpublished after a repair-only PR, create a coordinated explicit version-bump PR.",
             "pr_shape": {
                 "required_version_paths": version_paths,
@@ -9399,6 +9409,106 @@ def _release_recovery_payload(
             command="agentic-workspace report --target ./repo --section release_recovery --format json",
             cli_invoke=cli_invoke,
         ),
+    }
+
+
+def _release_recovery_repo_slug(target_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "config", "--get", "remote.origin.url"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    match = re.search(r"github\.com[:/](?P<repo>[^/\s]+/[^/\s]+?)(?:\.git)?$", result.stdout.strip())
+    return match.group("repo") if match else ""
+
+
+def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    repo = _release_recovery_repo_slug(target_root)
+    command = _command_with_cli_invoke(
+        command=f"python scripts/github/release_recovery_status.py --repo {repo or '<owner/name>'} --include-release-runs --format json",
+        cli_invoke=cli_invoke,
+    )
+    if not repo:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": "No GitHub origin remote was available for live release-run discovery.",
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "missing-github-remote"},
+            },
+            "release_publication_state": {
+                "status": "unknown",
+                "rule": "Live release publication state needs a GitHub repo remote or an explicit run fixture.",
+            },
+        }
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/github/release_recovery_status.py",
+                "--repo-root",
+                str(target_root),
+                "--repo",
+                repo,
+                "--include-release-runs",
+                "--format",
+                "json",
+            ],
+            cwd=target_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": str(exc),
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "helper-execution-failed"},
+            },
+            "release_publication_state": {"status": "unknown", "rule": "Live release helper could not be executed."},
+        }
+    if result.returncode != 0:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": (result.stderr or result.stdout).strip(),
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "helper-returned-error"},
+            },
+            "release_publication_state": {"status": "unknown", "rule": "Live release helper returned an error."},
+        }
+    try:
+        packet = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        packet = {}
+    if not isinstance(packet, dict):
+        packet = {}
+    release_ci_failure = packet.get("release_ci_failure", {})
+    if isinstance(release_ci_failure, dict):
+        release_ci_failure.setdefault("command", command)
+    return {
+        "release_ci_failure": release_ci_failure if isinstance(release_ci_failure, dict) else {},
+        "release_publication_state": packet.get("release_publication_state", {})
+        if isinstance(packet.get("release_publication_state"), dict)
+        else {},
     }
 
 
