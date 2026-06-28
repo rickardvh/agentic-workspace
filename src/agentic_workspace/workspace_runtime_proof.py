@@ -839,6 +839,31 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
     }
 
 
+def _runtime_mirror_consistency_proof_lane(*, changed_paths: list[str]) -> dict[str, Any] | None:
+    matched_paths = [
+        path
+        for path in changed_paths
+        if path
+        in {
+            "src/agentic_workspace/workspace_runtime_core.py",
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+        }
+    ]
+    if not matched_paths:
+        return None
+    return {
+        "id": "runtime_mirror_consistency",
+        "when": "changed path edits mirrored runtime packet surfaces",
+        "enough_proof": [
+            "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"
+        ],
+        "recovery_signal": "runtime mirror mismatches should block closeout until core and primitives expose the same packet shape",
+        "proof_kind": "targeted-static-check",
+        "proof_responsibility": "local-closeout",
+        "matched_paths": matched_paths,
+    }
+
+
 def _release_group_command(command: str) -> str:
     text = command.lower()
     if "test-memory" in text or "lint-memory" in text or "packages/memory" in text:
@@ -1127,6 +1152,9 @@ def _proof_selection_for_changed_paths(
         )
     selected_lanes.extend(subsystem_lanes)
     selected_lanes.extend(_supplemental_proof_lanes_for_changed_paths(changed_paths=changed_paths))
+    runtime_mirror_proof_lane = _runtime_mirror_consistency_proof_lane(changed_paths=changed_paths)
+    if runtime_mirror_proof_lane is not None:
+        selected_lanes.append(runtime_mirror_proof_lane)
     release_proof_lane = _coordinated_release_proof_lane(target_root=target_root, changed_paths=changed_paths)
     if release_proof_lane is not None:
         selected_lanes.append(release_proof_lane)

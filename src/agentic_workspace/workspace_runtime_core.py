@@ -35941,29 +35941,6 @@ def _changed_paths_matching_contract_path_match(*, changed_paths: list[str], pat
 
 def _supplemental_proof_lanes_for_changed_paths(*, changed_paths: list[str]) -> list[dict[str, Any]]:
     supplemental_lanes: list[dict[str, Any]] = []
-    runtime_mirror_paths = [
-        path
-        for path in changed_paths
-        if path
-        in {
-            "src/agentic_workspace/workspace_runtime_core.py",
-            "src/agentic_workspace/workspace_runtime_primitives.py",
-        }
-    ]
-    if runtime_mirror_paths:
-        supplemental_lanes.append(
-            {
-                "id": "runtime_mirror_consistency",
-                "when": "changed path edits mirrored runtime packet surfaces",
-                "enough_proof": [
-                    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"
-                ],
-                "recovery_signal": "runtime mirror mismatches should block closeout until core and primitives expose the same packet shape",
-                "proof_kind": "targeted-static-check",
-                "proof_responsibility": "local-closeout",
-                "matched_paths": runtime_mirror_paths,
-            }
-        )
     for raw_lane in _PROOF_SELECTION_RULES.get("supplemental_lanes", []):
         if not isinstance(raw_lane, dict):
             continue
