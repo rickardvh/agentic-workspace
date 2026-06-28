@@ -9598,6 +9598,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "before broad closeout when external issue, CI, scanner, or ticket evidence may be stale or divergent",
     },
     {
+        "section": "pr_comment_attention",
+        "kind": "agentic-workspace/pr-comment-attention/v1",
+        "purpose": "compact PR comment/review attention status from cached delta evidence or an explicit no-polling fallback",
+        "when_to_use": "during PR-oriented continuation, stacked PR work, or readiness closeout before claiming review comments are handled",
+    },
+    {
+        "section": "dogfooding_signal_status",
+        "kind": "agentic-workspace/dogfooding-signal-status/v1",
+        "purpose": "compact closeout status for package dogfooding signals: not checked, none found, routed, or dismissed",
+        "when_to_use": "for planned lanes, stacked PR sequences, release/recovery work, and non-trivial maintenance closeout",
+    },
+    {
         "section": "closeout_trust",
         "kind": "agentic-workspace/closeout-trust/v1",
         "purpose": "compact strict closeout gate, claim permission, proof, and residue routing posture",
@@ -11765,6 +11777,24 @@ def _run_lazy_report_section_command(
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
+    if normalized == "pr_comment_attention":
+        payload["pr_comment_attention"] = _pr_comment_attention_payload(
+            target_root=target_root,
+            task_text="PR-oriented report section requested",
+            cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "dogfooding_signal_status":
+        payload["dogfooding_signal_status"] = _dogfooding_signal_status_payload(
+            target_root=target_root,
+            config=config,
+            task_text="planned lane or maintenance report section requested",
+            cli_invoke=config.cli_invoke,
+            active_planning_present=bool(active_planning_record),
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized == "architecture_principles":
         payload["architecture_principles"] = _architecture_principles_payload(
             target_root=target_root,
@@ -12267,6 +12297,14 @@ def _run_report_router_command(
             "run": next_command,
         }
     configuration_projection = _configuration_projection_payload(config=config)
+    pr_comment_attention = _pr_comment_attention_payload(target_root=target_root, task_text=None, cli_invoke=config.cli_invoke)
+    dogfooding_signal_status = _dogfooding_signal_status_payload(
+        target_root=target_root,
+        config=config,
+        task_text=None,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=bool(active_planning_record),
+    )
     router_source = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -12302,6 +12340,14 @@ def _run_report_router_command(
         ),
         "authority_hierarchy": _authority_hierarchy_payload(cli_invoke=config.cli_invoke),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
+        **(
+            {"pr_comment_attention": pr_comment_attention} if pr_comment_attention.get("status") not in {None, "", "not_applicable"} else {}
+        ),
+        **(
+            {"dogfooding_signal_status": dogfooding_signal_status}
+            if dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}
+            else {}
+        ),
         "compliance_economics": _compliance_economics_payload(cli_invoke=config.cli_invoke),
         "final_report_budget": _final_report_budget_payload(),
         "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config, repo_friction=None),
@@ -21282,6 +21328,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "durable_intent",
         "workflow_obligations",
         "closeout_obligations",
+        "pr_comment_attention",
+        "dogfooding_signal_status",
         "routine_work_context",
         "local_chat_checkpoint",
         "continuation_view",
@@ -21312,6 +21360,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.objective_drift",
         "context.reuse_pressure",
         "context.routine_work_context",
+        "context.pr_comment_attention",
+        "context.dogfooding_signal_status",
         "context.read_only_response",
         "context.detail_commands",
         "routing",
@@ -21586,6 +21636,254 @@ def _uv_cache_guidance_payload(*, cli_invoke: str) -> dict[str, Any]:
     }
 
 
+def _read_local_cache_json(target_root: Path, relative_path: str) -> dict[str, Any]:
+    path = target_root / relative_path
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"_cache_error": f"{relative_path} could not be read as JSON"}
+    return payload if isinstance(payload, dict) else {"_cache_error": f"{relative_path} did not contain a JSON object"}
+
+
+def _current_git_branch(target_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "branch", "--show-current"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _github_repo_from_origin(target_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "config", "--get", "remote.origin.url"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    remote = result.stdout.strip()
+    if not remote:
+        return ""
+    match = re.search(r"github\.com[:/](?P<repo>[^/\s]+/[^/\s]+?)(?:\.git)?$", remote)
+    return match.group("repo") if match else ""
+
+
+def _task_pr_number(task_text: str | None) -> str:
+    text = str(task_text or "")
+    patterns = (
+        r"(?:pull\s+request|pr)\s*#?\s*(\d+)",
+        r"github\.com/[^/\s]+/[^/\s]+/pull/(\d+)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return ""
+
+
+def _branch_pr_number(branch: str) -> str:
+    match = re.search(r"(?:^|[/_-])(?:pr|pull|pull-request)[/_-]?(\d+)(?:$|[/_-])", branch, flags=re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def _pr_comment_attention_relevant(*, task_text: str | None, branch: str, cache: dict[str, Any]) -> bool:
+    task = str(task_text or "").lower()
+    if cache and "_cache_error" not in cache:
+        return True
+    if _task_pr_number(task_text) or _branch_pr_number(branch):
+        return True
+    if any(token in task for token in (" pull request", " pr ", "stacked pr", "review comment", "review thread")):
+        return True
+    return branch.startswith("codex/")
+
+
+def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    cache_path = ".agentic-workspace/local/cache/pr-comment-delta.json"
+    cache = _read_local_cache_json(target_root, cache_path)
+    branch = _current_git_branch(target_root)
+    repo = str(cache.get("repository") or _github_repo_from_origin(target_root) or "<owner/name>")
+    pr_number = str(cache.get("pr_number") or _task_pr_number(task_text) or _branch_pr_number(branch) or "")
+    if not _pr_comment_attention_relevant(task_text=task_text, branch=branch, cache=cache):
+        return {
+            "kind": "agentic-workspace/pr-comment-attention/v1",
+            "status": "not_applicable",
+            "reason": "No PR context detected; ordinary direct work does not scan GitHub comments.",
+        }
+    command = _command_with_cli_invoke(
+        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
+        cli_invoke=cli_invoke,
+    )
+    if cache.get("_cache_error"):
+        return {
+            "kind": "agentic-workspace/pr-comment-attention/v1",
+            "status": "pr_comment_status_unavailable",
+            "reason": str(cache["_cache_error"]),
+            "pr_number": pr_number,
+            "repository": repo,
+            "cache_path": cache_path,
+            "recommended_command": command,
+            "selector": "pr_comment_attention",
+        }
+    if cache:
+        counts = cache.get("category_counts", {}) if isinstance(cache.get("category_counts"), dict) else {}
+        actionable_categories = (
+            "actionable_code_doc_body_change",
+            "pr_metadata_body_only_change",
+            "ci_label_only_issue",
+            "ambiguous_needs_human",
+        )
+        actionable_count = sum(_as_int(counts.get(category)) for category in actionable_categories)
+        items = [item for item in _list_payload(cache.get("items")) if isinstance(item, dict)]
+        actionable_items = [item for item in items if str(item.get("category") or "") in actionable_categories]
+        status = "actionable_pr_comments_present" if actionable_count else "no_actionable_pr_comments_detected"
+        freshness = cache.get("freshness", {}) if isinstance(cache.get("freshness"), dict) else {}
+        cache_is_fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
+        if actionable_count == 0 and not cache_is_fresh:
+            return {
+                "kind": "agentic-workspace/pr-comment-attention/v1",
+                "status": "pr_comment_status_unavailable",
+                "reason": "Cached PR comment delta has no PR-head freshness proof; refresh before readiness claims.",
+                "repository": repo,
+                "pr_number": str(cache.get("pr_number") or pr_number),
+                "cached_status": status,
+                "freshness": freshness
+                or {
+                    "status": "missing",
+                    "readiness_claim_rule": "Refresh PR comments before claiming there are no actionable comments.",
+                },
+                "cache_path": cache_path,
+                "recommended_command": command,
+                "selector": "pr_comment_attention",
+                "degraded_explicitly": True,
+            }
+        return {
+            "kind": "agentic-workspace/pr-comment-attention/v1",
+            "status": status,
+            "repository": repo,
+            "pr_number": str(cache.get("pr_number") or pr_number),
+            "pr_url": str(cache.get("pr_url") or ""),
+            "actionable_count": actionable_count,
+            "new_comment_count": _as_int(cache.get("new_comment_count")),
+            "category_counts": counts,
+            "sample": [
+                {
+                    key: item.get(key)
+                    for key in ("kind", "category", "path", "line", "url", "author", "created_at", "proof_hint")
+                    if item.get(key) not in (None, "")
+                }
+                for item in actionable_items[:3]
+            ],
+            "baseline": cache.get("baseline", {}) if isinstance(cache.get("baseline"), dict) else {},
+            "freshness": freshness,
+            "pagination": cache.get("pagination", {}) if isinstance(cache.get("pagination"), dict) else {},
+            "cache_path": cache_path,
+            "recommended_command": command,
+            "selector": "pr_comment_attention",
+            "claim_boundary": "Do not claim PR readiness while actionable PR comments are present unless they are addressed or explicitly deferred.",
+        }
+    return {
+        "kind": "agentic-workspace/pr-comment-attention/v1",
+        "status": "pr_comment_status_unavailable",
+        "reason": "PR context is relevant, but no cached PR comment delta was found and startup/report do not poll GitHub by default.",
+        "repository": repo,
+        "pr_number": pr_number,
+        "branch": branch,
+        "cache_path": cache_path,
+        "recommended_command": command,
+        "selector": "pr_comment_attention",
+        "degraded_explicitly": True,
+    }
+
+
+def _dogfooding_signal_relevant(
+    *, task_text: str | None, config: WorkspaceConfig, active_planning_present: bool = False, source_checkout: bool | None = None
+) -> bool:
+    task = str(task_text or "").lower()
+    if active_planning_present or config.maintainer_mode:
+        return True
+    if source_checkout is True and any(token in task for token in ("lane", "stack", "stacked", "release", "recovery", "closeout")):
+        return True
+    return any(token in task for token in ("dogfood", "dogfooding", "stacked pr", "release recovery", "planned lane"))
+
+
+def _dogfooding_signal_status_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    task_text: str | None,
+    cli_invoke: str,
+    active_planning_present: bool = False,
+) -> dict[str, Any]:
+    cache_path = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
+    cache = _read_local_cache_json(target_root, cache_path)
+    source_checkout = _is_agentic_workspace_source_checkout(target_root)
+    if not cache and not _dogfooding_signal_relevant(
+        task_text=task_text,
+        config=config,
+        active_planning_present=active_planning_present,
+        source_checkout=source_checkout,
+    ):
+        return {
+            "kind": "agentic-workspace/dogfooding-signal-status/v1",
+            "status": "not_applicable",
+            "reason": "No planned lane, stacked PR, release/recovery, or maintainer dogfooding context detected.",
+        }
+    command = _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section improvement_intake --format json",
+        cli_invoke=cli_invoke,
+    )
+    allowed_statuses = {"not_checked", "no_signal_found", "signals_routed", "signals_dismissed_with_reason"}
+    if cache.get("_cache_error"):
+        status = "not_checked"
+        reason = str(cache["_cache_error"])
+        closeout_blocked = True
+    else:
+        raw_status = str(cache.get("status") or "").strip()
+        signals = [item for item in _list_payload(cache.get("signals")) if str(item).strip()]
+        destinations = [item for item in _list_payload(cache.get("destinations")) if str(item).strip()]
+        dismissal_reason = str(cache.get("dismissal_reason") or "").strip()
+        if raw_status in allowed_statuses:
+            status = raw_status
+        elif signals:
+            status = "not_checked"
+        else:
+            status = "not_checked"
+        reason = str(cache.get("reason") or "").strip()
+        closeout_blocked = bool(signals and not destinations and not dismissal_reason and status not in {"no_signal_found"})
+    payload = {
+        "kind": "agentic-workspace/dogfooding-signal-status/v1",
+        "status": status,
+        "applies_to_current_work": True,
+        "closeout_blocked": closeout_blocked,
+        "reason": reason or ("Dogfooding review has not been recorded for this maintenance shape." if status == "not_checked" else ""),
+        "destinations": [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()][:5],
+        "dismissal_reason": str(cache.get("dismissal_reason") or ""),
+        "signal_count": len([item for item in _list_payload(cache.get("signals")) if str(item).strip()]),
+        "sample_signals": [str(item) for item in _list_payload(cache.get("signals")) if str(item).strip()][:3],
+        "cache_path": cache_path,
+        "detail_command": command,
+        "selector": "dogfooding_signal_status",
+        "allowed_statuses": sorted(allowed_statuses),
+        "claim_boundary": "A broad done claim is qualified until dogfooding signals are routed, dismissed with a reason, or recorded as no_signal_found.",
+    }
+    return {key: value for key, value in payload.items() if value not in ("", [], {})}
+
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
@@ -21721,6 +22019,18 @@ def _start_tiny_payload_fast(
         changed_paths=changed_paths,
         task_text=task_text,
     )
+    pr_comment_attention = _pr_comment_attention_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
+    if pr_comment_attention.get("status") != "not_applicable":
+        payload["pr_comment_attention"] = pr_comment_attention
+    dogfooding_signal_status = _dogfooding_signal_status_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=active_planning_present,
+    )
+    if dogfooding_signal_status.get("status") != "not_applicable":
+        payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)

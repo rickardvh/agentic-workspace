@@ -246,6 +246,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         **({"task_path_references": payload["task_path_references"]} if isinstance(payload.get("task_path_references"), dict) else {}),
         **({"pre_test_evidence_guardrail": payload["pre_test_evidence_guardrail"]} if "pre_test_evidence_guardrail" in payload else {}),
+        **({"pr_comment_attention": payload["pr_comment_attention"]} if isinstance(payload.get("pr_comment_attention"), dict) else {}),
+        **(
+            {"dogfooding_signal_status": payload["dogfooding_signal_status"]}
+            if isinstance(payload.get("dogfooding_signal_status"), dict)
+            else {}
+        ),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": "Use listed skills only when directly relevant; otherwise proceed from the next action.",
@@ -1237,6 +1243,39 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     task_path_references = payload.get("task_path_references", {})
     if isinstance(task_path_references, dict) and task_path_references.get("status") == "present":
         context["task_path_references"] = task_path_references
+    pr_comment_attention = payload.get("pr_comment_attention", {})
+    if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
+        context["pr_comment_attention"] = {
+            key: pr_comment_attention.get(key)
+            for key in (
+                "kind",
+                "status",
+                "repository",
+                "pr_number",
+                "actionable_count",
+                "new_comment_count",
+                "recommended_command",
+                "selector",
+                "degraded_explicitly",
+            )
+            if key in pr_comment_attention
+        }
+    dogfooding_signal_status = payload.get("dogfooding_signal_status", {})
+    if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
+        context["dogfooding_signal_status"] = {
+            key: dogfooding_signal_status.get(key)
+            for key in (
+                "kind",
+                "status",
+                "closeout_blocked",
+                "destinations",
+                "dismissal_reason",
+                "signal_count",
+                "detail_command",
+                "selector",
+            )
+            if key in dogfooding_signal_status
+        }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
         cli_invocation = payload.get("cli_invocation", {})
@@ -1306,6 +1345,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append("sibling_repo_aw_freshness=attention")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
         startup_changed_signals.append("pre_test_evidence=advisory")
+    if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
+        startup_changed_signals.append(f"pr_comment_attention={pr_comment_attention.get('status')}")
+    if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
+        startup_changed_signals.append(f"dogfooding_signal_status={dogfooding_signal_status.get('status')}")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
@@ -1327,6 +1370,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("local_chat_checkpoint")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
         advisory_selectors.append("pre_test_evidence_guardrail")
+    if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
+        advisory_selectors.append("pr_comment_attention")
+    if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
+        advisory_selectors.append("dogfooding_signal_status")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",

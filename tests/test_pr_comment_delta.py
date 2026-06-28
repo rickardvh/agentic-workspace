@@ -91,6 +91,8 @@ def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
 
     assert packet["kind"] == "agentic-workspace/pr-comment-delta/v1"
     assert packet["new_comment_count"] == 5
+    assert packet["freshness"]["status"] == "baseline_only"
+    assert packet["freshness"]["readiness_claim_rule"].startswith("Refresh PR comments")
     assert packet["category_counts"]["pr_metadata_body_only_change"] == 1
     assert packet["category_counts"]["actionable_code_doc_body_change"] == 1
     assert packet["category_counts"]["ci_label_only_issue"] == 1
@@ -128,6 +130,7 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
             "repository": {
                 "pullRequest": {
                     "url": "https://github.com/rickardvh/agentic-workspace/pull/42",
+                    "headRefOid": "abc123",
                     "comments": {"nodes": []},
                     "reviews": {"nodes": []},
                     "reviewThreads": {
@@ -162,6 +165,8 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
     packet = module.build_packet(payload)
 
     assert packet["new_comment_count"] == 1
+    assert packet["freshness"]["status"] == "current_at_observed_head"
+    assert packet["freshness"]["pr_head_sha"] == "abc123"
     item = packet["items"][0]
     assert item["kind"] == "review_thread_comment"
     assert item["category"] == "actionable_code_doc_body_change"
