@@ -774,6 +774,152 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
     }
 
 
+def _release_ownership_payload(target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    path = target_root / ".github" / "release-ownership.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: list[str]) -> dict[str, Any] | None:
+    ownership = _release_ownership_payload(target_root)
+    if not ownership:
+        return None
+    release_version_paths = {
+        str(path).strip() for path in _list_payload(ownership.get("release_commit_allowed_paths")) if str(path).strip()
+    }
+    release_surface_exact = {
+        str(ownership.get("canonical_version_source") or "").strip(),
+        ".github/release-ownership.json",
+        ".github/workflows/pr-semver-label.yml",
+        ".github/workflows/release-from-semver-label.yml",
+        ".github/workflows/release.yml",
+        "docs/release-and-versioning.md",
+        "tests/test_release_workflows.py",
+    }
+    release_surface_exact = {path for path in release_surface_exact if path}
+    release_surface_prefixes = ("scripts/release/",)
+    matched = [
+        path
+        for path in changed_paths
+        if path in release_version_paths or path in release_surface_exact or path.startswith(release_surface_prefixes)
+    ]
+    if not matched:
+        return None
+    return {
+        "id": "coordinated_release_proof",
+        "when": "changed paths touch release-owned coordinated version or release workflow surfaces",
+        "enough_proof": [
+            "make test-workspace",
+            "make lint-workspace",
+            "make test-memory",
+            "make lint-memory",
+            "make test-planning",
+            "make lint-planning",
+            "make typecheck-planning",
+            "make test-verification",
+            "make lint-verification",
+            "uv run python scripts/check/check_generated_command_packages.py",
+            "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+            "uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+            "uv run pytest tests/test_release_workflows.py -q",
+        ],
+        "proof_kind": "full-test",
+        "proof_responsibility": "local-closeout",
+        "execution_mode": "serial-recommended",
+        "ci_relationship": "Release CI may repeat coordinated proof; local closeout should show the grouped release proof rationale before claiming release readiness.",
+        "recovery_signal": "Release-owned version or workflow changes need coordinated package, generated-surface, conformance, and release-authority proof.",
+        "matched_paths": matched,
+        "release_model": str(ownership.get("release_model", "coordinated-workspace")),
+        "release_ownership_path": ".github/release-ownership.json",
+    }
+
+
+def _release_group_command(command: str) -> str:
+    text = command.lower()
+    if "test-memory" in text or "lint-memory" in text or "packages/memory" in text:
+        return "memory-package"
+    if "test-planning" in text or "lint-planning" in text or "typecheck-planning" in text or "packages/planning" in text:
+        return "planning-package"
+    if "test-verification" in text or "lint-verification" in text or "packages/verification" in text:
+        return "verification-package"
+    if "check_generated_command_packages.py" in text or "generate_command_packages.py" in text:
+        return "generated-command-package-freshness"
+    if "run_operation_conformance_tests.py" in text:
+        return "operation-conformance"
+    if "defaults --section root_cli_authority" in text or "test_release_workflows.py" in text:
+        return "release-defaults-version-authority"
+    return "workspace-runtime"
+
+
+def _release_proof_profile_payload(
+    *, changed_paths: list[str], selected_lanes: list[dict[str, Any]], required_commands: list[str]
+) -> dict[str, Any] | None:
+    release_lane = next((lane for lane in selected_lanes if str(lane.get("id", "")) == "coordinated_release_proof"), None)
+    if release_lane is None:
+        return None
+    group_order = [
+        "workspace-runtime",
+        "memory-package",
+        "planning-package",
+        "verification-package",
+        "generated-command-package-freshness",
+        "operation-conformance",
+        "release-defaults-version-authority",
+    ]
+    group_metadata = {
+        "workspace-runtime": ("Workspace runtime behavior", "behavioral"),
+        "memory-package": ("Memory package behavior", "behavioral"),
+        "planning-package": ("Planning package behavior", "behavioral"),
+        "verification-package": ("Verification package behavior", "behavioral"),
+        "generated-command-package-freshness": ("Generated command package freshness/parity", "freshness-parity"),
+        "operation-conformance": ("Operation conformance", "behavioral"),
+        "release-defaults-version-authority": ("Release/defaults/version authority", "release-authority"),
+    }
+    grouped: dict[str, list[str]] = {group_id: [] for group_id in group_order}
+    for command in required_commands:
+        group_id = _release_group_command(str(command))
+        if group_id in grouped and command not in grouped[group_id]:
+            grouped[group_id].append(str(command))
+    groups = []
+    for group_id in group_order:
+        title, proof_purpose = group_metadata[group_id]
+        commands = grouped[group_id]
+        groups.append(
+            {
+                "id": group_id,
+                "title": title,
+                "status": "required" if commands else "unavailable",
+                "obligation": "required",
+                "proof_purpose": proof_purpose,
+                "commands": commands,
+                "claim_supported": (
+                    "coordinated release proof remains legible for this protected surface"
+                    if commands
+                    else "release proof is missing selected commands for this protected surface"
+                ),
+            }
+        )
+    return {
+        "kind": "agentic-workspace/release-proof-profile/v1",
+        "id": "coordinated-release-proof",
+        "status": "required",
+        "release_model": str(release_lane.get("release_model", "coordinated-workspace")),
+        "matched_paths": list(release_lane.get("matched_paths", [])),
+        "triggered_by": changed_paths,
+        "release_ownership_path": str(release_lane.get("release_ownership_path", ".github/release-ownership.json")),
+        "groups": groups,
+        "rule": (
+            "This profile explains why coordinated release proof is broad; it groups selected required commands by "
+            "protected release surface and proof purpose without relaxing required_commands."
+        ),
+    }
+
+
 def _proof_obligations_payload(
     *,
     required_commands: list[str],
@@ -981,6 +1127,9 @@ def _proof_selection_for_changed_paths(
         )
     selected_lanes.extend(subsystem_lanes)
     selected_lanes.extend(_supplemental_proof_lanes_for_changed_paths(changed_paths=changed_paths))
+    release_proof_lane = _coordinated_release_proof_lane(target_root=target_root, changed_paths=changed_paths)
+    if release_proof_lane is not None:
+        selected_lanes.append(release_proof_lane)
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
     active_plan_lanes: list[dict[str, Any]] = []
     active_plan_commands = _dedupe(
@@ -1361,6 +1510,11 @@ def _proof_selection_for_changed_paths(
         selected_lanes=selected_lanes,
         required_commands=required_commands,
     )
+    release_proof_profile = _release_proof_profile_payload(
+        changed_paths=changed_paths,
+        selected_lanes=selected_lanes,
+        required_commands=required_commands,
+    )
     architecture_principles = _architecture_principles_payload(
         target_root=target_root,
         changed_paths=changed_paths,
@@ -1555,6 +1709,8 @@ def _proof_selection_for_changed_paths(
         proof_selection["routing_reductions"] = routing_reductions
     if generated_cli_freshness is not None:
         proof_selection["generated_cli_freshness"] = generated_cli_freshness
+    if release_proof_profile is not None:
+        proof_selection["release_proof_profile"] = release_proof_profile
     if proof_command_adjustments:
         proof_selection["proof_command_adjustments"] = proof_command_adjustments
     if unavailable_proof_commands:
