@@ -985,6 +985,14 @@ def _installed_state_compatibility_payload(
     generated_status = "stale" if stale_generated_surfaces else "compatible"
     payload_status = "sync-required" if stale_generated_surfaces or payload_provenance_drift != "none" else "observed-compatible"
     action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config)
+    dry_run_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    apply_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --format json",
+        cli_invoke=config.cli_invoke,
+    )
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
@@ -1010,10 +1018,15 @@ def _installed_state_compatibility_payload(
             "stale_generated_surfaces": stale_generated_surfaces,
             "provenance": provenance_status,
             "provenance_drift": payload_provenance_drift,
-            "sync_command": _command_with_cli_invoke(
-                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
-                cli_invoke=config.cli_invoke,
-            ),
+            "expected_release_identity": {
+                "package": "agentic-workspace",
+                "version": __version__,
+                "source_class": current_identity.get("source_class"),
+                "source_identity": current_identity.get("source_identity"),
+            },
+            "sync_command": dry_run_sync_command,
+            "dry_run_command": dry_run_sync_command,
+            "apply_command": apply_sync_command,
             "rule": "Repo payload state is authoritative; stale payloads should be synced deliberately before trusting newer executables.",
         },
         "generated_artifacts": {
@@ -1036,6 +1049,16 @@ def _installed_state_compatibility_payload(
             },
         ],
         "next_action": next_action,
+        "repair_route": {
+            "status": "available" if status == "payload-upgrade-required" else "not-required",
+            "dry_run_command": dry_run_sync_command,
+            "apply_command": apply_sync_command,
+            "waiver": {
+                "allowed": status == "payload-upgrade-required",
+                "claim": "source-behavior-validated-installed-payload-freshness-unproven",
+                "rule": "A waiver can keep narrow source work moving, but final reporting must not claim installed payload freshness.",
+            },
+        },
         "action_effect": action_effect,
         "rule": (
             "Every entry surface should classify executable, payload, generated-artifact, and adapter posture through this "
@@ -1054,12 +1077,23 @@ def _installed_state_compatibility_payload(
             },
             "payload": {
                 key: payload["payload"][key]
-                for key in ("status", "installed_modules", "stale_generated_surfaces", "provenance", "provenance_drift")
+                for key in (
+                    "status",
+                    "release_identity",
+                    "expected_release_identity",
+                    "installed_modules",
+                    "stale_generated_surfaces",
+                    "provenance",
+                    "provenance_drift",
+                    "dry_run_command",
+                    "apply_command",
+                )
                 if payload["payload"].get(key) not in (None, [], "")
             },
             "generated_artifacts": payload["generated_artifacts"],
             "adapter_contracts": payload["adapter_contracts"],
             "next_action": payload["next_action"],
+            "repair_route": payload["repair_route"],
             "action_effect": payload["action_effect"],
         }
         if compact_payload["next_action"] is None:
@@ -9396,6 +9430,194 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
     }
 
 
+def _release_recovery_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    selected_modules: list[str],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    installed_state = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        compact=True,
+    )
+    ownership_path = target_root / ".github" / "release-ownership.json"
+    ownership: dict[str, Any] = {}
+    if ownership_path.is_file():
+        try:
+            ownership = json.loads(ownership_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            ownership = {}
+    semver_labels = [str(label) for label in ownership.get("semver_labels", []) if str(label)]
+    version_paths = [package["pyproject"] for package in ownership.get("packages", []) if isinstance(package, dict)] + [
+        package["package_json"] for package in ownership.get("typescript_packages", []) if isinstance(package, dict)
+    ]
+    helper = _command_with_cli_invoke(
+        command=("python scripts/github/release_recovery_status.py --repo <owner/name> --pr <number> --format json"),
+        cli_invoke=cli_invoke,
+    )
+    release_state = _release_recovery_live_state(target_root=target_root, cli_invoke=cli_invoke)
+    release_ci_failure = release_state.get("release_ci_failure", {})
+    if not release_ci_failure:
+        release_ci_failure = {
+            "status": "not-fetched",
+            "workflow": "Release From Semver Label",
+            "command": _command_with_cli_invoke(
+                command="python scripts/github/release_recovery_status.py --repo <owner/name> --include-release-runs --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "deeper_log_command": "gh run view <run-id> --log-failed",
+            "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
+        }
+    release_publication_state = release_state.get("release_publication_state", {})
+    return {
+        "kind": "agentic-workspace/release-recovery/v1",
+        "status": "available" if ownership else "unavailable",
+        "release_model": str(ownership.get("release_model", "unknown")),
+        "release_ownership_path": ".github/release-ownership.json",
+        "semver_labels": semver_labels,
+        "payload_drift": {
+            "status": installed_state.get("status", "unknown"),
+            "claim_boundary": installed_state.get("action_effect", {}).get("claim_boundary", ""),
+            "repair_route": installed_state.get("repair_route", {}),
+        },
+        "semver_release_action": {
+            "status": "not-fetched",
+            "rule": "Use the helper to classify whether a PR will publish, is repair-only, or is blocked by semver label state.",
+            "command": helper,
+            "repair_only_boundary": (
+                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not publish the failed release."
+            ),
+        },
+        "release_ci_failure": release_ci_failure,
+        "release_publication_state": release_publication_state,
+        "coordinated_recovery": {
+            "status": "required"
+            if release_publication_state.get("status") == "failed-release-unpublished"
+            else "not-required"
+            if release_publication_state.get("status") == "cleared-by-newer-success"
+            else "available",
+            "next_action": "When a failed release remains unpublished after a repair-only PR, create a coordinated explicit version-bump PR.",
+            "pr_shape": {
+                "required_version_paths": version_paths,
+                "proof": [
+                    "uv lock",
+                    "make test-workspace",
+                    "make lint-workspace",
+                    "uv run pytest tests/test_release_workflows.py -q",
+                ],
+            },
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section release_recovery --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _release_recovery_repo_slug(target_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "config", "--get", "remote.origin.url"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    match = re.search(r"github\.com[:/](?P<repo>[^/\s]+/[^/\s]+?)(?:\.git)?$", result.stdout.strip())
+    return match.group("repo") if match else ""
+
+
+def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    repo = _release_recovery_repo_slug(target_root)
+    command = _command_with_cli_invoke(
+        command=f"python scripts/github/release_recovery_status.py --repo {repo or '<owner/name>'} --include-release-runs --format json",
+        cli_invoke=cli_invoke,
+    )
+    if not repo:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": "No GitHub origin remote was available for live release-run discovery.",
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "missing-github-remote"},
+            },
+            "release_publication_state": {
+                "status": "unknown",
+                "rule": "Live release publication state needs a GitHub repo remote or an explicit run fixture.",
+            },
+        }
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/github/release_recovery_status.py",
+                "--repo-root",
+                str(target_root),
+                "--repo",
+                repo,
+                "--include-release-runs",
+                "--format",
+                "json",
+            ],
+            cwd=target_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": str(exc),
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "helper-execution-failed"},
+            },
+            "release_publication_state": {"status": "unknown", "rule": "Live release helper could not be executed."},
+        }
+    if result.returncode != 0:
+        return {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "release_run_status_unavailable",
+                "workflow": "Release From Semver Label",
+                "reason": (result.stderr or result.stdout).strip(),
+                "command": command,
+                "freshness": {"status": "unavailable", "source": "helper-returned-error"},
+            },
+            "release_publication_state": {"status": "unknown", "rule": "Live release helper returned an error."},
+        }
+    try:
+        packet = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        packet = {}
+    if not isinstance(packet, dict):
+        packet = {}
+    release_ci_failure = packet.get("release_ci_failure", {})
+    if isinstance(release_ci_failure, dict):
+        release_ci_failure.setdefault("command", command)
+    return {
+        "release_ci_failure": release_ci_failure if isinstance(release_ci_failure, dict) else {},
+        "release_publication_state": packet.get("release_publication_state", {})
+        if isinstance(packet.get("release_publication_state"), dict)
+        else {},
+    }
+
+
 _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
     {
         "section": "section_catalog",
@@ -9522,6 +9744,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/automation-readiness/v1",
         "purpose": "provider-agnostic automation-readiness checklist that keeps execution outside AW",
         "when_to_use": "before adding external automation, bot, CI, ticket, or agent workflow integration",
+    },
+    {
+        "section": "release_recovery",
+        "kind": "agentic-workspace/release-recovery/v1",
+        "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
+        "when_to_use": "during coordinated release, semver-label recovery, payload drift, or failed release CI diagnosis",
     },
 )
 
@@ -11630,6 +11858,15 @@ def _run_lazy_report_section_command(
             task_text=None,
             active_planning_record=active_planning_record,
             durable_intent=durable_intent,
+            cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "release_recovery":
+        payload["release_recovery"] = _release_recovery_payload(
+            target_root=target_root,
+            config=config,
+            selected_modules=selected_modules,
             cli_invoke=config.cli_invoke,
         )
         return _select_report_payload(payload, profile="router", section=normalized)

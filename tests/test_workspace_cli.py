@@ -1466,6 +1466,57 @@ def test_start_select_surfaces_installed_state_compatibility(tmp_path: Path, cap
     )
 
 
+def test_report_release_recovery_section_exposes_payload_and_semver_recovery_routes(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        cli,
+        "_release_recovery_live_state",
+        lambda **kwargs: {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "failed-release-run",
+                "workflow": "Release From Semver Label",
+                "run_url": "https://github.com/example/repo/actions/runs/1",
+                "failed_job": "release",
+                "failed_step": "Run proof",
+                "error_summary": ["ERROR release proof failed"],
+                "freshness": {"status": "active_failed_release"},
+            },
+            "release_publication_state": {
+                "status": "failed-release-unpublished",
+                "failed_run_url": "https://github.com/example/repo/actions/runs/1",
+            },
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(repo_root),
+                "--section",
+                "release_recovery",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    recovery = payload["answer"]
+
+    assert recovery["kind"] == "agentic-workspace/release-recovery/v1"
+    assert recovery["release_model"] == "coordinated-workspace"
+    assert recovery["semver_release_action"]["status"] == "not-fetched"
+    assert recovery["release_ci_failure"]["status"] == "failed-release-run"
+    assert recovery["release_ci_failure"]["failed_step"] == "Run proof"
+    assert recovery["release_publication_state"]["status"] == "failed-release-unpublished"
+    assert "release_recovery_status.py" in recovery["semver_release_action"]["command"]
+    assert "repair_route" in recovery["payload_drift"]
+    assert "required_version_paths" in recovery["coordinated_recovery"]["pr_shape"]
+
+
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
