@@ -985,6 +985,14 @@ def _installed_state_compatibility_payload(
     generated_status = "stale" if stale_generated_surfaces else "compatible"
     payload_status = "sync-required" if stale_generated_surfaces or payload_provenance_drift != "none" else "observed-compatible"
     action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config)
+    dry_run_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    apply_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target_root.as_posix()} --format json",
+        cli_invoke=config.cli_invoke,
+    )
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
@@ -1010,10 +1018,15 @@ def _installed_state_compatibility_payload(
             "stale_generated_surfaces": stale_generated_surfaces,
             "provenance": provenance_status,
             "provenance_drift": payload_provenance_drift,
-            "sync_command": _command_with_cli_invoke(
-                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
-                cli_invoke=config.cli_invoke,
-            ),
+            "expected_release_identity": {
+                "package": "agentic-workspace",
+                "version": __version__,
+                "source_class": current_identity.get("source_class"),
+                "source_identity": current_identity.get("source_identity"),
+            },
+            "sync_command": dry_run_sync_command,
+            "dry_run_command": dry_run_sync_command,
+            "apply_command": apply_sync_command,
             "rule": "Repo payload state is authoritative; stale payloads should be synced deliberately before trusting newer executables.",
         },
         "generated_artifacts": {
@@ -1036,6 +1049,16 @@ def _installed_state_compatibility_payload(
             },
         ],
         "next_action": next_action,
+        "repair_route": {
+            "status": "available" if status == "payload-upgrade-required" else "not-required",
+            "dry_run_command": dry_run_sync_command,
+            "apply_command": apply_sync_command,
+            "waiver": {
+                "allowed": status == "payload-upgrade-required",
+                "claim": "source-behavior-validated-installed-payload-freshness-unproven",
+                "rule": "A waiver can keep narrow source work moving, but final reporting must not claim installed payload freshness.",
+            },
+        },
         "action_effect": action_effect,
         "rule": (
             "Every entry surface should classify executable, payload, generated-artifact, and adapter posture through this "
@@ -1054,12 +1077,23 @@ def _installed_state_compatibility_payload(
             },
             "payload": {
                 key: payload["payload"][key]
-                for key in ("status", "installed_modules", "stale_generated_surfaces", "provenance", "provenance_drift")
+                for key in (
+                    "status",
+                    "release_identity",
+                    "expected_release_identity",
+                    "installed_modules",
+                    "stale_generated_surfaces",
+                    "provenance",
+                    "provenance_drift",
+                    "dry_run_command",
+                    "apply_command",
+                )
                 if payload["payload"].get(key) not in (None, [], "")
             },
             "generated_artifacts": payload["generated_artifacts"],
             "adapter_contracts": payload["adapter_contracts"],
             "next_action": payload["next_action"],
+            "repair_route": payload["repair_route"],
             "action_effect": payload["action_effect"],
         }
         if compact_payload["next_action"] is None:
@@ -9396,6 +9430,84 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
     }
 
 
+def _release_recovery_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    selected_modules: list[str],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    installed_state = _installed_state_compatibility_payload(
+        config=config,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        compact=True,
+    )
+    ownership_path = target_root / ".github" / "release-ownership.json"
+    ownership: dict[str, Any] = {}
+    if ownership_path.is_file():
+        try:
+            ownership = json.loads(ownership_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            ownership = {}
+    semver_labels = [str(label) for label in ownership.get("semver_labels", []) if str(label)]
+    version_paths = [package["pyproject"] for package in ownership.get("packages", []) if isinstance(package, dict)] + [
+        package["package_json"] for package in ownership.get("typescript_packages", []) if isinstance(package, dict)
+    ]
+    helper = _command_with_cli_invoke(
+        command=("python scripts/github/release_recovery_status.py --repo <owner/name> --pr <number> --format json"),
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/release-recovery/v1",
+        "status": "available" if ownership else "unavailable",
+        "release_model": str(ownership.get("release_model", "unknown")),
+        "release_ownership_path": ".github/release-ownership.json",
+        "semver_labels": semver_labels,
+        "payload_drift": {
+            "status": installed_state.get("status", "unknown"),
+            "claim_boundary": installed_state.get("action_effect", {}).get("claim_boundary", ""),
+            "repair_route": installed_state.get("repair_route", {}),
+        },
+        "semver_release_action": {
+            "status": "not-fetched",
+            "rule": "Use the helper to classify whether a PR will publish, is repair-only, or is blocked by semver label state.",
+            "command": helper,
+            "repair_only_boundary": (
+                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not publish the failed release."
+            ),
+        },
+        "release_ci_failure": {
+            "status": "not-fetched",
+            "workflow": "Release From Semver Label",
+            "command": _command_with_cli_invoke(
+                command="python scripts/github/release_recovery_status.py --repo <owner/name> --pr <number> --run-fixture <run.json> --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "deeper_log_command": "gh run view <run-id> --log-failed",
+            "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
+        },
+        "coordinated_recovery": {
+            "status": "available",
+            "next_action": "When a failed release remains unpublished after a repair-only PR, create a coordinated explicit version-bump PR.",
+            "pr_shape": {
+                "required_version_paths": version_paths,
+                "proof": [
+                    "uv lock",
+                    "make test-workspace",
+                    "make lint-workspace",
+                    "uv run pytest tests/test_release_workflows.py -q",
+                ],
+            },
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section release_recovery --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
 _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
     {
         "section": "section_catalog",
@@ -9522,6 +9634,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/automation-readiness/v1",
         "purpose": "provider-agnostic automation-readiness checklist that keeps execution outside AW",
         "when_to_use": "before adding external automation, bot, CI, ticket, or agent workflow integration",
+    },
+    {
+        "section": "release_recovery",
+        "kind": "agentic-workspace/release-recovery/v1",
+        "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
+        "when_to_use": "during coordinated release, semver-label recovery, payload drift, or failed release CI diagnosis",
     },
 )
 
@@ -11630,6 +11748,15 @@ def _run_lazy_report_section_command(
             task_text=None,
             active_planning_record=active_planning_record,
             durable_intent=durable_intent,
+            cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "release_recovery":
+        payload["release_recovery"] = _release_recovery_payload(
+            target_root=target_root,
+            config=config,
+            selected_modules=selected_modules,
             cli_invoke=config.cli_invoke,
         )
         return _select_report_payload(payload, profile="router", section=normalized)
