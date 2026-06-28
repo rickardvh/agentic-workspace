@@ -193,6 +193,7 @@ review_hint = "Workspace orchestration applies to workspace paths."
 
 def test_proof_routes_changed_path_to_verification_protocol(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    _write(tmp_path / "tests" / "test_runbook_review.py", "def test_runbook_review_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
@@ -254,6 +255,7 @@ proof_lane_hint = "runbook-verification"
 
 def test_proof_routes_active_assurance_requirement_to_verification_protocol(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    _write(tmp_path / "tests" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace/config.toml",
         """
@@ -1162,6 +1164,7 @@ def test_proof_tiny_detail_commands_use_resolved_cli_invoke(tmp_path: Path, caps
 def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
+    _write(tmp_path / "tests" / "test_access_control.py", "def test_access_control_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
@@ -1260,6 +1263,7 @@ candidates = []
 
 
 def test_proof_changed_includes_matched_assurance_requirement_profile(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / "tests" / "privacy" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
@@ -1306,7 +1310,107 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert lane["applies_because"] == ["changed path matched db/migrations/**"]
 
 
+def test_proof_changed_marks_missing_path_specific_proof_unavailable(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.model_harness]
+required_commands = ["uv run pytest tests/test_model_cli_harness.py -q"]
+
+[assurance.requirements.model_harness]
+level = "medium"
+applies_to_paths = ["scripts/model_cli_harness/**"]
+authority_refs = ["docs/maintainer/test-knowledge-inventory.md"]
+required_evidence = ["current harness proof selected"]
+proof_profile = "model_harness"
+force = "required-before-closeout"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "scripts/model_cli_harness/run_model_cli_harness.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/test_model_cli_harness.py -q" not in answer["required_commands"]
+    assert answer["unavailable_proof_commands"] == [
+        {
+            "lane": "assurance-requirement:model_harness",
+            "command": "uv run pytest tests/test_model_cli_harness.py -q",
+            "reason": "selected proof command references path-like arguments absent from the target repo",
+            "missing_paths": "tests/test_model_cli_harness.py",
+        }
+    ]
+    assert answer["unavailable_commands"] == [
+        {
+            "kind": "proof-command-unavailable/v1",
+            "command": "uv run pytest tests/test_model_cli_harness.py -q",
+            "lane": "assurance-requirement:model_harness",
+            "reason": "selected proof command references path-like arguments absent from the target repo",
+            "missing_paths": "tests/test_model_cli_harness.py",
+        }
+    ]
+    assert answer["manual_verification"]["status"] == "required"
+    assert answer["manual_verification"]["unavailable_commands"] == answer["unavailable_commands"]
+
+
+def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / "tests" / "test_model_cli_harness.py", "def test_harness_fixture():\n    assert True\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.model_harness]
+required_commands = ["uv run pytest tests/test_model_cli_harness.py -q"]
+
+[assurance.requirements.model_harness]
+level = "medium"
+applies_to_paths = ["scripts/model_cli_harness/**"]
+authority_refs = ["docs/maintainer/test-knowledge-inventory.md"]
+required_evidence = ["current harness proof selected"]
+proof_profile = "model_harness"
+force = "required-before-closeout"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "scripts/model_cli_harness/run_model_cli_harness.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/test_model_cli_harness.py -q" in answer["required_commands"]
+    assert answer.get("unavailable_proof_commands", []) == []
+
+
 def test_proof_changed_includes_matched_subsystem_assurance_profile(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / "tests" / "audit" / "test_audit.py", "def test_audit_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
         """
@@ -1367,6 +1471,7 @@ claim_boundary = "subsystem-scoped"
 def test_proof_current_includes_active_planning_assurance_requirement_profile(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
+    _write(tmp_path / "tests" / "privacy" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
@@ -1430,6 +1535,10 @@ candidates = []
 def test_proof_current_selects_active_plan_validation_commands(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
+    _write(
+        tmp_path / "tests" / "test_workspace_proof_cli.py",
+        "def test_proof_current_selects_active_plan_validation_commands():\n    assert True\n",
+    )
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "state.toml",
         """

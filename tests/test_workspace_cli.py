@@ -1739,6 +1739,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
 def test_adaptive_assurance_end_to_end_closeout_flow(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
+    _write(tmp_path / "tests" / "test_access_control.py", "def test_access_control_fixture():\n    assert True\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """

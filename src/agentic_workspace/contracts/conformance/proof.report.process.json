@@ -21,7 +21,8 @@
       "id": "minimal-repo",
       "files": {
         ".git/.keep": "",
-        "README.md": "# Fixture\n"
+        "README.md": "# Fixture\n",
+        "Makefile": "test-workspace:\n\tpython -c \"print('ok')\"\n\nlint-workspace:\n\tpython -c \"print('ok')\"\n"
       }
     }
   ],
@@ -43,7 +44,7 @@
             "next",
             "action"
           ],
-          "equals": "run-validation-command"
+          "equals": "manual-verification"
         },
         {
           "path": [
@@ -60,7 +61,8 @@
       "allowed_write_paths": [],
       "required_paths": [
         ".git/.keep",
-        "README.md"
+        "README.md",
+        "Makefile"
       ],
       "forbidden_paths": [
         ".agentic-workspace"

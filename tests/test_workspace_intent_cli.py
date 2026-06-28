@@ -206,6 +206,7 @@ def test_report_durable_intent_section_returns_compact_projection(capsys) -> Non
 
 def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
+    _write(tmp_path / "tests" / "test_workspace_cli.py", "def test_workspace_cli_fixture():\n    assert True\n")
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
         "schema_version = 1\n\n"
