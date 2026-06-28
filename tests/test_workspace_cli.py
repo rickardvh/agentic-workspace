@@ -692,6 +692,97 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #1700 checkpoint slice",
+                "--issue",
+                "#1700",
+                "--durable-source",
+                "docs/reference/local-chat-checkpoints.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 10_000, label="start tiny docs-task payload with checkpoint", sort_keys=False)
+    assert "local_chat_checkpoint" not in payload["context"]
+    assert "local_chat_checkpoint=present" not in payload["action_signals"]["changed_signals"]
+    assert "local_chat_checkpoint" not in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "local_chat_checkpoint" in payload["drill_down"]["available_selectors"]
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume checkpoint slice", "--format", "json"]) == 0
+    resume_payload = json.loads(capsys.readouterr().out)
+    assert resume_payload["context"]["local_chat_checkpoint"]["status"] == "present"
+
+
+def test_selector_first_output_policy_note_documents_visibility_tiers() -> None:
+    note = Path("docs/reviews/selector-first-output-policy-2026-06-28.md").read_text(encoding="utf-8")
+    assert "Always First Packet" in note
+    assert "Selector-Only by Default" in note
+    assert "Escalates Into First Packet" in note
+    assert "local_chat_checkpoint" in note
+    assert "dogfooding_signal_status" in note
+    assert "pr_comment_attention" in note
+
+
+def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue planned lane in stacked PR sequence",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["context"]["dogfooding_signal_status"]["status"] == "not_checked"
+    assert "dogfooding_signal_status=not_checked" in planned["action_signals"]["changed_signals"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Diagnose release recovery after failed semver release",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    release = json.loads(capsys.readouterr().out)
+    assert release["context"]["dogfooding_signal_status"]["status"] == "not_checked"
+    assert "dogfooding_signal_status" in release["action_signals"]["advisory_detail"]["selectors"]
+
+
 def test_start_treats_named_path_question_as_conceptual_reference(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
