@@ -29,6 +29,7 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_action_signals_payload,
     _compact_assurance_requirements,
     _compact_continuation_state_contract,
+    _compact_installed_state_drift_triage,
     _compact_intent_evidence,
     _compact_repair_plan_profile,
     _compact_repo_posture_projection,
@@ -50,6 +51,7 @@ from agentic_workspace.workspace_runtime_core import (
     _feature_tier_payload,
     _guidance_with_cli_invoke,
     _installed_state_compatibility_payload,
+    _installed_state_drift_triage_payload,
     _intent_acknowledgement_payload,
     _intent_custody_payload,
     _intent_decision_projection,
@@ -161,6 +163,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         for key in ("kind", "package", "version", "source_class", "module_path", "target_relation", "compatibility")
         if isinstance(identity, dict) and key in identity
     }
+    read_only_response = payload.get("read_only_response", {})
+    read_only_compact_default = bool(isinstance(read_only_response, dict) and read_only_response.get("compact_default") is True)
     projected = {
         "kind": payload["kind"],
         "target": ".",
@@ -238,7 +242,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             and payload["continuation_reorientation"].get("status") == "required"
             else {}
         ),
-        "routine_work_context": payload.get("routine_work_context", {}),
+        **({"routine_work_context": payload.get("routine_work_context", {})} if not read_only_compact_default else {}),
         "operating_posture": {
             "status": payload.get("operating_posture", {}).get("status", "unknown"),
             "required_behavior_summary": payload.get("operating_posture", {}).get("required_behavior_summary", ""),
@@ -313,6 +317,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         projected["installed_state_compatibility"] = _compact_startup_installed_state_signal(installed_state)
+    installed_state_triage = payload.get("installed_state_drift_triage", {})
+    if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") not in {None, "", "not_applicable"}:
+        projected["installed_state_drift_triage"] = _compact_installed_state_drift_triage(installed_state_triage)
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
         projected["sibling_repo_aw_freshness"] = sibling_freshness
@@ -665,6 +672,12 @@ def _start_payload(
     )
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=installed_state_compatibility,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            cli_invoke=config.cli_invoke,
+        )
     if parent_intent_status.get("status") != "guidance-only":
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
@@ -1111,7 +1124,7 @@ def _hydrate_selected_start_advisory_payloads(
             )
     if _selector_requests(select, "local_chat_checkpoint"):
         payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
-    if _selector_requests(select, "installed_state_compatibility"):
+    if _selector_requests(select, "installed_state_compatibility") or _selector_requests(select, "installed_state_drift_triage"):
         installed_modules = _fast_installed_modules(target_root=target_root)
         selected_modules = list(config.enabled_modules)
         payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
@@ -1120,6 +1133,12 @@ def _hydrate_selected_start_advisory_payloads(
             installed_modules=installed_modules,
             cli_compatibility=_cli_compatibility_payload(config=config, compact=True),
             compact=True,
+        )
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=payload["installed_state_compatibility"],
+            task_text=task_text,
+            changed_paths=[],
+            cli_invoke=config.cli_invoke,
         )
     if _selector_requests(select, "intent_custody"):
         payload["intent_custody"] = _intent_custody_payload(
@@ -1169,6 +1188,8 @@ def _hydrate_selected_start_advisory_payloads(
 
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
     skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
+    read_only_response = payload.get("read_only_response", {})
+    read_only_compact_default = bool(isinstance(read_only_response, dict) and read_only_response.get("compact_default") is True)
     next_safe_action = _next_safe_action_packet(
         immediate=payload["immediate_next_allowed_action"],
         workflow_sufficiency=payload.get("workflow_sufficiency"),
@@ -1269,12 +1290,18 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "pr_number",
                 "actionable_count",
                 "new_comment_count",
+                "stack_member_count",
+                "stack",
                 "recommended_command",
                 "selector",
                 "degraded_explicitly",
+                "claim_boundary",
             )
             if key in pr_comment_attention
         }
+    installed_state_triage = payload.get("installed_state_drift_triage", {})
+    if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") in {"actionable_now", "claim_blocking"}:
+        context["installed_state_drift_triage"] = _compact_installed_state_drift_triage(installed_state_triage)
     dogfooding_signal_status = payload.get("dogfooding_signal_status", {})
     if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
         context["dogfooding_signal_status"] = {
@@ -1301,8 +1328,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     prep_only_active = "prep_only_handoff" in payload
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
-        read_only_response = payload.get("read_only_response", {})
-        read_only_compact_default = bool(isinstance(read_only_response, dict) and read_only_response.get("compact_default") is True)
         context["task"] = (
             {
                 "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
@@ -1353,6 +1378,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         startup_changed_signals.append(f"installed_state_compatibility={installed_state.get('status')}")
+    if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") not in {None, "", "not_applicable"}:
+        startup_changed_signals.append(f"installed_state_drift_triage={installed_state_triage.get('status')}")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         startup_changed_signals.append(f"local_chat_checkpoint={local_checkpoint.get('status')}")
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
@@ -1367,6 +1394,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
+    if "routine_work_context" not in available_selectors:
+        available_selectors.append("routine_work_context")
     if (
         target_root is not None
         and "local_chat_checkpoint" not in available_selectors
@@ -1387,6 +1416,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     ]
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         advisory_selectors.append("installed_state_compatibility")
+    if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") not in {None, "", "not_applicable"}:
+        advisory_selectors.append("installed_state_drift_triage")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         advisory_selectors.append("local_chat_checkpoint")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
@@ -1491,6 +1522,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "pre_test_evidence_guardrail",
     ):
         if optional_key in payload:
+            if optional_key == "routine_work_context" and read_only_compact_default:
+                continue
             context[optional_key] = payload[optional_key]
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":

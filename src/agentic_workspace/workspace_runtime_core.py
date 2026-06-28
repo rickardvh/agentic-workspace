@@ -9710,6 +9710,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "during PR-oriented continuation, stacked PR work, or readiness closeout before claiming review comments are handled",
     },
     {
+        "section": "proof_reuse_guidance",
+        "kind": "agentic-workspace/proof-reuse-guidance/v1",
+        "purpose": "conservative proof reuse, focused-rerun, or rerun-required guidance from compact proof receipts",
+        "when_to_use": "after stacked PR rebases or continuation when prior proof may or may not still support a closeout claim",
+    },
+    {
+        "section": "runtime_mirror_consistency",
+        "kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
+        "purpose": "focused consistency proof for known mirrored AW runtime report/helper surfaces",
+        "when_to_use": "when changing core or runtime/primitives report helpers, selectors, or packet shapes",
+    },
+    {
         "section": "dogfooding_signal_status",
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
         "purpose": "compact closeout status for package dogfooding signals: not checked, none found, routed, or dismissed",
@@ -11887,6 +11899,17 @@ def _run_lazy_report_section_command(
         payload["pr_comment_attention"] = _pr_comment_attention_payload(
             target_root=target_root,
             task_text="PR-oriented report section requested",
+            cli_invoke=config.cli_invoke,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "proof_reuse_guidance":
+        payload["proof_reuse_guidance"] = _proof_reuse_guidance_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "runtime_mirror_consistency":
+        payload["runtime_mirror_consistency"] = _runtime_mirror_surface_consistency_payload(
+            target_root=target_root,
             cli_invoke=config.cli_invoke,
         )
         return _select_report_payload(payload, profile="router", section=normalized)
@@ -21082,6 +21105,7 @@ _START_TINY_ONLY_SELECTORS = {
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
+    "installed_state_drift_triage",
     "issue_reference_intent",
     "open_issue_intake",
     "intent_custody",
@@ -21432,6 +21456,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "durable_intent",
         "workflow_obligations",
         "closeout_obligations",
+        "installed_state_drift_triage",
         "pr_comment_attention",
         "dogfooding_signal_status",
         "routine_work_context",
@@ -21805,6 +21830,186 @@ def _branch_pr_number(branch: str) -> str:
     return match.group(1) if match else ""
 
 
+def _read_only_meta_task(task_text: str | None) -> bool:
+    task = " ".join(str(task_text or "").lower().split())
+    if not task:
+        return False
+    meta_terms = (
+        "dogfooding report",
+        "dogfood report",
+        "retrospective",
+        "status report",
+        "status check",
+        "summarize",
+        "summary",
+        "review current",
+        "read-only",
+        "meta analysis",
+        "operating behavior",
+        "issue review",
+        "pr review",
+        "release state",
+        "in-chat report",
+    )
+    if any(term in task for term in meta_terms):
+        return True
+    return bool(re.search(r"\b(?:what|why|how|which|do|does|did|are|is)\b", task)) and not any(
+        term in task for term in ("implement", "fix", "edit", "change", "add", "remove", "create pr")
+    )
+
+
+def _installed_state_drift_triage_payload(
+    *, installed_state: dict[str, Any], task_text: str | None, changed_paths: Sequence[str], cli_invoke: str
+) -> dict[str, Any]:
+    status = str(installed_state.get("status") or "compatible")
+    action_effect = installed_state.get("action_effect", {}) if isinstance(installed_state.get("action_effect"), dict) else {}
+    force = str(action_effect.get("force") or "advisory")
+    task = " ".join(str(task_text or "").lower().split())
+    freshness_terms = (
+        "installed state",
+        "payload freshness",
+        "payload fresh",
+        "payload drift",
+        "upgrade",
+        "release",
+        "version",
+        "semver",
+        "generated surface",
+        "generated artifact",
+        "adapter compatibility",
+        "source checkout parity",
+    )
+    claim_relevant = bool(changed_paths) or any(term in task for term in freshness_terms)
+    if status == "compatible":
+        triage = "not_applicable"
+    elif force == "required_before_execution":
+        triage = "claim_blocking"
+    elif claim_relevant:
+        triage = "actionable_now"
+    elif _read_only_meta_task(task_text):
+        triage = "background_advisory"
+    else:
+        triage = "waived_for_narrow_work"
+    resolution_command = str(action_effect.get("resolution_command") or "")
+    if resolution_command:
+        resolution_command = _command_with_cli_invoke(command=resolution_command, cli_invoke=cli_invoke)
+    return {
+        "kind": "agentic-workspace/installed-state-drift-triage/v1",
+        "status": triage,
+        "installed_state_status": status,
+        "force": force,
+        "claim_relevant": claim_relevant,
+        "repair_command": resolution_command,
+        "selector": "installed_state_compatibility",
+        "claim_boundary": action_effect.get(
+            "claim_boundary",
+            "source behavior may be validated, but installed payload freshness remains unproven until drift is reconciled.",
+        ),
+        "detail_visibility": "expanded installed-state diagnostics stay behind installed_state_compatibility unless drift blocks the current claim",
+    }
+
+
+def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
+    if not isinstance(triage, dict):
+        return {}
+    return {
+        key: triage.get(key)
+        for key in (
+            "kind",
+            "status",
+            "installed_state_status",
+            "force",
+            "claim_relevant",
+            "repair_command",
+            "selector",
+            "claim_boundary",
+            "detail_visibility",
+        )
+        if key in triage and triage.get(key) not in (None, "", [], {})
+    }
+
+
+def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str, cli_invoke: str) -> dict[str, Any]:
+    cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
+    cache = _read_local_cache_json(target_root, cache_path)
+    if not cache:
+        return {}
+    command_repo = str(cache.get("repository") or repo)
+    if cache.get("_cache_error"):
+        return {
+            "kind": "agentic-workspace/pr-stack-comment-attention/v1",
+            "status": "stack_comment_status_unavailable",
+            "reason": str(cache["_cache_error"]),
+            "repository": command_repo,
+            "branch": branch,
+            "cache_path": cache_path,
+            "degraded_because": "unreadable-cache",
+        }
+    raw_members = [item for item in _list_payload(cache.get("stack_members")) if isinstance(item, dict)]
+    if not raw_members:
+        return {}
+    members: list[dict[str, Any]] = []
+    actionable_present = False
+    unavailable_present = False
+    for item in raw_members:
+        pr_number = str(item.get("pr_number") or "").strip()
+        member_cache = item.get("delta", {}) if isinstance(item.get("delta"), dict) else item
+        counts = member_cache.get("category_counts", {}) if isinstance(member_cache.get("category_counts"), dict) else {}
+        actionable_count = sum(
+            _as_int(counts.get(category))
+            for category in (
+                "actionable_code_doc_body_change",
+                "pr_metadata_body_only_change",
+                "ci_label_only_issue",
+                "ambiguous_needs_human",
+            )
+        )
+        freshness = member_cache.get("freshness", {}) if isinstance(member_cache.get("freshness"), dict) else {}
+        fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
+        comment_status = str(item.get("status") or member_cache.get("status") or "")
+        if actionable_count:
+            comment_status = "actionable_pr_comments_present"
+            actionable_present = True
+        elif fresh:
+            comment_status = "no_actionable_pr_comments_detected"
+        else:
+            comment_status = "pr_comment_status_unavailable"
+            unavailable_present = True
+        refresh_command = _command_with_cli_invoke(
+            command=f"python scripts/github/pr_comment_delta.py --repo {command_repo} --pr {pr_number or '<number>'} --format json",
+            cli_invoke=cli_invoke,
+        )
+        members.append(
+            {
+                "pr_number": pr_number,
+                "branch": str(item.get("branch") or item.get("head_ref") or ""),
+                "head_sha": str(item.get("head_sha") or freshness.get("pr_head_sha") or ""),
+                "comment_status": comment_status,
+                "freshness": freshness or {"status": "missing"},
+                "actionable_count": actionable_count,
+                "refresh_command": refresh_command,
+            }
+        )
+    status = (
+        "actionable_stack_comments_present"
+        if actionable_present
+        else "stack_comment_status_unavailable"
+        if unavailable_present
+        else "stack_comments_current"
+    )
+    return {
+        "kind": "agentic-workspace/pr-stack-comment-attention/v1",
+        "status": status,
+        "repository": command_repo,
+        "branch": branch,
+        "stack_member_count": len(members),
+        "stack_members": members,
+        "cache_path": cache_path,
+        "claim_boundary": "A broad stack-ready claim is blocked while any stack member has actionable, stale, or unavailable comment status.",
+        "degraded_because": "stale-or-missing-member-freshness" if unavailable_present else "",
+    }
+
+
 def _pr_comment_attention_relevant(*, task_text: str | None, branch: str, cache: dict[str, Any]) -> bool:
     task = str(task_text or "").lower()
     if cache and "_cache_error" not in cache:
@@ -21822,11 +22027,32 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
     branch = _current_git_branch(target_root)
     repo = str(cache.get("repository") or _github_repo_from_origin(target_root) or "<owner/name>")
     pr_number = str(cache.get("pr_number") or _task_pr_number(task_text) or _branch_pr_number(branch) or "")
+    stack = _pr_stack_comment_cache_payload(target_root=target_root, repo=repo, branch=branch, cli_invoke=cli_invoke)
     if not _pr_comment_attention_relevant(task_text=task_text, branch=branch, cache=cache):
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": "not_applicable",
             "reason": "No PR context detected; ordinary direct work does not scan GitHub comments.",
+        }
+    if stack:
+        status = str(stack.get("status") or "stack_comment_status_unavailable")
+        return {
+            "kind": "agentic-workspace/pr-comment-attention/v1",
+            "status": status,
+            "repository": repo,
+            "pr_number": pr_number,
+            "branch": branch,
+            "stack": stack,
+            "stack_member_count": stack.get("stack_member_count", 0),
+            "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
+            if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
+            else _command_with_cli_invoke(
+                command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "selector": "pr_comment_attention",
+            "degraded_explicitly": status == "stack_comment_status_unavailable",
+            "claim_boundary": stack.get("claim_boundary"),
         }
     command = _command_with_cli_invoke(
         command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
@@ -21988,6 +22214,232 @@ def _dogfooding_signal_status_payload(
     return {key: value for key, value in payload.items() if value not in ("", [], {})}
 
 
+def _file_sha256(path: Path) -> str:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return ""
+    return hashlib.sha256(data).hexdigest()
+
+
+def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    receipt_path = target_root / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
+    relative_path = ".agentic-workspace/local/cache/proof-reuse.json"
+    detail_command = _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section proof_reuse_guidance --format json",
+        cli_invoke=cli_invoke,
+    )
+    if not receipt_path.is_file():
+        return {
+            "kind": "agentic-workspace/proof-reuse-guidance/v1",
+            "status": "reuse_unknown",
+            "reason": "No compact proof reuse receipt is available.",
+            "cache_path": relative_path,
+            "proof_groups": [],
+            "recommended_next_action": "Run current changed-path proof selection and validation.",
+            "detail_command": detail_command,
+            "rule": "Missing, stale, or ambiguous proof metadata degrades to rerun guidance.",
+        }
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/proof-reuse-guidance/v1",
+            "status": "rerun_required",
+            "reason": f"Compact proof reuse receipt is unreadable: {exc}",
+            "cache_path": relative_path,
+            "proof_groups": [],
+            "recommended_next_action": "Rerun required proof before any completion claim.",
+            "detail_command": detail_command,
+        }
+    if not isinstance(receipt, dict):
+        return {
+            "kind": "agentic-workspace/proof-reuse-guidance/v1",
+            "status": "rerun_required",
+            "reason": "Compact proof reuse receipt is not a JSON object.",
+            "cache_path": relative_path,
+            "proof_groups": [],
+            "recommended_next_action": "Rerun required proof before any completion claim.",
+            "detail_command": detail_command,
+        }
+    path_fingerprints = receipt.get("path_fingerprints", {}) if isinstance(receipt.get("path_fingerprints"), dict) else {}
+    changed_paths = [str(item) for item in _list_payload(receipt.get("changed_paths")) if str(item).strip()]
+    missing_paths: list[str] = []
+    changed_fingerprints: list[str] = []
+    for relative in changed_paths:
+        path = target_root / relative
+        current_hash = _file_sha256(path)
+        expected_hash = str(path_fingerprints.get(relative) or "")
+        if not current_hash:
+            missing_paths.append(relative)
+        elif expected_hash and current_hash != expected_hash:
+            changed_fingerprints.append(relative)
+        elif not expected_hash:
+            changed_fingerprints.append(relative)
+    proof_groups: list[dict[str, Any]] = []
+    raw_groups = receipt.get("proof_groups", []) if isinstance(receipt.get("proof_groups"), list) else []
+    for raw in raw_groups:
+        if not isinstance(raw, dict):
+            continue
+        command = str(raw.get("command") or raw.get("proof_command") or "").strip()
+        prior_status = str(raw.get("status") or "passed").strip()
+        if missing_paths or changed_fingerprints:
+            classification = "rerun_required"
+            rationale = "changed proof input fingerprints"
+        elif prior_status not in {"passed", "success", "ok"}:
+            classification = "rerun_required"
+            rationale = "prior proof did not pass"
+        elif not command:
+            classification = "reuse_unknown"
+            rationale = "proof command identity missing"
+        else:
+            classification = "reuse_safe_with_evidence"
+            rationale = "changed path fingerprints match the compact proof receipt"
+        proof_groups.append(
+            {
+                "command": command,
+                "classification": classification,
+                "evidence": {
+                    "prior_head": receipt.get("prior_head") or receipt.get("head"),
+                    "prior_base": receipt.get("prior_base") or receipt.get("base"),
+                    "changed_paths": changed_paths,
+                    "fingerprint_count": len(path_fingerprints),
+                },
+                "rationale": rationale,
+            }
+        )
+    if missing_paths or changed_fingerprints:
+        status = "rerun_required"
+        recommended = "Rerun proof for changed or missing proof inputs."
+    elif proof_groups and all(group["classification"] == "reuse_safe_with_evidence" for group in proof_groups):
+        status = "reuse_safe_with_evidence"
+        recommended = "Focused proof may reuse the named prior proof groups; record the reuse rationale in closeout."
+    elif proof_groups:
+        status = "focused_rerun_required"
+        recommended = "Rerun only proof groups without reuse evidence."
+    else:
+        status = "reuse_unknown"
+        recommended = "Run current changed-path proof selection and validation."
+    return {
+        "kind": "agentic-workspace/proof-reuse-guidance/v1",
+        "status": status,
+        "cache_path": relative_path,
+        "observed_changed_paths": changed_paths,
+        "missing_paths": missing_paths,
+        "changed_fingerprints": changed_fingerprints,
+        "proof_groups": proof_groups,
+        "recommended_next_action": recommended,
+        "detail_command": detail_command,
+        "rule": "This is claim-safety guidance, not a test-skipping feature; unknown evidence requires rerun.",
+    }
+
+
+def _function_dict_return_keys(tree: ast.AST, function_name: str) -> set[str]:
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or node.name != function_name:
+            continue
+        keys: set[str] = set()
+        for child in ast.walk(node):
+            if isinstance(child, ast.Dict):
+                for key in child.keys:
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                        keys.add(key.value)
+        return keys
+    return set()
+
+
+def _parse_python_module(path: Path) -> ast.AST | None:
+    try:
+        return ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return None
+
+
+def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    core_path = target_root / "src" / "agentic_workspace" / "workspace_runtime_core.py"
+    primitive_path = target_root / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
+    relative_core = "src/agentic_workspace/workspace_runtime_core.py"
+    relative_primitives = "src/agentic_workspace/workspace_runtime_primitives.py"
+    surfaces = [
+        {
+            "mirrored_surface": "pr_comment_attention",
+            "function": "_pr_comment_attention_payload",
+            "packet_kind": "agentic-workspace/pr-comment-attention/v1",
+        },
+        {
+            "mirrored_surface": "dogfooding_signal_status",
+            "function": "_dogfooding_signal_status_payload",
+            "packet_kind": "agentic-workspace/dogfooding-signal-status/v1",
+        },
+        {
+            "mirrored_surface": "installed_state_drift_triage",
+            "function": "_installed_state_drift_triage_payload",
+            "packet_kind": "agentic-workspace/installed-state-drift-triage/v1",
+        },
+        {
+            "mirrored_surface": "proof_reuse_guidance",
+            "function": "_proof_reuse_guidance_payload",
+            "packet_kind": "agentic-workspace/proof-reuse-guidance/v1",
+        },
+        {
+            "mirrored_surface": "runtime_mirror_consistency",
+            "function": "_runtime_mirror_surface_consistency_payload",
+            "packet_kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
+        },
+    ]
+    core_tree = _parse_python_module(core_path)
+    primitive_tree = _parse_python_module(primitive_path)
+    records: list[dict[str, Any]] = []
+    for surface in surfaces:
+        function = str(surface["function"])
+        if core_tree is None or primitive_tree is None:
+            status = "not_applicable"
+            reason = "core or runtime primitives module could not be parsed"
+            core_keys: set[str] = set()
+            primitive_keys: set[str] = set()
+        else:
+            core_keys = _function_dict_return_keys(core_tree, function)
+            primitive_keys = _function_dict_return_keys(primitive_tree, function)
+            if not core_keys and not primitive_keys:
+                status = "not_applicable"
+                reason = "surface is not mirrored in either module"
+            elif not core_keys or not primitive_keys:
+                status = "mirror_missing"
+                reason = "surface exists in only one mirrored runtime module"
+            elif core_keys != primitive_keys:
+                status = "shape_mismatch"
+                reason = "mirrored helper return-key shape differs"
+            else:
+                status = "in_sync"
+                reason = "mirrored helper return-key shape matches"
+        records.append(
+            {
+                **surface,
+                "status": status,
+                "core_owner": relative_core,
+                "runtime_mirror_owner": relative_primitives,
+                "core_keys": sorted(core_keys),
+                "runtime_mirror_keys": sorted(primitive_keys),
+                "reason": reason,
+            }
+        )
+    failing = [record for record in records if record["status"] in {"mirror_missing", "shape_mismatch"}]
+    return {
+        "kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
+        "status": "in_sync" if not failing else "shape_mismatch",
+        "mirrored_surface_count": len(records),
+        "records": records,
+        "recommended_next_action": "Mirror the missing helper/packet shape or document that the surface is intentionally core-only."
+        if failing
+        else "No mirror repair needed for known AW runtime report surfaces.",
+        "proof_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section runtime_mirror_consistency --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Compare the smallest durable mirrored contract: known helper existence and public packet return-key shape.",
+    }
+
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
@@ -22146,6 +22598,12 @@ def _start_tiny_payload_fast(
         payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=installed_state_compatibility,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            cli_invoke=config.cli_invoke,
+        )
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
         payload["sibling_repo_aw_freshness"] = sibling_freshness
@@ -24002,6 +24460,18 @@ def _read_only_response_posture_payload(*, task_text: str | None, changed_paths:
             "status": "not-applicable",
             "reason": "changed paths are present, so implementation/proof guidance remains the default",
             "compact_default": False,
+        }
+    if _read_only_meta_task(task):
+        return {
+            "kind": "agentic-workspace/read-only-response-posture/v1",
+            "status": "read-only-reporting",
+            "reason": "task text matches report, status, review, or meta-analysis posture without changed paths",
+            "compact_default": True,
+            "matched_read_only_signals": ["report/meta task shape"],
+            "matched_mutation_signals": [],
+            "default_projection": "selector-first-reporting",
+            "detail_selector": "acceptance",
+            "rule": "Report/meta/read-only task shapes get compact first packets while hard gates and claim boundaries remain visible.",
         }
     return {
         "kind": "agentic-workspace/read-only-response-posture/v1",
