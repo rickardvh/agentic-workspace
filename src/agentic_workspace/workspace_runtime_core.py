@@ -9980,6 +9980,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "before adding external automation, bot, CI, ticket, or agent workflow integration",
     },
     {
+        "section": "local_overlay",
+        "kind": "agentic-workspace/local-overlay/v1",
+        "purpose": "general local guidance overlay contract, provenance, ordinary guidance, and high-risk profile summary",
+        "when_to_use": "when local config may shape this checkout's workflow without becoming checked-in host policy",
+    },
+    {
+        "section": "local_high_risk_overlay",
+        "kind": "agentic-workspace/local-high-risk-overlay/v1",
+        "purpose": "high-assurance local overlay profile: matched source maps, validation profiles, CI states, templates, guardrails, and unresolved questions",
+        "when_to_use": "when local config may shape high-assurance implement/proof/closeout routing without becoming checked-in host policy",
+    },
+    {
         "section": "release_recovery",
         "kind": "agentic-workspace/release-recovery/v1",
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
@@ -10025,6 +10037,82 @@ def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> 
             "listed section payloads must remain lazy unless an explicit selector or verbose report already has the needed inputs",
             "adding a section here should not require ordinary report callers to compute that section",
         ],
+    }
+
+
+def _local_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    overlay = config.local_override.local_overlay if isinstance(config.local_override.local_overlay, dict) else {}
+    if overlay.get("status") != "configured":
+        return {
+            "kind": "agentic-workspace/local-overlay/v1",
+            "status": "absent",
+            "configured_count": 0,
+            "ordinary_guidance_count": 0,
+            "high_risk_profile_count": 0,
+            "rule": "No local guidance overlay is configured; ordinary output remains quiet.",
+        }
+    sections = _as_dict(overlay.get("sections"))
+    ordinary_guidance = _list_payload(sections.get("guidance"))
+    return {
+        "kind": "agentic-workspace/local-overlay/v1",
+        "status": "configured",
+        "configured_count": int(overlay.get("item_count", 0) or 0),
+        "ordinary_guidance_count": int(overlay.get("ordinary_guidance_count", len(ordinary_guidance)) or 0),
+        "high_risk_profile_count": int(overlay.get("high_risk_profile_count", 0) or 0),
+        "ordinary_guidance": ordinary_guidance,
+        "high_risk_profile": {
+            "status": _as_dict(overlay.get("high_risk_profile")).get("status", "absent"),
+            "configured_count": int(_as_dict(overlay.get("high_risk_profile")).get("item_count", 0) or 0),
+            "detail_selector": "local_high_risk_overlay",
+        },
+        "warnings": _list_payload(overlay.get("warnings")),
+        "authority_boundary": overlay.get("authority_boundary", {}),
+        "ordinary_routes": {
+            "report": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section local_overlay --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "match_changed_paths": _command_with_cli_invoke(
+                command="agentic-workspace implement --target ./repo --changed <paths> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "matching_rule": "Ordinary guidance and high-risk profile items match changed paths or task markers; no-match work stays quiet.",
+        "quiet_rule": "No-overlay and no-match ordinary work does not expand local-only detail.",
+    }
+
+
+def _local_high_risk_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    overlay = config.local_override.high_risk_overlay if isinstance(config.local_override.high_risk_overlay, dict) else {}
+    if overlay.get("status") != "configured":
+        return {
+            "kind": "agentic-workspace/local-high-risk-overlay/v1",
+            "status": "absent",
+            "configured_count": 0,
+            "active_count": 0,
+            "rule": "No local high-risk overlay is configured; ordinary output remains quiet.",
+        }
+    sections = _as_dict(overlay.get("sections"))
+    return {
+        "kind": "agentic-workspace/local-high-risk-overlay/v1",
+        "status": "configured",
+        "configured_count": int(overlay.get("item_count", 0) or 0),
+        "active_count": 0,
+        "sections": sections,
+        "warnings": _list_payload(overlay.get("warnings")),
+        "authority_boundary": overlay.get("authority_boundary", {}),
+        "ordinary_routes": {
+            "match_changed_paths": _command_with_cli_invoke(
+                command="agentic-workspace implement --target ./repo --changed <paths> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "proof_decision": _command_with_cli_invoke(
+                command="agentic-workspace proof --target ./repo --changed <paths> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "matching_rule": "This selector reports configured local overlay items; implement/proof report active matches from changed paths or task markers.",
+        "quiet_rule": "No-overlay and no-match ordinary work does not expand this local-only detail.",
     }
 
 
@@ -12287,6 +12375,14 @@ def _run_lazy_report_section_command(
             config=config,
             cli_invoke=config.cli_invoke,
         )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "local_overlay":
+        payload["local_overlay"] = _local_overlay_report_payload(config=config)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "local_high_risk_overlay":
+        payload["local_high_risk_overlay"] = _local_high_risk_overlay_report_payload(config=config)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "architecture_principles":
@@ -21009,6 +21105,16 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
             "classifications": cli_authority_review.get("classifications", []),
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         }
+    high_risk_overlay = proof.get("high_risk_overlay", {})
+    if isinstance(high_risk_overlay, dict) and high_risk_overlay.get("status") == "active":
+        active = high_risk_overlay.get("active", {})
+        active = active if isinstance(active, dict) else {}
+        compact["high_risk_overlay"] = {
+            "status": high_risk_overlay.get("status"),
+            "active_count": high_risk_overlay.get("active_count", 0),
+            "sections": {str(section): len(items) for section, items in active.items() if isinstance(items, list) and items},
+            "detail_selector": "proof.high_risk_overlay",
+        }
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -28777,7 +28883,7 @@ def _compact_selector_next_safe_action(packet: dict[str, Any]) -> dict[str, Any]
             "human_owned_decisions": [
                 _compact_authority_text(str(item)) for item in _list_payload(authority.get("human_owned_decisions"))[:1]
             ],
-            "reporting_rule": "AW marks hard gates; recommendations guide agent-owned route and completion judgment.",
+            "reporting_rule": "AW marks hard gates; recommendations guide agent judgment.",
         }
         compact["authority_boundary"] = compact_authority
     return compact
@@ -30829,6 +30935,12 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
             "scope": "local-config",
             "used_by": ["config.local_memory", "report.local_memory"],
         },
+        {
+            "field": "local_overlay.*",
+            "enforcement": "local-advisory",
+            "scope": "local-config",
+            "used_by": ["config.local_overlay", "report.local_overlay", "implement.proof.local_overlay", "proof.high_risk_overlay"],
+        },
     ]
 
 
@@ -30978,6 +31090,20 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         elif field.startswith("local_memory"):
             concrete_commands = [command("agentic-workspace report --target ./repo --section local_memory --format json")]
             payload_fields = ["local_memory"]
+        elif field.startswith("local_overlay"):
+            concrete_commands = [
+                command("agentic-workspace report --target ./repo --section local_overlay --format json"),
+                command("agentic-workspace report --target ./repo --section local_high_risk_overlay --format json"),
+                command("agentic-workspace implement --target ./repo --changed <paths> --format json"),
+                command("agentic-workspace proof --target ./repo --changed <paths> --format json"),
+            ]
+            payload_fields = [
+                "local_overlay",
+                "local_high_risk_overlay",
+                "proof.local_overlay",
+                "proof.high_risk_overlay",
+                "proof.proof_decision",
+            ]
         elif field.startswith("workspace.cli_invoke"):
             concrete_commands = [command("agentic-workspace config --target ./repo --select workspace.cli_invoke --format json")]
             payload_fields = ["copyable command strings"]
@@ -31337,6 +31463,35 @@ def _ambient_configuration_projection_rows(*, config: WorkspaceConfig) -> list[d
             authority_exception="local-only advisory; cannot become shared Planning, Memory, proof, or closeout authority",
         )
     )
+    local_overlay = config.local_override.local_overlay if isinstance(config.local_override.local_overlay, dict) else {}
+    rows.append(
+        _configuration_projection_row(
+            row_id="local-overlay:local-only-provenance",
+            source="local-config",
+            source_surface=".agentic-workspace/config.local.toml [local_overlay]",
+            owner="local-human-owned",
+            field="local_overlay.*",
+            configured_concern="local guidance overlay for ordinary local facts plus high-assurance profile guidance",
+            status="selector-backed" if local_overlay.get("status") == "configured" else "latent",
+            ordinary_path_routes=[
+                "agentic-workspace report --target ./repo --section local_overlay --format json",
+                "agentic-workspace report --target ./repo --section local_high_risk_overlay --format json",
+                "agentic-workspace implement --target ./repo --changed <paths> --format json",
+                "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            ],
+            payload_fields=[
+                "local_overlay",
+                "local_high_risk_overlay",
+                "proof.local_overlay",
+                "proof.high_risk_overlay",
+                "proof.proof_decision",
+            ],
+            trigger="a configured local overlay item matches changed paths or task markers",
+            suppression_rule="no overlay or no match stays quiet in ordinary output",
+            proof_or_test_coverage=["tests/test_workspace_proof_cli.py", "tests/test_workspace_implement_cli.py"],
+            authority_exception="local-only advisory/blocking guidance for this checkout; cannot become checked-in host policy or certify conformance",
+        )
+    )
     return rows
 
 
@@ -31463,6 +31618,8 @@ def _configuration_projection_applicability(field: str) -> str:
         return "delegation or runtime posture is relevant to the current task shape and safety allows handoff"
     if field.startswith("local_memory"):
         return "local memory is enabled and a memory-backed route is requested"
+    if field.startswith("local_overlay"):
+        return "a local overlay item matches changed paths or task markers for ordinary local guidance or high-assurance profile routing"
     if field.startswith("system_intent"):
         return "task, changed paths, or subsystem config intersects durable system intent"
     if field.startswith("update.modules"):
@@ -31481,12 +31638,16 @@ def _configuration_projection_suppression(field: str) -> str:
         return "hide target detail unless delegation posture changes the next action or config detail is requested"
     if field.startswith("local_memory"):
         return "hide local memory detail when disabled or when shared repo authority is being reported"
+    if field.startswith("local_overlay"):
+        return "hide overlay detail when no overlay exists or no overlay item matches the current changed paths/task facts"
     if field.startswith("system_intent"):
         return "surface only compact applicable-intent facts unless system-intent detail is requested"
     return "keep detailed field data behind config/report selectors unless it changes the ordinary next action"
 
 
 def _configuration_projection_authority_exception(*, field: str, owner_boundary: str, dependency: str) -> str:
+    if field.startswith("local_overlay"):
+        return "local-only guidance may shape this checkout's workflow but cannot become checked-in host policy or certify conformance"
     if owner_boundary == "local-human-owned":
         return "local-only advisory; cannot create shared repo obligations, proof gates, or closeout claims"
     if dependency in {"medium", "high"}:
@@ -37294,6 +37455,8 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
 def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
     if lane.get("domain_lane"):
         return "host-declared-domain-proof-lane"
+    if lane.get("local_overlay"):
+        return "local-only-high-risk-overlay"
     if lane.get("proof_profile"):
         return "host-configured-proof-profile"
     if lane.get("subsystem"):
@@ -40625,6 +40788,22 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         ),
         "agent_aid_storage": _agent_aid_storage_payload(target_root=config.target_root),
         "local_memory": _local_memory_payload(config=config),
+        "local_overlay": local_override.local_overlay
+        if isinstance(local_override.local_overlay, dict)
+        else {
+            "kind": "agentic-workspace/local-overlay-config/v1",
+            "status": "absent",
+            "sections": {},
+            "warnings": [],
+        },
+        "high_risk_overlay": local_override.high_risk_overlay
+        if isinstance(local_override.high_risk_overlay, dict)
+        else {
+            "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
+            "status": "absent",
+            "sections": {},
+            "warnings": [],
+        },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
             "reported_here": False,
@@ -40822,6 +41001,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
     assurance = payload["assurance"]
+    local_overlay = mixed_agent.get("local_overlay", {}) if isinstance(mixed_agent, dict) else {}
+    local_high_risk_overlay = mixed_agent.get("high_risk_overlay", {}) if isinstance(mixed_agent, dict) else {}
     compact_obligations = [
         {"id": obligation["id"], "stage": obligation["stage"], "scope_tags": obligation["scope_tags"], "commands": obligation["commands"]}
         for obligation in workspace["workflow_obligations"]
@@ -40902,6 +41083,24 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "confidence": runtime_resolution["confidence"],
                 "reasons": runtime_resolution["reasons"],
             },
+        },
+        "local_overlay": {
+            "status": local_overlay.get("status", "absent") if isinstance(local_overlay, dict) else "absent",
+            "item_count": local_overlay.get("item_count", 0) if isinstance(local_overlay, dict) else 0,
+            "ordinary_guidance_count": local_overlay.get("ordinary_guidance_count", 0) if isinstance(local_overlay, dict) else 0,
+            "high_risk_profile_count": local_overlay.get("high_risk_profile_count", 0) if isinstance(local_overlay, dict) else 0,
+            "warning_count": len(local_overlay.get("warnings", [])) if isinstance(local_overlay, dict) else 0,
+            "authority_boundary": local_overlay.get("authority_boundary", {}) if isinstance(local_overlay, dict) else {},
+            "detail_command": f"{workspace['cli_invoke']} report --target ./repo --section local_overlay --format json",
+        },
+        "local_high_risk_overlay": {
+            "status": local_high_risk_overlay.get("status", "absent") if isinstance(local_high_risk_overlay, dict) else "absent",
+            "item_count": local_high_risk_overlay.get("item_count", 0) if isinstance(local_high_risk_overlay, dict) else 0,
+            "warning_count": len(local_high_risk_overlay.get("warnings", [])) if isinstance(local_high_risk_overlay, dict) else 0,
+            "authority_boundary": local_high_risk_overlay.get("authority_boundary", {})
+            if isinstance(local_high_risk_overlay, dict)
+            else {},
+            "detail_command": f"{workspace['cli_invoke']} report --target ./repo --section local_high_risk_overlay --format json",
         },
         "full_profile_command": f"{workspace['cli_invoke']} config --target . --verbose --format json",
     }

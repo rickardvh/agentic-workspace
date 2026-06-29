@@ -1402,6 +1402,12 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append(f"dogfooding_signal_status={dogfooding_signal_status.get('status')}")
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
+    startup_local_overlay = startup_proof.get("local_overlay", {}) if isinstance(startup_proof, dict) else {}
+    if isinstance(startup_local_overlay, dict) and startup_local_overlay.get("status") == "active":
+        startup_changed_signals.append(f"local_overlay={startup_local_overlay.get('active_count', 0)}")
+    startup_high_risk_overlay = startup_proof.get("high_risk_overlay", {}) if isinstance(startup_proof, dict) else {}
+    if isinstance(startup_high_risk_overlay, dict) and startup_high_risk_overlay.get("status") == "active":
+        startup_changed_signals.append(f"high_risk_overlay={startup_high_risk_overlay.get('active_count', 0)}")
     available_selectors = _available_selectors_for_payload(payload)
     available_selectors = [selector for selector in available_selectors if not selector.startswith("workflow_participation")]
     if "routine_work_context" not in available_selectors:
@@ -1436,6 +1442,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("pr_comment_attention")
     if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
         advisory_selectors.append("dogfooding_signal_status")
+    if isinstance(startup_local_overlay, dict) and startup_local_overlay.get("status") == "active":
+        advisory_selectors.append("proof.local_overlay")
+    if isinstance(startup_high_risk_overlay, dict) and startup_high_risk_overlay.get("status") == "active":
+        advisory_selectors.append("proof.high_risk_overlay")
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",

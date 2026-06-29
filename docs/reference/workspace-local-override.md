@@ -32,6 +32,233 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
 | `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
 | `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |
+| `local_overlay` | object | no |  | Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy. |  |  |
+| `local_overlay.guidance` | ref `#/$defs/local_guidance_items` | no |  | General local guidance overlay items for ordinary checkout-local facts such as tool availability, validation commands, branch conventions, access constraints, and adoption-time hints. |  |  |
+| `local_overlay.guidance.<^.+$>` | object | no |  | One named ordinary local guidance overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.guidance.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local guidance item for changed paths. |  |  |
+| `local_overlay.guidance.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local guidance item. |  |  |
+| `local_overlay.guidance.<^.+$>.signal` | string | no |  | Short local guidance signal label, such as local-tool-availability or access-constraint. |  |  |
+| `local_overlay.guidance.<^.+$>.category` | string | no |  | Optional category for grouping ordinary local guidance. |  |  |
+| `local_overlay.guidance.<^.+$>.guidance` | string | no |  | Human-readable local guidance for the acting agent. |  |  |
+| `local_overlay.guidance.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Local or host references that explain why this guidance exists. |  |  |
+| `local_overlay.guidance.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Local validation commands required when this guidance item matches. |  |  |
+| `local_overlay.guidance.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional local commands that may improve confidence. |  |  |
+| `local_overlay.guidance.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named local tools, CI routes, or access paths that are unavailable in this checkout. |  |  |
+| `local_overlay.guidance.<^.+$>.review_owner` | string | no |  | Local review owner label for this guidance item. |  |  |
+| `local_overlay.guidance.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this local guidance item. |  |  |
+| `local_overlay.guidance.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this local guidance item affects routing and closeout claims. |  |  |
+| `local_overlay.guidance.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk` | object | no |  | High-assurance workflow profile that consumes the general local overlay substrate. |  |  |
+| `local_overlay.high_risk.source_maps` | ref `#/$defs/overlay_items` | no |  | High-assurance profile path or task mappings to host-owned authority refs, sources, proof profiles, and review expectations. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.source_maps.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk.validation_profiles` | ref `#/$defs/overlay_items` | no |  | High-assurance profile validation mappings for changed paths or task markers. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.validation_profiles.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk.ci_validation` | ref `#/$defs/overlay_items` | no |  | High-assurance profile CI availability and substitute-validation declarations. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.ci_validation.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk.templates` | ref `#/$defs/overlay_items` | no |  | High-assurance profile issue or PR template preservation requirements for API-created work items. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.templates.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk.guardrails` | ref `#/$defs/overlay_items` | no |  | High-assurance profile sensitive-data and synthetic-fixture guardrails. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.guardrails.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
+| `local_overlay.high_risk.unresolved_questions` | ref `#/$defs/overlay_items` | no |  | High-assurance profile unresolved assumption/question classifications for closeout. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>` | object | no |  | One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.applies_to_paths` | ref `#/$defs/string_list` | no |  | Repository-relative glob patterns that activate this local overlay item for changed paths. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.applies_to_task_markers` | ref `#/$defs/string_list` | no |  | Case-insensitive task text markers that activate this local overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.authority_refs` | ref `#/$defs/string_list` | no |  | Host-owned authority references that explain why this overlay exists. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.required_sources` | ref `#/$defs/string_list` | no |  | Local source-of-truth references that should be consulted before claims are made. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.review_owner` | string | no |  | Local review owner label for this overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.review_aids` | ref `#/$defs/string_list` | no |  | Optional local references, commands, or notes that help the reviewer evaluate the work. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.proof_profiles` | ref `#/$defs/string_list` | no |  | Proof profile labels this overlay item contributes when it matches current work. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.required_commands` | ref `#/$defs/string_list` | no |  | Validation commands required by this local overlay item when it matches. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.manual_evidence` | ref `#/$defs/string_list` | no |  | Manual evidence handles or records required before making bounded claims. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.optional_commands` | ref `#/$defs/string_list` | no |  | Optional validation commands that may improve confidence but are not required by this overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.manual_checks` | ref `#/$defs/string_list` | no |  | Manual checks the acting agent should record or route to a reviewer. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.unavailable_routes` | ref `#/$defs/string_list` | no |  | Named CI or validation routes that are unavailable for this checkout. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.validation_state` | enum `"ci_failed"`, `"ci_pending"`, `"ci_skipped"`, `"ci_not_run"`, `"ci_unavailable"`, `"quota_exhausted"`, `"logs_unavailable"`, `"local_substitute"` | no |  | Current CI or validation availability state for this local overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.local_substitute_commands` | ref `#/$defs/string_list` | no |  | Local substitute commands available when host CI or another validation route is unavailable. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.local_substitute_policy` | enum `"advisory"`, `"sufficient-for-bounded-claim"`, `"insufficient"`, `"human-review-only"` | no |  | How local substitute validation may support or limit completion claims. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.host` | string | no |  | Host system name for a template or work-item preservation rule. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.kind` | string | no |  | Host work-item or artifact kind affected by this overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.paths` | ref `#/$defs/string_list` | no |  | Repository-relative template or artifact paths that should be preserved. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.headings` | ref `#/$defs/string_list` | no |  | Template headings expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.required_fields` | ref `#/$defs/string_list` | no |  | Template fields expected to remain available for API-created work items. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.state` | string | no |  | Local state classification such as present, missing, or drifted. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.sensitive_data` | ref `#/$defs/string_list` | no |  | Sensitive data classes that must not be exposed in fixtures or examples. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.synthetic_fixture_guidance` | ref `#/$defs/string_list` | no |  | Guidance for acceptable synthetic fixtures or examples. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.safe_examples` | ref `#/$defs/string_list` | no |  | Known-safe example values that may be used instead of sensitive data. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.category` | enum `"merge-blocker"`, `"release-blocker"`, `"human-review-required"`, `"safe-follow-up"`, `"intentionally-deferred"` | no |  | Unresolved assumption category used to decide whether closeout needs human review or can defer residue. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.question` | string | no |  | Unresolved question that must be answered, reviewed, or explicitly routed. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.owner` | string | no |  | Human or team owner for the unresolved question or overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.residue_route` | string | no |  | Where unresolved residue should be routed if it cannot be closed in the current work. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.reason` | string | no |  | Local explanation for why this overlay item applies. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.claim_boundary` | string | no |  | Claim boundary imposed by this overlay item. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.drift_state` | string | no |  | Local drift classification for source, template, or validation expectations. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.impact` | enum `"advisory"`, `"blocking"`, `"human-review-only"`, `"claim-limiting"` | no |  | How strongly this overlay item affects routing and closeout claims. |  |  |
+| `local_overlay.high_risk.unresolved_questions.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
 | `delegation_targets.<^.+$>` | object | no |  | One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates. |  |  |
 | `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work. |  |  |
