@@ -3137,7 +3137,7 @@ cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
         """
 schema_version = 1
 
-[high_risk_overlay.source_maps.auth_docs]
+[local_overlay.high_risk.source_maps.auth_docs]
 applies_to_paths = ["services/auth/**"]
 authority_refs = ["SECURITY.md#auth", "docs/adr/auth-boundary.md"]
 required_sources = ["docs/risk/auth-risk-register.md"]
@@ -3146,7 +3146,7 @@ review_aids = ["Confirm auth ADR still matches changed code."]
 claim_boundary = "auth-source-map-review"
 impact = "human-review-only"
 
-[high_risk_overlay.validation_profiles.security_sensitive]
+[local_overlay.high_risk.validation_profiles.security_sensitive]
 category = "security-sensitive"
 applies_to_paths = ["services/auth/**"]
 required_commands = ["python -c \\"print('security validation')\\""]
@@ -3154,14 +3154,14 @@ manual_checks = ["Review auth threat-model delta."]
 claim_boundary = "security-validation-profile"
 impact = "blocking"
 
-[high_risk_overlay.ci_validation.github_actions]
+[local_overlay.high_risk.ci_validation.github_actions]
 applies_to_paths = ["services/auth/**"]
 validation_state = "ci_unavailable"
 local_substitute_commands = ["python -c \\"print('local substitute')\\""]
 local_substitute_policy = "human-review-only"
 claim_boundary = "local-substitute-is-not-ci"
 
-[high_risk_overlay.templates.security_issue]
+[local_overlay.high_risk.templates.security_issue]
 applies_to_paths = ["services/auth/**"]
 host = "github"
 kind = "issue"
@@ -3170,13 +3170,13 @@ headings = ["Risk", "Evidence", "Reviewer"]
 state = "missing"
 impact = "blocking"
 
-[high_risk_overlay.guardrails.synthetic_auth_data]
+[local_overlay.high_risk.guardrails.synthetic_auth_data]
 applies_to_paths = ["services/auth/**"]
 sensitive_data = ["production tokens", "customer emails"]
 synthetic_fixture_guidance = ["Use example.com addresses.", "Use placeholder credentials."]
 impact = "claim-limiting"
 
-[high_risk_overlay.unresolved_questions.legal_review]
+[local_overlay.high_risk.unresolved_questions.legal_review]
 applies_to_paths = ["services/auth/**"]
 category = "human-review-required"
 question = "Does this auth change require legal/security review before merge?"
@@ -3206,10 +3206,11 @@ reason = "local high-risk overlay declares auth changes review-sensitive"
 
     packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
     overlay = packet["local_high_risk_overlay"]
+    assert packet["local_overlay"]["status"] == "configured-no-match"
     assert overlay["status"] == "active"
     assert overlay["active_count"] == 6
     source_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-source:auth_docs")
-    assert source_lane["route_authority"]["authority"] == "local-only-high-risk-overlay"
+    assert source_lane["route_authority"]["authority"] == "local-only-high-risk-profile"
     assert source_lane["local_overlay"]["source_layer"] == "repo-local-override"
     assert "SECURITY.md#auth" in source_lane["commands"] or source_lane["manual_evidence"] == ["host:auth-risk-review"]
     validation_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-validation:security_sensitive")
@@ -3241,7 +3242,7 @@ cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
         """
 schema_version = 1
 
-[high_risk_overlay.guardrails.auth_data]
+[local_overlay.high_risk.guardrails.auth_data]
 applies_to_paths = ["services/auth/**"]
 sensitive_data = ["production token"]
 impact = "blocking"

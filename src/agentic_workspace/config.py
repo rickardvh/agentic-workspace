@@ -320,6 +320,7 @@ class MixedAgentLocalOverride:
     local_memory_enabled: bool | None
     local_memory_path: Path
     delegation_targets: tuple[DelegationTargetProfile, ...]
+    local_overlay: dict[str, Any]
     high_risk_overlay: dict[str, Any]
     field_sources: dict[str, str]
 
@@ -1526,6 +1527,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         delegation_targets=(),
+        local_overlay={},
         high_risk_overlay={},
         field_sources={},
     )
@@ -1566,12 +1568,25 @@ def _local_config_nested_source(
     *,
     local_payload: dict[str, Any],
     shared_payload: dict[str, Any] | None,
+    table: str,
     section: str,
     item_id: str,
 ) -> str:
-    if item_id in _local_config_table(_local_config_table(local_payload, "high_risk_overlay"), section):
+    if item_id in _local_config_table(_local_config_table(local_payload, table), section):
         return "repo-local-override"
-    if item_id in _local_config_table(_local_config_table(shared_payload, "high_risk_overlay"), section):
+    if item_id in _local_config_table(_local_config_table(shared_payload, table), section):
+        return "shared-local-config"
+    return "merged-local-config"
+
+
+def _local_overlay_high_risk_source(
+    *, local_payload: dict[str, Any], shared_payload: dict[str, Any] | None, section: str, item_id: str
+) -> str:
+    local_overlay = _local_config_table(local_payload, "local_overlay")
+    shared_overlay = _local_config_table(shared_payload, "local_overlay")
+    if item_id in _local_config_table(_local_config_table(local_overlay, "high_risk"), section):
+        return "repo-local-override"
+    if item_id in _local_config_table(_local_config_table(shared_overlay, "high_risk"), section):
         return "shared-local-config"
     return "merged-local-config"
 
@@ -1602,12 +1617,117 @@ def _optional_overlay_enum(
         return default
 
 
+def _normalize_local_guidance_overlay(
+    *,
+    raw_guidance: Any,
+    local_payload: dict[str, Any],
+    shared_payload: dict[str, Any] | None,
+    warnings: list[str],
+) -> dict[str, Any]:
+    allowed_fields = {
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "signal",
+        "category",
+        "guidance",
+        "authority_refs",
+        "required_commands",
+        "optional_commands",
+        "unavailable_routes",
+        "review_owner",
+        "claim_boundary",
+        "impact",
+        "notes",
+    }
+    if raw_guidance in (None, {}):
+        return {"status": "absent", "items": [], "warnings": []}
+    if not isinstance(raw_guidance, dict):
+        message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} local_overlay.guidance must be a table of named items."
+        warnings.append(message)
+        return {"status": "invalid", "items": [], "warnings": [message]}
+    guidance_warnings: list[str] = []
+    items: list[dict[str, Any]] = []
+    for item_id, raw_item in sorted(raw_guidance.items()):
+        item_path = Path(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} local_overlay.guidance.{item_id}")
+        if not isinstance(raw_item, dict):
+            message = f"{item_path.as_posix()} must be a table."
+            warnings.append(message)
+            guidance_warnings.append(message)
+            continue
+        raw_item = dict(raw_item)
+        unknown_fields = sorted(set(raw_item) - allowed_fields)
+        if unknown_fields:
+            message = f"{item_path.as_posix()} contains unsupported field(s): {', '.join(unknown_fields)}."
+            warnings.append(message)
+            guidance_warnings.append(message)
+        items.append(
+            {
+                "id": str(item_id).strip(),
+                "section": "guidance",
+                "source_layer": _local_config_nested_source(
+                    local_payload=local_payload,
+                    shared_payload=shared_payload,
+                    table="local_overlay",
+                    section="guidance",
+                    item_id=str(item_id),
+                ),
+                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay.guidance.{item_id}]",
+                "applies_to_paths": list(
+                    _optional_overlay_string_list(payload=raw_item, key="applies_to_paths", item_path=item_path, warnings=guidance_warnings)
+                ),
+                "applies_to_task_markers": list(
+                    _optional_overlay_string_list(
+                        payload=raw_item, key="applies_to_task_markers", item_path=item_path, warnings=guidance_warnings
+                    )
+                ),
+                "signal": _optional_overlay_string(payload=raw_item, key="signal", item_path=item_path, warnings=guidance_warnings),
+                "category": _optional_overlay_string(payload=raw_item, key="category", item_path=item_path, warnings=guidance_warnings),
+                "guidance": _optional_overlay_string(payload=raw_item, key="guidance", item_path=item_path, warnings=guidance_warnings),
+                "authority_refs": list(
+                    _optional_overlay_string_list(payload=raw_item, key="authority_refs", item_path=item_path, warnings=guidance_warnings)
+                ),
+                "required_commands": list(
+                    _optional_overlay_string_list(
+                        payload=raw_item, key="required_commands", item_path=item_path, warnings=guidance_warnings
+                    )
+                ),
+                "optional_commands": list(
+                    _optional_overlay_string_list(
+                        payload=raw_item, key="optional_commands", item_path=item_path, warnings=guidance_warnings
+                    )
+                ),
+                "unavailable_routes": list(
+                    _optional_overlay_string_list(
+                        payload=raw_item, key="unavailable_routes", item_path=item_path, warnings=guidance_warnings
+                    )
+                ),
+                "review_owner": _optional_overlay_string(
+                    payload=raw_item, key="review_owner", item_path=item_path, warnings=guidance_warnings
+                ),
+                "claim_boundary": _optional_overlay_string(
+                    payload=raw_item, key="claim_boundary", item_path=item_path, warnings=guidance_warnings
+                ),
+                "impact": _optional_overlay_enum(
+                    payload=raw_item,
+                    key="impact",
+                    item_path=item_path,
+                    allowed=SUPPORTED_LOCAL_HIGH_RISK_IMPACTS,
+                    default="advisory",
+                    warnings=guidance_warnings,
+                ),
+                "notes": _optional_overlay_string(payload=raw_item, key="notes", item_path=item_path, warnings=guidance_warnings),
+            }
+        )
+    return {"status": "configured" if items else "absent", "items": items, "warnings": guidance_warnings}
+
+
 def _normalize_local_high_risk_overlay(
     *,
     raw_overlay: Any,
     local_payload: dict[str, Any],
     shared_payload: dict[str, Any] | None,
     warnings: list[str],
+    surface_prefix: str = "high_risk_overlay",
 ) -> dict[str, Any]:
     if raw_overlay in (None, {}):
         return {
@@ -1617,12 +1737,12 @@ def _normalize_local_high_risk_overlay(
             "warnings": [],
         }
     if not isinstance(raw_overlay, dict):
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] section must be a table.")
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] section must be a table.")
         return {
             "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
             "status": "invalid",
             "sections": {},
-            "warnings": [f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] section must be a table."],
+            "warnings": [f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] section must be a table."],
         }
     section_fields = {
         "source_maps": {
@@ -1704,7 +1824,7 @@ def _normalize_local_high_risk_overlay(
     unknown_sections = sorted(set(raw_overlay) - set(section_fields))
     if unknown_sections:
         warnings.append(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] contains unsupported section(s): {', '.join(unknown_sections)}."
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] contains unsupported section(s): {', '.join(unknown_sections)}."
         )
     overlay_warnings: list[str] = []
     sections: dict[str, list[dict[str, Any]]] = {}
@@ -1714,14 +1834,14 @@ def _normalize_local_high_risk_overlay(
             sections[section] = []
             continue
         if not isinstance(raw_section, dict):
-            message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} high_risk_overlay.{section} must be a table of named items."
+            message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} {surface_prefix}.{section} must be a table of named items."
             warnings.append(message)
             overlay_warnings.append(message)
             sections[section] = []
             continue
         items: list[dict[str, Any]] = []
         for item_id, raw_item in sorted(raw_section.items()):
-            item_path = Path(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} high_risk_overlay.{section}.{item_id}")
+            item_path = Path(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} {surface_prefix}.{section}.{item_id}")
             if not isinstance(raw_item, dict):
                 message = f"{item_path.as_posix()} must be a table."
                 warnings.append(message)
@@ -1739,10 +1859,18 @@ def _normalize_local_high_risk_overlay(
                 "source_layer": _local_config_nested_source(
                     local_payload=local_payload,
                     shared_payload=shared_payload,
+                    table="high_risk_overlay",
+                    section=section,
+                    item_id=str(item_id),
+                )
+                if surface_prefix == "high_risk_overlay"
+                else _local_overlay_high_risk_source(
+                    local_payload=local_payload,
+                    shared_payload=shared_payload,
                     section=section,
                     item_id=str(item_id),
                 ),
-                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay.{section}.{item_id}]",
+                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}.{section}.{item_id}]",
                 "applies_to_paths": list(
                     _optional_overlay_string_list(payload=raw_item, key="applies_to_paths", item_path=item_path, warnings=overlay_warnings)
                 ),
@@ -1847,6 +1975,75 @@ def _normalize_local_high_risk_overlay(
     }
 
 
+def _normalize_local_overlay(
+    *,
+    raw_overlay: Any,
+    legacy_high_risk_overlay: Any,
+    local_payload: dict[str, Any],
+    shared_payload: dict[str, Any] | None,
+    warnings: list[str],
+) -> dict[str, Any]:
+    overlay_warnings: list[str] = []
+    if raw_overlay in (None, {}):
+        raw_overlay = {}
+    if not isinstance(raw_overlay, dict):
+        message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay] section must be a table."
+        warnings.append(message)
+        overlay_warnings.append(message)
+        raw_overlay = {}
+    unknown_sections = sorted(set(raw_overlay) - {"guidance", "high_risk"})
+    if unknown_sections:
+        message = (
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay] contains unsupported section(s): {', '.join(unknown_sections)}."
+        )
+        warnings.append(message)
+        overlay_warnings.append(message)
+    if legacy_high_risk_overlay not in (None, {}):
+        message = (
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] is deprecated; "
+            "use [local_overlay.high_risk] so high-risk workflow guidance consumes the general local overlay substrate."
+        )
+        warnings.append(message)
+        overlay_warnings.append(message)
+    guidance = _normalize_local_guidance_overlay(
+        raw_guidance=raw_overlay.get("guidance", {}),
+        local_payload=local_payload,
+        shared_payload=shared_payload,
+        warnings=warnings,
+    )
+    raw_high_risk = raw_overlay.get("high_risk", {})
+    if raw_high_risk in (None, {}) and legacy_high_risk_overlay not in (None, {}):
+        raw_high_risk = legacy_high_risk_overlay
+    high_risk = _normalize_local_high_risk_overlay(
+        raw_overlay=raw_high_risk,
+        local_payload=local_payload,
+        shared_payload=shared_payload,
+        warnings=warnings,
+        surface_prefix="local_overlay.high_risk",
+    )
+    overlay_warnings.extend(guidance.get("warnings", []))
+    overlay_warnings.extend(high_risk.get("warnings", []))
+    guidance_count = len(guidance.get("items", [])) if isinstance(guidance.get("items"), list) else 0
+    high_risk_count = int(high_risk.get("item_count", 0) or 0) if isinstance(high_risk, dict) else 0
+    return {
+        "kind": "agentic-workspace/local-overlay-config/v1",
+        "status": "configured" if guidance_count or high_risk_count else "absent",
+        "item_count": guidance_count + high_risk_count,
+        "ordinary_guidance_count": guidance_count,
+        "high_risk_profile_count": high_risk_count,
+        "sections": {
+            "guidance": guidance.get("items", []),
+            "high_risk": high_risk.get("sections", {}),
+        },
+        "high_risk_profile": high_risk,
+        "warnings": overlay_warnings,
+        "authority_boundary": {
+            "source": "local-overlay",
+            "rule": "Local overlay guidance may shape the acting checkout workflow, but it is not checked-in host policy.",
+        },
+    }
+
+
 def _local_config_display_path(*, path: Path, target_root: Path) -> str:
     try:
         return path.relative_to(target_root).as_posix()
@@ -1927,6 +2124,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "delegation",
             "clarification",
             "local_memory",
+            "local_overlay",
             "high_risk_overlay",
             "delegation_targets",
         }
@@ -2063,12 +2261,14 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
     )
     warnings.extend(delegation_target_warnings)
-    high_risk_overlay = _normalize_local_high_risk_overlay(
-        raw_overlay=payload.get("high_risk_overlay", {}),
+    local_overlay = _normalize_local_overlay(
+        raw_overlay=payload.get("local_overlay", {}),
+        legacy_high_risk_overlay=payload.get("high_risk_overlay", {}),
         local_payload=local_payload,
         shared_payload=shared_payload,
         warnings=warnings,
     )
+    high_risk_overlay = local_overlay.get("high_risk_profile", {}) if isinstance(local_overlay, dict) else {}
 
     return MixedAgentLocalOverride(
         path=local_path,
@@ -2123,6 +2323,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         ),
         delegation_targets=delegation_targets,
+        local_overlay=local_overlay,
         high_risk_overlay=high_risk_overlay,
         field_sources=field_sources
         | {

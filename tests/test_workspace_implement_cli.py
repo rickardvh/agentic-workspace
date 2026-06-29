@@ -61,7 +61,7 @@ cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
         """
 schema_version = 1
 
-[high_risk_overlay.validation_profiles.migration]
+[local_overlay.high_risk.validation_profiles.migration]
 category = "migration"
 applies_to_paths = ["db/migrations/**"]
 required_commands = ["python -c \\"print('migration validation')\\""]
@@ -90,6 +90,43 @@ impact = "blocking"
     assert payload["proof"]["high_risk_overlay"]["status"] == "active"
     assert payload["proof"]["high_risk_overlay"]["active_count"] == 1
     assert "high_risk_overlay=1" in payload["action_signals"]["changed_signals"]
+
+
+def test_implement_tiny_surfaces_ordinary_local_overlay_without_high_risk(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[local_overlay.guidance.local_cli]
+signal = "local-tool-availability"
+category = "tooling"
+applies_to_paths = ["tools/**"]
+guidance = "Local CLI is available in this checkout."
+required_commands = ["python -c \\"print('tool ok')\\""]
+impact = "advisory"
+""",
+    )
+    _write(tmp_path / "tools" / "run.py", "print('ok')\n")
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["proof"]["local_overlay"]["status"] == "active"
+    assert payload["proof"]["local_overlay"]["active_count"] == 1
+    assert payload["proof"]["high_risk_overlay"] == {}
+    assert "local_overlay=1" in payload["action_signals"]["changed_signals"]
 
 
 def _write_architecture_principles(target_root: Path) -> None:

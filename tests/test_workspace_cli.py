@@ -2479,7 +2479,7 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
 
 
-def test_local_high_risk_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
+def test_local_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
@@ -2491,7 +2491,7 @@ cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
 """,
     )
 
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_overlay", "--format", "json"]) == 0
     absent = json.loads(capsys.readouterr().out)["answer"]
     assert absent["status"] == "absent"
 
@@ -2500,7 +2500,15 @@ cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
         """
 schema_version = 1
 
-[high_risk_overlay.guardrails.fixtures]
+[local_overlay.guidance.local_cli]
+signal = "local-tool-availability"
+category = "tooling"
+applies_to_paths = ["tools/**"]
+guidance = "Use the checkout-local CLI."
+required_commands = ["python -c \\"print('tool ok')\\""]
+impact = "advisory"
+
+[local_overlay.high_risk.guardrails.fixtures]
 applies_to_paths = ["tests/fixtures/**"]
 sensitive_data = ["real customer email"]
 synthetic_fixture_guidance = ["Use example.com addresses."]
@@ -2509,19 +2517,68 @@ unsupported_policy_override = true
 """,
     )
 
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_overlay", "--format", "json"]) == 0
     configured = json.loads(capsys.readouterr().out)["answer"]
     assert configured["status"] == "configured"
-    assert configured["configured_count"] == 1
-    assert configured["sections"]["guardrails"][0]["source_layer"] == "repo-local-override"
+    assert configured["configured_count"] == 2
+    assert configured["ordinary_guidance_count"] == 1
+    assert configured["high_risk_profile_count"] == 1
+    assert configured["ordinary_guidance"][0]["source_layer"] == "repo-local-override"
+    assert configured["high_risk_profile"]["detail_selector"] == "local_high_risk_overlay"
     assert "unsupported_policy_override" in configured["warnings"][0]
     assert "checked-in host policy" in configured["authority_boundary"]["rule"]
 
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
+    high_risk = json.loads(capsys.readouterr().out)["answer"]
+    assert high_risk["configured_count"] == 1
+    assert high_risk["sections"]["guardrails"][0]["source_layer"] == "repo-local-override"
+
     assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
     projection = json.loads(capsys.readouterr().out)["answer"]
-    overlay_row = next(row for row in projection["facts"] if row["field"] == "high_risk_overlay.*")
+    overlay_row = next(row for row in projection["facts"] if row["field"] == "local_overlay.*")
     assert overlay_row["projection_status"] in {"active", "selector-backed"}
-    assert "local_high_risk_overlay" in overlay_row["ordinary_path_routes"][0]
+    assert "local_overlay" in overlay_row["ordinary_path_routes"][0]
+
+
+def test_local_overlay_ordinary_guidance_projects_without_high_risk(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[local_overlay.guidance.local_cli]
+signal = "local-tool-availability"
+category = "tooling"
+applies_to_paths = ["tools/**"]
+guidance = "Use the checkout-local CLI."
+required_commands = ["python -c \\"print('tool ok')\\""]
+impact = "advisory"
+
+[local_overlay.guidance.stack]
+signal = "branch-stack-convention"
+category = "workflow"
+applies_to_task_markers = ["stacked pr"]
+guidance = "Keep local stack order when preparing PRs."
+impact = "claim-limiting"
+""",
+    )
+    _write(tmp_path / "tools" / "run.py", "print('ok')\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["local_overlay"]["status"] == "active"
+    assert payload["local_overlay"]["ordinary_guidance_count"] == 1
+    assert payload.get("high_risk_overlay") is None
 
 
 def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, capsys) -> None:

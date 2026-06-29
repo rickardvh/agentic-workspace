@@ -1145,6 +1145,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     else []
                 ),
                 *(
+                    [f"local_overlay={payload.get('proof', {}).get('local_overlay', {}).get('active_count')}"]
+                    if isinstance(payload.get("proof"), dict)
+                    and isinstance(payload.get("proof", {}).get("local_overlay"), dict)
+                    and payload.get("proof", {}).get("local_overlay", {}).get("status") == "active"
+                    else []
+                ),
+                *(
                     [f"high_risk_overlay={payload.get('proof', {}).get('high_risk_overlay', {}).get('active_count')}"]
                     if isinstance(payload.get("proof"), dict)
                     and isinstance(payload.get("proof", {}).get("high_risk_overlay"), dict)
@@ -1197,6 +1204,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("proof"), dict)
             and isinstance(payload.get("proof", {}).get("proof_route_maintenance"), dict)
             and payload.get("proof", {}).get("proof_route_maintenance", {}).get("status") == "attention"
+            else {},
+            "local_overlay": {
+                "status": payload.get("proof", {}).get("local_overlay", {}).get("status"),
+                "active_count": payload.get("proof", {}).get("local_overlay", {}).get("active_count", 0),
+                "detail_selector": "proof.local_overlay",
+            }
+            if isinstance(payload.get("proof"), dict)
+            and isinstance(payload.get("proof", {}).get("local_overlay"), dict)
+            and payload.get("proof", {}).get("local_overlay", {}).get("status") == "active"
             else {},
             "high_risk_overlay": {
                 "status": payload.get("proof", {}).get("high_risk_overlay", {}).get("status"),

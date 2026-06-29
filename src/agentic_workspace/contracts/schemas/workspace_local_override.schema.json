@@ -129,36 +129,47 @@
       "additionalProperties": false,
       "description": "Machine-local memory opt-in and path configuration."
     },
-    "high_risk_overlay": {
+    "local_overlay": {
       "type": "object",
       "properties": {
-        "source_maps": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only path or task mappings to host-owned authority refs, sources, proof profiles, and review expectations."
+        "guidance": {
+          "$ref": "#/$defs/local_guidance_items",
+          "description": "General local guidance overlay items for ordinary checkout-local facts such as tool availability, validation commands, branch conventions, access constraints, and adoption-time hints."
         },
-        "validation_profiles": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only validation profile mappings for changed paths or task markers."
-        },
-        "ci_validation": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only CI availability and substitute-validation declarations."
-        },
-        "templates": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only issue or PR template preservation requirements for API-created work items."
-        },
-        "guardrails": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only sensitive-data and synthetic-fixture guardrails."
-        },
-        "unresolved_questions": {
-          "$ref": "#/$defs/overlay_items",
-          "description": "Local-only unresolved assumption/question classifications for high-risk closeout."
+        "high_risk": {
+          "type": "object",
+          "properties": {
+            "source_maps": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile path or task mappings to host-owned authority refs, sources, proof profiles, and review expectations."
+            },
+            "validation_profiles": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile validation mappings for changed paths or task markers."
+            },
+            "ci_validation": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile CI availability and substitute-validation declarations."
+            },
+            "templates": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile issue or PR template preservation requirements for API-created work items."
+            },
+            "guardrails": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile sensitive-data and synthetic-fixture guardrails."
+            },
+            "unresolved_questions": {
+              "$ref": "#/$defs/overlay_items",
+              "description": "High-assurance profile unresolved assumption/question classifications for closeout."
+            }
+          },
+          "additionalProperties": false,
+          "description": "High-assurance workflow profile that consumes the general local overlay substrate."
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local high-risk workflow overlay. It may shape the acting checkout workflow but is not checked-in host policy."
+      "description": "Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy."
     },
     "delegation_targets": {
       "type": "object",
@@ -358,6 +369,84 @@
         "description": "One non-empty local overlay value."
       },
       "description": "List of non-empty strings used by local-only overlay records."
+    },
+    "local_guidance_items": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "type": "object",
+          "properties": {
+            "applies_to_paths": {
+              "$ref": "#/$defs/string_list",
+              "description": "Repository-relative glob patterns that activate this local guidance item for changed paths."
+            },
+            "applies_to_task_markers": {
+              "$ref": "#/$defs/string_list",
+              "description": "Case-insensitive task text markers that activate this local guidance item."
+            },
+            "signal": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Short local guidance signal label, such as local-tool-availability or access-constraint."
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional category for grouping ordinary local guidance."
+            },
+            "guidance": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Human-readable local guidance for the acting agent."
+            },
+            "authority_refs": {
+              "$ref": "#/$defs/string_list",
+              "description": "Local or host references that explain why this guidance exists."
+            },
+            "required_commands": {
+              "$ref": "#/$defs/string_list",
+              "description": "Local validation commands required when this guidance item matches."
+            },
+            "optional_commands": {
+              "$ref": "#/$defs/string_list",
+              "description": "Optional local commands that may improve confidence."
+            },
+            "unavailable_routes": {
+              "$ref": "#/$defs/string_list",
+              "description": "Named local tools, CI routes, or access paths that are unavailable in this checkout."
+            },
+            "review_owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local review owner label for this guidance item."
+            },
+            "claim_boundary": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Claim boundary imposed by this local guidance item."
+            },
+            "impact": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "blocking",
+                "human-review-only",
+                "claim-limiting"
+              ],
+              "description": "How strongly this local guidance item affects routing and closeout claims."
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional local notes for reviewers or future agents."
+            }
+          },
+          "additionalProperties": false,
+          "description": "One named ordinary local guidance overlay item. It can shape this checkout's workflow but is not shared host policy."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Named ordinary local guidance overlay items."
     },
     "overlay_items": {
       "type": "object",
