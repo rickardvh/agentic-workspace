@@ -2152,8 +2152,11 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
 
     attention = payload["context"]["pr_comment_attention"]
     assert attention["status"] == "pr_comment_status_unavailable"
+    assert attention["comment_state"] == "cache_miss"
     assert attention["pr_number"] == "1831"
     assert "pr_comment_delta.py" in attention["recommended_command"]
+    assert "--pr 1831" in attention["thread_inspection"]["command"]
+    assert attention["unverified_context"] == ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."]
     assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
     assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
 
@@ -2197,8 +2200,10 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
     actionable = json.loads(capsys.readouterr().out)["answer"]
     assert actionable["status"] == "actionable_pr_comments_present"
+    assert actionable["comment_state"] == "comments_requiring_action"
     assert actionable["actionable_count"] == 1
     assert actionable["sample"][0]["path"] == "src/app.py"
+    assert actionable["thread_inspection"]["status"] == "available"
 
     # Legacy empty caches are not enough to support readiness claims because they
     # do not prove which PR head was observed.
@@ -2225,8 +2230,10 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
     stale_empty = json.loads(capsys.readouterr().out)["answer"]
     assert stale_empty["status"] == "pr_comment_status_unavailable"
+    assert stale_empty["comment_state"] == "stale_or_unknown"
     assert stale_empty["cached_status"] == "no_actionable_pr_comments_detected"
     assert stale_empty["degraded_explicitly"] is True
+    assert "Current PR head is unverified." in stale_empty["unverified_context"]
 
     cache_path.write_text(
         json.dumps(
@@ -2256,12 +2263,15 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
     fresh_empty = json.loads(capsys.readouterr().out)["answer"]
     assert fresh_empty["status"] == "no_actionable_pr_comments_detected"
+    assert fresh_empty["comment_state"] == "no_comments_requiring_action"
     assert fresh_empty["actionable_count"] == 0
     assert fresh_empty["freshness"]["pr_head_sha"] == "abc123"
+    assert fresh_empty["unverified_context"] == []
 
 
 def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_commands(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    _set_git_branch(tmp_path, current="codex/stack-comments", default="main")
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
@@ -2284,8 +2294,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     unavailable = json.loads(capsys.readouterr().out)
     unavailable_attention = unavailable["context"]["pr_comment_attention"]
     assert unavailable_attention["status"] == "stack_comment_status_unavailable"
+    assert unavailable_attention["comment_state"] == "stack_discovery_unavailable"
     assert unavailable_attention["stack_discovery"]["status"] == "unavailable"
     assert unavailable_attention["stack_member_count"] == 0
+    assert "Thread-level PR comment state is unverified." in unavailable_attention["unverified_context"]
 
     fresh_stack = {
         "repository": "rickardvh/agentic-workspace",
@@ -2338,9 +2350,24 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     )
     current = json.loads(capsys.readouterr().out)
     assert current["context"]["pr_comment_attention"]["status"] == "stack_comments_current"
+    assert current["context"]["pr_comment_attention"]["comment_state"] == "stack_current_no_actionable_comments"
+    assert current["context"]["pr_comment_attention"]["pr_number"] == "1841"
+    assert current["context"]["pr_comment_attention"]["stack_discovery"]["current_branch_pr_number"] == "1841"
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
+    actionable_stack["stack_members"][1]["delta"]["new_comment_count"] = 1
+    actionable_stack["stack_members"][1]["delta"]["items"] = [
+        {
+            "kind": "review_thread_comment",
+            "category": "actionable_code_doc_body_change",
+            "path": "src/app.py",
+            "line": 12,
+            "url": "https://example.test/pr#thread",
+            "author": "reviewer",
+            "proof_hint": "Run focused tests.",
+        }
+    ]
     cache_path.write_text(
         json.dumps(actionable_stack),
         encoding="utf-8",
@@ -2364,9 +2391,14 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
 
     attention = payload["context"]["pr_comment_attention"]
     assert attention["status"] == "actionable_stack_comments_present"
+    assert attention["comment_state"] == "stack_comments_requiring_action"
     assert attention["stack_member_count"] == 2
     assert attention["stack"]["stack_members"][0]["refresh_command"].endswith("--pr 1840 --format json")
     assert attention["stack"]["stack_members"][1]["comment_status"] == "actionable_pr_comments_present"
+    assert attention["stack"]["stack_members"][1]["new_comment_count"] == 1
+    assert attention["stack"]["stack_members"][1]["sample"][0]["path"] == "src/app.py"
+    assert attention["stack"]["stack_members"][1]["thread_inspection"]["command"].endswith("--pr 1841 --format json")
+    assert attention["unverified_context"] == []
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
 
     stale_stack = copy.deepcopy(fresh_stack)
@@ -2388,6 +2420,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     )
     stale = json.loads(capsys.readouterr().out)
     assert stale["context"]["pr_comment_attention"]["status"] == "stack_comment_status_unavailable"
+    assert stale["context"]["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
+    assert "lacks PR-head freshness proof" in stale["context"]["pr_comment_attention"]["unverified_context"][0]
 
 
 def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path: Path, capsys) -> None:

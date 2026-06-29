@@ -30,7 +30,7 @@
     "hard_constraints": "Start from merged master. Create stacked PRs, one coherent lane at a time, without merging them. Preserve AW mandatory workflow gates. Put the computer to sleep only after local proof, pushed PRs, and final status checks are complete.",
     "agent_may_decide": "Exact lane grouping, branch names, implementation details, test boundaries, and whether a lane can close multiple related issues.",
     "escalate_when": "An issue cannot be closed without redesign beyond the intended lane, destructive system action before PR publication, unavailable GitHub auth, or proof failures that cannot be fixed locally.",
-    "next_action": "Publish lane 3 (#1883/#1884 startup/output routing) stacked on lane 2, then implement lane 4 (#1886/#1893 PR comment attention and Windows decode fallback).",
+    "next_action": "Publish lane 4 (#1886/#1893 PR comment attention and Windows decode fallback) stacked on lane 3, then inspect final stack status and put the computer to sleep.",
     "proof_expectations": [
       "Focused regression tests for each issue lane.",
       "AW implement proof selection after each lane's changed paths are known.",
@@ -75,7 +75,7 @@
     "execution": {
       "milestone": "open-issues-stacked-lanes",
       "status": "active",
-      "next_step": "Publish lane 3 (#1883/#1884) stacked on lane 2, then implement lane 4 (#1886/#1893).",
+      "next_step": "Publish lane 4 (#1886/#1893) stacked on lane 3, then inspect final stack status and sleep.",
       "proof": "Focused regression, AW implement proof selection, workspace lint/typecheck, and PR checks."
     },
     "scope": {
@@ -162,7 +162,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Publish lane 3 (#1883/#1884 startup/output routing), then continue to lane 4 (#1886/#1893 PR comment attention and Windows decode fallback)."
+    "Publish lane 4 (#1886/#1893 PR comment attention and Windows decode fallback), then inspect final stack status and sleep."
   ],
   "blockers": [
     "None."
@@ -207,12 +207,12 @@
     "run status": "in-progress",
     "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Lane 1 (#1888) was published as draft PR #1894. Lane 2 (#1885/#1887) was published as draft PR #1895. Lane 3 (#1883/#1884) now exposes bounded dogfooding report sections and active-plan task-switch reconciliation without blocking explicit bounded maintenance.",
-    "scope touched": "Lane 3 report/runtime startup surfaces and focused workspace CLI tests.",
-    "changed surfaces": "src/agentic_workspace/reporting_support.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_planning.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_startup.py; tests/test_workspace_cli.py",
-    "validations run": "uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; git diff --check",
-    "result for continuation": "lane 3 ready to commit/push as the third stacked PR",
-    "next step": "Create lane 3 PR against codex/open-issues-lane2-proof-closeout, then branch lane 4 from lane 3."
+    "what happened": "Lane 1 (#1888) was published as draft PR #1894. Lane 2 (#1885/#1887) was published as draft PR #1895. Lane 3 (#1883/#1884) was published as draft PR #1896. Lane 4 (#1886/#1893) now makes PR comment attention states actionable and makes pr_comment_delta.py decode gh output with UTF-8 on Windows.",
+    "scope touched": "Lane 4 GitHub helper, PR comment attention runtime surfaces, and focused helper/workspace CLI tests.",
+    "changed surfaces": "scripts/github/pr_comment_delta.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_startup.py; tests/test_pr_comment_delta.py; tests/test_workspace_cli.py",
+    "validations run": "uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_pr_comment_delta.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; git diff --check",
+    "result for continuation": "lane 4 ready to commit/push as the fourth stacked PR",
+    "next step": "Create lane 4 PR against codex/open-issues-lane3-output-task-switch, inspect stack PR status/checks, then sleep the computer."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -233,9 +233,9 @@
     "decomposition adjustment": "pending"
   },
   "proof_report": {
-    "validation proof": "Lane 3 passed summary, planning doctor, make test-workspace, make lint-workspace, focused tests/test_workspace_cli.py, make typecheck, runtime mirror consistency, and git diff --check.",
-    "proof achieved now": "yes for lane 3 local proof",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json records the lane 3 proof receipt."
+    "validation proof": "Lane 4 passed summary, planning doctor, make test-workspace, make lint-workspace, focused tests/test_workspace_cli.py, focused tests/test_pr_comment_delta.py, make typecheck, runtime mirror consistency, and git diff --check.",
+    "proof achieved now": "yes for lane 4 local proof",
+    "evidence for \"proof achieved\" state": "Lane 4 proof receipt will be recorded before PR publication."
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Implement current open issues by stacked PR lane.",
@@ -244,12 +244,12 @@
     "unsolved intent passed to": "none yet"
   },
   "execution_summary": {
-    "outcome delivered": "lane 1 and lane 2 published; lane 3 implemented and locally proven",
-    "validation confirmed": "lane 3 local proof passed",
+    "outcome delivered": "lanes 1, 2, and 3 published; lane 4 implemented and locally proven",
+    "validation confirmed": "lane 4 local proof passed",
     "follow-on routed to": "none yet",
     "post-work posterity capture": "pending",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "publish lane 3, then implement lane 4"
+    "resume from": "publish lane 4, inspect final stack status, then sleep"
   },
   "durable_residue": {
     "status": "none",
@@ -311,6 +311,7 @@
   "drift_log": [
     "2026-06-29: Scaffolded by agentic-planning new-plan.",
     "2026-06-29: Lane 1 (#1888) published as draft PR #1894; lane 2 (#1885/#1887) implemented with local proof passing.",
-    "2026-06-29: Lane 2 (#1885/#1887) published as draft PR #1895; lane 3 (#1883/#1884) implemented with local proof passing."
+    "2026-06-29: Lane 2 (#1885/#1887) published as draft PR #1895; lane 3 (#1883/#1884) implemented with local proof passing.",
+    "2026-06-29: Lane 3 (#1883/#1884) published as draft PR #1896; lane 4 (#1886/#1893) implemented with local proof passing."
   ]
 }
