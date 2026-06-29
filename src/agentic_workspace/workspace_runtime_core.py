@@ -496,6 +496,25 @@ def _git_source_identity(root: Path | None) -> str:
     return f"git:{revision[:12]}" if revision else root.as_posix()
 
 
+def _portable_path_identity(path_value: Any, *, target_root: Path | None = None) -> str:
+    path_text = str(path_value or "").strip()
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    if not path.is_absolute():
+        return path.as_posix()
+    if target_root is not None:
+        try:
+            return path.resolve().relative_to(target_root.resolve()).as_posix()
+        except (OSError, ValueError):
+            pass
+    normalized_parts = path.as_posix().split("/")
+    if "site-packages" in normalized_parts:
+        index = normalized_parts.index("site-packages")
+        return "site-packages:" + "/".join(normalized_parts[index + 1 :])
+    return path.name
+
+
 def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str, Any]:
     identity = _invoked_cli_identity_payload(target_root=target_root)
     source_class = str(identity.get("source_class", "unknown"))
@@ -504,25 +523,25 @@ def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str,
         source_identity = _git_source_identity(_agentic_workspace_package_root())
     elif source_class == "editable-dev":
         source = "repo-local-dev"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     elif source_class == "installed-package":
         source = "released-wheel"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     else:
         source = "unknown"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     return {
         "package": "agentic-workspace",
         "version": __version__,
         "source": source,
         "source_class": source_class,
         "source_identity": source_identity,
-        "module_path": identity.get("module_path", ""),
-        "python_executable": identity.get("python_executable", ""),
+        "module_path": _portable_path_identity(identity.get("module_path", ""), target_root=target_root),
+        "python_executable": _portable_path_identity(identity.get("python_executable", ""), target_root=target_root),
     }
 
 
-def _command_generation_package_identity() -> dict[str, Any]:
+def _command_generation_package_identity(*, target_root: Path | None = None) -> dict[str, Any]:
     version = _package_version("command-generation")
     if not version:
         return {
@@ -537,7 +556,7 @@ def _command_generation_package_identity() -> dict[str, Any]:
     except ImportError:
         module_path = ""
     else:
-        module_path = Path(command_generation.__file__).resolve().as_posix()
+        module_path = _portable_path_identity(Path(command_generation.__file__).resolve(), target_root=target_root)
     return {
         "package": "command-generation",
         "version": version,
@@ -558,7 +577,7 @@ def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
             "tag": f"v{__version__}",
         },
         "installed_by": _payload_installer_identity(target_root=target_root),
-        "command_generation": _command_generation_package_identity(),
+        "command_generation": _command_generation_package_identity(target_root=target_root),
         "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "payload_files": [relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
         "rule": (

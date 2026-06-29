@@ -580,6 +580,16 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     assert full["adapter_contracts"]
 
 
+def test_payload_provenance_payload_uses_portable_path_identities(tmp_path: Path) -> None:
+    payload = cli._payload_provenance_payload(target_root=tmp_path)
+    encoded = json.dumps(payload, sort_keys=True)
+
+    assert not re.search(r"[A-Za-z]:/|/(?:Users|home|tmp)/", encoded)
+    assert payload["installed_by"]["module_path"]
+    assert payload["installed_by"]["python_executable"]
+    assert payload["command_generation"]["source_identity"]
+
+
 def test_start_select_installed_state_blocking_drift_blocks_execution(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
