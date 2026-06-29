@@ -935,6 +935,13 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
     assert explanation["selected_commands"][0]["kind"] == "proof-command/v1"
     assert explanation["proof_execution_evidence"]["status"] == "not-run"
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
+    maintenance = answer["proof_route_maintenance"]
+    assert maintenance["status"] == "attention"
+    assert maintenance["stale_route_count"] == 1
+    assert maintenance["new_capability_candidate_count"] >= 1
+    reasons = {item["reason"] for item in maintenance["suggested_updates"]}
+    assert "learned proof route is stale or unavailable" in reasons
+    assert "new target proof capability needs route-table promotion" in reasons
 
 
 def test_proof_changed_reuses_confirmed_memory_proof_route(tmp_path: Path, capsys) -> None:
@@ -1178,16 +1185,19 @@ candidates = []
     assert "npm test" not in answer["required_commands"]
     assert "npm run lint" in answer["required_commands"]
     assert answer["configured_policy"][0]["disallowed_commands"] == ["npm test"]
-    assert answer["host_policy_blocked_commands"] == [
+    blocked_commands = answer["host_policy_blocked_commands"]
+    assert {item["selected_by_lane"] for item in blocked_commands} == {"workspace_cli", "learned_route:package-json:test"}
+    assert all(
         {
             "lane": "concern:no_npm_test",
             "proof_profile": "no_npm_test",
             "command": "npm test",
             "configured_command": "npm test",
             "reason": "host-configured proof profile disallows this command",
-            "selected_by_lane": "workspace_cli",
-        }
-    ]
+        }.items()
+        <= item.items()
+        for item in blocked_commands
+    )
     assert answer["proof_route_selection"]["critical_warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
     assert answer["proof_route_explanation"]["host_policy_blocked_commands"] == answer["host_policy_blocked_commands"]
     assert answer["proof_next_decision"]["warnings"] == ["Host proof policy blocked one or more candidate proof commands."]
@@ -2280,6 +2290,73 @@ def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(c
     authority = {item["command"]: item for item in answer["proof_obligations"]["required_proof"]["command_authority"]}
     assert authority["make typecheck"]["route_authority"] == "package-seed-or-default-route"
     assert answer["proof_route_maintenance"]["fallback_selected_count"] >= 1
+    assert answer["proof_route_maintenance"]["ci_gap_candidate_count"] >= 1
+    reasons = {item["reason"] for item in answer["proof_route_maintenance"]["suggested_updates"]}
+    assert "CI-learned proof gap should be captured as repo route authority" in reasons
+
+
+def test_proof_changed_learned_route_table_can_override_package_default_authority(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "typecheck:\n\tpython -m compileall src\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-route-hints/v1",
+                "schema_version": "proof-route-hints/v1",
+                "hints": [
+                    {
+                        "id": "workspace-runtime:typecheck",
+                        "state": "confirmed",
+                        "intent_type": "static-check",
+                        "candidate_command": "make typecheck",
+                        "source": "memory",
+                        "source_path": ".agentic-workspace/proof-route-hints.json",
+                        "confidence": "high",
+                        "requires_live_confirmation": False,
+                        "scope": "src/agentic_workspace",
+                        "owner": "Memory",
+                        "provenance": "CI failed on workspace runtime type errors; route confirmed by prior closeout.",
+                        "learned_at": "2026-06-29",
+                    }
+                ],
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "workspace_runtime_typecheck_ci_parity" in lane_ids
+    assert "learned_route:workspace-runtime:typecheck" in lane_ids
+    assert answer["required_commands"].count("make typecheck") == 1
+    selected_typecheck = [command for command in answer["selected_commands"] if command["command"] == "make typecheck"]
+    selected_authorities = {command["route_authority"] for command in selected_typecheck}
+    assert "package-seed-or-default-route" in selected_authorities
+    assert "repo-learned-route-table" in selected_authorities
+    obligations = {item["command"]: item for item in answer["proof_obligations"]["required_proof"]["command_authority"]}
+    assert obligations["make typecheck"]["route_authority"] == "repo-learned-route-table"
+    precedence = answer["proof_route_precedence"]
+    assert precedence["status"] == "competing-routes"
+    assert precedence["cases"][0]["winner"]["route_source"] == "repo-learned-proof-route"
+    overridden_authorities = {item["route_authority"] for item in precedence["cases"][0]["overridden"]}
+    assert "package-seed-or-default-route" in overridden_authorities
 
 
 def test_proof_changed_selector_keeps_docs_only_work_off_workspace_runtime_typecheck(capsys) -> None:

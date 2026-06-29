@@ -59,6 +59,7 @@ from agentic_workspace.workspace_runtime_core import (
     _intent_proof_prompt_payload,
     _issue_scope_evidence_payload,
     _lane_execution_metadata,
+    _learned_proof_lanes_for_changed_paths,
     _learned_route_reliance_payload,
     _load_proof_route_hints,
     _load_workspace_config,
@@ -959,7 +960,12 @@ def _release_proof_profile_payload(
 
 def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, learned_confirmed: bool = False) -> dict[str, Any]:
     lane_id = str(lane.get("id", ""))
-    if learned_confirmed:
+    if lane.get("learned_route"):
+        authority = "repo-learned-route-table"
+        fallback_status = "repo-learned-confirmed"
+        route = lane.get("learned_route", {}) if isinstance(lane.get("learned_route"), dict) else {}
+        surface = str(route.get("source_path") or ".agentic-workspace/proof-route-hints.json")
+    elif learned_confirmed:
         authority = "agent-learned-confirmed-route"
         fallback_status = "confirmed-repo-knowledge"
         surface = str(lane.get("authority_surface", ".agentic-workspace/memory/repo"))
@@ -997,6 +1003,77 @@ def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, 
         "promotion_candidate": promotion_candidate,
         "maintenance_target": ".agentic-workspace/proof-route-hints.json" if promotion_candidate else surface,
         "rule": "Prefer confirmed repo/agent-learned/Verification proof knowledge over package defaults and generic fallbacks.",
+    }
+
+
+def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) -> dict[str, Any]:
+    priority = {
+        "host-configured-proof-profile": 100,
+        "host-configured-subsystem": 95,
+        "repo-learned-proof-route": 90,
+        "verification-manual-protocol": 85,
+        "live-adapted-target-capability": 60,
+        "live-confirmed-proof-rule": 40,
+        "manual-fallback": 20,
+    }
+    by_command: dict[str, list[dict[str, Any]]] = {}
+    for command in selected_commands:
+        if not isinstance(command, dict):
+            continue
+        command_text = str(command.get("command", "")).strip()
+        if not command_text:
+            continue
+        by_command.setdefault(command_text, []).append(command)
+    competing: list[dict[str, Any]] = []
+    for command_text, matches in by_command.items():
+        if len(matches) < 2:
+            continue
+        ordered = sorted(
+            matches,
+            key=lambda item: (
+                priority.get(str(item.get("selected_from", "")), 0),
+                1
+                if str(item.get("fallback_status", "")) in {"repo-confirmed", "repo-learned-confirmed", "confirmed-repo-knowledge"}
+                else 0,
+            ),
+            reverse=True,
+        )
+        winner = ordered[0]
+        competing.append(
+            {
+                "kind": "proof-route-precedence-case/v1",
+                "command": command_text,
+                "winner": {
+                    "lane": str(winner.get("lane", "")),
+                    "route_source": str(winner.get("selected_from", "")),
+                    "route_authority": str(winner.get("route_authority", "")),
+                    "authority_surface": str(winner.get("authority_surface", "")),
+                },
+                "overridden": [
+                    {
+                        "lane": str(item.get("lane", "")),
+                        "route_source": str(item.get("selected_from", "")),
+                        "route_authority": str(item.get("route_authority", "")),
+                        "authority_surface": str(item.get("authority_surface", "")),
+                    }
+                    for item in ordered[1:]
+                ],
+            }
+        )
+    return {
+        "kind": "proof-route-precedence/v1",
+        "status": "competing-routes" if competing else "no-competition",
+        "priority_order": [
+            "host-configured-proof-profile",
+            "host-configured-subsystem",
+            "repo-learned-proof-route",
+            "verification-manual-protocol",
+            "live-adapted-target-capability",
+            "live-confirmed-proof-rule",
+            "manual-fallback",
+        ],
+        "cases": competing,
+        "rule": "When the same command is selected from multiple sources, repo-owned and learned authority should be visible and preferred over package defaults.",
     }
 
 
@@ -1088,10 +1165,15 @@ def _proof_route_maintenance_payload(
     suggestions: list[dict[str, Any]] = []
     for command in fallback_commands:
         command_text = str(command.get("command", ""))
+        reason = (
+            "new target proof capability needs route-table promotion"
+            if str(command.get("fallback_status", "")) == "candidate-live-confirmed"
+            else "selected proof relies on fallback or seed route"
+        )
         suggestions.append(
             {
                 "kind": "proof-route-maintenance-suggestion/v1",
-                "reason": "selected proof relies on fallback or seed route",
+                "reason": reason,
                 "route_id": f"promote-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
                 "matcher": {"selected_lane": str(command.get("lane", ""))},
                 "command": command_text,
@@ -1100,6 +1182,19 @@ def _proof_route_maintenance_payload(
                 "recommended_state": "confirmed",
             }
         )
+        if str(command.get("ci_relationship", "")).strip():
+            suggestions.append(
+                {
+                    "kind": "proof-route-maintenance-suggestion/v1",
+                    "reason": "CI-learned proof gap should be captured as repo route authority",
+                    "route_id": f"ci-gap-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
+                    "matcher": {"selected_lane": str(command.get("lane", "")), "ci_relationship": str(command.get("ci_relationship", ""))},
+                    "command": command_text,
+                    "target_surface": ".agentic-workspace/proof-route-hints.json",
+                    "source_observation": str(command.get("selected_from", "")),
+                    "recommended_state": "confirmed-with-ci-provenance",
+                }
+            )
     for hint in stale_hints:
         suggestions.append(
             {
@@ -1141,11 +1236,15 @@ def _proof_route_maintenance_payload(
         )
     material = bool(stale_hints or invalid_hints or manual_missing)
     fallback_count = len(fallback_commands)
+    new_capability_count = sum(1 for command in fallback_commands if str(command.get("fallback_status", "")) == "candidate-live-confirmed")
+    ci_gap_count = sum(1 for command in fallback_commands if str(command.get("ci_relationship", "")).strip())
     return {
         "kind": "proof-route-maintenance/v1",
         "status": "attention" if material else "promotion-available" if fallback_count else "quiet",
         "material_to_current_work": material,
         "fallback_selected_count": fallback_count,
+        "new_capability_candidate_count": new_capability_count,
+        "ci_gap_candidate_count": ci_gap_count,
         "stale_route_count": len(stale_hints),
         "invalid_authority_count": len(invalid_hints),
         "manual_obligation_count": len(manual_missing),
@@ -1527,6 +1626,7 @@ def _proof_selection_for_changed_paths(
     target_capabilities = _apply_learned_route_hints_to_capabilities(
         target_capabilities=target_capabilities, learned_route_hints=learned_route_hints
     )
+    selected_lanes.extend(_learned_proof_lanes_for_changed_paths(changed_paths=changed_paths, learned_route_hints=learned_route_hints))
     learned_negative_commands = {
         str(hint.get("candidate_command", "")).strip()
         for hint in learned_route_hints.get("negative", [])
@@ -1654,7 +1754,7 @@ def _proof_selection_for_changed_paths(
             route_authority = _proof_route_authority_for_lane(
                 lane=lane,
                 route_source=route_source,
-                learned_confirmed=command_text in learned_confirmed_commands,
+                learned_confirmed=command_text in learned_confirmed_commands and route_source == "live-adapted-target-capability",
             )
             selected_commands.append(
                 {
@@ -1753,6 +1853,7 @@ def _proof_selection_for_changed_paths(
         unavailable_commands=unavailable_commands,
         learned_route_reliance=learned_route_reliance,
     )
+    proof_route_precedence = _proof_route_precedence_payload(selected_commands=selected_commands)
     host_repo_learning = _host_repo_learning_posture_payload(
         target_capabilities=target_capabilities,
         learned_route_hints=learned_route_hints,
@@ -1904,6 +2005,7 @@ def _proof_selection_for_changed_paths(
         "learned_route_hints": learned_route_hints,
         "learned_route_reliance": learned_route_reliance,
         "proof_route_maintenance": proof_route_maintenance,
+        "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
         "verification": verification,

@@ -612,6 +612,7 @@
           "_host_repo_learning_posture_payload",
           "_installed_state_drift_triage_payload",
           "_lane_execution_metadata",
+          "_learned_proof_lanes_for_changed_paths",
           "_load_proof_route_hints",
           "_make_targets_without_negative_routes",
           "_missing_repo_path_references_in_command",

@@ -36148,6 +36148,62 @@ def _supplemental_proof_lanes_for_changed_paths(*, changed_paths: list[str]) -> 
     return supplemental_lanes
 
 
+def _proof_scope_matches_changed_path(*, scope: str, changed_path: str) -> bool:
+    scope = scope.strip().replace("\\", "/").strip("/")
+    changed_path = changed_path.strip().replace("\\", "/").strip("/")
+    if scope in {"", ".", "repo", "*"}:
+        return True
+    return changed_path == scope or changed_path.startswith(f"{scope}/")
+
+
+def _learned_route_proof_kind(intent_type: str) -> str:
+    if intent_type == "static-check":
+        return "surface-check"
+    if intent_type == "docs-diff-review":
+        return "diff-review"
+    return "targeted-test"
+
+
+def _learned_proof_lanes_for_changed_paths(*, changed_paths: list[str], learned_route_hints: dict[str, Any]) -> list[dict[str, Any]]:
+    lanes: list[dict[str, Any]] = []
+    for hint in learned_route_hints.get("confirmed", []):
+        if not isinstance(hint, dict):
+            continue
+        command = str(hint.get("candidate_command", "")).strip()
+        if not command:
+            continue
+        scope = str(hint.get("scope", "repo")).strip() or "repo"
+        matched_paths = [path for path in changed_paths if _proof_scope_matches_changed_path(scope=scope, changed_path=path)]
+        if changed_paths and not matched_paths:
+            continue
+        hint_id = str(hint.get("id") or _decision_slug(command)).strip()
+        intent_type = str(hint.get("intent_type", "behavior-test")).strip() or "behavior-test"
+        lanes.append(
+            {
+                "id": f"learned_route:{hint_id}",
+                "when": "confirmed repo-learned proof route matches changed path scope",
+                "enough_proof": [command],
+                "proof_kind": _learned_route_proof_kind(intent_type),
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "matched_paths": matched_paths or list(changed_paths),
+                "learned_route": {
+                    "id": hint_id,
+                    "scope": scope,
+                    "source": str(hint.get("source", "")),
+                    "source_path": str(hint.get("source_path", "")),
+                    "owner": str(hint.get("owner", "")),
+                    "provenance": str(hint.get("provenance", "")),
+                    "learned_at": str(hint.get("learned_at", "")),
+                    "confirmation": str(hint.get("confirmation", "")),
+                },
+                "ci_relationship": str(hint.get("ci_relationship", "")),
+                "recovery_signal": "stale, failing, or missing learned route evidence should update the repo route table instead of forcing rediscovery",
+            }
+        )
+    return lanes
+
+
 def _makefile_targets(target_root: Path | None) -> set[str] | None:
     if target_root is None:
         return None
@@ -36781,7 +36837,12 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
         intent_type = "docs-diff-review"
     else:
         intent_type = "manual-verification"
-    source = "host-config" if lane.get("proof_profile") or lane.get("subsystem") else "changed-paths"
+    if lane.get("proof_profile") or lane.get("subsystem"):
+        source = "host-config"
+    elif lane.get("learned_route"):
+        source = "repo-learned-route"
+    else:
+        source = "changed-paths"
     return {
         "kind": "proof-intent/v1",
         "id": str(lane.get("id", "")),
@@ -36797,7 +36858,10 @@ def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustme
         return "host-configured-proof-profile"
     if lane.get("subsystem"):
         return "host-configured-subsystem"
-    if command in adjustments_by_replacement:
+    if lane.get("learned_route"):
+        return "repo-learned-proof-route"
+    adjustment = adjustments_by_replacement.get(command)
+    if isinstance(adjustment, dict) and str(adjustment.get("lane", "")) == str(lane.get("id", "")):
         return "live-adapted-target-capability"
     return "live-confirmed-proof-rule"
 
