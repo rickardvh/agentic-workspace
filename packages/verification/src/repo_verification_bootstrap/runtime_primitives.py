@@ -14,6 +14,18 @@ SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 PROOF_GOVERNANCE_KIND = "agentic-workspace/verification-proof-governance/v1"
 PROOF_DECISION_KIND = "agentic-workspace/verification-proof-decision/v1"
+CORE_EVIDENCE_CONCEPTS = {
+    "scenario_coverage": "Scenario or workflow coverage evidence.",
+    "contract": "Contract, conformance, or interface evidence.",
+    "conformance": "Conformance evidence against a declared protocol or spec.",
+    "regression_prevention": "Evidence that a previous failure mode remains covered.",
+    "characterization": "Characterization evidence for current behavior.",
+    "manual_review": "Named manual review evidence.",
+    "migration": "Migration or storage-transition evidence.",
+    "export_integration": "Export, import, or integration evidence.",
+    "security_review": "Security, access-control, or audit review evidence.",
+    "compliance_uncertainty": "Explicit preservation of compliance or certification uncertainty.",
+}
 
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
@@ -955,6 +967,92 @@ def _planning_refs(active_planning_record: dict[str, Any] | None) -> list[str]:
     return _dedupe(refs)
 
 
+def _load_evidence_concepts(*, payload: dict[str, Any]) -> dict[str, Any]:
+    raw_concepts = _table(payload, "evidence_concepts", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    declared: dict[str, dict[str, Any]] = {}
+    invalid: list[dict[str, str]] = []
+    for concept_id, raw_concept in sorted(raw_concepts.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} evidence_concepts.{concept_id}"
+        if not isinstance(raw_concept, dict):
+            raise VerificationUsageError(f"{surface} must be a table.")
+        unknown = sorted(set(raw_concept) - {"title", "meaning", "owner", "claim_effect", "render_as"})
+        if unknown:
+            raise VerificationUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        concept_key = str(concept_id).strip()
+        if not concept_key.startswith("host:"):
+            invalid.append(
+                {
+                    "id": concept_key,
+                    "reason": "host-declared evidence concepts must use the host:<term> namespace",
+                    "source": surface,
+                }
+            )
+            continue
+        declared[concept_key] = {
+            "id": concept_key,
+            "kind": "host-declared",
+            "title": _required_string(payload=raw_concept, key="title", surface=surface),
+            "meaning": _required_string(payload=raw_concept, key="meaning", surface=surface),
+            "owner": _optional_string(payload=raw_concept, key="owner", surface=surface) or "host-repo",
+            "claim_effect": _optional_string(payload=raw_concept, key="claim_effect", surface=surface) or "reviewable-evidence",
+            "render_as": _optional_string(payload=raw_concept, key="render_as", surface=surface) or concept_key,
+            "source": surface,
+        }
+    return {
+        "kind": "agentic-workspace/verification-evidence-concepts/v1",
+        "core": [
+            {"id": concept_id, "kind": "core", "meaning": meaning, "source": "AW core vocabulary"}
+            for concept_id, meaning in sorted(CORE_EVIDENCE_CONCEPTS.items())
+        ],
+        "declared_host": list(declared.values()),
+        "declared_host_by_id": declared,
+        "invalid_declarations": invalid,
+    }
+
+
+def _evidence_concept_usage(*, labels: list[str], concepts: dict[str, Any]) -> dict[str, Any]:
+    declared = concepts.get("declared_host_by_id", {}) if isinstance(concepts, dict) else {}
+    declared = declared if isinstance(declared, dict) else {}
+    used: list[dict[str, Any]] = []
+    degraded: list[dict[str, str]] = []
+    for label in labels:
+        normalized = str(label).strip()
+        if not normalized:
+            continue
+        if normalized in CORE_EVIDENCE_CONCEPTS:
+            used.append(
+                {
+                    "id": normalized,
+                    "kind": "core",
+                    "meaning": CORE_EVIDENCE_CONCEPTS[normalized],
+                    "source": "AW core vocabulary",
+                }
+            )
+        elif normalized.startswith("host:") and normalized in declared:
+            used.append(dict(declared[normalized]))
+        elif normalized.startswith("host:"):
+            degraded.append(
+                {
+                    "id": normalized,
+                    "state": "undeclared-host-concept",
+                    "reason": "Declare this host evidence concept under [evidence_concepts] before relying on it for proof or closeout output.",
+                }
+            )
+        else:
+            degraded.append(
+                {
+                    "id": normalized,
+                    "state": "legacy-unclassified-label",
+                    "reason": "Use a core concept or a declared host:<term> concept for machine-readable proof semantics.",
+                }
+            )
+    return {
+        "used": used,
+        "degraded": degraded,
+        "status": "attention" if degraded else "declared" if used else "none",
+    }
+
+
 def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     manifest_path, payload = _manifest_raw(target_root=target_root)
     if payload is None:
@@ -966,11 +1064,14 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             "evidence_bundles": [],
             "proof_routes": [],
             "known_gaps": [],
+            "evidence_concepts": _load_evidence_concepts(payload={}),
         }
     schema_version = payload.get("schema_version")
     if schema_version != SCHEMA_VERSION:
         raise VerificationUsageError(f'{VERIFICATION_MANIFEST_PATH.as_posix()} schema_version must be "{SCHEMA_VERSION}".')
-    unknown_top = sorted(set(payload) - {"schema_version", "protocols", "scenarios", "evidence_bundles", "proof_routes", "known_gaps"})
+    unknown_top = sorted(
+        set(payload) - {"schema_version", "protocols", "scenarios", "evidence_bundles", "proof_routes", "known_gaps", "evidence_concepts"}
+    )
     if unknown_top:
         raise VerificationUsageError(
             f"{VERIFICATION_MANIFEST_PATH.as_posix()} contains unsupported top-level field(s): {', '.join(unknown_top)}."
@@ -1169,6 +1270,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             }
         )
 
+    evidence_concepts = _load_evidence_concepts(payload=payload)
     proof_routes = _load_proof_routes(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
     known_gaps = _load_known_gaps(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
     return {
@@ -1179,6 +1281,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
         "evidence_bundles": evidence_bundles,
         "proof_routes": proof_routes,
         "known_gaps": known_gaps,
+        "evidence_concepts": evidence_concepts,
     }
 
 
@@ -1472,6 +1575,7 @@ def verification_report_payload(
     evidence_bundles = manifest["evidence_bundles"]
     proof_routes = manifest["proof_routes"]
     known_gaps = manifest["known_gaps"]
+    evidence_concepts = manifest["evidence_concepts"]
     evidence_by_protocol: dict[str, list[dict[str, Any]]] = {}
     for bundle in evidence_bundles:
         evidence_by_protocol.setdefault(str(bundle.get("protocol_id", "")), []).append(bundle)
@@ -1521,6 +1625,7 @@ def verification_report_payload(
             ]
         )
         expected_evidence = [str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()]
+        expected_evidence_concepts = _evidence_concept_usage(labels=expected_evidence, concepts=evidence_concepts)
         missing_evidence = [item for item in expected_evidence if item not in evidence_present]
         stale_expected_evidence = [item for item in missing_evidence if item in stale_evidence]
         if matched:
@@ -1530,6 +1635,7 @@ def verification_report_payload(
                     "applies_because": applies_because,
                     "match_signals": match_signals,
                     "evidence_bundle_ids": [b["id"] for b in bundles],
+                    "expected_evidence_concepts": expected_evidence_concepts,
                     "authority_boundary": {
                         "kind": "agentic-workspace/authority-boundary/v1",
                         "surface": "verification.protocol",
@@ -1574,6 +1680,7 @@ def verification_report_payload(
                     "state": state,
                     "applies_because": applies_because,
                     "expected_evidence": expected_evidence,
+                    "expected_evidence_concepts": expected_evidence_concepts,
                     "evidence_present": evidence_present,
                     "stale_evidence": stale_evidence,
                     "stale_expected_evidence": stale_expected_evidence,
@@ -1611,10 +1718,23 @@ def verification_report_payload(
         task_text=task_text,
         manifest=manifest,
     )
+    degraded_concepts = [
+        item
+        for status in evidence_status
+        if isinstance(status, dict)
+        for item in _list_payload(
+            status.get("expected_evidence_concepts", {}).get("degraded")
+            if isinstance(status.get("expected_evidence_concepts"), dict)
+            else []
+        )
+    ]
+    concept_attention = any(item.get("state") == "undeclared-host-concept" for item in degraded_concepts) or bool(
+        _list_payload(evidence_concepts.get("invalid_declarations"))
+    )
     return {
         "kind": "agentic-workspace/verification/v1",
         "status": "attention"
-        if any(item.get("state") in {"missing-evidence", "stale-evidence"} for item in evidence_status)
+        if any(item.get("state") in {"missing-evidence", "stale-evidence"} for item in evidence_status) or concept_attention
         else "matched"
         if active_protocols
         else "configured"
@@ -1641,6 +1761,19 @@ def verification_report_payload(
         "evidence_bundle_count": len(evidence_bundles),
         "proof_route_count": len(proof_routes),
         "known_gap_count": len(known_gaps),
+        "evidence_concepts": {
+            **evidence_concepts,
+            "used_degraded": degraded_concepts,
+            "status": "attention"
+            if concept_attention
+            else "declared"
+            if _list_payload(evidence_concepts.get("declared_host"))
+            else "core-only",
+            "rule": (
+                "Core concepts are AW vocabulary; host concepts must be declared as host:<term>. "
+                "Undeclared host concepts degrade proof guidance instead of weakening structured schemas."
+            ),
+        },
         "configured_protocols": configured_protocols,
         "configured_scenarios": configured_scenarios,
         "proof_routes": proof_routes,

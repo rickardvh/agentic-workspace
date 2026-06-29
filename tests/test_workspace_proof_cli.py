@@ -166,6 +166,21 @@ needs_review = false
     )
 
 
+def _write_empty_proof_planning_state(target_root: Path) -> None:
+    _write(
+        target_root / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+
 def test_proof_runtime_helpers_route_through_proof_owner(tmp_path: Path) -> None:
     assert workspace_runtime_primitives._verification_report_payload is workspace_runtime_proof._verification_report_payload
     assert workspace_runtime_primitives._tiny_proof_payload is workspace_runtime_proof._tiny_proof_payload
@@ -2851,3 +2866,162 @@ def test_proof_changed_selector_accepts_deleted_durable_surface(tmp_path: Path, 
     assert review["flagged_count"] == 0
     assert review["reviewed_paths"][0]["result"] == "accepted"
     assert review["reviewed_paths"][0]["disposition"] == "removed durable surface"
+
+
+def _write_proof_architecture_principles(target_root: Path) -> None:
+    _write(
+        target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+summary = "Portable host-neutral operating intent."
+governing_intents = []
+anti_intents = []
+decision_tests = []
+confidence = "high"
+needs_review = false
+
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+title = "Preserve host-agnostic agent judgment"
+authority = "repo-system-intent"
+owner = "workspace-runtime"
+summary = "AW provides infrastructure for agent judgment instead of package-owned host assumptions."
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
+guardrail_refs = ["docs/maintainer/non-enum-keyword-routing-audit.json"]
+derived_applications = ["non-enum-keyword-routing"]
+proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
+review_aids = ["Confirm proof selection did not infer from prose keywords."]
+claim_boundary = "architecture-principle-preservation"
+""",
+    )
+
+
+def test_proof_changed_selects_host_declared_domain_proof_lane(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.access_control]
+purpose = "Access-control changes need domain proof and review evidence."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('access proof')\\""]
+manual_evidence = ["host:access_matrix"]
+review_aids = ["Inspect role-to-permission impact."]
+evidence_concepts = ["host:access_matrix"]
+authority_refs = ["SECURITY.md#access-control"]
+claim_boundary = "access-control-proof-required-before-full-claim"
+owner = "security"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    domain = next(lane for lane in packet["selected_lanes"] if lane["id"] == "domain:access_control")
+    assert domain["domain_lane"]["source"] == ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
+    assert domain["manual_evidence"] == ["host:access_matrix"]
+    assert domain["claim_boundary"] == "access-control-proof-required-before-full-claim"
+    assert domain["route_authority"]["authority"] == "repo-owned-domain-proof-lane"
+    assert packet["safe_claim_now"]["state"] == "manual-review-required"
+
+
+def test_proof_decision_packet_includes_architecture_pressure(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write_proof_architecture_principles(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    assert packet["kind"] == "agentic-workspace/proof-decision-packet/v1"
+    assert packet["active_pressure"]["architecture_principle_match_count"] == 1
+    assert "matched architecture principle preservation claim is unresolved" in packet["missing_or_unresolved"]["blockers"]
+    assert packet["safe_claim_now"]["state"] in {"proof-missing", "manual-review-required"}
+
+
+def test_verification_distinguishes_host_evidence_concepts(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(tmp_path / ".agentic-workspace" / "config.toml", f'schema_version = 1\n\n[workspace]\ncli_invoke = "{REPO_LOCAL_CLI_INVOKE}"\n')
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[evidence_concepts."host:scenario_matrix"]
+title = "Scenario Matrix"
+meaning = "Host-owned scenario coverage matrix."
+owner = "qa"
+claim_effect = "manual-review-required"
+render_as = "scenario matrix"
+
+[protocols.access_review]
+title = "Access Review"
+purpose = "Access changes need declared evidence."
+applies_to_paths = ["services/auth/**"]
+expected_evidence = ["scenario_coverage", "host:scenario_matrix", "host:missing"]
+review_owner = "security"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "verification",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    verification = json.loads(capsys.readouterr().out)["values"]["verification"]
+    concepts = verification["evidence_status"][0]["expected_evidence_concepts"]
+    assert [item["kind"] for item in concepts["used"]] == ["core", "host-declared"]
+    assert concepts["degraded"][0]["state"] == "undeclared-host-concept"
+    assert verification["evidence_concepts"]["status"] == "attention"

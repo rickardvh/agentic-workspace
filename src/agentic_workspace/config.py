@@ -367,6 +367,25 @@ class AssuranceSubsystemProfile:
 
 
 @dataclass(frozen=True)
+class AssuranceDomainProofLane:
+    id: str
+    purpose: str
+    applies_to_paths: tuple[str, ...]
+    applies_to_task_markers: tuple[str, ...]
+    commands: tuple[str, ...]
+    manual_evidence: tuple[str, ...]
+    review_aids: tuple[str, ...]
+    evidence_concepts: tuple[str, ...]
+    assurance_requirement_refs: tuple[str, ...]
+    proof_profiles: tuple[str, ...]
+    authority_refs: tuple[str, ...]
+    escalation: tuple[str, ...]
+    claim_boundary: str | None
+    owner: str | None
+    notes: str | None
+
+
+@dataclass(frozen=True)
 class AssuranceConfig:
     default_level: str
     default_level_source: str
@@ -376,6 +395,7 @@ class AssuranceConfig:
     proof_profiles: tuple[AssuranceProofProfile, ...]
     requirements: tuple[AssuranceRequirement, ...]
     subsystem_profiles: tuple[AssuranceSubsystemProfile, ...]
+    domain_proof_lanes: tuple[AssuranceDomainProofLane, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_format: str | None
@@ -871,6 +891,78 @@ def _load_assurance_subsystem_profiles(
     return (tuple(profile for profile in profiles if profile.id), warnings)
 
 
+def _load_assurance_domain_proof_lanes(
+    *,
+    raw_lanes: Any,
+    config_path: Path,
+) -> tuple[tuple[AssuranceDomainProofLane, ...], list[str]]:
+    warnings: list[str] = []
+    if raw_lanes is None:
+        raw_lanes = {}
+    if not isinstance(raw_lanes, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.domain_proof_lanes] section must be a table.")
+    supported_fields = {
+        "purpose",
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "commands",
+        "manual_evidence",
+        "review_aids",
+        "evidence_concepts",
+        "assurance_requirement_refs",
+        "proof_profiles",
+        "authority_refs",
+        "escalation",
+        "claim_boundary",
+        "owner",
+        "notes",
+    }
+    lanes: list[AssuranceDomainProofLane] = []
+    for lane_id, raw_lane in sorted(raw_lanes.items()):
+        lane_path = Path(f"{config_path.as_posix()} assurance.domain_proof_lanes.{lane_id}")
+        if not isinstance(raw_lane, dict):
+            raise WorkspaceUsageError(f"{lane_path.as_posix()} must be a table.")
+        unknown_lane = sorted(set(raw_lane) - supported_fields)
+        if unknown_lane:
+            warnings.append(f"{lane_path.as_posix()} contains unsupported field(s): {', '.join(unknown_lane)}.")
+        applies_to_paths = require_optional_string_list(payload=raw_lane, key="applies_to_paths", config_path=lane_path)
+        applies_to_task_markers = require_optional_string_list(payload=raw_lane, key="applies_to_task_markers", config_path=lane_path)
+        if not (applies_to_paths or applies_to_task_markers):
+            raise WorkspaceUsageError(
+                f"{lane_path.as_posix()} requires applies_to_paths or applies_to_task_markers so matching is explicit."
+            )
+        commands = require_optional_string_list(payload=raw_lane, key="commands", config_path=lane_path)
+        manual_evidence = require_optional_string_list(payload=raw_lane, key="manual_evidence", config_path=lane_path)
+        review_aids = require_optional_string_list(payload=raw_lane, key="review_aids", config_path=lane_path)
+        if not (commands or manual_evidence or review_aids):
+            raise WorkspaceUsageError(f"{lane_path.as_posix()} requires commands, manual_evidence, or review_aids.")
+        purpose = require_optional_string(payload=raw_lane, key="purpose", config_path=lane_path)
+        if purpose is None:
+            raise WorkspaceUsageError(f"{lane_path.as_posix()} purpose is required.")
+        lanes.append(
+            AssuranceDomainProofLane(
+                id=str(lane_id).strip(),
+                purpose=purpose,
+                applies_to_paths=applies_to_paths,
+                applies_to_task_markers=applies_to_task_markers,
+                commands=commands,
+                manual_evidence=manual_evidence,
+                review_aids=review_aids,
+                evidence_concepts=require_optional_string_list(payload=raw_lane, key="evidence_concepts", config_path=lane_path),
+                assurance_requirement_refs=require_optional_string_list(
+                    payload=raw_lane, key="assurance_requirement_refs", config_path=lane_path
+                ),
+                proof_profiles=require_optional_string_list(payload=raw_lane, key="proof_profiles", config_path=lane_path),
+                authority_refs=require_optional_string_list(payload=raw_lane, key="authority_refs", config_path=lane_path),
+                escalation=require_optional_string_list(payload=raw_lane, key="escalation", config_path=lane_path),
+                claim_boundary=require_optional_string(payload=raw_lane, key="claim_boundary", config_path=lane_path),
+                owner=require_optional_string(payload=raw_lane, key="owner", config_path=lane_path),
+                notes=require_optional_string(payload=raw_lane, key="notes", config_path=lane_path),
+            )
+        )
+    return (tuple(lane for lane in lanes if lane.id), warnings)
+
+
 def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
     warnings: list[str] = []
     if raw_assurance is None:
@@ -885,6 +977,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "proof_profiles",
         "requirements",
         "subsystem_profiles",
+        "domain_proof_lanes",
         "test_data_policy",
         "decision_record_target",
         "decision_record_format",
@@ -943,6 +1036,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         config_path=config_path,
     )
     warnings.extend(subsystem_profile_warnings)
+    domain_proof_lanes, domain_lane_warnings = _load_assurance_domain_proof_lanes(
+        raw_lanes=raw_assurance.get("domain_proof_lanes", {}),
+        config_path=config_path,
+    )
+    warnings.extend(domain_lane_warnings)
     return (
         AssuranceConfig(
             default_level=default_level,
@@ -953,6 +1051,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             proof_profiles=tuple(profile for profile in profiles if profile.id),
             requirements=requirements,
             subsystem_profiles=subsystem_profiles,
+            domain_proof_lanes=domain_proof_lanes,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,

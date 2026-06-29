@@ -7,6 +7,7 @@ monolith keeps compatibility re-exports for legacy private import names.
 from __future__ import annotations
 
 import copy
+import fnmatch
 import json
 import re
 import tomllib
@@ -969,6 +970,10 @@ def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, 
         authority = "agent-learned-confirmed-route"
         fallback_status = "confirmed-repo-knowledge"
         surface = str(lane.get("authority_surface", ".agentic-workspace/memory/repo"))
+    elif lane.get("domain_lane"):
+        authority = "repo-owned-domain-proof-lane"
+        fallback_status = "repo-confirmed"
+        surface = ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
     elif lane.get("proof_profile") or lane.get("requirement_id") or lane.get("subsystem"):
         authority = "repo-owned-proof-policy"
         fallback_status = "repo-confirmed"
@@ -1009,6 +1014,7 @@ def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, 
 def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) -> dict[str, Any]:
     priority = {
         "host-configured-proof-profile": 100,
+        "host-declared-domain-proof-lane": 98,
         "host-configured-subsystem": 95,
         "repo-learned-proof-route": 90,
         "verification-manual-protocol": 85,
@@ -1065,6 +1071,7 @@ def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) 
         "status": "competing-routes" if competing else "no-competition",
         "priority_order": [
             "host-configured-proof-profile",
+            "host-declared-domain-proof-lane",
             "host-configured-subsystem",
             "repo-learned-proof-route",
             "verification-manual-protocol",
@@ -1345,6 +1352,227 @@ def _proof_obligations_payload(
     }
 
 
+def _host_domain_proof_lanes_for_changed_paths(
+    *,
+    config: WorkspaceConfig | None,
+    changed_paths: list[str],
+    task_text: str | None,
+) -> list[dict[str, Any]]:
+    if config is None:
+        return []
+    haystack = (task_text or "").lower()
+    lanes: list[dict[str, Any]] = []
+    for lane in config.assurance.domain_proof_lanes:
+        path_matches = [
+            {"path": path, "pattern": pattern}
+            for pattern in lane.applies_to_paths
+            for path in changed_paths
+            if fnmatch.fnmatch(path, pattern)
+        ]
+        task_matches = [marker for marker in lane.applies_to_task_markers if marker.lower() in haystack]
+        if not (path_matches or task_matches):
+            continue
+        lanes.append(
+            {
+                "id": f"domain:{lane.id}",
+                "when": "matched host-declared domain proof lane",
+                "enough_proof": list(lane.commands),
+                "recovery_signal": (
+                    "missing or failing host domain proof should block broad closeout until resolved, manually evidenced, or explicitly waived"
+                ),
+                "proof_kind": "targeted-test" if lane.commands else "manual-verification",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "domain_lane": {
+                    "id": lane.id,
+                    "purpose": lane.purpose,
+                    "source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+                    "owner": lane.owner or "",
+                    "matched_paths": path_matches,
+                    "matched_task_markers": task_matches,
+                    "manual_evidence": list(lane.manual_evidence),
+                    "evidence_concepts": list(lane.evidence_concepts),
+                    "assurance_requirement_refs": list(lane.assurance_requirement_refs),
+                    "proof_profiles": list(lane.proof_profiles),
+                    "authority_refs": list(lane.authority_refs),
+                    "escalation": list(lane.escalation),
+                    "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
+                    "notes": lane.notes or "",
+                },
+                "matched_paths": [match["path"] for match in path_matches],
+                "review_aids": list(lane.review_aids),
+                "manual_evidence": list(lane.manual_evidence),
+                "evidence_concepts": list(lane.evidence_concepts),
+                "assurance_requirement_refs": list(lane.assurance_requirement_refs),
+                "proof_profiles": list(lane.proof_profiles),
+                "authority_refs": list(lane.authority_refs),
+                "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
+                "escalate_when": list(lane.escalation),
+            }
+        )
+    return lanes
+
+
+def _domain_manual_proof_obligations(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    obligations: list[dict[str, Any]] = []
+    for lane in domain_lanes:
+        manual_evidence = [str(item).strip() for item in _list_payload(lane.get("manual_evidence")) if str(item).strip()]
+        review_aids = [str(item).strip() for item in _list_payload(lane.get("review_aids")) if str(item).strip()]
+        if not (manual_evidence or review_aids):
+            continue
+        domain = lane.get("domain_lane", {}) if isinstance(lane.get("domain_lane"), dict) else {}
+        lane_id = str(lane.get("id", ""))
+        obligations.append(
+            {
+                "kind": "manual-proof-obligation/v1",
+                "id": lane_id,
+                "status": "missing-evidence" if manual_evidence else "review",
+                "required": bool(manual_evidence),
+                "protocol_id": "",
+                "title": str(domain.get("purpose") or lane_id),
+                "purpose": str(domain.get("purpose") or "Host-declared domain proof lane"),
+                "review_owner": str(domain.get("owner") or ""),
+                "expected_evidence": manual_evidence,
+                "missing_evidence": manual_evidence,
+                "stale_evidence": [],
+                "steps": [],
+                "reference_material": _list_payload(domain.get("authority_refs")),
+                "review_aids": review_aids,
+                "proof_route_ids": [lane_id],
+                "authority": _proof_route_authority_for_lane(lane=lane, route_source="host-declared-domain-proof-lane"),
+                "claim_boundary": str(lane.get("claim_boundary") or "domain-proof-required-before-full-completion-claim"),
+            }
+        )
+    return obligations
+
+
+def _proof_decision_packet(
+    *,
+    changed_paths: list[str],
+    selected_lanes: list[dict[str, Any]],
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    manual_proof_obligations: list[dict[str, Any]],
+    manual_verification: dict[str, Any] | None,
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+    active_assurance_requirements: dict[str, Any],
+    verification: dict[str, Any],
+    architecture_principles: dict[str, Any],
+    test_strategy_check: dict[str, Any],
+    proof_execution_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    lane_authority = {
+        str(command.get("lane", "")): {
+            "authority": str(command.get("route_authority", "")),
+            "route_authority": str(command.get("route_authority", "")),
+            "authority_surface": str(command.get("authority_surface", "")),
+            "fallback_status": str(command.get("fallback_status", "")),
+        }
+        for command in selected_commands
+        if isinstance(command, dict) and str(command.get("lane", "")).strip()
+    }
+    compact_lanes = []
+    for lane in selected_lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        authority = lane_authority.get(lane_id) or _proof_route_authority_for_lane(
+            lane=lane,
+            route_source="host-declared-domain-proof-lane"
+            if lane.get("domain_lane")
+            else "verification-manual-protocol"
+            if lane_id.startswith("verification:")
+            else "live-confirmed-proof-rule",
+        )
+        compact_lanes.append(
+            {
+                "id": lane_id,
+                "why": str(lane.get("when", "")),
+                "commands": [str(command) for command in _list_payload(lane.get("enough_proof"))],
+                "manual_evidence": [str(item) for item in _list_payload(lane.get("manual_evidence"))],
+                "review_aids": [str(item) for item in _list_payload(lane.get("review_aids"))],
+                "evidence_concepts": [str(item) for item in _list_payload(lane.get("evidence_concepts"))],
+                "claim_boundary": str(lane.get("claim_boundary", "")),
+                "route_authority": authority,
+                **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
+            }
+        )
+    manual_required = bool(manual_verification) or any(item.get("required") for item in manual_proof_obligations)
+    architecture_count = int(architecture_principles.get("matched_count", 0) or 0) if isinstance(architecture_principles, dict) else 0
+    assurance_active = (
+        int(active_assurance_requirements.get("active_count", 0) or 0) if isinstance(active_assurance_requirements, dict) else 0
+    )
+    verification_active = int(verification.get("active_count", 0) or 0) if isinstance(verification, dict) else 0
+    blockers: list[str] = []
+    if required_commands:
+        blockers.append("required proof commands have not been recorded as passed")
+    if manual_required:
+        blockers.append("manual evidence or review is required")
+    if unavailable_commands:
+        blockers.append("one or more selected proof commands are unavailable")
+    if host_policy_blocked_commands:
+        blockers.append("host proof policy blocked one or more commands")
+    if architecture_count:
+        blockers.append("matched architecture principle preservation claim is unresolved")
+    if assurance_active:
+        blockers.append("active assurance requirements need closeout evidence or waiver")
+    if verification_active and manual_required:
+        blockers.append("Verification evidence remains missing or stale")
+    if host_policy_blocked_commands:
+        safe_claim_state = "human-waiver-required"
+    elif manual_required:
+        safe_claim_state = "manual-review-required"
+    elif required_commands or unavailable_commands or architecture_count or assurance_active:
+        safe_claim_state = "proof-missing"
+    else:
+        safe_claim_state = "slice-only-completion"
+    return {
+        "kind": "agentic-workspace/proof-decision-packet/v1",
+        "status": "attention" if blockers else "clear",
+        "changed_paths": changed_paths,
+        "selected_lane_count": len(compact_lanes),
+        "selected_lanes": compact_lanes,
+        "required_commands": required_commands,
+        "manual_checks": manual_proof_obligations,
+        "route_authority": {
+            "command_count": len(selected_commands),
+            "commands": selected_commands,
+            "rule": "Authority explains why proof was selected; it does not certify legal, security, or compliance correctness.",
+        },
+        "active_pressure": {
+            "assurance_requirement_count": assurance_active,
+            "verification_protocol_count": verification_active,
+            "architecture_principle_match_count": architecture_count,
+            "test_strategy_status": str(test_strategy_check.get("status", "")) if isinstance(test_strategy_check, dict) else "",
+        },
+        "missing_or_unresolved": {
+            "blockers": blockers,
+            "unavailable_commands": unavailable_commands,
+            "host_policy_blocked_commands": host_policy_blocked_commands,
+            "proof_execution_evidence_status": str(proof_execution_evidence.get("status", "")),
+        },
+        "safe_claim_now": {
+            "state": safe_claim_state,
+            "claim": "Only a local slice/proof-selection claim is safe until proof execution and closeout evidence are recorded."
+            if blockers
+            else "No proof-selection blocker is visible; acceptance and closeout reconciliation still remain agent-owned.",
+            "does_not_certify": ["legal correctness", "security correctness", "compliance correctness"],
+            "human_owned": ["waivers", "domain certification", "accepted re-scoping"],
+        },
+        "detail_selectors": [
+            "proof_obligations",
+            "verification",
+            "assurance_requirements",
+            "architecture_principles",
+            "test_strategy_check",
+            "proof_route_explanation",
+        ],
+        "verbose_detail": "agentic-workspace proof --target ./repo --verbose --changed <paths> --format json",
+        "rule": "Compact packet is the ordinary-agent decision surface; verbose proof remains the debugging surface.",
+    }
+
+
 def _proof_selection_for_changed_paths(
     *,
     changed_paths: list[str],
@@ -1612,10 +1840,12 @@ def _proof_selection_for_changed_paths(
                 "applies_because": _list_payload(protocol.get("applies_because")),
             }
         )
+    domain_lanes = _host_domain_proof_lanes_for_changed_paths(config=config, changed_paths=changed_paths, task_text=task_text)
     selected_lanes.extend(active_plan_lanes)
     selected_lanes.extend(concern_lanes)
     selected_lanes.extend(requirement_lanes)
     selected_lanes.extend(verification_lanes)
+    selected_lanes.extend(domain_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     project_roots = _project_roots_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
@@ -1833,6 +2063,24 @@ def _proof_selection_for_changed_paths(
         for lane in [*concern_lanes, *requirement_lanes]
         if lane.get("proof_profile")
     ]
+    domain_policy = [
+        {
+            "kind": "domain-proof-lane/v1",
+            "source": "host-config",
+            "id": str(_as_dict(lane.get("domain_lane")).get("id") or lane.get("id", "")),
+            "purpose": str(_as_dict(lane.get("domain_lane")).get("purpose") or ""),
+            "matched_paths": _list_payload(_as_dict(lane.get("domain_lane")).get("matched_paths")),
+            "matched_task_markers": _list_payload(_as_dict(lane.get("domain_lane")).get("matched_task_markers")),
+            "required_commands": list(lane.get("enough_proof", [])),
+            "manual_evidence": _list_payload(lane.get("manual_evidence")),
+            "review_aids": _list_payload(lane.get("review_aids")),
+            "evidence_concepts": _list_payload(lane.get("evidence_concepts")),
+            "claim_boundary": str(lane.get("claim_boundary", "")),
+            "authority_refs": _list_payload(lane.get("authority_refs")),
+        }
+        for lane in domain_lanes
+    ]
+    configured_policy.extend(domain_policy)
     learned_route_reliance = _learned_route_reliance_payload(
         selected_commands=selected_commands,
         learned_route_hints=learned_route_hints,
@@ -1861,7 +2109,10 @@ def _proof_selection_for_changed_paths(
         host_policy_blocked_commands=host_policy_blocked_commands,
         selected_commands=selected_commands,
     )
-    manual_proof_obligations = _manual_proof_obligations_payload(verification=verification)
+    manual_proof_obligations = [
+        *_manual_proof_obligations_payload(verification=verification),
+        *_domain_manual_proof_obligations(domain_lanes),
+    ]
     proof_route_maintenance = _proof_route_maintenance_payload(
         selected_lanes=selected_lanes,
         selected_commands=selected_commands,
@@ -1962,6 +2213,21 @@ def _proof_selection_for_changed_paths(
         if target_root is not None
         else {"kind": "agentic-workspace/test-strategy-check/v1", "status": "unavailable", "changed_test_paths": []}
     )
+    proof_decision = _proof_decision_packet(
+        changed_paths=changed_paths,
+        selected_lanes=selected_lanes,
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        manual_proof_obligations=manual_proof_obligations,
+        manual_verification=manual_verification,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+        active_assurance_requirements=active_assurance_requirements,
+        verification=verification,
+        architecture_principles=architecture_principles,
+        test_strategy_check=test_strategy_check,
+        proof_execution_evidence=proof_execution_evidence,
+    )
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -2013,6 +2279,7 @@ def _proof_selection_for_changed_paths(
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
+        "proof_decision": proof_decision,
         "intent_proof": intent_proof,
         "proof_confidence": proof_confidence,
         "proof_adequacy": proof_adequacy,
@@ -2042,9 +2309,16 @@ def _proof_selection_for_changed_paths(
                     lane=lane,
                     route_source="verification-manual-protocol"
                     if str(lane.get("id", "")).startswith("verification:")
+                    else "host-declared-domain-proof-lane"
+                    if lane.get("domain_lane")
                     else "live-confirmed-proof-rule",
                 ),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
+                **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
+                **({"manual_evidence": lane["manual_evidence"]} if lane.get("manual_evidence") else {}),
+                **({"evidence_concepts": lane["evidence_concepts"]} if lane.get("evidence_concepts") else {}),
+                **({"claim_boundary": lane["claim_boundary"]} if lane.get("claim_boundary") else {}),
+                **({"authority_refs": lane["authority_refs"]} if lane.get("authority_refs") else {}),
                 **({"requirement_id": lane["requirement_id"]} if lane.get("requirement_id") else {}),
                 **({"verification_protocol_id": lane["verification_protocol_id"]} if lane.get("verification_protocol_id") else {}),
                 **({"verification_scenario_refs": lane["verification_scenario_refs"]} if lane.get("verification_scenario_refs") else {}),

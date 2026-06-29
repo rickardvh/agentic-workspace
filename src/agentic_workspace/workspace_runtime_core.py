@@ -8533,6 +8533,7 @@ def _run_report_command(
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
     repo_posture = _repo_posture_payload(config=config, surface="report", compact=False)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
+    local_aw_state = _local_aw_state_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(
         module_reports=module_reports, target_root=target_root, config=config, cli_invoke=config.cli_invoke
@@ -8649,6 +8650,7 @@ def _run_report_command(
         "configuration_projection": configuration_projection,
         "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "branch_workflow_posture": branch_workflow_posture,
+        "local_aw_state": local_aw_state,
         "local_memory": local_memory,
         "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -9864,6 +9866,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "before broad closeout when external issue, CI, scanner, or ticket evidence may be stale or divergent",
     },
     {
+        "section": "external_work_delta",
+        "kind": "planning-external-work-delta/v1",
+        "purpose": "cached external work delta counts and samples without building the full report graph",
+        "when_to_use": "after refreshing external issue or ticket evidence, especially in tests or lightweight routing checks",
+    },
+    {
+        "section": "external_work_reconciliation",
+        "kind": "agentic-workspace/external-work-reconciliation/v1",
+        "purpose": "compact reconciliation posture for cached external work evidence and Planning residue",
+        "when_to_use": "before closeout or intake decisions that depend on external issue, ticket, or tracker freshness",
+    },
+    {
         "section": "pr_comment_attention",
         "kind": "agentic-workspace/pr-comment-attention/v1",
         "purpose": "compact PR comment/review attention status from cached delta evidence or an explicit no-polling fallback",
@@ -10018,6 +10032,142 @@ def _workflow_gate(gate_id: str, summary: str, *, source: str = "", command: str
     if command:
         payload["command"] = command
     return payload
+
+
+def _local_aw_state_role(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    if normalized in {".agentic-workspace/config.toml", ".agentic-workspace/config.local.toml", ".agentic-workspace/OWNERSHIP.toml"}:
+        return "policy/config"
+    if normalized.startswith(".agentic-workspace/verification/") or "proof-route" in normalized:
+        return "Verification/proof"
+    if normalized.startswith(".agentic-workspace/system-intent/") or normalized.startswith(".agentic-workspace/subsystem-intent/"):
+        return "policy/config"
+    if normalized.startswith(".agentic-workspace/local/cache/") or normalized.startswith(".agentic-workspace/local/scratch/"):
+        return "cache/scratch"
+    if normalized.startswith(".agentic-workspace/local/"):
+        return "local-only"
+    if "provenance" in normalized or normalized.endswith("payload.json"):
+        return "provenance"
+    if "/generated/" in normalized or normalized.endswith((".pyc", ".log", ".tmp")):
+        return "generated artifact"
+    if normalized.startswith((".agentic-workspace/planning/", ".agentic-workspace/memory/", ".agentic-workspace/skills/")):
+        return "payload"
+    return "unknown"
+
+
+def _git_lines(*, target_root: Path, args: list[str]) -> tuple[str, list[str]]:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=target_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return ("unavailable", [str(exc)])
+    if completed.returncode != 0:
+        return ("unavailable", [completed.stderr.strip() or f"git exited {completed.returncode}"])
+    return ("ok", [line.strip() for line in completed.stdout.splitlines() if line.strip()])
+
+
+def _local_aw_state_payload(*, target_root: Path) -> dict[str, Any]:
+    root = target_root / ".agentic-workspace"
+    if not root.exists():
+        return {
+            "kind": "agentic-workspace/local-aw-state/v1",
+            "status": "not-configured",
+            "root": ".agentic-workspace",
+            "surface_count": 0,
+            "rule": "No .agentic-workspace tree exists in this target.",
+        }
+    tracked_status, tracked = _git_lines(target_root=target_root, args=["ls-files", ".agentic-workspace"])
+    ignored_status, ignored = _git_lines(
+        target_root=target_root, args=["ls-files", "--others", "--ignored", "--exclude-standard", ".agentic-workspace"]
+    )
+    untracked_status, untracked = _git_lines(
+        target_root=target_root, args=["ls-files", "--others", "--exclude-standard", ".agentic-workspace"]
+    )
+    status_status, porcelain = _git_lines(target_root=target_root, args=["status", "--short", "--", ".agentic-workspace"])
+    if "unavailable" in {tracked_status, ignored_status, untracked_status, status_status}:
+        return {
+            "kind": "agentic-workspace/local-aw-state/v1",
+            "status": "unavailable",
+            "root": ".agentic-workspace",
+            "reason": next(
+                (
+                    items[0]
+                    for state, items in (
+                        (tracked_status, tracked),
+                        (ignored_status, ignored),
+                        (untracked_status, untracked),
+                        (status_status, porcelain),
+                    )
+                    if state == "unavailable" and items
+                ),
+                "git unavailable",
+            ),
+            "degraded": True,
+            "rule": "Local AW state classification requires Git ignored/tracked inspection; no raw ignored tree is dumped on degraded targets.",
+        }
+    changed_paths = [line[3:].strip().replace("\\", "/") for line in porcelain if len(line) > 3]
+    state_by_path: dict[str, set[str]] = {}
+    for path in tracked:
+        state_by_path.setdefault(path.replace("\\", "/"), set()).add("tracked")
+    for path in ignored:
+        state_by_path.setdefault(path.replace("\\", "/"), set()).add("ignored")
+        state_by_path[path.replace("\\", "/")].add("local-only")
+    for path in untracked:
+        state_by_path.setdefault(path.replace("\\", "/"), set()).add("untracked")
+        state_by_path[path.replace("\\", "/")].add("local-only")
+    for path in changed_paths:
+        state_by_path.setdefault(path.replace("\\", "/"), set()).add("changed-current-session")
+    role_counts: dict[str, int] = {}
+    state_counts: dict[str, int] = {}
+    samples: list[dict[str, Any]] = []
+    for path in sorted(state_by_path):
+        role = _local_aw_state_role(path)
+        states = sorted(state_by_path[path])
+        role_counts[role] = role_counts.get(role, 0) + 1
+        for state in states:
+            state_counts[state] = state_counts.get(state, 0) + 1
+        if len(samples) < 12 and role != "payload":
+            samples.append({"path": path, "role": role, "states": states})
+    meaningful = [
+        sample
+        for sample in samples
+        if sample["role"] in {"policy/config", "Verification/proof", "provenance", "generated artifact", "unknown", "local-only"}
+    ]
+    return {
+        "kind": "agentic-workspace/local-aw-state/v1",
+        "status": "attention" if meaningful else "quiet",
+        "root": ".agentic-workspace",
+        "surface_count": len(state_by_path),
+        "role_counts": dict(sorted(role_counts.items())),
+        "state_counts": dict(sorted(state_counts.items())),
+        "meaningful_samples": meaningful,
+        "ordinary_payload_presence": {
+            "count": role_counts.get("payload", 0),
+            "warning": False,
+            "rule": "Installed payload presence is counted but is not reported as policy drift by itself.",
+        },
+        "classification_rule": {
+            "roles": [
+                "payload",
+                "policy/config",
+                "Verification/proof",
+                "provenance",
+                "cache/scratch",
+                "generated artifact",
+                "local-only",
+                "unknown",
+            ],
+            "states": ["tracked", "ignored", "local-only", "untracked", "changed-current-session", "unavailable"],
+            "sample_cap": 12,
+        },
+        "rule": "This compact packet summarizes meaningful local AW state without dumping the ignored tree or treating ignored payload presence as policy change.",
+    }
 
 
 def _workflow_compliance_summary_payload(
@@ -12050,6 +12200,17 @@ def _run_lazy_report_section_command(
             durable_intent=durable_intent,
             cli_invoke=config.cli_invoke,
         )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized in {"external_work_delta", "external_work_reconciliation"}:
+        external_work_delta = _external_work_delta_payload(target_root=target_root)
+        payload["external_work_delta"] = external_work_delta
+        if normalized == "external_work_reconciliation":
+            payload["external_work_reconciliation"] = _external_work_reconciliation_payload(
+                module_reports=[],
+                external_work_delta=external_work_delta,
+                cli_invoke=config.cli_invoke,
+            )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "release_recovery":
@@ -15176,6 +15337,11 @@ def _architecture_principles_payload(
                 "forbidden_sources": [str(item) for item in _list_payload(principle.get("forbidden_sources"))],
                 "affected_decisions": [str(item) for item in _list_payload(principle.get("affected_decisions"))],
                 "matched_paths": path_matches,
+                "matcher": {
+                    "kind": "path_glob",
+                    "patterns": [str(item) for item in _list_payload(principle.get("path_globs"))],
+                    "reason": "changed path matched declared architecture_principles.path_globs",
+                },
                 "guardrail_refs": [str(item) for item in _list_payload(principle.get("guardrail_refs"))],
                 "derived_applications": [str(item) for item in _list_payload(principle.get("derived_applications"))],
                 "guardrails": [
@@ -15188,6 +15354,8 @@ def _architecture_principles_payload(
                     if isinstance(guardrail, dict) and str(guardrail.get("id", "")).strip()
                 ],
                 "proof_expectation": str(principle.get("proof_expectation", "")).strip(),
+                "review_aids": [str(item) for item in _list_payload(principle.get("review_aids"))],
+                "claim_boundary": str(principle.get("claim_boundary") or "architecture-principle-preservation-claim-required").strip(),
                 "closeout_question": (
                     "Was this principle preserved for the matching changed paths, or did the human owner explicitly re-scope it?"
                 ),
@@ -15246,10 +15414,15 @@ def _architecture_principles_payload(
                     "id": item["id"],
                     "title": item["title"],
                     "owner": item["owner"],
+                    "authority": item["authority"],
                     "matched_paths": item["matched_paths"],
+                    "matcher": item["matcher"],
                     "guardrail_refs": item["guardrail_refs"],
                     "derived_applications": item["derived_applications"],
                     "guardrails": item["guardrails"],
+                    "proof_expectation": item["proof_expectation"],
+                    "review_aids": item["review_aids"],
+                    "claim_boundary": item["claim_boundary"],
                     "closeout_question": item["closeout_question"],
                 }
                 for item in matched
@@ -37069,7 +37242,9 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
         intent_type = "docs-diff-review"
     else:
         intent_type = "manual-verification"
-    if lane.get("proof_profile") or lane.get("subsystem"):
+    if lane.get("domain_lane"):
+        source = "host-domain-proof-lane"
+    elif lane.get("proof_profile") or lane.get("subsystem"):
         source = "host-config"
     elif lane.get("learned_route"):
         source = "repo-learned-route"
@@ -37086,6 +37261,8 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
 
 
 def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("domain_lane"):
+        return "host-declared-domain-proof-lane"
     if lane.get("proof_profile"):
         return "host-configured-proof-profile"
     if lane.get("subsystem"):
@@ -40557,6 +40734,26 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             ],
             "requirements": _assurance_requirement_payloads(config),
             "subsystem_profiles": _assurance_subsystem_profile_payloads(config),
+            "domain_proof_lanes": [
+                {
+                    "id": lane.id,
+                    "purpose": lane.purpose,
+                    "applies_to_paths": list(lane.applies_to_paths),
+                    "applies_to_task_markers": list(lane.applies_to_task_markers),
+                    "commands": list(lane.commands),
+                    "manual_evidence": list(lane.manual_evidence),
+                    "review_aids": list(lane.review_aids),
+                    "evidence_concepts": list(lane.evidence_concepts),
+                    "assurance_requirement_refs": list(lane.assurance_requirement_refs),
+                    "proof_profiles": list(lane.proof_profiles),
+                    "authority_refs": list(lane.authority_refs),
+                    "escalation": list(lane.escalation),
+                    "claim_boundary": lane.claim_boundary,
+                    "owner": lane.owner,
+                    "notes": lane.notes,
+                }
+                for lane in assurance.domain_proof_lanes
+            ],
             "test_data_policy": dict(assurance.test_data_policy),
             "decision_record_target": assurance.decision_record_target,
             "invariant_registry": assurance.invariant_registry,
@@ -40636,6 +40833,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "configured_proof_profile_count": len(assurance["proof_profiles"]),
             "configured_requirement_count": len(assurance.get("requirements", [])),
             "configured_subsystem_profile_count": len(assurance.get("subsystem_profiles", [])),
+            "configured_domain_proof_lane_count": len(assurance.get("domain_proof_lanes", [])),
         },
         "local_runtime": {
             "local_override_path": local_override["path"],
