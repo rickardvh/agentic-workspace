@@ -1,6 +1,6 @@
 {
   "schema_version": "agentic-workspace/skill-spec/v1",
-  "rule": "Skills steer agent behavior and proportionality; the CLI is preferred for robust state inspection, mutation, validation, and reporting when it is available.",
+  "rule": "Skills steer agent behavior and proportionality inside the mandatory enabled-AW workflow; advisory skill routing and implementation_allowed never bypass start/implement routing, planning gates, proof, or closeout.",
   "transition_gates": [
     {
       "id": "startup-to-work",
@@ -14,6 +14,7 @@
       ],
       "interpreted_fields": [
         "immediate_next_allowed_action",
+        "workflow_participation",
         "workflow_sufficiency",
         "next_safe_action",
         "skill_routing"
@@ -24,7 +25,8 @@
         "continue direct work when the packet says enough"
       ],
       "forbidden_actions": [
-        "open broad raw planning files before compact routing when the packet forbids it"
+        "open broad raw planning files before compact routing when the packet forbids it",
+        "treat advisory skill routing or implementation_allowed as permission to skip enabled-AW workflow participation"
       ],
       "proof_obligations": [
         "preserve next_safe_action proof_required before claiming completion"
@@ -497,6 +499,7 @@
       ],
       "interpreted_fields": [
         "immediate_next_allowed_action",
+        "workflow_participation",
         "workflow_sufficiency",
         "next_safe_action",
         "skill_routing",
@@ -508,6 +511,7 @@
       ],
       "forbidden_actions": [
         "Open raw planning or memory state before compact startup routing points there.",
+        "Treat advisory skill routing or implementation_allowed as permission to skip start/implement routing.",
         "Create planning, review, memory, or handoff artifacts for routine direct work.",
         "Treat generated skill or adapter output as the source of product behavior."
       ],
@@ -614,6 +618,7 @@
           "mutates_state": false,
           "key_output_fields": [
             "immediate_next_allowed_action",
+            "workflow_participation",
             "next_safe_action",
             "planning_safety_gate",
             "skill_routing.preferred_routes",
@@ -639,7 +644,7 @@
         },
         {
           "path": "next_safe_action.implementation_allowed",
-          "decision": "Whether implementation can start without additional planning or proof setup.",
+          "decision": "Whether implementation can start without additional planning or proof setup after enabled-AW routing has already been followed.",
           "fallback_when_missing": "Treat implementation as provisional and inspect the compact planning safety gate before editing."
         }
       ],
@@ -662,6 +667,7 @@
       ],
       "forbidden_actions": [
         "Open raw planning or memory state before compact startup routing points there.",
+        "Treat advisory skill routing or implementation_allowed as permission to skip start/implement routing.",
         "Create planning, review, memory, or handoff artifacts for routine direct work.",
         "Treat generated skill or adapter output as the source of product behavior."
       ],

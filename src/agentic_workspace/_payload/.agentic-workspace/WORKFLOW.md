@@ -2,7 +2,7 @@
 
 Conservative fallback/projection workflow for Agentic Workspace systems installed in a repository.
 
-Canonical workflow decisions live in compact CLI JSON and structured contracts. Use `start` as the ordinary Startup Router, `next_safe_action` for the current decision packet, `skill_specs.json` for skill and transition semantics, `cli_commands.json` for command surface facts, and package skills for routed human-readable projections. This file is only the conservative no-CLI fallback and readable projection; do not treat it as an independent workflow authority or a second operating manual.
+Canonical workflow decisions live in compact CLI JSON and structured contracts. When Agentic Workspace is enabled, workflow participation is mandatory for non-trivial work; `advisory` fields describe internal routing support only after the workflow has been entered. Use `start` as the ordinary Startup Router, `next_safe_action` for the current decision packet, `skill_specs.json` for skill and transition semantics, `cli_commands.json` for command surface facts, and package skills for routed human-readable projections. This file is only the conservative no-CLI fallback and readable projection; do not treat it as an independent workflow authority or a second operating manual.
 
 Keep this file concise, product-managed, and replaceable. It answers what to do when compact CLI or structured JSON output is unavailable, which minimal files to inspect first, which actions remain forbidden, and where to resume when the CLI becomes available again. When the CLI works, stop reading this file and follow the compact packet.
 
@@ -34,12 +34,12 @@ Ordinary first contact is one routed decision, not a checklist of root commands:
 
 Active work is Work Shaping plus Planning Autopilot:
 
-- `start` owns ordinary first-contact routing, work-shape pressure, and the next safe action.
+- `start` owns ordinary first-contact routing, mandatory when AW is enabled, plus work-shape pressure and the next safe action.
 - `summary` owns active continuation, Planning state projection, proof posture, and claim-boundary inspection after routing points there.
 - `implement --changed` owns known changed-path work context, task posture, proof hints, and changed-surface gates.
 - `planning` owns routed state mutation: new plans, promotions, handoffs, delegation decisions, closeout, and archive.
 
-The agent still owns semantic judgment about intent clarity, direct/bounded/lane/epic shape, proof proportionality, and completion claim level. Do not treat the command list as the workflow, and do not hand-edit Planning state when a command-owned mutation is available.
+The agent still owns semantic judgment about intent clarity, direct/bounded/lane/epic shape, proof proportionality, and completion claim level inside the mandatory enabled-AW workflow. `implementation_allowed` and `advisory-support` are not permission to skip startup, planning, proof, or closeout routing. Do not treat the command list as the workflow, and do not hand-edit Planning state when a command-owned mutation is available.
 
 When implementing an issue, satisfy the intended end state in the ordinary path. Do not treat a smaller change as complete merely because checks pass if that smaller change preserves the old ordinary-path behavior. If the full intended outcome appears larger than the issue safely permits, ask for clarification instead of closing the issue with a partial path.
 
@@ -75,9 +75,9 @@ Use this only when compact routing is unavailable or the compact packet explicit
 - `lane`: work spans milestones, managed payloads, proof scope, or handoff risk. When Planning is installed, create checked-in active planning and an execplan with package commands before edits; otherwise leave an equivalent durable handoff in the repo's configured workflow surface.
 - `epic`: work contains multiple lanes or needs product shaping. Use a schema-backed decomposition record when Planning provides one, split it into bounded lanes or slices, then write implementation execplans only for ready slices.
 
-For lane or epic work, do not jump straight from the prompt to implementation. Assess risk and scope first; record `adaptive_assurance` when the Planning module is installed and risk is medium or higher, and keep decomposition evidence with the durable workflow surface.
+For lane, epic, milestone-scale, or high-assurance work, do not jump straight from the prompt to implementation. Assess risk and scope first; route through Planning custody or checked-in active planning before edits or closure claims, record `adaptive_assurance` when the Planning module is installed and risk is medium or higher, and keep decomposition evidence with the durable workflow surface.
 
-Skipping compact workspace orientation may be faster for a local edit, but it lowers continuation and review trust for planned, lane, epic, high-risk, or unclear-proof work. Do not use this fallback section to bypass a working `start`, `implement`, `summary`, or `proof` packet.
+Skipping compact workspace orientation may be faster for a local edit, but it lowers continuation and review trust for planned, lane, epic, high-risk, or unclear-proof work. Do not use this fallback section to bypass a working `start`, `implement`, `summary`, or `proof` packet, and do not treat advisory wording in those packets as optional participation.
 
 ## Fallback Procedure
 

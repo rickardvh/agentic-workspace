@@ -580,6 +580,12 @@ def _planning_safety_gate_payload(
         reason = "Checked-in Planning candidates indicate broad or lane-shaped work; promote or decompose a bounded lane first."
         required_next_action = "select-or-promote-candidate-lane"
         workflow_sufficient = False
+    elif (not active_planning_present) and (not changed_paths) and (work_shape in {"lane", "epic"} or proof_burden == "high"):
+        status = "blocked"
+        decision = "planning-escalation-required"
+        reason = "Broad, milestone-scale, or high-assurance task posture needs checked-in Planning custody before implementation."
+        required_next_action = "create-or-promote-active-execplan"
+        workflow_sufficient = False
     elif (
         (not active_planning_present)
         and issue_refs

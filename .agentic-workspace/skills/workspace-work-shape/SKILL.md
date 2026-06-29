@@ -6,6 +6,7 @@ description: Classify work shape and route direct, bounded, lane, or epic work b
 # Workspace Work Shape
 
 Use this skill before implementation when task size, proof cost, handoff needs, or the user's intended outcome are unclear.
+This skill does not make AW optional: when AW is enabled, work-shape judgment happens after `start`/`implement` routing, and `implementation_allowed` only applies inside that routed workflow.
 
 ## Route
 

@@ -702,6 +702,37 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "memory_decision_packet" in payload["drill_down"]["available_selectors"]
     assert "routine_work_context" in payload["drill_down"]["available_selectors"]
     assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
+    assert payload["workflow_participation"]["status"] == "mandatory"
+    assert "implementation_allowed cannot bypass workflow" in payload["workflow_participation"]["rule"]
+
+
+def test_start_routes_high_assurance_milestone_to_planning_before_implementation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement an entire high-assurance milestone",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["workflow_participation"]["status"] == "mandatory"
+    assert payload["next_safe_action"]["next_safe_action"] == "create-or-promote-active-execplan"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert "continue implementation without active planning ownership" in payload["next_safe_action"]["forbidden_actions"]
+    assert payload["action_signals"]["allowed_next_action"] == "create-or-promote-active-execplan"
+    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "planning-escalation-required"
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
@@ -2274,6 +2305,9 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert unavailable["status"] == "unavailable"
     assert unavailable["session_signal_source"]["status"] == "missing"
     assert unavailable["repo_wide_existing"]["included_by_default"] is False
+    assert unavailable["repo_wide_existing"]["status"] == "bounded_index_available"
+    assert "defaults --section improvement_intake --format json" in unavailable["repo_wide_existing"]["command"]
+    assert "report --target ./repo --section improvement_intake --format json" in unavailable["repo_wide_existing"]["full_scan_command"]
     assert "large_file" not in json.dumps(unavailable)
 
     cache_path.write_text(

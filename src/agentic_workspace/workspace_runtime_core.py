@@ -143,6 +143,7 @@ from agentic_workspace.workspace_runtime_projection import (
     _compact_authority_boundary,
     _compact_authority_text,
     _tiny_action_effect,
+    _workflow_participation_payload,
 )
 
 
@@ -4655,6 +4656,10 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
     cache_path = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
     cache = _read_local_cache_json(target_root, cache_path)
     repo_wide_command = _command_with_cli_invoke(
+        command="agentic-workspace defaults --section improvement_intake --format json",
+        cli_invoke=cli_invoke,
+    )
+    full_repo_wide_command = _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section improvement_intake --format json",
         cli_invoke=cli_invoke,
     )
@@ -4668,9 +4673,11 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "session_observed_signals": [],
             "routing_decisions": [],
             "repo_wide_existing": {
-                "status": "available_on_request",
+                "status": "bounded_index_available",
                 "command": repo_wide_command,
+                "full_scan_command": full_repo_wide_command,
                 "included_by_default": False,
+                "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
             },
             "claim_boundary": "Session-scoped improvement state is unavailable; do not claim no dogfooding residue from this packet.",
         }
@@ -4684,9 +4691,11 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "session_observed_signals": [],
             "routing_decisions": [],
             "repo_wide_existing": {
-                "status": "available_on_request",
+                "status": "bounded_index_available",
                 "command": repo_wide_command,
+                "full_scan_command": full_repo_wide_command,
                 "included_by_default": False,
+                "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
             },
             "claim_boundary": "No session signal source exists; broad repo-wide candidates stay behind explicit improvement_intake.",
         }
@@ -4720,9 +4729,11 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             }
         ],
         "repo_wide_existing": {
-            "status": "available_on_request",
+            "status": "bounded_index_available",
             "command": repo_wide_command,
+            "full_scan_command": full_repo_wide_command,
             "included_by_default": False,
+            "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
         },
         "claim_boundary": (
             "Unresolved session improvement signals remain closeout-visible."
@@ -20981,7 +20992,7 @@ def _attach_start_router_fields(payload: dict[str, Any]) -> None:
             proof_required=bool(next_safe_action.get("proof_required")),
             proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
             advisory_selectors=["skill_routing", "workflow_sufficiency"],
-            agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+            agent_judgment="Agent owns work-shape unless blocked.",
         )
 
 
@@ -22980,6 +22991,7 @@ def _start_tiny_payload_fast(
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
+        "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "cli_invocation": _cli_invocation_payload(config=config),
         "startup_sequence": startup_sequence,
