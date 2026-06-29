@@ -623,6 +623,263 @@
             "additionalProperties": true
           }
         },
+        "domain_proof_lanes": {
+          "description": "Host-declared proof lanes for domain-specific changed-path or task-marker matches.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "purpose"
+            ],
+            "properties": {
+              "purpose": {
+                "description": "Human-readable reason this domain lane exists.",
+                "type": "string",
+                "minLength": 1
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this lane when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "commands": {
+                "description": "Commands expected for this lane when executable proof exists.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "manual_evidence": {
+                "description": "Manual evidence labels expected before closeout.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_aids": {
+                "description": "Manual review aids or checklists associated with this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "evidence_concepts": {
+                "description": "Core or declared host evidence concept ids used by this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "assurance_requirement_refs": {
+                "description": "Assurance requirement ids related to this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profiles": {
+                "description": "Proof profile ids related to this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "authority_refs": {
+                "description": "Repo-owned authority refs for interpreting the lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "escalation": {
+                "description": "Conditions that should escalate proof or review.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this lane.",
+                "type": "string",
+                "minLength": 1
+              },
+              "owner": {
+                "description": "Repo-local owner label for the lane.",
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "description": "Optional repo-local note about this lane.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "closeout_postures": {
+          "description": "Host-declared high-assurance closeout postures that project evidence, waiver, uncertainty, and claim boundaries.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-defined closeout posture. It declares claim boundaries; it does not certify domain correctness.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "purpose"
+            ],
+            "properties": {
+              "purpose": {
+                "description": "Human-readable reason this posture exists.",
+                "type": "string",
+                "minLength": 1
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this posture when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "assurance_requirement_refs": {
+                "description": "Active assurance requirement ids that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profiles": {
+                "description": "Selected proof profile ids that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Evidence labels expected before the posture supports a completion claim.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "authority_refs": {
+                "description": "Repo-owned authority refs for interpreting the posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this posture.",
+                "type": "string",
+                "minLength": 1
+              },
+              "uncertainty": {
+                "description": "Uncertainty statement that must remain explicit at closeout.",
+                "type": "string",
+                "minLength": 1
+              },
+              "human_waiver_refs": {
+                "description": "Human-owned waiver refs required for this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "certification_limits": {
+                "description": "Domain certification limits that final claims must not exceed.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "notes": {
+                "description": "Optional repo-local note about this posture.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
         "test_data_policy": {
           "description": "Repo-specific policy for test data, privacy, fixtures, or generated samples.",
           "type": "object",

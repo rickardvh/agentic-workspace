@@ -143,6 +143,36 @@ def test_report_local_aw_state_classifies_ignored_policy_and_cache(tmp_path: Pat
     assert any(sample["role"] == "Verification/proof" for sample in packet["meaningful_samples"])
 
 
+def test_report_local_aw_state_keeps_ignored_payload_only_state_quiet(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/planning/\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "state.toml", 'kind = "agentic-planning-state"\n')
+    subprocess.run(["git", "add", ".gitignore"], cwd=tmp_path, check=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_aw_state", "--format", "json"]) == 0
+
+    packet = json.loads(capsys.readouterr().out)["answer"]
+    assert packet["status"] == "quiet"
+    assert packet["ordinary_payload_presence"]["count"] == 1
+    assert packet["ordinary_payload_presence"]["warning"] is False
+    assert packet["meaningful_samples"] == []
+
+
+def test_report_local_aw_state_surfaces_ignored_generated_proof_artifact(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/proof/\n")
+    _write(tmp_path / ".agentic-workspace" / "proof" / "generated" / "result.json", "{}\n")
+    subprocess.run(["git", "add", ".gitignore"], cwd=tmp_path, check=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_aw_state", "--format", "json"]) == 0
+
+    packet = json.loads(capsys.readouterr().out)["answer"]
+    assert packet["status"] == "attention"
+    assert packet["role_counts"]["generated artifact"] == 1
+    assert packet["state_counts"]["ignored"] == 1
+    assert packet["meaningful_samples"][0]["role"] == "generated artifact"
+
+
 def test_report_local_aw_state_degrades_without_git(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
 

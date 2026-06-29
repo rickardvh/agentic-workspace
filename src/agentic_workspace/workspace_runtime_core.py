@@ -40754,6 +40754,25 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 }
                 for lane in assurance.domain_proof_lanes
             ],
+            "closeout_postures": [
+                {
+                    "id": posture.id,
+                    "purpose": posture.purpose,
+                    "applies_to_paths": list(posture.applies_to_paths),
+                    "applies_to_task_markers": list(posture.applies_to_task_markers),
+                    "assurance_requirement_refs": list(posture.assurance_requirement_refs),
+                    "proof_profiles": list(posture.proof_profiles),
+                    "required_evidence": list(posture.required_evidence),
+                    "review_owner": posture.review_owner,
+                    "authority_refs": list(posture.authority_refs),
+                    "claim_boundary": posture.claim_boundary,
+                    "uncertainty": posture.uncertainty,
+                    "human_waiver_refs": list(posture.human_waiver_refs),
+                    "certification_limits": list(posture.certification_limits),
+                    "notes": posture.notes,
+                }
+                for posture in assurance.closeout_postures
+            ],
             "test_data_policy": dict(assurance.test_data_policy),
             "decision_record_target": assurance.decision_record_target,
             "invariant_registry": assurance.invariant_registry,
@@ -40834,6 +40853,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "configured_requirement_count": len(assurance.get("requirements", [])),
             "configured_subsystem_profile_count": len(assurance.get("subsystem_profiles", [])),
             "configured_domain_proof_lane_count": len(assurance.get("domain_proof_lanes", [])),
+            "configured_closeout_posture_count": len(assurance.get("closeout_postures", [])),
         },
         "local_runtime": {
             "local_override_path": local_override["path"],

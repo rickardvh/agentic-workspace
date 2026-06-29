@@ -105,6 +105,37 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.subsystem_profiles.<name>.blocked_without_evidence` | array of string | no | `[]` | Claim ids or labels blocked while required subsystem evidence is missing. |  |  |
 | `assurance.subsystem_profiles.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this subsystem profile. |  |  |
 | `assurance.subsystem_profiles.<name>.notes` | string | no |  | Optional repo-local note about this subsystem profile. |  |  |
+| `assurance.domain_proof_lanes` | object | no | `{}` | Host-declared proof lanes for domain-specific changed-path or task-marker matches. |  |  |
+| `assurance.domain_proof_lanes.<name>` | object | no |  | One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts. |  | x-agentic-workspace-unknown-properties: "warn" |
+| `assurance.domain_proof_lanes.<name>.purpose` | string | yes |  | Human-readable reason this domain lane exists. |  |  |
+| `assurance.domain_proof_lanes.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this lane when changed paths match. |  |  |
+| `assurance.domain_proof_lanes.<name>.applies_to_task_markers` | array of string | no | `[]` | Task-text markers that activate this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.commands` | array of string | no | `[]` | Commands expected for this lane when executable proof exists. |  |  |
+| `assurance.domain_proof_lanes.<name>.manual_evidence` | array of string | no | `[]` | Manual evidence labels expected before closeout. |  |  |
+| `assurance.domain_proof_lanes.<name>.review_aids` | array of string | no | `[]` | Manual review aids or checklists associated with this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.evidence_concepts` | array of string | no | `[]` | Core or declared host evidence concept ids used by this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.assurance_requirement_refs` | array of string | no | `[]` | Assurance requirement ids related to this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.proof_profiles` | array of string | no | `[]` | Proof profile ids related to this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.authority_refs` | array of string | no | `[]` | Repo-owned authority refs for interpreting the lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.escalation` | array of string | no | `[]` | Conditions that should escalate proof or review. |  |  |
+| `assurance.domain_proof_lanes.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.owner` | string | no |  | Repo-local owner label for the lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.notes` | string | no |  | Optional repo-local note about this lane. |  |  |
+| `assurance.closeout_postures` | object | no | `{}` | Host-declared high-assurance closeout postures that project evidence, waiver, uncertainty, and claim boundaries. |  |  |
+| `assurance.closeout_postures.<name>` | object | no |  | One host-defined closeout posture. It declares claim boundaries; it does not certify domain correctness. |  | x-agentic-workspace-unknown-properties: "warn" |
+| `assurance.closeout_postures.<name>.purpose` | string | yes |  | Human-readable reason this posture exists. |  |  |
+| `assurance.closeout_postures.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this posture when changed paths match. |  |  |
+| `assurance.closeout_postures.<name>.applies_to_task_markers` | array of string | no | `[]` | Task-text markers that activate this posture. |  |  |
+| `assurance.closeout_postures.<name>.assurance_requirement_refs` | array of string | no | `[]` | Active assurance requirement ids that activate this posture. |  |  |
+| `assurance.closeout_postures.<name>.proof_profiles` | array of string | no | `[]` | Selected proof profile ids that activate this posture. |  |  |
+| `assurance.closeout_postures.<name>.required_evidence` | array of string | no | `[]` | Evidence labels expected before the posture supports a completion claim. |  |  |
+| `assurance.closeout_postures.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
+| `assurance.closeout_postures.<name>.authority_refs` | array of string | no | `[]` | Repo-owned authority refs for interpreting the posture. |  |  |
+| `assurance.closeout_postures.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this posture. |  |  |
+| `assurance.closeout_postures.<name>.uncertainty` | string | no |  | Uncertainty statement that must remain explicit at closeout. |  |  |
+| `assurance.closeout_postures.<name>.human_waiver_refs` | array of string | no | `[]` | Human-owned waiver refs required for this posture. |  |  |
+| `assurance.closeout_postures.<name>.certification_limits` | array of string | no | `[]` | Domain certification limits that final claims must not exceed. |  |  |
+| `assurance.closeout_postures.<name>.notes` | string | no |  | Optional repo-local note about this posture. |  |  |
 | `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |

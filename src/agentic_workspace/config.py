@@ -386,6 +386,24 @@ class AssuranceDomainProofLane:
 
 
 @dataclass(frozen=True)
+class AssuranceCloseoutPosture:
+    id: str
+    purpose: str
+    applies_to_paths: tuple[str, ...]
+    applies_to_task_markers: tuple[str, ...]
+    assurance_requirement_refs: tuple[str, ...]
+    proof_profiles: tuple[str, ...]
+    required_evidence: tuple[str, ...]
+    review_owner: str | None
+    authority_refs: tuple[str, ...]
+    claim_boundary: str | None
+    uncertainty: str | None
+    human_waiver_refs: tuple[str, ...]
+    certification_limits: tuple[str, ...]
+    notes: str | None
+
+
+@dataclass(frozen=True)
 class AssuranceConfig:
     default_level: str
     default_level_source: str
@@ -396,6 +414,7 @@ class AssuranceConfig:
     requirements: tuple[AssuranceRequirement, ...]
     subsystem_profiles: tuple[AssuranceSubsystemProfile, ...]
     domain_proof_lanes: tuple[AssuranceDomainProofLane, ...]
+    closeout_postures: tuple[AssuranceCloseoutPosture, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_format: str | None
@@ -963,6 +982,72 @@ def _load_assurance_domain_proof_lanes(
     return (tuple(lane for lane in lanes if lane.id), warnings)
 
 
+def _load_assurance_closeout_postures(
+    *,
+    raw_postures: Any,
+    config_path: Path,
+) -> tuple[tuple[AssuranceCloseoutPosture, ...], list[str]]:
+    warnings: list[str] = []
+    if raw_postures is None:
+        raw_postures = {}
+    if not isinstance(raw_postures, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.closeout_postures] section must be a table.")
+    supported_fields = {
+        "purpose",
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "assurance_requirement_refs",
+        "proof_profiles",
+        "required_evidence",
+        "review_owner",
+        "authority_refs",
+        "claim_boundary",
+        "uncertainty",
+        "human_waiver_refs",
+        "certification_limits",
+        "notes",
+    }
+    activation_fields = {"applies_to_paths", "applies_to_task_markers", "assurance_requirement_refs", "proof_profiles"}
+    postures: list[AssuranceCloseoutPosture] = []
+    for posture_id, raw_posture in sorted(raw_postures.items()):
+        posture_path = Path(f"{config_path.as_posix()} assurance.closeout_postures.{posture_id}")
+        if not isinstance(raw_posture, dict):
+            raise WorkspaceUsageError(f"{posture_path.as_posix()} must be a table.")
+        unknown_posture = sorted(set(raw_posture) - supported_fields)
+        if unknown_posture:
+            warnings.append(f"{posture_path.as_posix()} contains unsupported field(s): {', '.join(unknown_posture)}.")
+        activation_values = {
+            key: require_optional_string_list(payload=raw_posture, key=key, config_path=posture_path) for key in activation_fields
+        }
+        if not any(activation_values.values()):
+            allowed = ", ".join(sorted(activation_fields))
+            raise WorkspaceUsageError(f"{posture_path.as_posix()} requires at least one activation signal: {allowed}.")
+        purpose = require_optional_string(payload=raw_posture, key="purpose", config_path=posture_path)
+        if purpose is None:
+            raise WorkspaceUsageError(f"{posture_path.as_posix()} purpose is required.")
+        postures.append(
+            AssuranceCloseoutPosture(
+                id=str(posture_id).strip(),
+                purpose=purpose,
+                applies_to_paths=activation_values["applies_to_paths"],
+                applies_to_task_markers=activation_values["applies_to_task_markers"],
+                assurance_requirement_refs=activation_values["assurance_requirement_refs"],
+                proof_profiles=activation_values["proof_profiles"],
+                required_evidence=require_optional_string_list(payload=raw_posture, key="required_evidence", config_path=posture_path),
+                review_owner=require_optional_string(payload=raw_posture, key="review_owner", config_path=posture_path),
+                authority_refs=require_optional_string_list(payload=raw_posture, key="authority_refs", config_path=posture_path),
+                claim_boundary=require_optional_string(payload=raw_posture, key="claim_boundary", config_path=posture_path),
+                uncertainty=require_optional_string(payload=raw_posture, key="uncertainty", config_path=posture_path),
+                human_waiver_refs=require_optional_string_list(payload=raw_posture, key="human_waiver_refs", config_path=posture_path),
+                certification_limits=require_optional_string_list(
+                    payload=raw_posture, key="certification_limits", config_path=posture_path
+                ),
+                notes=require_optional_string(payload=raw_posture, key="notes", config_path=posture_path),
+            )
+        )
+    return (tuple(posture for posture in postures if posture.id), warnings)
+
+
 def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
     warnings: list[str] = []
     if raw_assurance is None:
@@ -978,6 +1063,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "requirements",
         "subsystem_profiles",
         "domain_proof_lanes",
+        "closeout_postures",
         "test_data_policy",
         "decision_record_target",
         "decision_record_format",
@@ -1041,6 +1127,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         config_path=config_path,
     )
     warnings.extend(domain_lane_warnings)
+    closeout_postures, closeout_posture_warnings = _load_assurance_closeout_postures(
+        raw_postures=raw_assurance.get("closeout_postures", {}),
+        config_path=config_path,
+    )
+    warnings.extend(closeout_posture_warnings)
     return (
         AssuranceConfig(
             default_level=default_level,
@@ -1052,6 +1143,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             requirements=requirements,
             subsystem_profiles=subsystem_profiles,
             domain_proof_lanes=domain_proof_lanes,
+            closeout_postures=closeout_postures,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,

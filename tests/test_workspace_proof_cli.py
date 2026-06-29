@@ -3008,6 +3008,235 @@ owner = "security"
     assert packet["missing_or_unresolved"]["degraded_evidence_concepts"][0]["lane"] == "domain:access_control"
 
 
+def test_domain_proof_lanes_compose_and_skip_non_matching_changes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.access_control]
+purpose = "Access-control changes need access proof."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('access proof')\\""]
+
+[assurance.domain_proof_lanes.audit_events]
+purpose = "Access-control changes need audit-event proof."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('audit proof')\\""]
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    _write(tmp_path / "docs" / "readme.md", "# Docs\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    lane_ids = [lane["id"] for lane in packet["selected_lanes"]]
+    assert "domain:access_control" in lane_ids
+    assert "domain:audit_events" in lane_ids
+    assert packet["selected_lane_count"] >= 2
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/readme.md",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    assert all(not lane["id"].startswith("domain:") for lane in packet["selected_lanes"])
+
+
+def test_domain_proof_lane_coexists_with_package_default_lane(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime changes need host contract proof."
+applies_to_paths = ["src/agentic_workspace/**"]
+commands = ["python -c \\"print('runtime contract proof')\\""]
+proof_profiles = ["runtime_contract"]
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    lane_ids = [lane["id"] for lane in packet["selected_lanes"]]
+    assert "workspace_cli" in lane_ids
+    assert "domain:runtime_contract" in lane_ids
+
+
+def test_high_assurance_closeout_posture_projects_missing_and_non_applicable_states(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.closeout_postures.critical_access]
+purpose = "Critical access changes need explicit closeout evidence."
+applies_to_paths = ["services/auth/**"]
+required_evidence = ["domain_review_recorded"]
+review_owner = "security"
+authority_refs = ["SECURITY.md#critical-access"]
+claim_boundary = "critical-access-closeout"
+certification_limits = ["does not certify production authorization safety"]
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    _write(tmp_path / "docs" / "readme.md", "# Docs\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    posture = packet["high_assurance_closeout_posture"]
+    assert posture["status"] == "missing-proof"
+    assert posture["matched_count"] == 1
+    assert posture["matched_postures"][0]["claim_boundary"] == "critical-access-closeout"
+    assert posture["missing_evidence"] == ["domain_review_recorded"]
+    assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/readme.md",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    posture = json.loads(capsys.readouterr().out)["values"]["proof_decision"]["high_assurance_closeout_posture"]
+    assert posture["status"] == "not-applicable"
+    assert posture["matched_count"] == 0
+
+
+def test_high_assurance_closeout_posture_projects_waiver_and_uncertainty(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.closeout_postures.access_waiver]
+purpose = "Access changes with unresolved policy uncertainty need human waiver."
+applies_to_paths = ["services/auth/**"]
+uncertainty = "External policy owner must confirm the residual risk."
+human_waiver_refs = ["SECURITY.md#waivers"]
+certification_limits = ["agent output is not a policy approval"]
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    posture = packet["high_assurance_closeout_posture"]
+    assert posture["status"] == "human-waiver-required"
+    assert posture["human_waiver_refs"] == ["SECURITY.md#waivers"]
+    assert posture["uncertainty"] == ["External policy owner must confirm the residual risk."]
+    assert packet["safe_claim_now"]["state"] == "human-waiver-required"
+
+
 def test_proof_decision_packet_includes_architecture_pressure(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
