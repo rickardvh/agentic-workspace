@@ -3408,6 +3408,55 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
     return errors
 
 
+def _validate_generated_mutation_target_routing(ir: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    packages = {package.get("id"): package for package in ir.get("packages", []) if isinstance(package, dict)}
+    for package_id, package in packages.items():
+        has_mutating_generated_command = any(
+            isinstance(command, dict)
+            and command.get("status") == "generated"
+            and isinstance(command.get("effect_hints"), dict)
+            and (
+                command["effect_hints"].get("writes_repo_state") is True
+                or command["effect_hints"].get("destructive") is True
+                or command["effect_hints"].get("requires_preflight_gate") is True
+            )
+            for command in package.get("commands", [])
+        )
+        for target in package.get("targets", []):
+            if not isinstance(target, dict) or target.get("kind") not in {"python", "typescript"}:
+                continue
+            if has_mutating_generated_command and target.get("maturity_level_ref") == "weak-agent-safe-adapter":
+                errors.append(
+                    f"command_package_ir.json package {package_id!r} {target.get('kind')} target advertises "
+                    "weak-agent-safe-adapter while generated commands include mutation-capable effects"
+                )
+    return errors
+
+
+def _validate_primitive_conformance_surface() -> list[str]:
+    errors: list[str] = []
+    primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
+    if not primitive_conformance_dockerfile.is_file():
+        errors.append("generated/python/Dockerfile.primitive-conformance is missing")
+    try:
+        import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
+    except ModuleNotFoundError:
+        primitive_conformance_script = None
+    else:
+        primitive_conformance_script = Path(primitive_conformance.__file__).resolve()
+    if primitive_conformance_script is None:
+        errors.append("command_generation.primitive_conformance is missing")
+    elif not primitive_conformance_script.is_file():
+        errors.append("command_generation.primitive_conformance is missing")
+    else:
+        primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
+        for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
+            if primitive_id not in primitive_conformance_text:
+                errors.append(f"primitive conformance is missing required primitive case: {primitive_id}")
+    return errors
+
+
 def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> list[str]:
     errors: list[str] = []
     try:
@@ -4913,26 +4962,8 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append("command_package_ir.json root Bash transport candidate must remain explicit and deferred")
             if not powershell_targets or powershell_targets[0].get("maturity_level_ref") != "deferred":
                 errors.append("command_package_ir.json root PowerShell transport candidate must remain explicit and deferred")
+        errors.extend(_validate_generated_mutation_target_routing(ir))
         for package_id, package in packages.items():
-            has_mutating_generated_command = any(
-                isinstance(command, dict)
-                and command.get("status") == "generated"
-                and isinstance(command.get("effect_hints"), dict)
-                and (
-                    command["effect_hints"].get("writes_repo_state") is True
-                    or command["effect_hints"].get("destructive") is True
-                    or command["effect_hints"].get("requires_preflight_gate") is True
-                )
-                for command in package.get("commands", [])
-            )
-            for target in package.get("targets", []):
-                if not isinstance(target, dict) or target.get("kind") not in {"python", "typescript"}:
-                    continue
-                if has_mutating_generated_command and target.get("maturity_level_ref") == "weak-agent-safe-adapter":
-                    errors.append(
-                        f"command_package_ir.json package {package_id!r} {target.get('kind')} target advertises "
-                        "weak-agent-safe-adapter while generated commands include mutation-capable effects"
-                    )
             for command in package.get("commands", []):
                 if isinstance(command, dict) and command.get("status") == "generated":
                     errors.extend(_validate_generated_command_projection_boundary(package_id=str(package_id), command=command))
@@ -5101,25 +5132,8 @@ def _validate_static_surfaces() -> list[str]:
     python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
     if not python_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.conformance is missing")
-    primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
-    if not primitive_conformance_dockerfile.is_file():
-        errors.append("generated/python/Dockerfile.primitive-conformance is missing")
     errors.extend(_validate_command_generation_release_provenance())
-    try:
-        import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
-    except ModuleNotFoundError:
-        primitive_conformance_script = None
-    else:
-        primitive_conformance_script = Path(primitive_conformance.__file__).resolve()
-    if primitive_conformance_script is None:
-        errors.append("command_generation.primitive_conformance is missing")
-    elif not primitive_conformance_script.is_file():
-        errors.append("command_generation.primitive_conformance is missing")
-    else:
-        primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
-        for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
-            if primitive_id not in primitive_conformance_text:
-                errors.append(f"primitive conformance is missing required primitive case: {primitive_id}")
+    errors.extend(_validate_primitive_conformance_surface())
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript.conformance.Dockerfile"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript.conformance.Dockerfile is missing")

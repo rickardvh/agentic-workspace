@@ -4,6 +4,168 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def _write_repo_local_proof_target(target: Path) -> None:
+    _init_git_repo(target)
+    _write(
+        target / "Makefile",
+        """
+schema-reference-docs:
+\tpython -c "print('schema docs')"
+
+typecheck:
+\tpython -m compileall src
+
+typecheck-planning:
+\tpython -m compileall packages/planning/src
+
+check-planning:
+\tpython -c "print('planning checks')"
+
+test-workspace:
+\tpython -c "print('workspace tests')"
+
+test-planning:
+\tpython -c "print('planning tests')"
+""",
+    )
+    _write(target / "scripts" / "check" / "check_agent_aids.py", "print('agent aids ok')\n")
+    _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('generated packages ok')\n")
+    _write(target / "scripts" / "generate" / "generate_command_packages.py", "print('generate packages ok')\n")
+    _write(target / "README.md", "# Fixture\n")
+    _write(target / "docs" / ".keep", "")
+    _write(target / ".agentic-workspace" / "docs" / "agent-installation.md", "# Install\n")
+    _write(target / "packages" / "planning" / "README.md", "# Planning\n")
+    _write(target / "packages" / "memory" / "README.md", "# Memory\n")
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.proof_profiles.workspace_behavior]
+required_commands = ["make test-workspace"]
+optional_commands = []
+review_aids = []
+
+[assurance.subsystem_profiles.workspace-cli-runtime]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
+required_evidence = ["workspace_runtime_proof"]
+proof_profile = "workspace_behavior"
+force = "required-before-closeout"
+blocked_without_evidence = ["claim-work-complete"]
+claim_boundary = "workspace-runtime-routing"
+""",
+    )
+    _write(
+        target / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+owns = ["workspace command routing"]
+proof = ["uv run pytest tests/test_workspace_cli.py -q"]
+""",
+    )
+    _write(
+        target / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.generated_adapter_local_conformance]
+protocol_id = "generated_adapter_conformance"
+title = "Generated adapter local conformance"
+steps = []
+expected_observations = []
+pass_evidence_labels = ["generated_adapter_conformance"]
+fail_evidence_labels = ["generated_adapter_conformance_drift"]
+
+[scenarios.closeout_intent_satisfaction_review]
+protocol_id = "closeout_intent_satisfaction"
+title = "Closeout intent satisfaction review"
+steps = []
+expected_observations = []
+pass_evidence_labels = ["closeout_intent_satisfaction"]
+fail_evidence_labels = ["closeout_intent_gap"]
+
+[scenarios.requirement_grounding_delegation_review]
+protocol_id = "requirement_grounding_delegation"
+title = "Requirement grounding delegation review"
+steps = []
+expected_observations = []
+pass_evidence_labels = ["requirement_grounding_delegation"]
+fail_evidence_labels = ["requirement_grounding_gap"]
+
+[protocols.generated_adapter_conformance]
+title = "Generated adapter conformance"
+purpose = "Generated workspace adapter changes need conformance evidence."
+applies_to_paths = ["generated/workspace/python/**"]
+scenario_refs = ["generated_adapter_local_conformance"]
+steps = []
+expected_evidence = ["generated_adapter_conformance"]
+review_owner = "maintainer"
+
+[protocols.closeout_intent_satisfaction]
+title = "Closeout intent satisfaction"
+purpose = "Workspace runtime changes need closeout intent review."
+applies_to_paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+scenario_refs = ["closeout_intent_satisfaction_review"]
+steps = []
+expected_evidence = ["closeout_intent_satisfaction"]
+review_owner = "maintainer"
+
+[protocols.requirement_grounding_delegation]
+title = "Requirement grounding delegation"
+purpose = "Workspace runtime changes need requirement grounding review."
+applies_to_paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+scenario_refs = ["requirement_grounding_delegation_review"]
+steps = []
+expected_evidence = ["requirement_grounding_delegation"]
+review_owner = "maintainer"
+
+[proof_routes.generated_adapter_conformance]
+protocol_refs = ["generated_adapter_conformance"]
+scenario_refs = ["generated_adapter_local_conformance"]
+commands = [
+  "uv run python scripts/generate/generate_command_packages.py --check",
+  "uv run python scripts/check/check_generated_command_packages.py --require-node",
+]
+proof_lane_hint = "generated-adapter-conformance"
+
+[proof_routes.closeout_intent_satisfaction]
+protocol_refs = ["closeout_intent_satisfaction"]
+scenario_refs = ["closeout_intent_satisfaction_review"]
+commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json"]
+proof_lane_hint = "closeout-intent-satisfaction"
+
+[proof_routes.requirement_grounding_delegation]
+protocol_refs = ["requirement_grounding_delegation"]
+scenario_refs = ["requirement_grounding_delegation_review"]
+commands = [
+  "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+]
+proof_lane_hint = "requirement-grounding-delegation"
+""",
+    )
+    _write(
+        target / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+schema_version = 1
+kind = "workspace-system-intent/v1"
+summary = "Keep proof routing scoped."
+governing_intents = []
+anti_intents = []
+decision_tests = ["Use focused proof selection for changed paths."]
+open_questions = []
+confidence = "high"
+needs_review = false
+""",
+    )
+
+
 def test_proof_runtime_helpers_route_through_proof_owner(tmp_path: Path) -> None:
     assert workspace_runtime_primitives._verification_report_payload is workspace_runtime_proof._verification_report_payload
     assert workspace_runtime_primitives._tiny_proof_payload is workspace_runtime_proof._tiny_proof_payload
@@ -116,26 +278,43 @@ def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Pat
     assert payload["answer"]["command"] == "agentic-workspace proof --target ./repo --format json"
 
 
-def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", ".agentic-workspace/planning/state.toml", "--format", "json"]) == 0
+def test_proof_changed_selector_returns_path_based_validation_lane(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["surface"] == "proof"
     assert payload["selector"] == {"changed": [".agentic-workspace/planning/state.toml"]}
     answer = payload["answer"]
+    expected_target = tmp_path.as_posix()
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == [
-        f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json",
-        f"{REPO_LOCAL_CLI_INVOKE} doctor --target . --modules planning --format json",
+        f'{REPO_LOCAL_CLI_INVOKE} summary --target "{expected_target}" --format json',
+        f'{REPO_LOCAL_CLI_INVOKE} doctor --target "{expected_target}" --modules planning --format json',
     ]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
     first_step = answer["validation_plan"]["required"][0]
     assert first_step["order"] == 1
-    assert first_step["command"] == f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json"
+    assert first_step["command"] == f'{REPO_LOCAL_CLI_INVOKE} summary --target "{expected_target}" --format json'
     assert first_step["cwd"] == "."
-    assert first_step["run"] == f"{REPO_LOCAL_CLI_INVOKE} summary --target . --format json"
+    assert first_step["run"] == f'{REPO_LOCAL_CLI_INVOKE} summary --target "{expected_target}" --format json'
     assert first_step["required"] is True
     assert first_step["lane_id"] == "planning_surfaces"
     assert first_step["action"] == "run-validation-command"
@@ -1796,12 +1975,16 @@ candidates = []
     assert waived["waiver_state"] == "waived-with-reason"
 
 
-def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys) -> None:
+def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json",
                 ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py",
@@ -1820,8 +2003,10 @@ def test_proof_changed_selector_routes_agent_aid_changes_to_manifest_lane(capsys
     assert "uv run pytest tests -q" not in answer["required_commands"]
 
 
-def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "README.md", "--format", "json"]) == 0
+def test_proof_changed_selector_routes_readme_to_docs_review(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -1835,8 +2020,10 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
     assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
 
 
-def test_proof_changed_selector_routes_package_readmes_to_docs_review(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "packages/planning/README.md", "--format", "json"]) == 0
+def test_proof_changed_selector_routes_package_readmes_to_docs_review(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "packages/planning/README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -2034,12 +2221,16 @@ def test_proof_failed_receipt_marks_excerpt_failure_summary_lower_trust(tmp_path
     }
 
 
-def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> None:
+def test_proof_changed_selector_routes_installed_docs_to_docs_review(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 ".agentic-workspace/docs/agent-installation.md",
                 "--format",
@@ -2056,8 +2247,12 @@ def test_proof_changed_selector_routes_installed_docs_to_docs_review(capsys) -> 
     assert ".agentic-workspace/docs" in answer["required_commands"][0]
 
 
-def test_proof_changed_selector_reduces_package_docs_prefix_to_review(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "packages/planning/docs/usage.md", "--format", "json"]) == 0
+def test_proof_changed_selector_reduces_package_docs_prefix_to_review(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "packages/planning/docs/usage.md", "--format", "json"]) == 0
+    )
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -2075,12 +2270,16 @@ def test_proof_changed_selector_reduces_package_docs_prefix_to_review(capsys) ->
     ]
 
 
-def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes(capsys) -> None:
+def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/README.md",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
@@ -2098,12 +2297,16 @@ def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes
     assert not answer["escalate_when"] or not answer["escalate_when"][0].startswith("changed paths span multiple validation lanes")
 
 
-def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_schema(capsys) -> None:
+def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_schema(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
                 "--format",
@@ -2163,12 +2366,16 @@ def test_proof_changed_surfaces_compact_intent_proof_prompt(capsys) -> None:
     assert "proof strength" not in json.dumps(answer["required_commands"]).lower()
 
 
-def test_proof_changed_verbose_surfaces_proof_confidence(capsys) -> None:
+def test_proof_changed_verbose_surfaces_proof_confidence(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--format",
@@ -2197,12 +2404,16 @@ def test_proof_changed_verbose_surfaces_proof_confidence(capsys) -> None:
     assert proof_adequacy["proof_confidence"]["claim_boundary"] == "slice"
 
 
-def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:
+def test_proof_changed_selector_includes_planning_schema_reference_wrapper(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/contracts/schemas/planning-execplan.schema.json",
                 "--format",
@@ -2219,12 +2430,16 @@ def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsy
     assert "make check-planning" in answer["required_commands"]
 
 
-def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(capsys) -> None:
+def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
                 "--format",
@@ -2261,12 +2476,16 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(cap
     assert typecheck_command["intent_type"] == "static-check"
 
 
-def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(capsys) -> None:
+def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/workspace_runtime_proof.py",
                 "--format",
@@ -2359,20 +2578,26 @@ def test_proof_changed_learned_route_table_can_override_package_default_authorit
     assert "package-seed-or-default-route" in overridden_authorities
 
 
-def test_proof_changed_selector_keeps_docs_only_work_off_workspace_runtime_typecheck(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "README.md", "--format", "json"]) == 0
+def test_proof_changed_selector_keeps_docs_only_work_off_workspace_runtime_typecheck(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
 
     answer = json.loads(capsys.readouterr().out)["answer"]
     assert "make typecheck" not in answer["required_commands"]
     assert "workspace_runtime_typecheck_ci_parity" not in [lane["id"] for lane in answer["selected_lanes"]]
 
 
-def test_proof_changed_selector_flags_high_impact_skill_behavior_evidence(capsys) -> None:
+def test_proof_changed_selector_flags_high_impact_skill_behavior_evidence(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/skills/planning-closeout-trust/SKILL.md",
                 "--format",
@@ -2403,12 +2628,16 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     assert len(encoded) < 2500
 
 
-def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
+def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "generated/workspace/python/cli.py",
                 "--format",
@@ -2448,12 +2677,16 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert answer["subsystem_ownership"]["matched_subsystems"][0]["id"] == "workspace-cli-runtime"
 
 
-def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> None:
+def test_proof_changed_selector_broadens_contract_plus_cli_changes(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
                 "generated/workspace/python/cli.py",
@@ -2481,12 +2714,16 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
     assert "make test-workspace" in answer["required_commands"]
 
 
-def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
+def test_proof_changed_selector_escalates_for_cross_lane_changes(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
     assert (
         cli.main(
             [
                 "proof",
                 "--verbose",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
                 "generated/workspace/python/cli.py",

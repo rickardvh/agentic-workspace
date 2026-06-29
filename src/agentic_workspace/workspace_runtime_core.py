@@ -6087,6 +6087,7 @@ LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
 TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
+TEST_SUITE_BUDGET_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-suite-budget.json"
 ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "assurance-evidence-records.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\nAGENTS.local.md\n"
@@ -27829,6 +27830,13 @@ _TEST_STRATEGY_DISPOSITION_VALUES = {
     "existing-proof-sufficient",
     "temporary-with-follow-up-consolidation",
 }
+_TEST_STRATEGY_PLACEMENT_ALTERNATIVES = [
+    "merge into an existing scenario matrix for the same contract",
+    "move package-owned behavior to a package-local proof",
+    "encode stable behavior as contract or conformance evidence",
+    "cite an existing proof when it already answers the trust question",
+    "record temporary follow-up consolidation when standalone evidence is unavoidable",
+]
 
 _PRE_TEST_EVIDENCE_REQUIREMENT_IDS = {"test_evidence_change_decision"}
 _PRE_TEST_EVIDENCE_PROOF_PROFILES = {"test_evidence_change"}
@@ -28138,6 +28146,217 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
     }
 
 
+def _suite_budget_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def _test_suite_budget_freshness(observed_at: str, max_age_days: int | None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "observed_at": observed_at,
+        "max_age_days": max_age_days,
+        "status": "unknown",
+    }
+    if not observed_at:
+        payload["reason"] = "current observation is missing observed_at"
+        return payload
+    if not isinstance(max_age_days, int) or max_age_days < 0:
+        payload["reason"] = "max_age_days is missing or invalid"
+        return payload
+    try:
+        observed_date = date.fromisoformat(observed_at[:10])
+    except ValueError:
+        payload["reason"] = "observed_at is not ISO-8601 date-like text"
+        return payload
+    age_days = (date.today() - observed_date).days
+    payload["age_days"] = age_days
+    if age_days < 0:
+        payload["status"] = "future-dated"
+    elif age_days <= max_age_days:
+        payload["status"] = "fresh"
+    else:
+        payload["status"] = "stale"
+    return payload
+
+
+def _normalize_test_suite_budget_scope(raw_scope: Any) -> tuple[dict[str, Any] | None, list[str]]:
+    if not isinstance(raw_scope, dict):
+        return None, ["scope entry must be an object"]
+    scope = str(raw_scope.get("scope") or "").strip()
+    baseline = _as_dict(raw_scope.get("baseline"))
+    current = _as_dict(raw_scope.get("current"))
+    target = _as_dict(raw_scope.get("target"))
+    baseline_count = _suite_budget_int(baseline.get("collected_count"))
+    current_count = _suite_budget_int(current.get("collected_count"))
+    target_min = _suite_budget_int(target.get("min"))
+    target_max = _suite_budget_int(target.get("max"))
+    observed_at = str(current.get("observed_at") or "").strip()
+    max_age_days = _suite_budget_int(current.get("max_age_days"))
+    missing = []
+    if not scope:
+        missing.append("scope")
+    if baseline_count is None:
+        missing.append("baseline.collected_count")
+    if current_count is None:
+        missing.append("current.collected_count")
+    if not observed_at:
+        missing.append("current.observed_at")
+    if missing:
+        return None, missing
+    normalized: dict[str, Any] = {
+        "scope": scope,
+        "baseline_date": str(baseline.get("date") or "").strip(),
+        "baseline_collected_count": baseline_count,
+        "current_observed_at": observed_at,
+        "current_collected_count": current_count,
+        "current_source": str(current.get("source") or "").strip(),
+        "freshness": _test_suite_budget_freshness(observed_at, max_age_days),
+    }
+    if target_min is not None:
+        normalized["target_min"] = target_min
+    if target_max is not None:
+        normalized["target_max"] = target_max
+    if target_min is not None and target_max is not None:
+        normalized["target_range"] = [target_min, target_max]
+    return normalized, []
+
+
+def _load_test_suite_budget(target_root: Path) -> dict[str, Any]:
+    path = target_root / TEST_SUITE_BUDGET_RELATIVE_PATH
+    if not path.exists():
+        return {
+            "kind": "agentic-workspace/test-suite-budget/v1",
+            "status": "not-configured",
+            "path": TEST_SUITE_BUDGET_RELATIVE_PATH.as_posix(),
+            "scopes": [],
+            "rule": "Host repositories only receive budget drift pressure when they provide a repo-owned suite budget artifact.",
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/test-suite-budget/v1",
+            "status": "invalid",
+            "path": TEST_SUITE_BUDGET_RELATIVE_PATH.as_posix(),
+            "scopes": [],
+            "invalid_scopes": [{"id": "file", "missing_or_invalid_fields": ["json"], "error": str(exc)}],
+        }
+    if not isinstance(payload, dict):
+        return {
+            "kind": "agentic-workspace/test-suite-budget/v1",
+            "status": "invalid",
+            "path": TEST_SUITE_BUDGET_RELATIVE_PATH.as_posix(),
+            "scopes": [],
+            "invalid_scopes": [{"id": "file", "missing_or_invalid_fields": ["object"]}],
+        }
+    scopes: list[dict[str, Any]] = []
+    invalid_scopes: list[dict[str, Any]] = []
+    for index, raw_scope in enumerate(_list_payload(payload.get("scopes"))):
+        normalized, missing = _normalize_test_suite_budget_scope(raw_scope)
+        if normalized is None:
+            invalid_scopes.append({"id": f"scope-{index + 1}", "missing_or_invalid_fields": missing})
+        else:
+            scopes.append(normalized)
+    return {
+        "kind": "agentic-workspace/test-suite-budget/v1",
+        "status": "invalid" if invalid_scopes else "configured",
+        "path": TEST_SUITE_BUDGET_RELATIVE_PATH.as_posix(),
+        "source": str(payload.get("source") or "").strip(),
+        "provenance": _as_dict(payload.get("provenance")),
+        "scopes": scopes,
+        "invalid_scopes": invalid_scopes,
+    }
+
+
+def _test_suite_budget_scope_drift(scope: dict[str, Any] | None, *, over_target_by: int | None = None) -> dict[str, Any]:
+    if not isinstance(scope, dict):
+        return {"status": "not-configured"}
+    baseline_count = _suite_budget_int(scope.get("baseline_collected_count"))
+    current_count = _suite_budget_int(scope.get("current_collected_count"))
+    delta = current_count - baseline_count if baseline_count is not None and current_count is not None else None
+    payload = {
+        **scope,
+        "status": "configured",
+        "collected_count_delta_from_baseline": delta,
+    }
+    if over_target_by is not None:
+        payload["over_target_by"] = over_target_by
+    return payload
+
+
+def _test_strategy_budget_drift_payload(
+    *,
+    suite_budget: dict[str, Any],
+    files: list[dict[str, Any]],
+    matched_dispositions: list[dict[str, Any]],
+    missing_disposition_paths: list[str],
+) -> dict[str, Any]:
+    root_files = [item for item in files if str(item.get("path", "")).startswith("tests/")]
+    package_local_files = [item for item in files if str(item.get("path", "")).startswith("packages/")]
+    root_hotspots = [item for item in root_files if item.get("is_hotspot")]
+    scopes = {str(item.get("scope")): item for item in _list_payload(suite_budget.get("scopes")) if isinstance(item, dict)}
+    root_budget = scopes.get("root")
+    total_budget = scopes.get("all")
+    disposition_satisfied_paths = sorted(
+        {
+            str(path).strip().replace("\\", "/")
+            for item in matched_dispositions
+            for path in _list_payload(item.get("changed_test_paths"))
+            if str(path).strip()
+        }
+    )
+    missing_root_disposition_paths = [path for path in missing_disposition_paths if path in {str(item.get("path")) for item in root_files}]
+    root_over_target_by = 0
+    if isinstance(root_budget, dict):
+        current_count = _suite_budget_int(root_budget.get("current_collected_count")) or 0
+        target_max = _suite_budget_int(root_budget.get("target_max"))
+        if target_max is not None:
+            root_over_target_by = max(0, current_count - target_max)
+    root_freshness = _as_dict(root_budget.get("freshness")) if isinstance(root_budget, dict) else {}
+    root_budget_can_apply = isinstance(root_budget, dict) and root_over_target_by > 0 and str(root_freshness.get("status") or "") == "fresh"
+    over_budget_hotspot_paths = [
+        str(item.get("path")) for item in root_hotspots if root_budget_can_apply and str(item.get("path")) in missing_root_disposition_paths
+    ]
+    status = "not-applicable"
+    if suite_budget.get("status") == "not-configured":
+        status = "not-configured"
+    elif suite_budget.get("status") == "invalid":
+        status = "invalid"
+    elif package_local_files and not root_files:
+        status = "package-local"
+    elif root_files:
+        status = "attention" if root_over_target_by and root_hotspots else "context"
+    return {
+        "kind": "agentic-workspace/test-suite-budget-drift/v1",
+        "status": status,
+        "advisory_only": True,
+        "scope": "root" if root_files else "package-local" if package_local_files else "none",
+        "budget_source": {
+            "status": suite_budget.get("status", "not-configured"),
+            "path": suite_budget.get("path", TEST_SUITE_BUDGET_RELATIVE_PATH.as_posix()),
+            "source": suite_budget.get("source", ""),
+            "provenance": suite_budget.get("provenance", {}),
+            "invalid_scopes": suite_budget.get("invalid_scopes", []),
+        },
+        "root": _test_suite_budget_scope_drift(root_budget, over_target_by=root_over_target_by),
+        "total": _test_suite_budget_scope_drift(total_budget),
+        "changed_root_test_paths": [str(item.get("path")) for item in root_files],
+        "changed_package_local_test_paths": [str(item.get("path")) for item in package_local_files],
+        "changed_hotspot_files": [str(item.get("path")) for item in root_hotspots],
+        "over_budget_hotspot_files_requiring_disposition": over_budget_hotspot_paths,
+        "placement_alternatives": list(_TEST_STRATEGY_PLACEMENT_ALTERNATIVES),
+        "disposition_paths": disposition_satisfied_paths,
+        "missing_disposition_paths": missing_root_disposition_paths,
+        "rule": (
+            "When a target repo provides fresh suite-budget observations and root collected tests exceed its strategy target, "
+            "changed root hotspots should state why evidence belongs there or move the proof to a narrower owner."
+        ),
+    }
+
+
 def _test_strategy_check_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, verification: dict[str, Any]
 ) -> dict[str, Any]:
@@ -28162,6 +28381,7 @@ def _test_strategy_check_payload(
             }
         return {"kind": "agentic-workspace/test-strategy-check/v1", "status": "not-applicable", "changed_test_paths": []}
     disposition_record = _load_test_strategy_dispositions(target_root)
+    suite_budget = _load_test_suite_budget(target_root)
     disposition_items = [item for item in _list_payload(disposition_record.get("items")) if isinstance(item, dict)]
     matched_dispositions = [
         item
@@ -28225,6 +28445,13 @@ def _test_strategy_check_payload(
         )
     task_lower = str(task_text or "").lower()
     reviewer_requested = any(term in task_lower for term in ("review", "comment", "pr feedback", "requested coverage", "regression"))
+    budget_drift = _test_strategy_budget_drift_payload(
+        suite_budget=suite_budget,
+        files=files,
+        matched_dispositions=matched_dispositions,
+        missing_disposition_paths=missing_disposition_paths,
+    )
+    budget_requires_disposition = bool(budget_drift.get("over_budget_hotspot_files_requiring_disposition"))
     return {
         "kind": "agentic-workspace/test-strategy-check/v1",
         "status": "advisory",
@@ -28241,6 +28468,8 @@ def _test_strategy_check_payload(
         "proof_decision_options": pre_test_guardrail.get("proof_decision_options", []),
         "pre_test_decision_questions": pre_test_guardrail.get("pre_test_decision_questions", []),
         "regression_sprawl_review_questions": pre_test_guardrail.get("regression_sprawl_review_questions", []),
+        "budget_drift": budget_drift,
+        "placement_alternatives": budget_drift.get("placement_alternatives", []),
         "verification_evidence_surfaces": {
             "evidence_strategy_status": evidence_strategy.get("status", "unavailable"),
             "proof_governance_status": proof_governance.get("status", "unavailable"),
@@ -28264,7 +28493,9 @@ def _test_strategy_check_payload(
             "temporary-with-follow-up-consolidation",
         ],
         "disposition_required_before_closeout": bool(
-            ((material_count or unknown_materiality_count) and missing_disposition_paths) or temporary_without_follow_up
+            ((material_count or unknown_materiality_count) and missing_disposition_paths)
+            or budget_requires_disposition
+            or temporary_without_follow_up
         ),
         "materiality_rule": (
             "Disposition pressure is strongest when tests are added, deleted, renamed, or change test function count. "
@@ -28288,6 +28519,7 @@ def _test_strategy_check_payload(
                 f"deleted_or_missing_test_file_count={deleted_count}",
                 f"material_evidence_change_count={material_count}",
                 f"unknown_materiality_count={unknown_materiality_count}",
+                f"root_budget_drift_status={budget_drift.get('status')}",
             ],
             recommended_by_aw=["record the testing evidence disposition before closeout"],
             proof_hints=["evidence_strategy.proof_governance", "proof_decision", "regression_sprawl", "nearby parametrized tests"],

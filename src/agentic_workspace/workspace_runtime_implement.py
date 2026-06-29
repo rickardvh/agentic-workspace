@@ -1360,6 +1360,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "changed_test_paths": test_strategy_check.get("changed_test_paths", []),
                 "hotspot_file_count": test_strategy_check.get("hotspot_file_count", 0),
                 "scenario_matrix_candidate_count": test_strategy_check.get("scenario_matrix_candidate_count", 0),
+                "budget_drift_status": _as_dict(test_strategy_check.get("budget_drift")).get("status", "not-applicable"),
+                "changed_hotspot_files": _as_dict(test_strategy_check.get("budget_drift")).get("changed_hotspot_files", [])[:8],
                 "pre_test_guardrail_status": _as_dict(test_strategy_check.get("pre_test_evidence_guardrail")).get(
                     "status", "not-applicable"
                 ),
