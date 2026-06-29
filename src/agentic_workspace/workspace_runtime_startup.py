@@ -223,6 +223,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "detail_command": payload.get("closeout_obligations", {}).get(
                 "detail_command", "agentic-workspace report --target ./repo --section closeout_trust --format json"
             ),
+            "ordinary_closeout_route": payload.get("closeout_obligations", {}).get("ordinary_closeout_route", {}),
         },
         "memory_consult": {
             "status": payload.get("memory_consult", {}).get("status", "unknown"),
@@ -1188,6 +1189,39 @@ def _hydrate_selected_start_advisory_payloads(
         )
 
 
+def _selector_first_closeout_obligations(payload: dict[str, Any]) -> dict[str, Any]:
+    obligations = payload.get("closeout_obligations", {})
+    if not isinstance(obligations, dict):
+        return {}
+    task_intent = _as_dict(payload.get("task_intent"))
+    requested_text = " ".join(
+        [
+            *(str(item) for item in _list_payload(task_intent.get("requested_outcomes"))),
+            str(task_intent.get("implement_changed_command") or ""),
+        ]
+    ).lower()
+    route_relevant = bool(payload.get("closeout_report_route")) or any(
+        marker in requested_text
+        for marker in ("planned", "plan", "lane", "release", "status", "complete", "completion", "closeout", "merge", "issue", "pr")
+    )
+    if not route_relevant:
+        return {}
+    compact = {
+        key: obligations.get(key)
+        for key in ("status", "activation_rule", "detail_command")
+        if key in obligations and obligations.get(key) not in (None, "", [], {})
+    }
+    raw_route = _as_dict(obligations.get("ordinary_closeout_route"))
+    route = {
+        key: raw_route.get(key)
+        for key in ("status", "first_inspection", "substitute_command", "top_level_closeout_command")
+        if raw_route.get(key) not in (None, "", [], {})
+    }
+    if route:
+        compact["ordinary_closeout_route"] = route
+    return compact
+
+
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
     skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
     read_only_response = payload.get("read_only_response", {})
@@ -1226,6 +1260,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         },
         "memory": payload.get("memory_consult", {}),
     }
+    compact_closeout_obligations = _selector_first_closeout_obligations(payload)
+    if compact_closeout_obligations:
+        context["closeout_obligations"] = compact_closeout_obligations
     local_checkpoint = payload.get("local_chat_checkpoint", {})
     if isinstance(local_checkpoint, dict) and _local_chat_checkpoint_default_visible(local_checkpoint, payload=payload):
         context["local_chat_checkpoint"] = {

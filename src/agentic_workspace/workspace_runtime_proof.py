@@ -29,6 +29,7 @@ from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
+    PROOF_RECEIPT_RELATIVE_PATH,
     _active_planning_assurance_for_proof,
     _adapt_make_proof_command_for_target,
     _applicable_intent_status_payload,
@@ -218,6 +219,17 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     "kind": answer.get("proof_strategy", {}).get("kind"),
                     "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
                 }
+            next_decision["detail_command_template"] = _command_template_payload(
+                command=next_decision.get(
+                    "detail_command",
+                    _command_with_cli_invoke(
+                        command="agentic-workspace proof --verbose --changed <paths> --format json",
+                        cli_invoke=cli_invoke,
+                    ),
+                ),
+                placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
+                purpose="verbose proof drill-down after substituting the actual changed paths",
+            )
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
             local_overlay = _compact_tiny_local_overlay(answer.get("local_overlay"))
@@ -304,6 +316,14 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
             ),
+            "detail_command_template": _command_template_payload(
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace proof --verbose --changed <paths> --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
+                purpose="verbose proof drill-down after substituting the actual changed paths",
+            ),
         }
         return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)
     return {
@@ -312,13 +332,146 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
         "selector": {},
         "next": {
             "action": "select-proof-scope",
-            "command": _command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
+            "command": None,
             "run": None,
             "required": False,
         },
+        "command_template": _command_template_payload(
+            command=_command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
+            placeholders={"paths": []},
+            purpose="proof selection after changed paths are known",
+        ),
         "required_commands": [],
         "warnings": [],
         "detail_command": _command_with_cli_invoke(command="agentic-workspace proof --verbose --format json", cli_invoke=cli_invoke),
+    }
+
+
+def _command_template_payload(*, command: Any, placeholders: dict[str, Any], purpose: str) -> dict[str, Any]:
+    template = str(command or "").strip()
+    return {
+        "kind": "agentic-workspace/command-template/v1",
+        "template": template,
+        "runnable": False,
+        "placeholders": placeholders,
+        "instantiation_required": [name for name, value in placeholders.items() if value in (None, "", [])],
+        "purpose": purpose,
+        "rule": "Substitute placeholders before running.",
+    }
+
+
+def _proof_receipt_passed(result: Any) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "-", str(result or "").strip().lower()).strip("-")
+    return normalized in {"pass", "passed", "success", "succeeded", "ok", "green"}
+
+
+def _proof_receipt_failed(result: Any) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "-", str(result or "").strip().lower()).strip("-")
+    if normalized in {"fail", "failed", "failure", "error", "errored", "timeout", "timed-out", "cancelled", "canceled"}:
+        return True
+    return bool(set(normalized.split("-")) & {"fail", "failed", "failure", "error", "errored", "timeout", "cancelled", "canceled"})
+
+
+def _proof_receipt_reconciliation_payload(
+    *, target_root: Path | None, required_commands: list[str], changed_paths: list[str]
+) -> dict[str, Any]:
+    command_states: list[dict[str, Any]] = []
+    base = {
+        "kind": "agentic-workspace/proof-receipt-reconciliation/v1",
+        "receipt_path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "required_command_count": len(required_commands),
+        "rule": (
+            "Receipts are accepted only for exact command matches, compatible changed-path scope, and passed results; "
+            "proof selection alone is never treated as execution evidence."
+        ),
+    }
+    if target_root is None:
+        return {
+            **base,
+            "status": "unavailable",
+            "reason": "target root unavailable",
+            "commands": [
+                {"command": command, "evidence_state": "not-run-or-not-recorded", "diagnostic": "not run or not recorded"}
+                for command in required_commands
+            ],
+        }
+    receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
+    if not receipt_path.is_file():
+        return {
+            **base,
+            "status": "not-recorded",
+            "commands": [
+                {"command": command, "evidence_state": "not-run-or-not-recorded", "diagnostic": "not run or not recorded"}
+                for command in required_commands
+            ],
+        }
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            **base,
+            "status": "untrusted-record",
+            "reason": f"latest receipt could not be read as JSON: {exc}",
+            "commands": [
+                {"command": command, "evidence_state": "record-stale-untrusted", "diagnostic": "record unreadable or untrusted"}
+                for command in required_commands
+            ],
+        }
+    if not isinstance(receipt, dict):
+        receipt = {}
+    receipt_command = str(receipt.get("command") or "").strip()
+    receipt_result = str(receipt.get("result") or "").strip()
+    receipt_paths = _list_payload(receipt.get("changed_paths"))
+    normalized_receipt_paths = [str(path).strip() for path in receipt_paths if str(path).strip()]
+    normalized_changed_paths = [str(path).strip() for path in changed_paths if str(path).strip()]
+    path_scope_matches = set(normalized_changed_paths).issubset(set(normalized_receipt_paths)) if normalized_changed_paths else True
+    for command in required_commands:
+        state: dict[str, Any]
+        if command != receipt_command:
+            state = {
+                "command": command,
+                "evidence_state": "run-but-not-recorded" if receipt_command else "not-run-or-not-recorded",
+                "diagnostic": "run but not recorded for this selected command" if receipt_command else "not run or not recorded",
+            }
+        elif not path_scope_matches:
+            state = {
+                "command": command,
+                "evidence_state": "record-stale-untrusted",
+                "diagnostic": "record stale or untrusted for this changed-path scope",
+            }
+        elif _proof_receipt_passed(receipt_result):
+            state = {
+                "command": command,
+                "evidence_state": "accepted",
+                "diagnostic": "passed receipt accepted",
+            }
+        elif _proof_receipt_failed(receipt_result):
+            state = {
+                "command": command,
+                "evidence_state": "recorded-failed",
+                "diagnostic": "run and recorded as failed",
+            }
+        else:
+            state = {
+                "command": command,
+                "evidence_state": "record-stale-untrusted",
+                "diagnostic": "receipt result is not a recognized pass/fail state",
+            }
+        state["required"] = True
+        command_states.append(state)
+    accepted_count = sum(1 for state in command_states if state.get("evidence_state") == "accepted")
+    return {
+        **base,
+        "status": "accepted" if command_states and accepted_count == len(command_states) else "attention",
+        "accepted_count": accepted_count,
+        "receipt": {
+            "command": receipt_command,
+            "result": receipt_result,
+            "changed_paths": normalized_receipt_paths,
+            "recorded_at": receipt.get("recorded_at", ""),
+            "plan_id": receipt.get("plan_id", ""),
+        },
+        "commands": command_states,
     }
 
 
@@ -2612,13 +2765,29 @@ def _proof_selection_for_changed_paths(
             "candidate_commands": target_capabilities.get("candidate_commands", []),
             "unavailable_commands": unavailable_commands,
         }
+    proof_receipt_reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=target_root,
+        required_commands=required_commands,
+        changed_paths=changed_paths,
+    )
     proof_execution_evidence = {
         "kind": "proof-execution-evidence/v1",
-        "status": "not-run",
+        "status": "recorded-and-accepted" if proof_receipt_reconciliation.get("status") == "accepted" else "not-run-or-not-recorded",
         "state_model": list(_PROOF_EXECUTION_STATUSES),
         "expected_commands": required_commands,
         "manual_verification_expected": manual_verification is not None,
-        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
+        "receipt_reconciliation": proof_receipt_reconciliation,
+        "missing_evidence_diagnostics": {
+            "not-run-or-not-recorded": "no trusted receipt exists for this selected command",
+            "run-but-not-recorded": "a receipt exists, but not for this selected command",
+            "record-stale-untrusted": "a receipt exists, but command/path/result trust does not match the current proof selection",
+            "recorded-failed": "the selected command was recorded as failed",
+            "accepted": "the selected command has an exact matching passed receipt",
+        },
+        "rule": (
+            "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, "
+            "or was manually verified. Latest receipts are reconciled but do not bypass intent or closeout review."
+        ),
     }
     configured_policy = [
         {
@@ -2867,6 +3036,7 @@ def _proof_selection_for_changed_paths(
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
+        "proof_receipt_reconciliation": proof_receipt_reconciliation,
         "proof_decision": proof_decision,
         "high_assurance_closeout_posture": high_assurance_closeout_posture,
         "intent_proof": intent_proof,

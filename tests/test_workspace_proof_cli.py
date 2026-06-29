@@ -621,6 +621,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "warnings",
         "intent_proof",
         "detail_command",
+        "detail_command_template",
         "proof_route_selection",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
@@ -631,7 +632,9 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
     assert "validation_plan" not in encoded
-    assert len(encoded) < 2900
+    assert payload["detail_command_template"]["runnable"] is False
+    assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
+    assert len(encoded) < 3400
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -742,14 +745,16 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert explanation["manual_verification"]["status"] == "required"
     assert explanation["manual_verification"]["templates"][0]["intent_type"] == "behavior-test"
     assert explanation["manual_verification"]["templates"][0]["trust"] == "lower-than-executable-proof"
-    assert explanation["proof_execution_evidence"] == {
-        "kind": "proof-execution-evidence/v1",
-        "status": "not-run",
-        "state_model": ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"],
-        "expected_commands": [],
-        "manual_verification_expected": True,
-        "rule": "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, or was manually verified.",
-    }
+    execution_evidence = explanation["proof_execution_evidence"]
+    assert execution_evidence["kind"] == "proof-execution-evidence/v1"
+    assert execution_evidence["status"] == "not-run-or-not-recorded"
+    assert execution_evidence["state_model"] == ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"]
+    assert execution_evidence["expected_commands"] == []
+    assert execution_evidence["manual_verification_expected"] is True
+    assert execution_evidence["receipt_reconciliation"]["commands"] == []
+    assert execution_evidence["missing_evidence_diagnostics"]["not-run-or-not-recorded"] == (
+        "no trusted receipt exists for this selected command"
+    )
 
 
 def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
@@ -1127,7 +1132,7 @@ def test_proof_changed_reports_live_confirmed_learned_route_hints(tmp_path: Path
         },
     }
     assert explanation["selected_commands"][0]["kind"] == "proof-command/v1"
-    assert explanation["proof_execution_evidence"]["status"] == "not-run"
+    assert explanation["proof_execution_evidence"]["status"] == "not-run-or-not-recorded"
     assert answer["proof_next_decision"]["warnings"] == ["1 learned route hint(s) are stale or unavailable."]
     maintenance = answer["proof_route_maintenance"]
     assert maintenance["status"] == "attention"
@@ -2234,6 +2239,103 @@ def test_proof_failed_receipt_marks_excerpt_failure_summary_lower_trust(tmp_path
         "source_kind": "caller-supplied-excerpt",
         "rule": "Caller-supplied excerpts are useful repair hints but lower trust than repo-local logs.",
     }
+
+
+def test_proof_changed_reconciles_latest_passed_receipt_without_closing_claim(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    reconciliation = answer["proof_receipt_reconciliation"]
+    states = {item["command"]: item for item in reconciliation["commands"]}
+    assert reconciliation["status"] == "attention"
+    assert states["make test-workspace"]["evidence_state"] == "accepted"
+    assert states["make test-workspace"]["diagnostic"] == "passed receipt accepted"
+    assert states["make typecheck"]["evidence_state"] == "run-but-not-recorded"
+    assert answer["proof_execution_evidence"]["status"] == "not-run-or-not-recorded"
+    assert "closeout review" in answer["proof_execution_evidence"]["rule"]
+
+
+def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    states = {item["command"]: item for item in answer["proof_receipt_reconciliation"]["commands"]}
+    assert states["make test-workspace"]["evidence_state"] == "record-stale-untrusted"
+    assert states["make test-workspace"]["diagnostic"] == "record stale or untrusted for this changed-path scope"
 
 
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(tmp_path: Path, capsys) -> None:

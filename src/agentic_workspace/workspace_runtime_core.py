@@ -20789,6 +20789,7 @@ def _startup_closeout_report_route(closeout_inspection: dict[str, Any]) -> dict[
     closeout_report_command = detail_command.replace("--section closeout_trust", "--section closeout_report")
     if not closeout_report_command or closeout_report_command == detail_command:
         closeout_report_command = "agentic-workspace report --target ./repo --section closeout_report --format json"
+    closeout_trust_command = detail_command or closeout_report_command.replace("--section closeout_report", "--section closeout_trust")
     return {
         "kind": "agentic-workspace/closeout-report-route/v1",
         "status": "available",
@@ -20797,6 +20798,18 @@ def _startup_closeout_report_route(closeout_inspection: dict[str, Any]) -> dict[
         "escalation_source": "closeout_trust_inspection" if closeout_inspection.get("status") == "required" else "startup-route",
         "next_command": closeout_report_command,
         "selector": "closeout_report",
+        "ordinary_route": {
+            "status": "mandatory-before-completion-claim",
+            "first_inspection": closeout_trust_command,
+            "closeout_report": closeout_report_command,
+            "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
+            "rule": "Run the closeout route and reconcile its result before claiming completion; startup/proof commands do not close work by themselves.",
+        },
+        "top_level_closeout_command": {
+            "status": "not-available",
+            "substitute_command": closeout_report_command,
+            "why": "Agentic Workspace exposes closeout through report sections and planning closeout/archive commands rather than a generic top-level closeout command.",
+        },
     }
 
 
@@ -21248,6 +21261,14 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
             "status": cli_authority_review.get("status", "unknown"),
             "classifications": cli_authority_review.get("classifications", []),
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
+            "detail_command_template": {
+                "kind": "agentic-workspace/command-template/v1",
+                "template": "agentic-workspace proof --verbose --changed <paths> --format json",
+                "runnable": False,
+                "placeholders": {"paths": proof.get("changed_paths", [])},
+                "instantiation_required": [] if proof.get("changed_paths") else ["paths"],
+                "rule": "Do not run templates containing angle-bracket placeholders until all placeholders are substituted.",
+            },
         }
     high_risk_overlay = proof.get("high_risk_overlay", {})
     if isinstance(high_risk_overlay, dict) and high_risk_overlay.get("status") == "active":
@@ -21262,6 +21283,14 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
+        compact["detail_command_template"] = {
+            "kind": "agentic-workspace/command-template/v1",
+            "template": "agentic-workspace proof --verbose --changed <paths> --format json",
+            "runnable": False,
+            "placeholders": {"paths": changed},
+            "instantiation_required": [],
+            "rule": "Do not run templates containing angle-bracket placeholders until all placeholders are substituted.",
+        }
     return compact
 
 
@@ -23309,6 +23338,24 @@ def _start_tiny_payload_fast(
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
             ),
+            "ordinary_closeout_route": {
+                "status": "mandatory-before-completion-claim",
+                "first_inspection": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "closeout_report": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section closeout_report --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
+                "top_level_closeout_command": "not-available",
+                "substitute_command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section closeout_report --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "rule": "Use this route before claiming completion; if Planning is active, satisfy planning closeout/archive requirements as well.",
+            },
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
         "local_chat_checkpoint": _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -24490,15 +24537,29 @@ def _compact_start_closeout_obligations(
     if not isinstance(required, list):
         required = []
     target_arg = _command_target_arg(target_root)
+    closeout_trust_command = _command_with_cli_invoke(
+        command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json",
+        cli_invoke=cli_invoke,
+    )
+    closeout_report_command = _command_with_cli_invoke(
+        command=f"agentic-workspace report --target {target_arg} --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+    )
     return {
         "status": value.get("status", "unknown"),
         "required_before_lane_closeout_count": len(required),
         "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
         "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-        "detail_command": _command_with_cli_invoke(
-            command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json",
-            cli_invoke=cli_invoke,
-        ),
+        "detail_command": closeout_trust_command,
+        "ordinary_closeout_route": {
+            "status": "mandatory-before-completion-claim",
+            "first_inspection": closeout_trust_command,
+            "closeout_report": closeout_report_command,
+            "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
+            "top_level_closeout_command": "not-available",
+            "substitute_command": closeout_report_command,
+            "rule": "Use this route before claiming completion; if Planning is active, satisfy planning closeout/archive requirements as well.",
+        },
     }
 
 
@@ -38651,8 +38712,19 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     lower_trust_count = sum((1 for item in command_states if item["trust"] == "lower-trust"))
     return {
         "status": "complete" if command_states and lower_trust_count == 0 else "absent" if not command_states else "attention",
-        "rule": "Selected proof is not executed proof; required commands need compact evidence or an explicit waiver reason.",
+        "rule": (
+            "Selected proof is not executed proof; required commands need compact evidence, a reconciled proof receipt, "
+            "or an explicit waiver reason."
+        ),
         "state_model": list(_PROOF_EXECUTION_STATUSES),
+        "missing_evidence_diagnostics": {
+            "missing": "not run or not recorded",
+            "run": "run but not recorded as passed evidence",
+            "failed": "run and recorded as failed",
+            "unavailable": "selected command unavailable in this target",
+            "waived": "accepted only with explicit reason or evidence reference",
+            "passed": "recorded as executed evidence",
+        },
         "required_command_count": len(command_states),
         "lower_trust_required_count": lower_trust_count,
         "counts": counts,
