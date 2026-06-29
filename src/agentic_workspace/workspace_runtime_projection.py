@@ -13,6 +13,32 @@ def _list_payload(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _workflow_participation_payload(*, surface: str, compact: bool = False) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/workflow-participation/v1",
+        "surface": surface,
+        "status": "mandatory",
+        "rule": (
+            "When Agentic Workspace is enabled, run and follow the routed AW workflow for non-trivial work. "
+            "Advisory routing only scopes agent judgment inside that mandatory workflow."
+        ),
+        "agent_judgment_scope": (
+            "The agent owns semantic work-shape, proof-proportionality, and completion judgment only after the "
+            "required start/implement route has been consulted and any gates have been followed."
+        ),
+        "not_permission": [
+            "implementation_allowed is not permission to skip AW startup, planning, proof, or closeout routing",
+            "advisory-support is not optional workflow participation",
+        ],
+    }
+    if compact:
+        return {
+            "status": payload["status"],
+            "rule": "AW mandatory; advisory guidance and implementation_allowed cannot bypass workflow.",
+        }
+    return payload
+
+
 def _authority_boundary_payload(
     *,
     surface: str,
@@ -51,7 +77,11 @@ def _authority_boundary_payload(
         "proof_hints": hints,
         "agent_owned_decisions": agent,
         "human_owned_decisions": human,
-        "reporting_rule": rule or "Report AW facts, constraints, and suggestions separately from the agent's semantic decision.",
+        "reporting_rule": rule
+        or (
+            "Report AW facts, constraints, and suggestions separately from the agent's semantic decision; "
+            "advisory route support is internal to the mandatory enabled-AW workflow."
+        ),
     }
 
 

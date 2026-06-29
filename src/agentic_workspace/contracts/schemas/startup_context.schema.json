@@ -17,6 +17,11 @@
       "type": "string",
       "description": "Resolved target repository for the startup decision."
     },
+    "workflow_participation": {
+      "type": "object",
+      "description": "Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow.",
+      "additionalProperties": true
+    },
     "action_signals": {
       "type": "object",
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",

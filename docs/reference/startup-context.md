@@ -13,6 +13,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | (root) | object | yes |  | Startup routing payload returned when an agent needs the minimum safe context for entering or resuming work in a repository. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"startup-context/v1"` | yes |  | Discriminator for the startup context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
+| `workflow_participation` | object | no |  | Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow. |  |  |
 | `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
 | `pre_test_evidence_guardrail` | object | no |  | Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |

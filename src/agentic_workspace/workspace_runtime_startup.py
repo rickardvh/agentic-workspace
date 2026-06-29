@@ -121,6 +121,7 @@ from agentic_workspace.workspace_runtime_planning import (
     _planning_safety_gate_payload,
     _raw_active_planning_record_for_closeout,
 )
+from agentic_workspace.workspace_runtime_projection import _workflow_participation_payload
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
@@ -441,7 +442,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "workflow_sufficiency",
             *(["pre_test_evidence_guardrail"] if "pre_test_evidence_guardrail" in payload else []),
         ],
-        agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+        agent_judgment="Agent owns work-shape unless blocked.",
     )
     return projected
 
@@ -576,6 +577,7 @@ def _start_payload(
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
+        "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "startup_sequence": startup_sequence,
         "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
@@ -1401,6 +1403,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     startup_proof = payload.get("proof", {})
     startup_proof_commands = _tiny_required_proof_commands(startup_proof) if isinstance(startup_proof, dict) else []
     available_selectors = _available_selectors_for_payload(payload)
+    available_selectors = [selector for selector in available_selectors if not selector.startswith("workflow_participation")]
     if "routine_work_context" not in available_selectors:
         available_selectors.append("routine_work_context")
     if (
@@ -1436,6 +1439,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
+        "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
         "action_signals": _compact_action_signals_payload(
             surface="start",
             allowed_next_action=str(next_safe_action.get("next_safe_action", "")),
@@ -1446,7 +1450,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             proof_commands=startup_proof_commands,
             changed_signals=startup_changed_signals,
             advisory_selectors=advisory_selectors,
-            agent_judgment="Agent owns work-shape choice unless hard_blockers names a gate.",
+            agent_judgment="Agent owns work-shape unless blocked.",
         ),
         "next_safe_action": next_safe_action,
         "skills": _startup_skills_projection(
