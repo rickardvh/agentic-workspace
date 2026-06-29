@@ -349,6 +349,18 @@
       "checked_in_justification": "Compact agent-recorded test strategy dispositions preserve evidence-owner decisions that would otherwise be lossy in chat or PR prose."
     },
     {
+      "pattern": ".agentic-workspace/verification/test-suite-budget.json",
+      "format": "json",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_suite_budget",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Optional repo-owned test suite budget observations with provenance and freshness semantics for test_strategy_check drift output.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "Checked-in suite budget observations preserve maintainer-owned test strategy targets and measurement provenance without making package runtime code carry repo-specific counts."
+    },
+    {
       "pattern": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
       "format": "toml",
       "owner": "memory-payload",

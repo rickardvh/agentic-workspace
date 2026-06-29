@@ -1,0 +1,42 @@
+{
+  "kind": "agentic-workspace/test-suite-budget/v1",
+  "source": "GitHub review #1858 / refined issues #1856 and #1857",
+  "provenance": {
+    "measurement_command": "uv run pytest --collect-only -q",
+    "recorded_by": "maintainer review evidence",
+    "recorded_at": "2026-06-29",
+    "notes": "Counts are repo-owned observations used only by this source checkout when fresh."
+  },
+  "scopes": [
+    {
+      "scope": "root",
+      "baseline": {
+        "date": "2026-06-15",
+        "collected_count": 613
+      },
+      "current": {
+        "observed_at": "2026-06-29",
+        "collected_count": 884,
+        "source": "review comment on PR #1858",
+        "max_age_days": 30
+      },
+      "target": {
+        "min": 500,
+        "max": 700
+      }
+    },
+    {
+      "scope": "all",
+      "baseline": {
+        "date": "2026-06-15",
+        "collected_count": 1118
+      },
+      "current": {
+        "observed_at": "2026-06-29",
+        "collected_count": 1426,
+        "source": "review comment on PR #1858",
+        "max_age_days": 30
+      }
+    }
+  ]
+}

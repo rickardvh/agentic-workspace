@@ -5246,10 +5246,48 @@ force = "required-before-closeout"
     )
 
 
+def _write_test_suite_budget(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / ".agentic-workspace" / "verification" / "test-suite-budget.json",
+        {
+            "kind": "agentic-workspace/test-suite-budget/v1",
+            "source": "test fixture",
+            "provenance": {
+                "measurement_command": "pytest --collect-only",
+                "recorded_at": "2026-06-29",
+            },
+            "scopes": [
+                {
+                    "scope": "root",
+                    "baseline": {"date": "2026-06-15", "collected_count": 613},
+                    "current": {
+                        "observed_at": "2026-06-29",
+                        "collected_count": 884,
+                        "source": "fixture",
+                        "max_age_days": 99999,
+                    },
+                    "target": {"min": 500, "max": 700},
+                },
+                {
+                    "scope": "all",
+                    "baseline": {"date": "2026-06-15", "collected_count": 1118},
+                    "current": {
+                        "observed_at": "2026-06-29",
+                        "collected_count": 1426,
+                        "source": "fixture",
+                        "max_age_days": 99999,
+                    },
+                },
+            ],
+        },
+    )
+
+
 def test_implement_surfaces_test_strategy_check_for_hotspot_tests(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write_python_test_evidence_config(tmp_path)
+    _write_test_suite_budget(tmp_path)
     _write(
         tmp_path / "tests" / "test_runtime.py",
         """
@@ -5303,6 +5341,9 @@ def test_runtime_warning_eta(): assert True
     assert budget["root"]["current_collected_count"] == 884
     assert budget["root"]["baseline_collected_count"] == 613
     assert budget["root"]["over_target_by"] == 184
+    assert budget["root"]["freshness"]["status"] == "fresh"
+    assert budget["budget_source"]["source"] == "test fixture"
+    assert budget["budget_source"]["provenance"]["measurement_command"] == "pytest --collect-only"
     assert budget["changed_hotspot_files"] == ["tests/test_runtime.py"]
     assert budget["over_budget_hotspot_files_requiring_disposition"] == ["tests/test_runtime.py"]
     assert any("contract or conformance" in option for option in budget["placement_alternatives"])
@@ -5411,10 +5452,53 @@ def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Pa
     assert "test_strategy_check" not in payload["context"]
 
 
+def test_test_strategy_check_degrades_without_target_suite_budget(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_python_test_evidence_config(tmp_path)
+    _write(
+        tmp_path / "tests" / "test_runtime.py",
+        """
+def test_runtime_alpha(): assert True
+def test_runtime_beta(): assert True
+def test_runtime_gamma(): assert True
+def test_runtime_delta(): assert True
+def test_runtime_epsilon(): assert True
+def test_runtime_zeta(): assert True
+def test_runtime_eta(): assert True
+def test_runtime_theta(): assert True
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "tests/test_runtime.py",
+                "--select",
+                "test_strategy_check",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    check = json.loads(capsys.readouterr().out)["values"]["test_strategy_check"]
+    assert check["budget_drift"]["status"] == "not-configured"
+    assert check["budget_drift"]["budget_source"]["path"] == ".agentic-workspace/verification/test-suite-budget.json"
+    assert check["budget_drift"]["root"]["status"] == "not-configured"
+    assert check["budget_drift"]["over_budget_hotspot_files_requiring_disposition"] == []
+
+
 def test_test_strategy_check_reads_recorded_disposition(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write_python_test_evidence_config(tmp_path)
+    _write_test_suite_budget(tmp_path)
     _write(
         tmp_path / "tests" / "test_runtime.py",
         """
@@ -5483,6 +5567,7 @@ def test_test_strategy_check_distinguishes_non_material_retained_test_edit(tmp_p
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
     _write_python_test_evidence_config(tmp_path)
+    _write_test_suite_budget(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
@@ -5524,6 +5609,7 @@ def test_test_strategy_check_marks_package_local_budget_context(tmp_path: Path, 
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
     _write_empty_planning_state(tmp_path)
+    _write_test_suite_budget(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
