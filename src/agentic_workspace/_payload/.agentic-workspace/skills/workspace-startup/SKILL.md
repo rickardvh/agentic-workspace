@@ -6,6 +6,7 @@ description: Orient through compact Agentic Workspace commands before opening ra
 # Workspace Startup
 
 Use this skill when the task is about ordinary startup, task routing, config obligations, proof selection, closeout, or module boundaries in an installed Agentic Workspace repo.
+When Agentic Workspace is enabled, this skill is inside mandatory workflow participation; advisory skill routing and `implementation_allowed` never mean startup, planning gates, proof, or closeout can be skipped.
 
 ## Route
 
@@ -31,7 +32,7 @@ Use instead:
 This skill is the hand-authored startup pilot for the `startup-router` SkillSpec contract in `src/agentic_workspace/contracts/skill_specs.json`.
 
 - Preferred CLI: `agentic-workspace start --target . --task "<task>" --format json`.
-- Interpreted fields: `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
+- Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
 - Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
 - Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.
 - No-CLI fallback: read `.agentic-workspace/WORKFLOW.md` only far enough to preserve the same forbidden actions and no-artifact-by-default rule.

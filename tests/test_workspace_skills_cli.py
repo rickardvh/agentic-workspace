@@ -18,6 +18,33 @@ def test_workspace_startup_skill_declares_skillspec_pilot_contract() -> None:
         assert "No-CLI fallback" in text
 
 
+def test_routed_skill_surfaces_preserve_mandatory_aw_boundary() -> None:
+    root = Path(__file__).resolve().parents[1]
+    spec = json.loads((root / "src" / "agentic_workspace" / "contracts" / "skill_specs.json").read_text(encoding="utf-8"))
+
+    assert "mandatory enabled-AW workflow" in spec["rule"]
+    startup_gate = next(gate for gate in spec["transition_gates"] if gate["id"] == "startup-to-work")
+    assert "workflow_participation" in startup_gate["interpreted_fields"]
+    assert any("implementation_allowed" in action and "skip" in action for action in startup_gate["forbidden_actions"])
+
+    skill_paths = [
+        root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md",
+        root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md",
+        root / ".agentic-workspace" / "skills" / "workspace-transition-gates" / "SKILL.md",
+        root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace" / "skills" / "workspace-transition-gates" / "SKILL.md",
+        root / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md",
+        root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md",
+        root / ".agentic-workspace" / "planning" / "skills" / "planning-reporting" / "SKILL.md",
+        root / "packages" / "planning" / "skills" / "planning-reporting" / "SKILL.md",
+        root / ".agentic-workspace" / "planning" / "skills" / "planning-high-assurance-lifecycle" / "SKILL.md",
+        root / "packages" / "planning" / "skills" / "planning-high-assurance-lifecycle" / "SKILL.md",
+    ]
+    for path in skill_paths:
+        text = path.read_text(encoding="utf-8")
+        assert "enabled-AW" in text or "Agentic Workspace is enabled" in text or "AW is enabled" in text or "AW optional" in text
+        assert "implementation_allowed" in text or "planning or proof gate" in text
+
+
 def test_generated_startup_router_skill_is_compact_adapter_projection() -> None:
     root = Path(__file__).resolve().parents[1]
     generated = (root / "generated" / "workspace" / "skills" / "startup-router" / "SKILL.md").read_text(encoding="utf-8")

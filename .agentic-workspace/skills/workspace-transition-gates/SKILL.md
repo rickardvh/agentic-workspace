@@ -8,6 +8,7 @@ description: Apply SkillSpec-backed gates to workspace transitions. Use when mov
 This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
 
 Use it to make workflow transitions inspectable instead of relying on ambient judgement.
+When AW is enabled, these gates are mandatory workflow boundaries. Advisory routing explains agent-owned choices inside the workflow; it is not permission to skip `start`, `implement`, Planning gates, proof, or closeout.
 
 Each gate is a compact SkillSpec-shaped record:
 
@@ -25,9 +26,9 @@ Each gate is a compact SkillSpec-shaped record:
 
 - Trigger: first contact, takeover, or uncertain task shape.
 - Preferred CLI: `agentic-workspace start --task "<task>" --format json`.
-- Interpreted fields: `immediate_next_allowed_action`, `workflow_sufficiency`, `next_safe_action`, `skill_routing`.
+- Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `workflow_sufficiency`, `next_safe_action`, `skill_routing`.
 - Allowed: follow `next_safe_action.preferred_cli`, request a selector, or continue direct work when the packet says enough.
-- Forbidden: open broad raw planning files before the compact summary when the packet forbids it.
+- Forbidden: open broad raw planning files before the compact summary when the packet forbids it; treat advisory routing or `implementation_allowed` as a bypass around enabled-AW workflow participation.
 - Fallback: read `.agentic-workspace/WORKFLOW.md` and preserve forbidden actions.
 
 ### Work To Planning

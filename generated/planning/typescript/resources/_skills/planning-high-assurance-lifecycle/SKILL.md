@@ -6,6 +6,7 @@ description: Preserve intent, decomposition, assurance, delegation, proof, and c
 # Planning High-Assurance Lifecycle
 
 Use this skill when work is broad, multi-lane, high-assurance, cross-boundary, or likely to grow beyond an initially bounded slice.
+This skill is the mandatory routed path when enabled-AW startup reports broad, milestone-scale, or high-assurance work without active Planning custody; do not treat advisory routing or `implementation_allowed` as permission to skip Planning before implementation.
 
 ## Primary Ownership
 

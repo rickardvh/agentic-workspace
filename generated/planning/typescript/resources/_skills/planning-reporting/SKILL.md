@@ -7,6 +7,7 @@ description: Report active planning state, proof expectations, and next-action g
 
 Use this skill when you need a compact, comparable picture of what is active and what should happen next, without rereading `.agentic-workspace/planning/state.toml` or execplan prose first.
 Use `agentic-workspace report --target <repo> --format json` first when the question is broader than planning state alone.
+This reporting skill is not a bypass around enabled-AW participation: consult it when `start`, `next_safe_action`, `skill_routing`, or active Planning state routes here, and preserve any planning or proof gate before implementation or closeout.
 
 ## Primary Ownership
 
