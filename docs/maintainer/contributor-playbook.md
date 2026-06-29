@@ -144,7 +144,7 @@ Use `agentic-workspace defaults --format json` first when you need the structure
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
 
-The default suite-oriented `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and package `make test` lanes run `pytest` with xdist (`-n auto`). Keep direct `uv run pytest <path>` invocations available for tiny focused runs where worker startup would dominate.
+The default suite-oriented `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and package `make test` lanes run `pytest` with xdist (`-n 4` on Windows from the root Makefile, `-n auto` elsewhere). Keep direct `uv run pytest <path>` invocations available for tiny focused runs where worker startup would dominate.
 
 Final repo sync after package work:
 

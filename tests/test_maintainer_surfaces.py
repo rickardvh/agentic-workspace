@@ -480,6 +480,18 @@ def test_contributor_playbook_requires_operational_affordance_review() -> None:
     assert "weak agents can proceed without learning package internals" in text
 
 
+def test_root_makefile_bounds_default_xdist_workers_on_windows() -> None:
+    makefile = (WORKSPACE_ROOT / "Makefile").read_text(encoding="utf-8")
+    playbook = (WORKSPACE_ROOT / "docs" / "maintainer" / "contributor-playbook.md").read_text(encoding="utf-8")
+    maintainer_commands = (WORKSPACE_ROOT / "docs" / "maintainer" / "maintainer-commands.md").read_text(encoding="utf-8")
+
+    assert "ifeq ($(OS),Windows_NT)" in makefile
+    assert "PYTEST_PARALLEL_ARGS ?= -n 4" in makefile
+    assert "PYTEST_PARALLEL_ARGS ?= -n auto" in makefile
+    assert "-n 4` on Windows" in playbook
+    assert "-n 4` on Windows" in maintainer_commands
+
+
 def test_operational_affordance_design_requires_action_changing_warnings() -> None:
     text = (WORKSPACE_ROOT / "docs" / "maintainer" / "operational-affordance-design.md").read_text(encoding="utf-8")
 

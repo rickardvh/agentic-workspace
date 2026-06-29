@@ -277,6 +277,65 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
 
 
+def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch, tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "local" / "scratch" / "one" / "repo" / ".git").mkdir(parents=True)
+    (target / "scratch" / "two" / "repo" / ".git").mkdir(parents=True)
+    monkeypatch.setattr(cli, "_is_agentic_workspace_source_checkout", lambda target_root: True)
+    monkeypatch.setattr(
+        cli,
+        "_workspace_payload_source",
+        lambda relative: target / "src" / "agentic_workspace" / "_payload" / relative,
+    )
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    plan = payload["payload_closure_plan"]
+    assert plan["kind"] == "agentic-workspace/payload-doctor-closure-plan/v1"
+    surface_classes = {item["id"]: item for item in plan["surface_classes"]}
+    assert set(surface_classes) == {
+        "installed_payload",
+        "source_payload_mirrors",
+        "generated_payload_projections",
+        "local_scratch_blockers",
+        "provenance",
+        "proof",
+    }
+    assert surface_classes["source_payload_mirrors"]["status"] == "check-required"
+    assert any(
+        path.startswith("src/agentic_workspace/_payload/.agentic-workspace/") for path in surface_classes["source_payload_mirrors"]["paths"]
+    )
+    assert surface_classes["generated_payload_projections"]["refresh_command"] == (
+        "uv run python scripts/generate/generate_command_packages.py"
+    )
+    assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == [
+        ".agentic-workspace/local/scratch/one/repo",
+        "scratch/two/repo",
+    ]
+    assert surface_classes["local_scratch_blockers"]["dry_run_command"] == ("git clean -nd -- .agentic-workspace/local/scratch scratch")
+    assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
+    proof_commands = surface_classes["proof"]["commands"]
+    assert "make test-workspace" in proof_commands
+    assert "make maintainer-surfaces" in proof_commands
+    assert "uv run python scripts/generate/generate_command_packages.py --check" in proof_commands
+    assert "make absolute-paths" in proof_commands
+    assert "git diff --check" in proof_commands
+    assert [step["surface_class"] for step in plan["repair_sequence"]] == [
+        "installed_payload",
+        "installed_payload",
+        "source_payload_mirrors",
+        "generated_payload_projections",
+        "local_scratch_blockers",
+        "provenance",
+        "proof",
+    ]
+
+
 def test_setup_surfaces_assurance_verification_onboarding_without_optional_module_residue(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -390,6 +390,25 @@ def _git_source_identity(root: Path | None) -> str:
     return f"git:{revision[:12]}" if revision else root.as_posix()
 
 
+def _portable_path_identity(path_value: Any, *, target_root: Path | None = None) -> str:
+    path_text = str(path_value or "").strip()
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    if not path.is_absolute():
+        return path.as_posix()
+    if target_root is not None:
+        try:
+            return path.resolve().relative_to(target_root.resolve()).as_posix()
+        except (OSError, ValueError):
+            pass
+    normalized_parts = path.as_posix().split("/")
+    if "site-packages" in normalized_parts:
+        index = normalized_parts.index("site-packages")
+        return "site-packages:" + "/".join(normalized_parts[index + 1 :])
+    return path.name
+
+
 def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str, Any]:
     identity = _invoked_cli_identity_payload(target_root=target_root)
     source_class = str(identity.get("source_class", "unknown"))
@@ -398,25 +417,25 @@ def _payload_installer_identity(*, target_root: Path | None = None) -> dict[str,
         source_identity = _git_source_identity(_agentic_workspace_package_root())
     elif source_class == "editable-dev":
         source = "repo-local-dev"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     elif source_class == "installed-package":
         source = "released-wheel"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     else:
         source = "unknown"
-        source_identity = str(identity.get("module_path", ""))
+        source_identity = _portable_path_identity(identity.get("module_path", ""), target_root=target_root)
     return {
         "package": "agentic-workspace",
         "version": __version__,
         "source": source,
         "source_class": source_class,
         "source_identity": source_identity,
-        "module_path": identity.get("module_path", ""),
-        "python_executable": identity.get("python_executable", ""),
+        "module_path": _portable_path_identity(identity.get("module_path", ""), target_root=target_root),
+        "python_executable": _portable_path_identity(identity.get("python_executable", ""), target_root=target_root),
     }
 
 
-def _command_generation_package_identity() -> dict[str, Any]:
+def _command_generation_package_identity(*, target_root: Path | None = None) -> dict[str, Any]:
     version = _package_version("command-generation")
     if not version:
         return {
@@ -431,7 +450,7 @@ def _command_generation_package_identity() -> dict[str, Any]:
     except ImportError:
         module_path = ""
     else:
-        module_path = Path(command_generation.__file__).resolve().as_posix()
+        module_path = _portable_path_identity(Path(command_generation.__file__).resolve(), target_root=target_root)
     return {
         "package": "command-generation",
         "version": version,
@@ -452,7 +471,7 @@ def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
             "tag": f"v{__version__}",
         },
         "installed_by": _payload_installer_identity(target_root=target_root),
-        "command_generation": _command_generation_package_identity(),
+        "command_generation": _command_generation_package_identity(target_root=target_root),
         "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "payload_files": [relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
         "rule": (
@@ -7377,6 +7396,8 @@ def _run_lifecycle_command(
     }
     if cli_compatibility_warnings:
         payload["executable_drift_warnings"] = cli_compatibility_warnings
+    if installed_state_compatibility.get("status") != "compatible":
+        payload["health"] = "attention-needed"
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
         payload=payload,
         command_name=command_name,
@@ -7402,6 +7423,16 @@ def _run_lifecycle_command(
         payload["manual_review_actions"] = manual_review_actions
         payload["repair_plan"] = _repair_plan_payload(
             command_name=command_name, repair_actions=repair_actions, manual_review_actions=manual_review_actions
+        )
+        payload["payload_closure_plan"] = _payload_doctor_closure_plan(
+            command_name=command_name,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            installed_state_compatibility=installed_state_compatibility,
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+            reports=reports,
+            cli_invoke=config.cli_invoke,
         )
         if compact_status and command_name in {"status", "doctor"}:
             payload = _compact_status_payload(payload, cli_invoke=config.cli_invoke)
@@ -7503,13 +7534,28 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
         ),
     }
     command_name = str(payload.get("command", "status") or "status")
-    if str(payload.get("health", "")) == "healthy":
+    payload_closure_plan = payload.get("payload_closure_plan", {})
+    closure_attention = (
+        isinstance(payload_closure_plan, dict)
+        and str(payload_closure_plan.get("status", "")) == "attention"
+        and bool(payload_closure_plan.get("payload_action_required"))
+        and command_name == "doctor"
+    )
+    if str(payload.get("health", "")) == "healthy" and not closure_attention:
         payload["next_action"] = {"action": "no-immediate-action", "summary": "No immediate lifecycle action is required.", "commands": []}
     else:
         detail_command = _command_with_cli_invoke(
             command=f"agentic-workspace {command_name} --target ./repo --verbose --format json", cli_invoke=cli_invoke
         )
-        if command_name == "status":
+        if closure_attention:
+            primary = payload_closure_plan.get("primary_next_action", {}) if isinstance(payload_closure_plan, dict) else {}
+            primary_command = str(primary.get("command", "")) if isinstance(primary, dict) else ""
+            commands = [primary_command] if primary_command else [detail_command]
+            action = (
+                str(primary.get("action", "follow-payload-closure-plan")) if isinstance(primary, dict) else "follow-payload-closure-plan"
+            )
+            summary = "Follow payload_closure_plan.repair_sequence before making payload freshness or doctor-closure claims."
+        elif command_name == "status":
             inspect_command = _command_with_cli_invoke(
                 command="agentic-workspace doctor --target ./repo --format json", cli_invoke=cli_invoke
             )
@@ -7661,6 +7707,208 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
             "route": "agentic-workspace defaults --section improvement_intake --format json",
             "preferred_remedy": "make safe module repair availability visible from the root lifecycle surface",
         },
+    }
+
+
+def _local_scratch_nested_repo_paths(*, target_root: Path) -> list[str]:
+    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH, Path("scratch")]
+    nested_repos: list[str] = []
+    for scratch_root in scratch_roots:
+        absolute_root = target_root / scratch_root
+        if not absolute_root.is_dir():
+            continue
+        for current_root, dirnames, filenames in os.walk(absolute_root):
+            if ".git" in dirnames or ".git" in filenames:
+                _append_unique(nested_repos, _display_path(current_root, target_root))
+                dirnames[:] = []
+                continue
+            dirnames[:] = [dirname for dirname in dirnames if dirname != ".git"]
+    return sorted(nested_repos)
+
+
+def _payload_doctor_closure_plan(
+    *,
+    command_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    installed_state_compatibility: dict[str, Any],
+    repair_actions: list[dict[str, Any]],
+    manual_review_actions: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    source_checkout = _is_agentic_workspace_source_checkout(target_root)
+    payload_state = installed_state_compatibility.get("payload", {})
+    payload_state = payload_state if isinstance(payload_state, dict) else {}
+    payload_status = str(payload_state.get("status", "unknown"))
+    provenance = payload_state.get("provenance", {})
+    provenance_status = str(provenance.get("status", "unknown")) if isinstance(provenance, dict) else "unknown"
+    provenance_drift = str(payload_state.get("provenance_drift", "unknown"))
+    installed_payload_needs_sync = payload_status == "sync-required" or provenance_drift not in {"none", "unknown"}
+    scratch_repos = _local_scratch_nested_repo_paths(target_root=target_root)
+    proof_commands = [
+        _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke),
+        "make test-workspace",
+        "make maintainer-surfaces",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "make absolute-paths",
+        "git diff --check",
+    ]
+    installed_dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --dry-run --format json", cli_invoke=cli_invoke
+    )
+    installed_apply = _command_with_cli_invoke(command=f"agentic-workspace upgrade --target {target} --format json", cli_invoke=cli_invoke)
+    scratch_roots = [
+        relative.as_posix() for relative in (WORKSPACE_LOCAL_SCRATCH_ROOT_PATH, Path("scratch")) if (target_root / relative).exists()
+    ]
+    scratch_scope = " ".join(scratch_roots) if scratch_roots else WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()
+    source_mirror_paths = []
+    if source_checkout:
+        for relative in WORKSPACE_PAYLOAD_FILES:
+            source_mirror_paths.append(_display_path(_workspace_payload_source(relative).as_posix(), target_root))
+        for module_path in MODULE_UPGRADE_SOURCE_PATHS.values():
+            _append_unique(source_mirror_paths, module_path.as_posix())
+    surface_classes = [
+        {
+            "id": "installed_payload",
+            "status": "sync-required" if installed_payload_needs_sync else "compatible",
+            "dry_run_command": installed_dry_run,
+            "apply_command": installed_apply,
+            "rule": "Sync installed target-repo payload before claiming doctor compatibility.",
+        },
+        {
+            "id": "source_payload_mirrors",
+            "status": "check-required" if source_checkout else "not-source-checkout",
+            "paths": sorted(source_mirror_paths),
+            "check_command": "make maintainer-surfaces" if source_checkout else None,
+            "rule": "When the invoked CLI is a source checkout, verify source payload mirrors with the maintainer surface lane.",
+        },
+        {
+            "id": "generated_payload_projections",
+            "status": "check-required" if source_checkout else "not-source-checkout",
+            "refresh_command": "uv run python scripts/generate/generate_command_packages.py" if source_checkout else None,
+            "check_command": "uv run python scripts/generate/generate_command_packages.py --check" if source_checkout else None,
+            "rule": "Refresh generated command-package projections before broad tests discover stale generated targets.",
+        },
+        {
+            "id": "local_scratch_blockers",
+            "status": "cleanup-required" if scratch_repos else "clear",
+            "nested_repo_paths": scratch_repos,
+            "dry_run_command": f"git clean -nd -- {scratch_scope}",
+            "cleanup_command_after_review": f"git clean -fd -- {scratch_scope}",
+            "rule": "Use the dry-run first; the cleanup command is deliberately scoped to local scratch roots.",
+        },
+        {
+            "id": "provenance",
+            "status": "normalize-required"
+            if provenance_drift not in {"none", "unknown"} or provenance_status in {"missing", "invalid"}
+            else "check-required",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "normalize_command": installed_apply,
+            "hygiene_check": "make absolute-paths",
+            "rule": "Payload provenance must stay repo-portable and free of machine-local absolute paths.",
+        },
+        {
+            "id": "proof",
+            "status": "required",
+            "commands": proof_commands,
+            "rule": "Run this proof lane after repair steps so later checks do not reveal omitted payload-surface work.",
+        },
+    ]
+    repair_sequence = [
+        {
+            "id": "inspect_installed_payload",
+            "surface_class": "installed_payload",
+            "command": installed_dry_run,
+            "when": "installed payload status is not compatible or doctor reports managed payload drift",
+        },
+        {
+            "id": "apply_installed_payload",
+            "surface_class": "installed_payload",
+            "command": installed_apply,
+            "when": "dry-run shows only managed payload sync or provenance normalization",
+        },
+        {
+            "id": "check_source_payload_mirrors",
+            "surface_class": "source_payload_mirrors",
+            "command": "make maintainer-surfaces",
+            "when": "running from an agentic-workspace source checkout or touching payload mirrors",
+        },
+        {
+            "id": "refresh_generated_projections",
+            "surface_class": "generated_payload_projections",
+            "command": "uv run python scripts/generate/generate_command_packages.py",
+            "when": "source payload mirrors or generated command-package inputs changed",
+        },
+        {
+            "id": "review_local_scratch_cleanup",
+            "surface_class": "local_scratch_blockers",
+            "command": f"git clean -nd -- {scratch_scope}",
+            "when": "nested scratch repositories are listed",
+        },
+        {
+            "id": "normalize_provenance",
+            "surface_class": "provenance",
+            "command": installed_apply,
+            "when": "payload provenance is missing, invalid, stale, or contains local absolute paths",
+        },
+        {"id": "run_final_proof", "surface_class": "proof", "commands": proof_commands, "when": "all repair steps are complete"},
+    ]
+    plan_status = "attention" if installed_payload_needs_sync or repair_actions or manual_review_actions or scratch_repos else "available"
+    payload_action_required = installed_payload_needs_sync or bool(repair_actions) or bool(scratch_repos)
+    if installed_payload_needs_sync:
+        primary_next_action = {
+            "action": "inspect-installed-payload-sync",
+            "surface_class": "installed_payload",
+            "command": installed_dry_run,
+            "run": installed_dry_run,
+            "next": installed_apply,
+        }
+    elif scratch_repos:
+        scratch_dry_run = f"git clean -nd -- {scratch_scope}"
+        primary_next_action = {
+            "action": "review-local-scratch-cleanup",
+            "surface_class": "local_scratch_blockers",
+            "command": scratch_dry_run,
+            "run": scratch_dry_run,
+            "next": f"git clean -fd -- {scratch_scope}",
+        }
+    elif repair_actions:
+        repair_command = str(repair_actions[0].get("dry_run") or repair_actions[0].get("command") or "")
+        primary_next_action = {
+            "action": str(repair_actions[0].get("action", "inspect-safe-repair")),
+            "surface_class": "installed_payload",
+            "command": repair_command,
+            "run": repair_command,
+            "next": repair_actions[0].get("command"),
+        }
+    else:
+        primary_next_action = {
+            "action": "run-payload-closure-proof",
+            "surface_class": "proof",
+            "command": proof_commands[0],
+            "run": proof_commands[0],
+            "next": proof_commands,
+        }
+    return {
+        "kind": "agentic-workspace/payload-doctor-closure-plan/v1",
+        "command": command_name,
+        "status": plan_status,
+        "target_root": target,
+        "selected_modules": list(selected_modules),
+        "source_checkout": source_checkout,
+        "surface_classes": surface_classes,
+        "repair_sequence": repair_sequence,
+        "primary_next_action": primary_next_action,
+        "payload_action_required": payload_action_required,
+        "repair_action_count": len(repair_actions),
+        "manual_review_action_count": len(manual_review_actions),
+        "report_count": len(reports),
+        "rule": (
+            "Payload closure is one lane: installed payload sync, source mirror checks, generated projections, "
+            "scratch cleanup, provenance normalization, and proof stay visible together."
+        ),
     }
 
 
@@ -7854,6 +8102,18 @@ def _lifecycle_plan_payload(
         },
         "next_safe_command": {"status": next_status, "command": review_command if review_required else next_command, "reason": next_reason},
     }
+    installed_state = payload.get("installed_state_compatibility", {})
+    if isinstance(installed_state, dict) and command_name in {"doctor", "status", "upgrade"}:
+        plan["payload_closure_plan"] = _payload_doctor_closure_plan(
+            command_name=command_name,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            installed_state_compatibility=installed_state,
+            repair_actions=[],
+            manual_review_actions=[],
+            reports=[report for report in payload.get("reports", []) if isinstance(report, dict)],
+            cli_invoke=cli_invoke,
+        )
     if command_name == "upgrade":
         plan["root_upgrade_front_door"] = _root_upgrade_front_door_payload(
             target_root=target_root,
