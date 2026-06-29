@@ -957,6 +957,69 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "planning-escalation-required"
 
 
+def test_start_reconciles_unrelated_active_plan_with_explicit_maintenance_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Unrelated active plan",
+            "post_decomposition_delegation": {"status": "ready"},
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Report AW session experience and upgrade AW payload",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
+    assert payload["next_safe_action"]["implementation_allowed"] is True
+    assert payload["action_signals"]["implementation_allowed"] is True
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert gate["gate_result"] == "active-plan-task-switch"
+    switch = gate["task_switch_reconciliation"]
+    assert switch["status"] == "active"
+    assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
+    assert {route["id"] for route in switch["safe_routes"]} == {
+        "continue-active-plan",
+        "proceed-bounded-repo-maintenance",
+        "reconcile-active-plan-before-implementation",
+    }
+    assert "claim-active-plan-complete" in switch["active_plan_protection"]["blocked_claims"]
+
+
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2561,6 +2624,29 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     repo_wide = json.loads(capsys.readouterr().out)["answer"]
     assert repo_wide["intake_scope"]["status"] == "explicit_repo_wide_requested"
     assert "repo_wide_existing_candidates" in repo_wide
+
+
+def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    large_doc = tmp_path / "docs" / "large-concept.md"
+    large_doc.parent.mkdir(parents=True, exist_ok=True)
+    large_doc.write_text("\n".join(f"line {index}" for index in range(260)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
+    intake = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(intake, 8_000, label="selected improvement_intake compact report", sort_keys=False)
+    assert intake["answer"]["detail_selector"] == "improvement_intake"
+    assert "detail_command" in intake["answer"]
+    assert intake["answer"]["rule"].startswith("Selected dogfooding report sections return compact")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "repo_friction", "--format", "json"]) == 0
+    friction = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(friction, 8_000, label="selected repo_friction compact report", sort_keys=False)
+    assert friction["answer"]["detail_selector"] == "repo_friction"
+    assert friction["answer"]["large_file_hotspots"]["sample"] == []
+    assert friction["answer"]["concept_surface_hotspots"]["count"] >= 1
 
 
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:

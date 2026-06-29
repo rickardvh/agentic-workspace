@@ -9972,6 +9972,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "for quick dogfooding reports or closeout when current-session signals should be routed, recorded, dismissed, deferred, or left visibly unresolved",
     },
     {
+        "section": "improvement_intake",
+        "kind": "workspace-improvement-intake/v1",
+        "purpose": "bounded dogfooding and improvement-signal intake router without constructing the full report graph",
+        "when_to_use": "when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
+    },
+    {
+        "section": "repo_friction",
+        "kind": "workspace-repo-friction/v1",
+        "purpose": "bounded repo-friction sample and improvement pressure evidence",
+        "when_to_use": "when choosing or routing improvement targets from concrete repo-friction evidence",
+    },
+    {
         "section": "closeout_trust",
         "kind": "agentic-workspace/closeout-trust/v1",
         "purpose": "compact strict closeout gate, claim permission, proof, and residue routing posture",
@@ -12409,6 +12421,25 @@ def _run_lazy_report_section_command(
             config=config,
             cli_invoke=config.cli_invoke,
         )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "improvement_intake":
+        payload["improvement_intake"] = _improvement_intake_payload(target_root=target_root, config=config, repo_friction={})
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "repo_friction":
+        payload["repo_friction"] = repo_friction_payload(
+            target_root=target_root,
+            improvement_latitude=config.improvement_latitude,
+            improvement_latitude_source=config.improvement_latitude_source,
+            policy_payload=_improvement_latitude_payload(config.improvement_latitude),
+            boundary_test_payload=_improvement_boundary_test_payload(),
+            external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
+            incidental_finding_policy=copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["incidental_finding_policy"]),
+            validation_friction_policy=_validation_friction_payload(),
+            cli_invoke=config.cli_invoke,
+        )
+        payload["repo_friction"]["capture_shortcut"] = _friction_capture_shortcut_payload()
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_overlay":
@@ -20674,7 +20705,8 @@ def _next_safe_action_packet(
     )
     if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
         proof_required = True
-    implementation_allowed = not forbidden_actions and not skill.startswith("planning")
+    task_switch_route_choice = action == "choose-task-switch-route" and decision == "active-plan-task-switch"
+    implementation_allowed = not forbidden_actions and (task_switch_route_choice or not skill.startswith("planning"))
     completion_claim_allowed = not forbidden_actions and action not in {"choose-smallest-workflow-shape"}
     gate_result = decision or action
     read_only_allowance = _read_only_allowance_packet(
@@ -22300,6 +22332,22 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
     if "work_shape_guidance" in gate:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
+    task_switch = gate.get("task_switch_reconciliation")
+    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+        compact["task_switch_reconciliation"] = {
+            key: task_switch.get(key)
+            for key in (
+                "kind",
+                "status",
+                "summary",
+                "current_task_class",
+                "recommended_next_action",
+                "safe_routes",
+                "active_plan_protection",
+                "rule",
+            )
+            if key in task_switch
+        }
     custody_planning = gate.get("custody_planning")
     if isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable"):
         compact["custody_planning"] = {
@@ -23479,6 +23527,18 @@ def _start_tiny_payload_fast(
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
         payload["planning_safety_gate"] = planning_safety_gate
+    task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
+    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+        next_packet = task_switch.get("next_action_packet", {})
+        if isinstance(next_packet, dict):
+            payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+                surface="start",
+                decision=planning_safety_gate["decision"],
+                reason=planning_safety_gate["reason"],
+                required_next_action=planning_safety_gate["required_next_action"],
+                evidence_required=["current-task route chosen without claiming active-plan progress"],
+            )
+            payload["immediate_next_allowed_action"] = next_packet
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
     )

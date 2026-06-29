@@ -474,6 +474,77 @@ def _retrofit_active_owner_commands(*, config: WorkspaceConfig, planning_revisio
     }
 
 
+def _task_switch_reconciliation_payload(
+    *,
+    active_planning_present: bool,
+    active_plan_reliance: dict[str, Any],
+    active_summary: dict[str, Any],
+    task_text: str | None,
+    config: WorkspaceConfig,
+    planning_revision: dict[str, Any],
+) -> dict[str, Any]:
+    if not active_planning_present:
+        return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
+    if active_plan_reliance.get("status") != "not-needed-for-current-task":
+        return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
+    summary_command = _command_with_cli_invoke(command="agentic-workspace summary --target . --format json", cli_invoke=config.cli_invoke)
+    closeout_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command="agentic-workspace planning closeout --target . --proof-from last --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    text = " ".join((task_text or "").lower().split())
+    maintenance_like = any(
+        marker in text
+        for marker in ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status", "issue", "pr")
+    )
+    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
+    return {
+        "kind": "agentic-workspace/task-switch-reconciliation/v1",
+        "status": "active",
+        "summary": "Current task does not explicitly continue the active plan; keep the active plan protected and choose the current-task route deliberately.",
+        "active_execplan": active_summary.get("active_execplan", ""),
+        "current_task_class": "repo-maintenance-or-reporting" if maintenance_like else "new-explicit-task",
+        "recommended_next_action": recommended,
+        "next_action_packet": {
+            "action": "choose-task-switch-route",
+            "summary": "Explicit task differs from the active plan. Choose the current-task route deliberately; do not treat old active-plan text as the only safe path.",
+            "command": "",
+            "run": None,
+            "risk": "active-plan-task-switch",
+            "required_inputs": ["current task", "active plan boundary"],
+            "next_proof": "use implement/proof for changed paths if this becomes implementation; otherwise report bounded read-only/maintenance outcome",
+            "read_first": [summary_command],
+            "open_execplan_only_when": "the new task mutates active-plan-owned work or needs active plan ownership changed",
+        },
+        "safe_routes": [
+            {
+                "id": "continue-active-plan",
+                "command": summary_command,
+                "when": "the user intends the existing active plan to remain the current work",
+            },
+            {
+                "id": "proceed-bounded-repo-maintenance",
+                "command": "",
+                "when": "the current task is reporting, dogfooding, payload upgrade, comment handling, or other bounded maintenance",
+            },
+            {
+                "id": "reconcile-active-plan-before-implementation",
+                "command": closeout_command,
+                "when": "the new task would mutate work that conflicts with the active plan or needs its ownership changed",
+            },
+        ],
+        "implementation_allowed": True,
+        "active_plan_protection": {
+            "claim_boundary": "Do not claim active-plan progress, completion, or abandonment from this new task.",
+            "blocked_claims": ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"],
+        },
+        "rule": "An unrelated active plan is protected state, not an automatic hard block for explicit bounded maintenance or reporting.",
+    }
+
+
 def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
@@ -528,6 +599,14 @@ def _planning_safety_gate_payload(
         planning_revision=planning_revision,
         cli_invoke=config.cli_invoke,
     )
+    task_switch_reconciliation = _task_switch_reconciliation_payload(
+        active_planning_present=active_planning_present,
+        active_plan_reliance=active_plan_reliance,
+        active_summary=active_summary,
+        task_text=task_text,
+        config=config,
+        planning_revision=planning_revision,
+    )
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
@@ -556,6 +635,12 @@ def _planning_safety_gate_payload(
         reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
         required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
+    elif task_switch_reconciliation.get("status") == "active":
+        status = "attention"
+        decision = "active-plan-task-switch"
+        reason = str(task_switch_reconciliation.get("summary") or "Current task differs from the active plan; choose a safe task route.")
+        required_next_action = "choose-task-switch-route"
+        workflow_sufficient = True
     elif active_planning_present:
         status = "satisfied"
         decision = "planning-backed"
@@ -680,6 +765,7 @@ def _planning_safety_gate_payload(
         "active_planning_present": active_planning_present,
         "planning_revision": planning_revision,
         "active_plan_reliance": active_plan_reliance,
+        "task_switch_reconciliation": task_switch_reconciliation,
         "active_state_summary": active_summary,
         "issue_refs": issue_refs,
         "pr_context": {

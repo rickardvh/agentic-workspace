@@ -739,6 +739,18 @@ def _start_payload(
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
         payload["planning_safety_gate"] = planning_safety_gate
+    task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
+    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+        next_packet = task_switch.get("next_action_packet", {})
+        if isinstance(next_packet, dict):
+            payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+                surface="start",
+                decision=planning_safety_gate["decision"],
+                reason=planning_safety_gate["reason"],
+                required_next_action=planning_safety_gate["required_next_action"],
+                evidence_required=["current-task route chosen without claiming active-plan progress"],
+            )
+            payload["immediate_next_allowed_action"] = next_packet
     if not planning_safety_gate["workflow_sufficient"] and (not _is_config_posture_task(task_text)):
         repair_route = planning_safety_gate.get("repair_route", {})
         repair_command = (
