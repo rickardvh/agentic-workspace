@@ -315,11 +315,10 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     )
     assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == [
         ".agentic-workspace/local/scratch/one/repo",
-        "scratch/two/repo",
     ]
-    assert surface_classes["local_scratch_blockers"]["dry_run_command"] == ("git clean -ndx -- .agentic-workspace/local/scratch scratch")
+    assert surface_classes["local_scratch_blockers"]["dry_run_command"] == ("git clean -ndx -- .agentic-workspace/local/scratch")
     assert surface_classes["local_scratch_blockers"]["cleanup_command_after_review"] == (
-        "git clean -fdx -- .agentic-workspace/local/scratch scratch"
+        "git clean -fdx -- .agentic-workspace/local/scratch"
     )
     assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
     proof_commands = surface_classes["proof"]["commands"]

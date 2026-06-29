@@ -155,16 +155,16 @@ def test_upgrade_compacts_local_scratch_preservation_in_lifecycle_plan(tmp_path:
     assert local_summary["total_file_count"] == 12
     assert local_summary["sample_limit"] == 5
     assert local_summary["omitted_file_count"] == 7
-    assert local_summary["audit_command"] == "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local scratch"
+    assert local_summary["audit_command"] == "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local"
     assert local_summary["audit_commands"][0]["id"] == "ignored-local-only-files"
-    assert local_summary["cleanup_dry_run_command"] == "git clean -ndx -- .agentic-workspace/local scratch"
+    assert local_summary["cleanup_dry_run_command"] == "git clean -ndx -- .agentic-workspace/local"
     local_entries = [entry for entry in classifications["entries"] if entry["reason_class"] == "local-only preserved"]
     assert len(local_entries) == 5
     assert all(entry["source"] == "local-only-scan-sample" for entry in local_entries)
     assert not any(path.endswith("file-11.txt") for path in payload["lifecycle_plan"]["preserved_files"])
 
 
-def test_upgrade_compacts_ignored_local_scratch_preservation_audit_routes(tmp_path: Path, capsys) -> None:
+def test_upgrade_compacts_ignored_aw_local_scratch_preservation_audit_routes(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     subprocess.run(["git", "init"], cwd=target, text=True, capture_output=True, check=True)
@@ -180,17 +180,17 @@ def test_upgrade_compacts_ignored_local_scratch_preservation_audit_routes(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     local_summary = payload["lifecycle_plan"]["surface_classifications"]["local_only_preservation"]
-    assert local_summary["total_file_count"] == 2
+    assert local_summary["total_file_count"] == 1
     assert set(local_summary["sample_paths"]) == {
         ".agentic-workspace/local/scratch/ignored-local.txt",
-        "scratch/ignored-root.txt",
     }
+    assert "scratch" not in " ".join([local_summary["audit_command"], local_summary["cleanup_dry_run_command"]])
     audit = subprocess.run(local_summary["audit_command"].split(), cwd=target, text=True, capture_output=True, check=True)
     assert ".agentic-workspace/local/scratch/ignored-local.txt" in audit.stdout
-    assert "scratch/ignored-root.txt" in audit.stdout
+    assert "scratch/ignored-root.txt" not in audit.stdout
     cleanup = subprocess.run(local_summary["cleanup_dry_run_command"].split(), cwd=target, text=True, capture_output=True, check=True)
     assert "Would remove .agentic-workspace/local/" in cleanup.stdout
-    assert "Would remove scratch/" in cleanup.stdout
+    assert "Would remove scratch/" not in cleanup.stdout
 
 
 def test_closeout_trust_labels_latest_cleanup_closeout_evidence(tmp_path: Path, capsys) -> None:

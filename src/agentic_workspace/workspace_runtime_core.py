@@ -8229,13 +8229,12 @@ def _lifecycle_ownership_for_reason(reason_class: str) -> str:
 
 def _local_only_surfaces(*, target_root: Path) -> list[str]:
     paths: list[str] = []
-    for relative_root in (Path(".agentic-workspace") / "local", Path("scratch")):
-        local_root = target_root / relative_root
-        if not local_root.exists():
-            continue
-        for path in sorted(local_root.rglob("*")):
-            if path.is_file():
-                paths.append(path.relative_to(target_root).as_posix())
+    local_root = target_root / ".agentic-workspace" / "local"
+    if not local_root.exists():
+        return paths
+    for path in sorted(local_root.rglob("*")):
+        if path.is_file():
+            paths.append(path.relative_to(target_root).as_posix())
     return paths
 
 
@@ -8250,24 +8249,23 @@ def _local_only_preservation_summary(*, target_root: Path, paths: list[str], sam
         "omitted_file_count": max(0, len(paths) - len(sample_paths)),
         "roots": [
             ".agentic-workspace/local",
-            "scratch",
         ],
         "rule": "Local-only scratch and cache files are preserved by default; compact lifecycle JSON reports counts and samples instead of enumerating every file.",
-        "audit_command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local scratch",
+        "audit_command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local",
         "audit_commands": [
             {
                 "id": "ignored-local-only-files",
-                "command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local scratch",
-                "covers": "ignored local-only files under .agentic-workspace/local and scratch",
+                "command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local",
+                "covers": "ignored AW-local files under .agentic-workspace/local",
             },
             {
                 "id": "unignored-local-only-files",
-                "command": "git ls-files --others --exclude-standard -- .agentic-workspace/local scratch",
-                "covers": "unignored local-only files under .agentic-workspace/local and scratch",
+                "command": "git ls-files --others --exclude-standard -- .agentic-workspace/local",
+                "covers": "unignored AW-local files under .agentic-workspace/local",
             },
         ],
-        "cleanup_dry_run_command": "git clean -ndx -- .agentic-workspace/local scratch",
-        "cleanup_rule": "The cleanup route is a dry-run only and uses -x so ignored local-only roots are visible before any explicit cleanup.",
+        "cleanup_dry_run_command": "git clean -ndx -- .agentic-workspace/local",
+        "cleanup_rule": "The cleanup route is a dry-run only and uses -x so ignored AW-local files are visible before any explicit cleanup; repo-root scratch is not AW-owned by default.",
     }
 
 
