@@ -7722,7 +7722,7 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
 
 
 def _local_scratch_nested_repo_paths(*, target_root: Path) -> list[str]:
-    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH, Path("scratch")]
+    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH]
     nested_repos: list[str] = []
     for scratch_root in scratch_roots:
         absolute_root = target_root / scratch_root
@@ -7770,10 +7770,10 @@ def _payload_doctor_closure_plan(
         command=f"agentic-workspace upgrade --target {target} --dry-run --format json", cli_invoke=cli_invoke
     )
     installed_apply = _command_with_cli_invoke(command=f"agentic-workspace upgrade --target {target} --format json", cli_invoke=cli_invoke)
-    scratch_roots = [
-        relative.as_posix() for relative in (WORKSPACE_LOCAL_SCRATCH_ROOT_PATH, Path("scratch")) if (target_root / relative).exists()
-    ]
+    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()] if (target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists() else []
     scratch_scope = " ".join(scratch_roots) if scratch_roots else WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()
+    scratch_dry_run_command = f"git clean -ndx -- {scratch_scope}"
+    scratch_cleanup_command = f"git clean -fdx -- {scratch_scope}"
     source_mirror_paths = []
     if source_checkout:
         for relative in WORKSPACE_PAYLOAD_FILES:
@@ -7806,9 +7806,9 @@ def _payload_doctor_closure_plan(
             "id": "local_scratch_blockers",
             "status": "cleanup-required" if scratch_repos else "clear",
             "nested_repo_paths": scratch_repos,
-            "dry_run_command": f"git clean -nd -- {scratch_scope}",
-            "cleanup_command_after_review": f"git clean -fd -- {scratch_scope}",
-            "rule": "Use the dry-run first; the cleanup command is deliberately scoped to local scratch roots.",
+            "dry_run_command": scratch_dry_run_command,
+            "cleanup_command_after_review": scratch_cleanup_command,
+            "rule": "Use the ignored-aware dry-run first; cleanup is deliberately scoped to local scratch roots and requires explicit review.",
         },
         {
             "id": "provenance",
@@ -7855,7 +7855,7 @@ def _payload_doctor_closure_plan(
         {
             "id": "review_local_scratch_cleanup",
             "surface_class": "local_scratch_blockers",
-            "command": f"git clean -nd -- {scratch_scope}",
+            "command": scratch_dry_run_command,
             "when": "nested scratch repositories are listed",
         },
         {
@@ -7877,13 +7877,12 @@ def _payload_doctor_closure_plan(
             "next": installed_apply,
         }
     elif scratch_repos:
-        scratch_dry_run = f"git clean -nd -- {scratch_scope}"
         primary_next_action = {
             "action": "review-local-scratch-cleanup",
             "surface_class": "local_scratch_blockers",
-            "command": scratch_dry_run,
-            "run": scratch_dry_run,
-            "next": f"git clean -fd -- {scratch_scope}",
+            "command": scratch_dry_run_command,
+            "run": scratch_dry_run_command,
+            "next": scratch_cleanup_command,
         }
     elif repair_actions:
         repair_command = str(repair_actions[0].get("dry_run") or repair_actions[0].get("command") or "")
@@ -8363,10 +8362,10 @@ def _lifecycle_ownership_for_reason(reason_class: str) -> str:
 
 
 def _local_only_surfaces(*, target_root: Path) -> list[str]:
+    paths: list[str] = []
     local_root = target_root / ".agentic-workspace" / "local"
     if not local_root.exists():
-        return []
-    paths: list[str] = []
+        return paths
     for path in sorted(local_root.rglob("*")):
         if path.is_file():
             paths.append(path.relative_to(target_root).as_posix())
@@ -8384,11 +8383,23 @@ def _local_only_preservation_summary(*, target_root: Path, paths: list[str], sam
         "omitted_file_count": max(0, len(paths) - len(sample_paths)),
         "roots": [
             ".agentic-workspace/local",
-            "scratch",
         ],
         "rule": "Local-only scratch and cache files are preserved by default; compact lifecycle JSON reports counts and samples instead of enumerating every file.",
-        "audit_command": "git ls-files --others --exclude-standard -- .agentic-workspace/local scratch",
-        "cleanup_dry_run_command": "git clean -nd -- .agentic-workspace/local/scratch scratch",
+        "audit_command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local",
+        "audit_commands": [
+            {
+                "id": "ignored-local-only-files",
+                "command": "git ls-files --others --ignored --exclude-standard -- .agentic-workspace/local",
+                "covers": "ignored AW-local files under .agentic-workspace/local",
+            },
+            {
+                "id": "unignored-local-only-files",
+                "command": "git ls-files --others --exclude-standard -- .agentic-workspace/local",
+                "covers": "unignored AW-local files under .agentic-workspace/local",
+            },
+        ],
+        "cleanup_dry_run_command": "git clean -ndx -- .agentic-workspace/local",
+        "cleanup_rule": "The cleanup route is a dry-run only and uses -x so ignored AW-local files are visible before any explicit cleanup; repo-root scratch is not AW-owned by default.",
     }
 
 
@@ -17264,7 +17275,10 @@ def _report_closeout_trust_payload(
         closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
         slice_completed = slice_status in {"complete", "completed", "done", "closed", "satisfied"}
         command_owned = evidence_source.get("authority") in {"archived-planning-evidence", "retained-closeout-evidence"}
-        slice_trusted = bool(command_owned and proof_recorded and slice_completed and closure_decision)
+        relevance = _as_dict(evidence_source.get("relevance"))
+        evidence_selection = _as_dict(evidence_source.get("selection"))
+        relevance_status = str(relevance.get("status") or "relevant")
+        slice_trusted = bool(command_owned and proof_recorded and slice_completed and closure_decision and relevance_status != "unrelated")
         parent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
         parent_closure_blocked = parent_status not in {"closed", "complete", "completed", "done"}
         return {
@@ -17276,6 +17290,13 @@ def _report_closeout_trust_payload(
             "owner_kind": evidence_source.get("authority", "archived-planning-evidence"),
             "evidence_relationship": evidence_source.get("relationship")
             or ("retained-archive-evidence" if evidence_source.get("authority") == "archived-planning-evidence" else "closeout-evidence"),
+            "relevance": relevance
+            or {
+                "status": "relevant",
+                "relationship": evidence_source.get("relationship", ""),
+                "rule": "No explicit closeout evidence relevance metadata was available; treating selected evidence as historical slice evidence.",
+            },
+            "evidence_selection": evidence_selection,
             "source_plan": evidence_source.get("source_plan", ""),
             "intended_archive": evidence_source.get("intended_archive", ""),
             "retention_state": evidence_source.get("retention_state", ""),
@@ -18604,13 +18625,68 @@ def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -
     return payload
 
 
+_CLOSEOUT_EVIDENCE_RELEVANCE_PRIORITY = {
+    "current-slice": 500,
+    "latest-cleaned-plan-evidence": 450,
+    "same-lineage": 400,
+    "parent-lane": 300,
+    "older-related": 200,
+    "retained-closeout-evidence": 100,
+    "unrelated": 0,
+}
+
+
+def _closeout_evidence_lineage(payload: dict[str, Any]) -> dict[str, Any]:
+    lineage = _as_dict(payload.get("lineage"))
+    relationship = str(
+        lineage.get("relationship") or lineage.get("evidence_relationship") or payload.get("evidence_relationship") or ""
+    ).strip()
+    if not relationship:
+        retention_state = str(_as_dict(payload.get("retention")).get("state") or "").strip()
+        relationship = (
+            "latest-cleaned-plan-evidence" if retention_state == "cleanup-distilled-without-full-archive" else "retained-closeout-evidence"
+        )
+    relationship = relationship.replace("_", "-").lower()
+    if relationship in {"parent", "lane", "parent-lane-closure", "lane-closure"}:
+        relationship = "parent-lane"
+    elif relationship in {"related", "older", "older-slice", "older-related-slice"}:
+        relationship = "older-related"
+    elif relationship in {"same-lineage-latest", "lineage", "same-lineage-cleanup"}:
+        relationship = "same-lineage"
+    elif relationship in {"unrelated-retained-closeout-evidence", "historical-unrelated"}:
+        relationship = "unrelated"
+    return {
+        "relationship": relationship,
+        "lineage_id": str(lineage.get("lineage_id") or payload.get("plan_id") or "").strip(),
+        "plan_id": str(payload.get("plan_id") or "").strip(),
+        "source_plan": str(payload.get("source_plan") or "").strip(),
+        "intended_archive": str(payload.get("intended_archive") or "").strip(),
+        "rule": "Explicit closeout evidence lineage/relevance is used before mtime; mtime only orders records with the same relevance.",
+    }
+
+
+def _closeout_evidence_relevance_summary(*, lineage: dict[str, Any], mtime: float) -> dict[str, Any]:
+    relationship = str(lineage.get("relationship") or "retained-closeout-evidence")
+    priority = _CLOSEOUT_EVIDENCE_RELEVANCE_PRIORITY.get(relationship, _CLOSEOUT_EVIDENCE_RELEVANCE_PRIORITY["retained-closeout-evidence"])
+    status = "unrelated" if relationship == "unrelated" else "relevant"
+    return {
+        "status": status,
+        "relationship": relationship,
+        "priority": priority,
+        "lineage_id": lineage.get("lineage_id", ""),
+        "plan_id": lineage.get("plan_id", ""),
+        "sort_mtime": mtime,
+        "rule": "Closeout trust treats relevance as stronger than freshness; newer unrelated evidence stays historical context.",
+    }
+
+
 def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {}
     evidence_root = target_root / ".agentic-workspace" / "planning" / "closeout-evidence"
     if not evidence_root.is_dir():
         return {}
-    candidates: list[tuple[float, Path, dict[str, Any]]] = []
+    candidates: list[tuple[int, float, Path, dict[str, Any], dict[str, Any]]] = []
     target_resolved = target_root.resolve()
     for record_path in evidence_root.glob("*.closeout.json"):
         try:
@@ -18636,23 +18712,49 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
             mtime = resolved.stat().st_mtime
         except OSError:
             mtime = 0.0
-        candidates.append((mtime, resolved, payload))
+        lineage = _closeout_evidence_lineage(payload)
+        relevance = _closeout_evidence_relevance_summary(lineage=lineage, mtime=mtime)
+        candidates.append((int(relevance["priority"]), mtime, resolved, payload, relevance))
     if not candidates:
         return {}
-    mtime, record_path, payload = max(candidates, key=lambda item: item[0])
+    priority, mtime, record_path, payload, relevance = max(candidates, key=lambda item: (item[0], item[1]))
     relative = record_path.relative_to(target_resolved).as_posix()
     payload = copy.deepcopy(payload)
     retention = _as_dict(payload.get("retention"))
     retention_state = str(retention.get("state") or "").strip()
+    relationship = str(relevance.get("relationship") or "").strip()
+    candidate_summary = [
+        {
+            "path": path.relative_to(target_resolved).as_posix(),
+            "relationship": candidate_relevance.get("relationship", ""),
+            "relevance_status": candidate_relevance.get("status", ""),
+            "priority": candidate_priority,
+            "sort_mtime": candidate_mtime,
+        }
+        for candidate_priority, candidate_mtime, path, _candidate_payload, candidate_relevance in sorted(
+            candidates, key=lambda item: (item[0], item[1]), reverse=True
+        )[:5]
+    ]
     payload["_closeout_evidence_source"] = {
         "authority": "retained-closeout-evidence",
         "path": relative,
         "source_plan": str(payload.get("source_plan") or ""),
         "intended_archive": str(payload.get("intended_archive") or ""),
         "retention_state": retention_state,
-        "relationship": "latest-cleaned-plan-evidence"
-        if retention_state == "cleanup-distilled-without-full-archive"
-        else "retained-closeout-evidence",
+        "relationship": relationship,
+        "relevance": relevance,
+        "selection": {
+            "basis": "relevance-then-mtime",
+            "selected_priority": priority,
+            "candidate_count": len(candidates),
+            "newer_unrelated_count": sum(
+                1
+                for _candidate_priority, candidate_mtime, _path, _candidate_payload, candidate_relevance in candidates
+                if candidate_mtime > mtime and candidate_relevance.get("status") == "unrelated"
+            ),
+            "candidate_summary": candidate_summary,
+            "rule": "Select retained closeout evidence by explicit lineage/relevance first, then mtime within the same relevance class.",
+        },
         "sort_mtime": mtime,
         "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
         "rule": "Retained closeout evidence may inform user-facing reports when full archive retention was skipped; it does not restore active planning state.",

@@ -1,0 +1,102 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Address PR 1892 comments on AW local scratch scope",
+  "plan_id": "pr1892-comments-1890-scratch-scope",
+  "created_at": "2026-06-29T21:47:22.891278+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/pr1892-comments-1890-scratch-scope.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/pr1892-comments-1890-scratch-scope.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "pr1892-comments-1890-scratch-scope",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Address PR 1892 comments on AW local scratch scope.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Kept AW-owned local preservation/audit/cleanup routes scoped to .agentic-workspace/local by default, removed repo-root scratch from doctor local scratch blockers, and updated regressions for the revised #1890 acceptance. #1891 behavior remains unchanged from the existing PR work.",
+    "scope touched": "workspace runtime core/primitives, focused CLI/doctor tests, and this planning record.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_cli.py; tests/test_workspace_doctor_status_cli.py; planning closeout evidence.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py::test_upgrade_compacts_ignored_aw_local_scratch_preservation_audit_routes tests/test_workspace_cli.py::test_upgrade_compacts_local_scratch_preservation_in_lifecycle_plan tests/test_workspace_doctor_status_cli.py::test_doctor_compact_payload_closure_plan_names_full_repair_lane -q --tb=short; uv run python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_cli.py tests/test_workspace_doctor_status_cli.py .agentic-workspace/planning/execplans/pr1892-comments-1890-scratch-scope.plan.json --task \"Address PR #1892 comments and updated #1890 scratch scope\" --format json; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check; make maintainer-surfaces; make absolute-paths; git diff --check; make test-workspace.",
+    "result for continuation": "Code and tests are complete for the PR comment follow-up; only PR branch publication remains.",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes were limited to runtime local scratch surfaces, focused tests, and planning evidence.",
+    "proof status": "passed",
+    "intent served": "yes; root scratch is excluded from default AW local preservation/audit/cleanup routes and AW-local ignored files remain auditable.",
+    "config compliance": "AW start/implement/summary/doctor routing used; active plan created before product edits.",
+    "misinterpretation risk": "low after updated #1890 and PR comment clarified root scratch is not AW-owned by default.",
+    "follow-on decision": "No product continuation needed; leave PR unmerged."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "full current-slice proof",
+    "evidence for \"proof achieved\" state": "Focused regression tests passed; tests/test_workspace_cli.py passed 80 tests; make lint-workspace passed; make typecheck passed; runtime_mirror_consistency reported in_sync; generated command packages, maintainer surfaces, absolute paths, git diff --check, planning doctor, summary, AW implement routing, and make test-workspace all passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Address PR 1892 comments on AW local scratch scope.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Updated runtime and tests now keep repo-root scratch outside default AW-owned local preservation/cleanup/audit commands while preserving .agentic-workspace/local ignored-aware reporting and doctor cleanup scope.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The updated #1890 acceptance is implemented and validated; no merge was performed.",
+    "evidence carried forward": "Commands recorded in proof_report and execution_run; code diff narrows AW local roots to .agentic-workspace/local and focused tests prove root scratch exclusion.",
+    "reopen trigger": "A new PR comment, failing check, or issue update changes the intended ownership of repo-root scratch."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1892 follow-up changes for updated #1890 scratch ownership semantics are implemented locally and ready to push.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "this plan and generated closeout evidence",
+    "resume from": "commit/push PR branch only; do not merge",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Potential narrow GitHub issue after PR branch update: make pr_comment_delta.py decode gh output as UTF-8 on Windows or otherwise avoid locale-dependent decode failure.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

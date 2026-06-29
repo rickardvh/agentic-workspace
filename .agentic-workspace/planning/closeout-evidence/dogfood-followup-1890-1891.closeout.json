@@ -1,0 +1,113 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Fix PR 1889 follow-up issues #1890 and #1891",
+  "plan_id": "dogfood-followup-1890-1891",
+  "created_at": "2026-06-29T21:17:16.891912+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/dogfood-followup-1890-1891.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/dogfood-followup-1890-1891.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "dogfood-followup-1890-1891",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Address the post-merge PR #1889 comment by fixing #1890 and #1891 in a new PR.",
+    "hard constraints": "Do not merge; preserve compact outputs, non-destructive cleanup, and honest closeout trust boundaries.",
+    "agent may decide locally": "Helper names, compact field names, and exact relevance scoring as long as acceptance criteria are satisfied.",
+    "escalate when": "A correct fix needs destructive cleanup, broad archive-history dumps, or merge/publish action beyond opening a PR."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "#1890 fixed ignored local-only audit/cleanup routes by scanning both .agentic-workspace/local and scratch, emitting ignored-aware audit commands, and using scoped git clean -ndx dry-runs. #1891 fixed closeout_trust evidence selection by adding explicit relevance/lineage scoring before mtime and compact relevance/selection fields.",
+    "scope touched": "workspace runtime core/primitives, compact closeout reporting projection, focused workspace tests, doctor payload-closure route test, payload provenance sync, and AW plan state",
+    "changed surfaces": "upgrade lifecycle local-only preservation summary, payload doctor closure scratch cleanup route, closeout_trust retained evidence selection/projection, payload provenance, focused tests",
+    "validations run": "focused regressions; make test-workspace; make lint-workspace; AW summary; AW doctor planning; uv run pytest tests/test_workspace_cli.py -q; make typecheck; runtime mirror consistency; maintainer surfaces; generated command package check; absolute paths; structured file inventory; contract tooling; git diff --check",
+    "result for continuation": "open PR only; do not merge without explicit human instruction",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "AW start, active plan, implement proof selection, doctor payload sync, maintainer surfaces, and no-merge boundary followed. Runtime source edit reason: existing primitive bugfix for workspace runtime local-only lifecycle summaries, payload doctor closure route, and closeout_trust evidence selection/projection. Owner: workspace package runtime boundary. Source symbols/primitives: _local_only_surfaces, _local_only_preservation_summary, _payload_doctor_closure_plan, _report_closeout_trust_payload, _closeout_evidence_lineage, _recent_retained_closeout_evidence_for_report. Proof: focused regressions plus AW-required workspace proof lane. Command-generation/AW owns generated projection checks; no generated package refresh was required.",
+    "misinterpretation risk": "low; latest instruction forbids merging without explicit instruction",
+    "follow-on decision": "PR review/CI only"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Passed: focused five-test regression group; make test-workspace; uv run pytest tests/test_workspace_cli.py -q; make lint-workspace; AW summary; AW doctor planning; make typecheck; runtime_mirror_consistency status=in_sync; generate_command_packages.py --check; make maintainer-surfaces; make absolute-paths; structured file inventory; contract tooling; git diff --check."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Fix PR 1889 follow-up issues #1890 and #1891.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1890 ignored local-only files are visible through emitted audit routes and cleanup dry-run uses -x while remaining non-destructive. #1891 closeout_trust now selects by relevance before mtime and reports relevance/selection metadata; regression proves older relevant evidence beats newer unrelated evidence. PR remains the continuation surface and must not be merged without explicit instruction.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Both follow-up issues are implemented with focused regressions and the AW-required proof lane passed; merge remains explicitly out of scope.",
+    "evidence carried forward": "Proof report, branch diff, and PR body validation list.",
+    "reopen trigger": "PR review, CI failure, or explicit human instruction to broaden beyond #1890/#1891."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issues #1890 and #1891 implemented in a new branch for PR publication.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "PR review/CI; no merge authorization",
+    "post-work posterity capture": "closeout evidence retained through plan archive",
+    "resume from": "PR review only",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "#1890 fixed: ignored local-only files are covered by audit and cleanup dry-run routes.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "#1891 fixed: closeout_trust selects retained evidence by explicit relevance before mtime.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "PR review/CI; no merge authorization",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
