@@ -1916,10 +1916,16 @@ execplans = [
 
     result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
 
     assert not archived_record_path.exists()
+    assert closeout_evidence_path.exists()
+    closeout_evidence = json.loads(closeout_evidence_path.read_text(encoding="utf-8"))
+    assert closeout_evidence["kind"] == "planning-closeout-evidence/v1"
+    assert closeout_evidence["source_plan"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert closeout_evidence["retention"]["state"] == "cleanup-distilled-without-full-archive"
     assert "execplans = []" in state_text
     assert 'maturity = "closed"' not in state_text
     assert "durable_residue" not in state_text
@@ -1933,6 +1939,7 @@ execplans = [
     )
     assert summary["todo"]["queued_count"] == 0
     assert any("remove active execplan 'plan-alpha' from live planning state after archive" in action.detail for action in result.actions)
+    assert any(action.kind == "retained closeout evidence" and action.path == closeout_evidence_path for action in result.actions)
 
 
 def test_archive_execplan_retain_archive_uses_unique_path_when_archive_is_stale(tmp_path: Path) -> None:

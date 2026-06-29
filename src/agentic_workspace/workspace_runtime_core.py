@@ -8125,14 +8125,16 @@ def _lifecycle_surface_classifications_payload(
             source="summary",
             review_required_for_surface=True,
         )
-    for path in _local_only_surfaces(target_root=target_root):
+    local_only_paths = _local_only_surfaces(target_root=target_root)
+    local_only_summary = _local_only_preservation_summary(target_root=target_root, paths=local_only_paths)
+    for path in local_only_summary["sample_paths"]:
         add_entry(
             path=path,
             module="workspace",
             action="preserved",
             reason_class="local-only preserved",
             reason="Repo-local private state is preserved unless --local-only explicitly targets it.",
-            source="local-only-scan",
+            source="local-only-scan-sample",
             review_required_for_surface=False,
         )
     for path in _unsupported_legacy_surfaces(target_root=target_root):
@@ -8165,6 +8167,7 @@ def _lifecycle_surface_classifications_payload(
         "rule": "Classifications explain lifecycle output; they do not grant mutation permission.",
         "entries": entries,
         "summary_by_class": dict(sorted(summary_by_class.items())),
+        "local_only_preservation": local_only_summary,
         "detail_hint": "Use --format json for full surface classifications; text output stays compact.",
     }
 
@@ -8233,6 +8236,25 @@ def _local_only_surfaces(*, target_root: Path) -> list[str]:
         if path.is_file():
             paths.append(path.relative_to(target_root).as_posix())
     return paths
+
+
+def _local_only_preservation_summary(*, target_root: Path, paths: list[str], sample_limit: int = 5) -> dict[str, Any]:
+    sample_paths = list(paths[:sample_limit])
+    return {
+        "kind": "workspace-local-only-preservation-summary/v1",
+        "status": "present" if paths else "absent",
+        "total_file_count": len(paths),
+        "sample_limit": sample_limit,
+        "sample_paths": sample_paths,
+        "omitted_file_count": max(0, len(paths) - len(sample_paths)),
+        "roots": [
+            ".agentic-workspace/local",
+            "scratch",
+        ],
+        "rule": "Local-only scratch and cache files are preserved by default; compact lifecycle JSON reports counts and samples instead of enumerating every file.",
+        "audit_command": "git ls-files --others --exclude-standard -- .agentic-workspace/local scratch",
+        "cleanup_dry_run_command": "git clean -nd -- .agentic-workspace/local/scratch scratch",
+    }
 
 
 def _unsupported_legacy_surfaces(*, target_root: Path) -> list[str]:
@@ -17116,6 +17138,17 @@ def _report_closeout_trust_payload(
             "scope": "slice",
             "canonical_evidence": evidence_source.get("authority", "archived-planning-evidence"),
             "owner_surface": evidence_source.get("path", ""),
+            "owner_kind": evidence_source.get("authority", "archived-planning-evidence"),
+            "evidence_relationship": evidence_source.get("relationship")
+            or ("retained-archive-evidence" if evidence_source.get("authority") == "archived-planning-evidence" else "closeout-evidence"),
+            "source_plan": evidence_source.get("source_plan", ""),
+            "intended_archive": evidence_source.get("intended_archive", ""),
+            "retention_state": evidence_source.get("retention_state", ""),
+            "freshness": {
+                "last_modified": evidence_source.get("last_modified", ""),
+                "sort_mtime": evidence_source.get("sort_mtime", 0.0),
+                "rule": "Freshness is based on the selected closeout evidence record mtime, not on issue or PR state.",
+            },
             "source": evidence_source,
             "proof_recorded": proof_recorded,
             "slice_completed": slice_completed,
@@ -18474,9 +18507,17 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
     mtime, record_path, payload = max(candidates, key=lambda item: item[0])
     relative = record_path.relative_to(target_resolved).as_posix()
     payload = copy.deepcopy(payload)
+    retention = _as_dict(payload.get("retention"))
+    retention_state = str(retention.get("state") or "").strip()
     payload["_closeout_evidence_source"] = {
         "authority": "retained-closeout-evidence",
         "path": relative,
+        "source_plan": str(payload.get("source_plan") or ""),
+        "intended_archive": str(payload.get("intended_archive") or ""),
+        "retention_state": retention_state,
+        "relationship": "latest-cleaned-plan-evidence"
+        if retention_state == "cleanup-distilled-without-full-archive"
+        else "retained-closeout-evidence",
         "sort_mtime": mtime,
         "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
         "rule": "Retained closeout evidence may inform user-facing reports when full archive retention was skipped; it does not restore active planning state.",
