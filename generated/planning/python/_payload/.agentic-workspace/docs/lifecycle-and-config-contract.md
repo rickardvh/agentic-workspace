@@ -45,7 +45,7 @@ When normal work is blocked by repo-state ambiguity, interrupted bootstrap, or e
 5. **Package-local fallback**: Use module bootstrap CLIs only for package-local debugging or when the root command cannot run.
 
 ### Interrupted Handoff
-- **`llms.txt`**: Canonical external-agent entry surface.
+- **`docs/agentic-workspace-install.md`**: Public source-repo install/adopt handoff for external agents.
 - **`.agentic-workspace/bootstrap-handoff.md`**: Post-bootstrap next-action brief when judgment is still needed.
 - **`.agentic-workspace/bootstrap-handoff.json`**: Compact structured sibling to the handoff brief.
 

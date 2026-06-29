@@ -7,14 +7,6 @@ description: Run a bounded human intent-discovery dialogue before vague or high-
 
 Use this skill when a prompt is broad, vague, high-stakes, or outcome-shaped enough that silently choosing a first implementation slice could miss the user's real goal.
 
-Use it for natural-language intent elicitation, not mechanical classification. The agent owns judgment about whether the prompt is clear enough to proceed.
-
-## Trigger Conditions
-
-- The requested task, initiative, repo/system outcome, completion boundary, anti-goals, or unresolved assumptions are unclear.
-- Two plausible interpretations would produce materially different work, proof, or closure claims.
-- Existing Planning, Memory, issue, config, or system-intent evidence is stale, contradictory, unavailable, or missing in a way that can change the next safe action.
-
 ## Protocol
 
 1. Name two or three plausible interpretations, not just one inferred intent.
@@ -35,20 +27,8 @@ Use it for natural-language intent elicitation, not mechanical classification. T
 - `proceed_without_answer_when`
 - `captured_intent_after_reply`
 - `promotion_target`
-- `intent_records`
 
-Each `intent_records` entry should use the compact custody shape:
-
-- `intent_ref`
-- `level`: `task`, `initiative`, `repo`, `system`, `completion-boundary`, `anti-goal`, or `unresolved-assumption`
-- `statement`
-- `completion_boundary`
-- `anti_goals`
-- `unresolved_assumptions`
-- `provenance`
-- `freshness`
-
-Prefer `intent_custody` when compact refs, boundaries, anti-goals, provenance, and freshness are enough. Promote to Planning, Memory, an issue, or `durable_intent` only when the intent must survive as owned durable state.
+Prefer `intent_custody` when compact refs, boundaries, anti-goals, provenance, and freshness are enough. Use `unresolved-assumption` entries when uncertainty must remain visible through proof or closeout.
 
 ## Examples
 

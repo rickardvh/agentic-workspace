@@ -62,6 +62,7 @@
     "closeout_trust",
     "external_work_reconciliation",
     "external_work_delta",
+    "local_aw_state",
     "findings",
     "next_action",
     "discovery",
@@ -262,6 +263,11 @@
     "architecture_principles": {
       "type": "object",
       "description": "Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths.",
+      "additionalProperties": true
+    },
+    "local_aw_state": {
+      "type": "object",
+      "description": "Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces.",
       "additionalProperties": true
     },
     "workflow_obligations": {

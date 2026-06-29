@@ -32,9 +32,9 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
 - **Start Here**: Read `docs/agentic-workspace-install.md`.
-- **Primary Command**: `agentic-workspace init --target ./repo --modules memory`.
-- **Module Selection**: Choose the smallest explicit `--modules` set that fits, such as `memory`, `planning`, `verification`, or `planning,memory`.
-- **Fallback Only**: Use `uvx` or `pipx run` only as an explicit temporary/debug fallback when the target repo has no installed CLI yet.
+- **Primary Command**: `agentic-workspace init --target ./repo --preset full`.
+- **Guest-Mode Command**: `agentic-workspace install --target ./repo --preset full`.
+- **Optional Local Sandbox Command**: `agentic-workspace install --target ./repo --preset full --local-only`.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
 - **Orientation**: Return to the configured startup file (default `AGENTS.md`) after bootstrap is complete.
 

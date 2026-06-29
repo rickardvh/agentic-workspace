@@ -149,6 +149,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `applicable_intent.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `applicable_intent.rule` | string | no |  | Usage rule for when this projection should be consulted. |  |  |
 | `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
+| `local_aw_state` | object | yes |  | Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |

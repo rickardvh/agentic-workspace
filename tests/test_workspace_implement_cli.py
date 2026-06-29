@@ -4671,6 +4671,100 @@ def test_implement_architecture_principle_uses_structured_path_not_task_keywords
     assert packet["matched_principles"] == []
 
 
+def test_implement_architecture_principle_selector_reports_multiple_matches(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+summary = "Portable host-neutral operating intent."
+governing_intents = []
+anti_intents = []
+decision_tests = []
+confidence = "high"
+needs_review = false
+
+[[architecture_principles]]
+id = "runtime-portability"
+title = "Preserve runtime portability"
+owner = "workspace-runtime"
+summary = "Runtime behavior must remain host-neutral."
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
+
+[[architecture_principles]]
+id = "runtime-claim-boundary"
+title = "Preserve runtime claim boundary"
+owner = "workspace-runtime"
+summary = "Runtime reports must not overstate claim safety."
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Refactor runtime routing",
+                "--select",
+                "architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
+    assert packet["status"] == "attention"
+    assert packet["matched_count"] == 2
+    assert [item["id"] for item in packet["matched_principles"]] == ["runtime-portability", "runtime-claim-boundary"]
+    assert packet["closeout"]["required_claim"] == "preserved|re-scoped-by-human|unresolved"
+
+
+def test_proof_architecture_principle_selector_degrades_malformed_state(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+[[architecture_principles]
+id = "broken"
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
+    assert packet["status"] == "unavailable"
+    assert packet["matched_count"] == 0
+    assert packet["source"] == ".agentic-workspace/system-intent/intent.toml"
+    assert packet["error"]
+
+
 def test_proof_surfaces_architecture_principle_closeout_claim(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
