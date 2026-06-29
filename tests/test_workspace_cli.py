@@ -135,6 +135,100 @@ def test_upgrade_refreshes_module_upgrade_source_recorded_at(tmp_path: Path, cap
     assert "recorded_at after successful upgrade" in action["detail"]
 
 
+def test_upgrade_compacts_local_scratch_preservation_in_lifecycle_plan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    scratch_dir = target / ".agentic-workspace" / "local" / "scratch" / "run"
+    scratch_dir.mkdir(parents=True)
+    for index in range(12):
+        (scratch_dir / f"file-{index}.txt").write_text(f"scratch {index}\n", encoding="utf-8")
+
+    assert cli.main(["upgrade", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    classifications = payload["lifecycle_plan"]["surface_classifications"]
+    local_summary = classifications["local_only_preservation"]
+    assert local_summary["status"] == "present"
+    assert local_summary["total_file_count"] == 12
+    assert local_summary["sample_limit"] == 5
+    assert local_summary["omitted_file_count"] == 7
+    assert local_summary["audit_command"] == "git ls-files --others --exclude-standard -- .agentic-workspace/local scratch"
+    local_entries = [entry for entry in classifications["entries"] if entry["reason_class"] == "local-only preserved"]
+    assert len(local_entries) == 5
+    assert all(entry["source"] == "local-only-scan-sample" for entry in local_entries)
+    assert not any(path.endswith("file-11.txt") for path in payload["lifecycle_plan"]["preserved_files"])
+
+
+def test_closeout_trust_labels_latest_cleanup_closeout_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    archive_path = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "older.plan.json"
+    closeout_path = target / ".agentic-workspace" / "planning" / "closeout-evidence" / "latest.closeout.json"
+    proof_report = {
+        "validation proof": "passed",
+        "proof achieved now": "yes",
+        'evidence for "proof achieved" state': "focused proof passed",
+    }
+    closure_check = {
+        "slice status": "completed",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close",
+    }
+    _write(
+        archive_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "title": "Older Archive",
+                "proof_report": proof_report,
+                "closure_check": closure_check,
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        closeout_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "title": "Latest Cleanup",
+                "plan_id": "latest",
+                "created_at": "2026-06-29T20:00:00+00:00",
+                "source_plan": ".agentic-workspace/planning/execplans/latest.plan.json",
+                "intended_archive": ".agentic-workspace/planning/execplans/archive/latest.plan.json",
+                "retention": {
+                    "state": "cleanup-distilled-without-full-archive",
+                    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+                    "canonical_evidence": "retained closeout evidence",
+                },
+                "proof_report": proof_report,
+                "closure_check": closure_check,
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.utime(archive_path, (1000, 1000))
+    os.utime(closeout_path, (2000, 2000))
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert evidence["trust"] == "normal"
+    assert evidence["owner_surface"] == ".agentic-workspace/planning/closeout-evidence/latest.closeout.json"
+    assert evidence["owner_kind"] == "retained-closeout-evidence"
+    assert evidence["evidence_relationship"] == "latest-cleaned-plan-evidence"
+    assert evidence["source_plan"] == ".agentic-workspace/planning/execplans/latest.plan.json"
+    assert evidence["intended_archive"] == ".agentic-workspace/planning/execplans/archive/latest.plan.json"
+    assert evidence["retention_state"] == "cleanup-distilled-without-full-archive"
+    assert evidence["freshness"]["sort_mtime"] == 2000
+
+
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")

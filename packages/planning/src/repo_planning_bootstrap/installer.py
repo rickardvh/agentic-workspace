@@ -14080,6 +14080,7 @@ def archive_execplan(
     retention_skip_reason = (
         "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead"
     )
+    cleanup_evidence_reason = "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive"
     archive_record = _compact_closeout_archive_record(closeout_record)
 
     if retain_archive:
@@ -14245,7 +14246,7 @@ def archive_execplan(
             if plan_path != record_path:
                 result.add("would remove", plan_path, "remove active Markdown view")
         else:
-            if archive_retention_skipped:
+            if archive_retention_skipped or apply_cleanup:
                 result.add("would create", closeout_evidence_path, "compact retained closeout evidence for reporting")
             if record_path.exists():
                 result.add("would remove", record_path, "remove completed execplan after closeout distillation")
@@ -14272,7 +14273,7 @@ def archive_execplan(
         if plan_path.exists() and plan_path != record_path:
             plan_path.unlink()
     else:
-        if archive_retention_skipped:
+        if archive_retention_skipped or apply_cleanup:
             closeout_evidence_path = _unique_closeout_evidence_record_path(closeout_evidence_path)
             closeout_evidence_record = _compact_closeout_archive_record(
                 _closeout_evidence_record(
@@ -14280,7 +14281,8 @@ def archive_execplan(
                     plan_path=plan_path,
                     target_root=target_root,
                     intended_archive_path=destination_record,
-                    reason=retention_skip_reason,
+                    reason=retention_skip_reason if archive_retention_skipped else cleanup_evidence_reason,
+                    retention_state="archive-retention-skipped" if archive_retention_skipped else "cleanup-distilled-without-full-archive",
                 )
             )
             closeout_evidence_size_warning = _closeout_evidence_size_guardrail_warning(
@@ -14321,7 +14323,7 @@ def archive_execplan(
     if retain_archive:
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     else:
-        if archive_retention_skipped:
+        if archive_retention_skipped or apply_cleanup:
             if closeout_evidence_retention_skipped:
                 result.add("retained closeout evidence skipped", closeout_evidence_path, "closeout evidence exceeded size guardrail")
             else:
@@ -14374,6 +14376,7 @@ def _closeout_evidence_record(
     target_root: Path,
     intended_archive_path: Path,
     reason: str,
+    retention_state: str = "archive-retention-skipped",
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "kind": "planning-closeout-evidence/v1",
@@ -14383,12 +14386,12 @@ def _closeout_evidence_record(
         "source_plan": plan_path.relative_to(target_root).as_posix(),
         "intended_archive": intended_archive_path.relative_to(target_root).as_posix(),
         "retention": {
-            "state": "archive-retention-skipped",
+            "state": retention_state,
             "reason": reason,
             "canonical_evidence": "retained closeout evidence",
             "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
             "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
-            "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive exceeds inventory size guardrails.",
+            "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped.",
         },
     }
     for section in (

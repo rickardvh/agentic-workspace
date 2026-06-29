@@ -1,0 +1,107 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Fix dogfooding issues #1880 then #1882",
+  "plan_id": "dogfood-issues-1880-1882",
+  "created_at": "2026-06-29T20:40:49.231504+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/dogfood-issues-1880-1882.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/dogfood-issues-1880-1882.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "dogfood-issues-1880-1882",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Fix dogfooding issues #1880 then #1882.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "#1880 was fixed first by compacting lifecycle local-only scratch preservation into counts, samples, omitted count, audit command, and scoped cleanup dry-run command. #1882 was fixed second by retaining compact closeout evidence on cleanup and exposing owner, relationship, retention state, source plan, intended archive, and freshness in closeout_trust.",
+    "scope touched": "workspace runtime lifecycle/report helpers, planning archive helper, compact reporting projection, focused tests, and active plan metadata",
+    "changed surfaces": "upgrade/doctor lifecycle classifications, planning archive closeout-evidence retention, closeout_trust report payload, compact report projection, workspace and planning tests",
+    "validations run": "focused tests, AW implement proof lane, planning/workspace lint and tests, typechecks, doctor, payload/maintainer surfaces, runtime mirror consistency, contract tooling, structured file inventory, absolute paths, and git diff check",
+    "result for continuation": "no continuation required",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "AW start, implement, doctor, maintainer-surface, generated-projection, and plan closeout workflow followed. Path authority resolved: packages/planning/src/repo_planning_bootstrap/installer.py is an inventory-backed planning runtime primitive edit for archive_execplan/_closeout_evidence_record; source_symbol_or_primitive=archive_execplan and _closeout_evidence_record; edit_reason=existing primitive bugfix/new retained evidence behavior for #1882; proof=planning archive regression plus make test-planning/lint/typecheck. Workspace runtime edits are existing primitive bugfixes for lifecycle surface classifications and closeout_trust report helpers. Command-generation owns generated CLI projections and was checked with generate_command_packages.py --check.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Passed: focused workspace regressions for #1880/#1882; focused planning archive regression; ruff check on touched Python files; generate_command_packages.py --check; AW summary; AW doctor planning; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; make typecheck-planning; make typecheck; runtime_mirror_consistency report status=in_sync; make maintainer-surfaces; contract tooling; structured file inventory; make absolute-paths; git diff --check."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Fix dogfooding issues #1880 then #1882.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1880 lifecycle upgrade JSON is compact for local-only scratch preservation while preserving audit and cleanup commands. #1882 closeout_trust distinguishes latest cleanup-retained evidence from older archive evidence and carries owner/freshness fields. Both have focused tests and full AW-selected proof.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Both ordered issue fixes are implemented with focused regressions and the broad AW-selected proof lane passed.",
+    "evidence carried forward": "Validation commands listed in proof_report and git diff for touched files.",
+    "reopen trigger": "Reopen only if PR review or CI finds a regression in lifecycle local-only scratch summaries or closeout_trust evidence ownership/freshness."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issues #1880 and #1882 fixed in order.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "closeout evidence retained through plan archive",
+    "resume from": "no resume needed",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "#1880 fixed: upgrade/doctor lifecycle JSON now summarizes local-only scratch preservation instead of enumerating every local scratch file.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "#1882 fixed: closeout_trust now labels latest cleanup-retained closeout evidence and preserves compact evidence during completed-plan cleanup.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
