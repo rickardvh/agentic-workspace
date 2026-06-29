@@ -14774,6 +14774,9 @@ def _copy_payload(
         if existed and not force:
             result.add("skipped", destination, "already present")
             continue
+        if existed and _files_match(source, destination):
+            result.add("current", destination, "already matches managed payload")
+            continue
         if result.dry_run:
             result.add("would copy" if not existed else "would overwrite", destination, source.as_posix())
             continue
@@ -14799,6 +14802,9 @@ def _copy_bundled_skills(*, target_root: Path, result: InstallResult, conservati
             continue
         if existed and not force:
             result.add("skipped", destination, "already present")
+            continue
+        if existed and _files_match(source, destination):
+            result.add("current", destination, "already matches managed planning skill")
             continue
         if result.dry_run:
             result.add("would copy" if not existed else "would overwrite", destination, source.as_posix())

@@ -135,6 +135,29 @@ def test_upgrade_refreshes_module_upgrade_source_recorded_at(tmp_path: Path, cap
     assert "recorded_at after successful upgrade" in action["detail"]
 
 
+def test_upgrade_is_idempotent_for_managed_planning_skills(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json", "--non-interactive"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["upgrade", "--target", str(target), "--format", "json", "--non-interactive"]) == 0
+    capsys.readouterr()
+    assert cli.main(["upgrade", "--target", str(target), "--format", "json", "--non-interactive"]) == 0
+    second = json.loads(capsys.readouterr().out)
+    assert cli.main(["upgrade", "--target", str(target), "--dry-run", "--format", "json", "--non-interactive"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)
+
+    assert second["updated_managed"] == []
+    assert dry_run["updated_managed"] == []
+    planning_report = next(report for report in dry_run["reports"] if report["module"] == "planning")
+    assert any(
+        action["kind"] == "current" and "already matches managed planning skill" in action["detail"]
+        for action in planning_report["actions"]
+    )
+
+
 def test_upgrade_compacts_local_scratch_preservation_in_lifecycle_plan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
