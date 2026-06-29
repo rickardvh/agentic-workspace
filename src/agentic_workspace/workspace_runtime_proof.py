@@ -1433,6 +1433,11 @@ def _domain_manual_proof_obligations(domain_lanes: list[dict[str, Any]]) -> list
                 "purpose": str(domain.get("purpose") or "Host-declared domain proof lane"),
                 "review_owner": str(domain.get("owner") or ""),
                 "expected_evidence": manual_evidence,
+                **(
+                    {"expected_evidence_concepts": lane["evidence_concept_usage"]}
+                    if isinstance(lane.get("evidence_concept_usage"), dict)
+                    else {}
+                ),
                 "missing_evidence": manual_evidence,
                 "stale_evidence": [],
                 "steps": [],
@@ -1444,6 +1449,83 @@ def _domain_manual_proof_obligations(domain_lanes: list[dict[str, Any]]) -> list
             }
         )
     return obligations
+
+
+def _evidence_concept_usage_for_labels(*, labels: list[str], verification: dict[str, Any]) -> dict[str, Any]:
+    concepts = verification.get("evidence_concepts", {}) if isinstance(verification, dict) else {}
+    concepts = concepts if isinstance(concepts, dict) else {}
+    core_by_id = {
+        str(item.get("id", "")).strip(): item
+        for item in _list_payload(concepts.get("core"))
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    }
+    declared = concepts.get("declared_host_by_id", {})
+    declared = declared if isinstance(declared, dict) else {}
+    used: list[dict[str, Any]] = []
+    degraded: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw_label in labels:
+        label = str(raw_label).strip()
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        if label in core_by_id:
+            used.append(dict(core_by_id[label]))
+        elif label.startswith("host:") and label in declared and isinstance(declared[label], dict):
+            used.append(dict(declared[label]))
+        elif label.startswith("host:"):
+            degraded.append(
+                {
+                    "id": label,
+                    "state": "undeclared-host-concept",
+                    "reason": "Declare this host evidence concept under .agentic-workspace/verification/manifest.toml [evidence_concepts] before relying on it for proof or closeout output.",
+                }
+            )
+        else:
+            degraded.append(
+                {
+                    "id": label,
+                    "state": "legacy-unclassified-label",
+                    "reason": "Use a core concept or a declared host:<term> concept for machine-readable proof semantics.",
+                }
+            )
+    return {
+        "used": used,
+        "degraded": degraded,
+        "status": "attention" if degraded else "declared" if used else "none",
+    }
+
+
+def _annotate_domain_lane_evidence_concepts(*, domain_lanes: list[dict[str, Any]], verification: dict[str, Any]) -> list[dict[str, Any]]:
+    annotated: list[dict[str, Any]] = []
+    for lane in domain_lanes:
+        manual_evidence = [str(item).strip() for item in _list_payload(lane.get("manual_evidence")) if str(item).strip()]
+        evidence_concepts = [str(item).strip() for item in _list_payload(lane.get("evidence_concepts")) if str(item).strip()]
+        usage = _evidence_concept_usage_for_labels(labels=[*manual_evidence, *evidence_concepts], verification=verification)
+        next_lane = {**lane, "evidence_concept_usage": usage}
+        if isinstance(next_lane.get("domain_lane"), dict):
+            next_lane["domain_lane"] = {**next_lane["domain_lane"], "evidence_concept_usage": usage}
+        annotated.append(next_lane)
+    return annotated
+
+
+def _degraded_domain_lane_evidence_concepts(domain_lanes: list[dict[str, Any]]) -> list[dict[str, str]]:
+    degraded: list[dict[str, str]] = []
+    for lane in domain_lanes:
+        usage = lane.get("evidence_concept_usage", {})
+        usage = usage if isinstance(usage, dict) else {}
+        for item in _list_payload(usage.get("degraded")):
+            if not isinstance(item, dict):
+                continue
+            degraded.append(
+                {
+                    "lane": str(lane.get("id", "")),
+                    "id": str(item.get("id", "")),
+                    "state": str(item.get("state", "")),
+                    "reason": str(item.get("reason", "")),
+                }
+            )
+    return degraded
 
 
 def _proof_decision_packet(
@@ -1493,6 +1575,11 @@ def _proof_decision_packet(
                 "manual_evidence": [str(item) for item in _list_payload(lane.get("manual_evidence"))],
                 "review_aids": [str(item) for item in _list_payload(lane.get("review_aids"))],
                 "evidence_concepts": [str(item) for item in _list_payload(lane.get("evidence_concepts"))],
+                **(
+                    {"evidence_concept_usage": lane["evidence_concept_usage"]}
+                    if isinstance(lane.get("evidence_concept_usage"), dict)
+                    else {}
+                ),
                 "claim_boundary": str(lane.get("claim_boundary", "")),
                 "route_authority": authority,
                 **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
@@ -1504,6 +1591,7 @@ def _proof_decision_packet(
         int(active_assurance_requirements.get("active_count", 0) or 0) if isinstance(active_assurance_requirements, dict) else 0
     )
     verification_active = int(verification.get("active_count", 0) or 0) if isinstance(verification, dict) else 0
+    degraded_domain_concepts = _degraded_domain_lane_evidence_concepts(selected_lanes)
     blockers: list[str] = []
     if required_commands:
         blockers.append("required proof commands have not been recorded as passed")
@@ -1519,6 +1607,8 @@ def _proof_decision_packet(
         blockers.append("active assurance requirements need closeout evidence or waiver")
     if verification_active and manual_required:
         blockers.append("Verification evidence remains missing or stale")
+    if degraded_domain_concepts:
+        blockers.append("domain proof lane contains undeclared or unclassified evidence concepts")
     if host_policy_blocked_commands:
         safe_claim_state = "human-waiver-required"
     elif manual_required:
@@ -1550,6 +1640,7 @@ def _proof_decision_packet(
             "blockers": blockers,
             "unavailable_commands": unavailable_commands,
             "host_policy_blocked_commands": host_policy_blocked_commands,
+            "degraded_evidence_concepts": degraded_domain_concepts,
             "proof_execution_evidence_status": str(proof_execution_evidence.get("status", "")),
         },
         "safe_claim_now": {
@@ -1841,6 +1932,7 @@ def _proof_selection_for_changed_paths(
             }
         )
     domain_lanes = _host_domain_proof_lanes_for_changed_paths(config=config, changed_paths=changed_paths, task_text=task_text)
+    domain_lanes = _annotate_domain_lane_evidence_concepts(domain_lanes=domain_lanes, verification=verification)
     selected_lanes.extend(active_plan_lanes)
     selected_lanes.extend(concern_lanes)
     selected_lanes.extend(requirement_lanes)
@@ -2075,6 +2167,7 @@ def _proof_selection_for_changed_paths(
             "manual_evidence": _list_payload(lane.get("manual_evidence")),
             "review_aids": _list_payload(lane.get("review_aids")),
             "evidence_concepts": _list_payload(lane.get("evidence_concepts")),
+            **({"evidence_concept_usage": lane["evidence_concept_usage"]} if isinstance(lane.get("evidence_concept_usage"), dict) else {}),
             "claim_boundary": str(lane.get("claim_boundary", "")),
             "authority_refs": _list_payload(lane.get("authority_refs")),
         }
@@ -2317,6 +2410,7 @@ def _proof_selection_for_changed_paths(
                 **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
                 **({"manual_evidence": lane["manual_evidence"]} if lane.get("manual_evidence") else {}),
                 **({"evidence_concepts": lane["evidence_concepts"]} if lane.get("evidence_concepts") else {}),
+                **({"evidence_concept_usage": lane["evidence_concept_usage"]} if lane.get("evidence_concept_usage") else {}),
                 **({"claim_boundary": lane["claim_boundary"]} if lane.get("claim_boundary") else {}),
                 **({"authority_refs": lane["authority_refs"]} if lane.get("authority_refs") else {}),
                 **({"requirement_id": lane["requirement_id"]} if lane.get("requirement_id") else {}),

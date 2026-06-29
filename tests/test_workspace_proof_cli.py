@@ -2919,6 +2919,17 @@ claim_boundary = "access-control-proof-required-before-full-claim"
 owner = "security"
 """,
     )
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[evidence_concepts."host:access_matrix"]
+title = "Access Matrix"
+meaning = "Host-owned role-to-permission review matrix."
+owner = "security"
+""",
+    )
     _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
 
     assert (
@@ -2942,9 +2953,59 @@ owner = "security"
     domain = next(lane for lane in packet["selected_lanes"] if lane["id"] == "domain:access_control")
     assert domain["domain_lane"]["source"] == ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
     assert domain["manual_evidence"] == ["host:access_matrix"]
+    assert domain["evidence_concept_usage"]["used"][0]["id"] == "host:access_matrix"
+    assert domain["evidence_concept_usage"]["degraded"] == []
     assert domain["claim_boundary"] == "access-control-proof-required-before-full-claim"
     assert domain["route_authority"]["authority"] == "repo-owned-domain-proof-lane"
     assert packet["safe_claim_now"]["state"] == "manual-review-required"
+
+
+def test_domain_proof_lane_undeclared_host_concepts_degrade(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.access_control]
+purpose = "Access-control changes need domain proof and review evidence."
+applies_to_paths = ["services/auth/**"]
+manual_evidence = ["host:access_matrix"]
+evidence_concepts = ["host:access_matrix"]
+owner = "security"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    domain = next(lane for lane in packet["selected_lanes"] if lane["id"] == "domain:access_control")
+    usage = domain["evidence_concept_usage"]
+    assert usage["used"] == []
+    assert usage["degraded"][0]["id"] == "host:access_matrix"
+    assert usage["degraded"][0]["state"] == "undeclared-host-concept"
+    assert "domain proof lane contains undeclared or unclassified evidence concepts" in packet["missing_or_unresolved"]["blockers"]
+    assert packet["missing_or_unresolved"]["degraded_evidence_concepts"][0]["lane"] == "domain:access_control"
 
 
 def test_proof_decision_packet_includes_architecture_pressure(tmp_path: Path, capsys) -> None:
