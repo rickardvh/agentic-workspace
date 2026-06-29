@@ -379,6 +379,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "owner_surface",
                     "owner_kind",
                     "evidence_relationship",
+                    "relevance",
+                    "evidence_selection",
                     "source_plan",
                     "intended_archive",
                     "retention_state",
