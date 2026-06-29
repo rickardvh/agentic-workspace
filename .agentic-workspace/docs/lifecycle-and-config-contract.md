@@ -5,10 +5,10 @@ This contract defines how the workspace is initialized, configured, and recovere
 ## 1. Initialization Lifecycle
 
 ### Default Behavior
-- `agentic-workspace init`: Bootstraps the repo with selected modules such as `memory`, `planning`, `verification`, or `planning,memory`.
+- `agentic-workspace init`: Bootstraps the repo with selected modules (`memory`, `planning`, or `full`).
 - [`.agentic-workspace/docs/installer-behavior.md`](installer-behavior.md) for payload resolution and development mirroring rules.
 - [`.agentic-workspace/docs/capability-aware-execution.md`](capability-aware-execution.md) for how the installer configures model-specific execution.
-- **User Intent**: The selected module set (`--modules`) determines the initial module set and configuration.
+- **User Intent**: The selected preset (`--preset`) determines the initial module set and configuration.
 - **Mode Selection**: The CLI automatically chooses a lifecycle mode (Clean install, Conservative adopt, or High-ambiguity adopt) based on existing repo state.
 
 ### High-Ambiguity Signals

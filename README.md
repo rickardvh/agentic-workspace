@@ -112,3 +112,12 @@ For installed surfaces and ownership boundaries, see [`docs/package/installed-su
 ## Source checkout note
 
 If you are working on Agentic Workspace itself, follow [`AGENTS.md`](AGENTS.md) and the [`maintainer documentation`](docs/maintainer/contributor-playbook.md). This README describes the shipped package and ordinary adoption path, not the full source-checkout workflow.
+
+For agent maintainers, the primary operating path is `AGENTS.md`, active execplan, and `docs/maintainer/contributor-playbook.md`.
+
+Default startup path for an agent maintainer:
+
+1. Read [`AGENTS.md`](AGENTS.md).
+2. Use `uv run python scripts/run_agentic_workspace.py start --task "<task>" --format json` before non-trivial source-checkout work.
+3. Use `uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task "<task>" --format json` when changed paths are already known.
+4. Open active planning state or package-local instructions only when the compact command output routes you there.

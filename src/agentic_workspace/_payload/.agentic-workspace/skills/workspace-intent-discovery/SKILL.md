@@ -12,7 +12,7 @@ Use this skill when a prompt is broad, vague, high-stakes, or outcome-shaped eno
 1. Name two or three plausible interpretations, not just one inferred intent.
 2. Ask one compact question that captures why the work matters, desired outcome, non-goals, and an acceptable first slice.
 3. If the user does not answer and progress is still safe, proceed only with stated assumptions and visible uncertainty.
-4. Carry the clarified result into the smallest existing surface: `task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue.
+4. Carry the clarified result into the smallest existing surface: `task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue, including a `completion-boundary` when closure could otherwise be ambiguous.
 5. Stop the dialogue after one bounded clarification unless the user's answer exposes a real safety, authority, or scope blocker.
 
 ## Output Shape
@@ -27,6 +27,8 @@ Use this skill when a prompt is broad, vague, high-stakes, or outcome-shaped eno
 - `proceed_without_answer_when`
 - `captured_intent_after_reply`
 - `promotion_target`
+
+Prefer `intent_custody` when compact refs, boundaries, anti-goals, provenance, and freshness are enough. Use `unresolved-assumption` entries when uncertainty must remain visible through proof or closeout.
 
 ## Examples
 
