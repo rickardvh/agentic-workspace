@@ -3120,6 +3120,141 @@ proof_profiles = ["runtime_contract"]
     assert "domain:runtime_contract" in lane_ids
 
 
+def test_local_high_risk_overlay_shapes_proof_decision_with_provenance(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[high_risk_overlay.source_maps.auth_docs]
+applies_to_paths = ["services/auth/**"]
+authority_refs = ["SECURITY.md#auth", "docs/adr/auth-boundary.md"]
+required_sources = ["docs/risk/auth-risk-register.md"]
+manual_evidence = ["host:auth-risk-review"]
+review_aids = ["Confirm auth ADR still matches changed code."]
+claim_boundary = "auth-source-map-review"
+impact = "human-review-only"
+
+[high_risk_overlay.validation_profiles.security_sensitive]
+category = "security-sensitive"
+applies_to_paths = ["services/auth/**"]
+required_commands = ["python -c \\"print('security validation')\\""]
+manual_checks = ["Review auth threat-model delta."]
+claim_boundary = "security-validation-profile"
+impact = "blocking"
+
+[high_risk_overlay.ci_validation.github_actions]
+applies_to_paths = ["services/auth/**"]
+validation_state = "ci_unavailable"
+local_substitute_commands = ["python -c \\"print('local substitute')\\""]
+local_substitute_policy = "human-review-only"
+claim_boundary = "local-substitute-is-not-ci"
+
+[high_risk_overlay.templates.security_issue]
+applies_to_paths = ["services/auth/**"]
+host = "github"
+kind = "issue"
+paths = [".github/ISSUE_TEMPLATE/security.yml"]
+headings = ["Risk", "Evidence", "Reviewer"]
+state = "missing"
+impact = "blocking"
+
+[high_risk_overlay.guardrails.synthetic_auth_data]
+applies_to_paths = ["services/auth/**"]
+sensitive_data = ["production tokens", "customer emails"]
+synthetic_fixture_guidance = ["Use example.com addresses.", "Use placeholder credentials."]
+impact = "claim-limiting"
+
+[high_risk_overlay.unresolved_questions.legal_review]
+applies_to_paths = ["services/auth/**"]
+category = "human-review-required"
+question = "Does this auth change require legal/security review before merge?"
+owner = "security"
+residue_route = "human-review"
+reason = "local high-risk overlay declares auth changes review-sensitive"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    overlay = packet["local_high_risk_overlay"]
+    assert overlay["status"] == "active"
+    assert overlay["active_count"] == 6
+    source_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-source:auth_docs")
+    assert source_lane["route_authority"]["authority"] == "local-only-high-risk-overlay"
+    assert source_lane["local_overlay"]["source_layer"] == "repo-local-override"
+    assert "SECURITY.md#auth" in source_lane["commands"] or source_lane["manual_evidence"] == ["host:auth-risk-review"]
+    validation_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-validation:security_sensitive")
+    assert validation_lane["validation_profile"]["category"] == "security-sensitive"
+    assert "python -c \"print('security validation')\"" in validation_lane["commands"]
+    unresolved = packet["missing_or_unresolved"]
+    assert "validation-state:ci_unavailable" in unresolved["local_overlay_blockers"]
+    assert "local-substitute-policy:human-review-only" in unresolved["local_overlay_blockers"]
+    assert "template-preservation:missing" in unresolved["local_overlay_blockers"]
+    assert "guardrail:claim-limiting" in unresolved["local_overlay_blockers"]
+    assert "unresolved-question:human-review-required" in unresolved["local_overlay_blockers"]
+    assert packet["safe_claim_now"]["state"] == "human-waiver-required"
+
+
+def test_local_high_risk_overlay_no_match_stays_out_of_tiny_proof(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[high_risk_overlay.guardrails.auth_data]
+applies_to_paths = ["services/auth/**"]
+sensitive_data = ["production token"]
+impact = "blocking"
+""",
+    )
+    _write(tmp_path / "docs" / "readme.md", "# Docs\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "docs/readme.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload.get("high_risk_overlay") is None
+
+
 def test_high_assurance_closeout_posture_projects_missing_and_non_applicable_states(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)

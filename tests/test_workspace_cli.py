@@ -2479,6 +2479,51 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
 
 
+def test_local_high_risk_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
+    absent = json.loads(capsys.readouterr().out)["answer"]
+    assert absent["status"] == "absent"
+
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[high_risk_overlay.guardrails.fixtures]
+applies_to_paths = ["tests/fixtures/**"]
+sensitive_data = ["real customer email"]
+synthetic_fixture_guidance = ["Use example.com addresses."]
+impact = "claim-limiting"
+unsupported_policy_override = true
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
+    configured = json.loads(capsys.readouterr().out)["answer"]
+    assert configured["status"] == "configured"
+    assert configured["configured_count"] == 1
+    assert configured["sections"]["guardrails"][0]["source_layer"] == "repo-local-override"
+    assert "unsupported_policy_override" in configured["warnings"][0]
+    assert "checked-in host policy" in configured["authority_boundary"]["rule"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
+    projection = json.loads(capsys.readouterr().out)["answer"]
+    overlay_row = next(row for row in projection["facts"] if row["field"] == "high_risk_overlay.*")
+    assert overlay_row["projection_status"] in {"active", "selector-backed"}
+    assert "local_high_risk_overlay" in overlay_row["ordinary_path_routes"][0]
+
+
 def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

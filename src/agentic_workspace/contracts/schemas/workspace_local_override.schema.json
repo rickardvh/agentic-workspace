@@ -129,6 +129,37 @@
       "additionalProperties": false,
       "description": "Machine-local memory opt-in and path configuration."
     },
+    "high_risk_overlay": {
+      "type": "object",
+      "properties": {
+        "source_maps": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only path or task mappings to host-owned authority refs, sources, proof profiles, and review expectations."
+        },
+        "validation_profiles": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only validation profile mappings for changed paths or task markers."
+        },
+        "ci_validation": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only CI availability and substitute-validation declarations."
+        },
+        "templates": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only issue or PR template preservation requirements for API-created work items."
+        },
+        "guardrails": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only sensitive-data and synthetic-fixture guardrails."
+        },
+        "unresolved_questions": {
+          "$ref": "#/$defs/overlay_items",
+          "description": "Local-only unresolved assumption/question classifications for high-risk closeout."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Machine-local high-risk workflow overlay. It may shape the acting checkout workflow but is not checked-in host policy."
+    },
     "delegation_targets": {
       "type": "object",
       "patternProperties": {
@@ -316,6 +347,203 @@
       },
       "additionalProperties": false,
       "description": "Named local delegation targets available to this runtime."
+    }
+  },
+  "$defs": {
+    "string_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "One non-empty local overlay value."
+      },
+      "description": "List of non-empty strings used by local-only overlay records."
+    },
+    "overlay_items": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "type": "object",
+          "properties": {
+            "applies_to_paths": {
+              "$ref": "#/$defs/string_list",
+              "description": "Repository-relative glob patterns that activate this local overlay item for changed paths."
+            },
+            "applies_to_task_markers": {
+              "$ref": "#/$defs/string_list",
+              "description": "Case-insensitive task text markers that activate this local overlay item."
+            },
+            "authority_refs": {
+              "$ref": "#/$defs/string_list",
+              "description": "Host-owned authority references that explain why this overlay exists."
+            },
+            "required_sources": {
+              "$ref": "#/$defs/string_list",
+              "description": "Local source-of-truth references that should be consulted before claims are made."
+            },
+            "review_owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local review owner label for this overlay item."
+            },
+            "review_aids": {
+              "$ref": "#/$defs/string_list",
+              "description": "Optional local references, commands, or notes that help the reviewer evaluate the work."
+            },
+            "proof_profiles": {
+              "$ref": "#/$defs/string_list",
+              "description": "Proof profile labels this overlay item contributes when it matches current work."
+            },
+            "required_commands": {
+              "$ref": "#/$defs/string_list",
+              "description": "Validation commands required by this local overlay item when it matches."
+            },
+            "manual_evidence": {
+              "$ref": "#/$defs/string_list",
+              "description": "Manual evidence handles or records required before making bounded claims."
+            },
+            "optional_commands": {
+              "$ref": "#/$defs/string_list",
+              "description": "Optional validation commands that may improve confidence but are not required by this overlay item."
+            },
+            "manual_checks": {
+              "$ref": "#/$defs/string_list",
+              "description": "Manual checks the acting agent should record or route to a reviewer."
+            },
+            "unavailable_routes": {
+              "$ref": "#/$defs/string_list",
+              "description": "Named CI or validation routes that are unavailable for this checkout."
+            },
+            "validation_state": {
+              "type": "string",
+              "enum": [
+                "ci_failed",
+                "ci_pending",
+                "ci_skipped",
+                "ci_not_run",
+                "ci_unavailable",
+                "quota_exhausted",
+                "logs_unavailable",
+                "local_substitute"
+              ],
+              "description": "Current CI or validation availability state for this local overlay item."
+            },
+            "local_substitute_commands": {
+              "$ref": "#/$defs/string_list",
+              "description": "Local substitute commands available when host CI or another validation route is unavailable."
+            },
+            "local_substitute_policy": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "sufficient-for-bounded-claim",
+                "insufficient",
+                "human-review-only"
+              ],
+              "description": "How local substitute validation may support or limit completion claims."
+            },
+            "host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Host system name for a template or work-item preservation rule."
+            },
+            "kind": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Host work-item or artifact kind affected by this overlay item."
+            },
+            "paths": {
+              "$ref": "#/$defs/string_list",
+              "description": "Repository-relative template or artifact paths that should be preserved."
+            },
+            "headings": {
+              "$ref": "#/$defs/string_list",
+              "description": "Template headings expected to remain available for API-created work items."
+            },
+            "required_fields": {
+              "$ref": "#/$defs/string_list",
+              "description": "Template fields expected to remain available for API-created work items."
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local state classification such as present, missing, or drifted."
+            },
+            "sensitive_data": {
+              "$ref": "#/$defs/string_list",
+              "description": "Sensitive data classes that must not be exposed in fixtures or examples."
+            },
+            "synthetic_fixture_guidance": {
+              "$ref": "#/$defs/string_list",
+              "description": "Guidance for acceptable synthetic fixtures or examples."
+            },
+            "safe_examples": {
+              "$ref": "#/$defs/string_list",
+              "description": "Known-safe example values that may be used instead of sensitive data."
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "merge-blocker",
+                "release-blocker",
+                "human-review-required",
+                "safe-follow-up",
+                "intentionally-deferred"
+              ],
+              "description": "Unresolved assumption category used to decide whether closeout needs human review or can defer residue."
+            },
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unresolved question that must be answered, reviewed, or explicitly routed."
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Human or team owner for the unresolved question or overlay item."
+            },
+            "residue_route": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Where unresolved residue should be routed if it cannot be closed in the current work."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local explanation for why this overlay item applies."
+            },
+            "claim_boundary": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Claim boundary imposed by this overlay item."
+            },
+            "drift_state": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local drift classification for source, template, or validation expectations."
+            },
+            "impact": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "blocking",
+                "human-review-only",
+                "claim-limiting"
+              ],
+              "description": "How strongly this overlay item affects routing and closeout claims."
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional local notes for reviewers or future agents."
+            }
+          },
+          "additionalProperties": false,
+          "description": "One named local-only high-risk overlay item. It can shape this checkout's workflow but is not shared host policy."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Named local-only high-risk overlay items for one overlay section."
     }
   },
   "additionalProperties": false,

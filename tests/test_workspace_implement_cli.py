@@ -44,6 +44,54 @@ def test_implement_context_adapter_routes_through_implement_owner_facade() -> No
     assert workspace_runtime_primitives._run_implement_context_adapter is workspace_runtime_implement._run_implement_context_adapter
 
 
+def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        """
+schema_version = 1
+
+[high_risk_overlay.validation_profiles.migration]
+category = "migration"
+applies_to_paths = ["db/migrations/**"]
+required_commands = ["python -c \\"print('migration validation')\\""]
+manual_checks = ["Confirm rollback note exists."]
+impact = "blocking"
+""",
+    )
+    _write(tmp_path / "db" / "migrations" / "001_init.sql", "select 1;\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "db/migrations/001_init.sql",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["proof"]["high_risk_overlay"]["status"] == "active"
+    assert payload["proof"]["high_risk_overlay"]["active_count"] == 1
+    assert "high_risk_overlay=1" in payload["action_signals"]["changed_signals"]
+
+
 def _write_architecture_principles(target_root: Path) -> None:
     _write(
         target_root / ".agentic-workspace" / "system-intent" / "intent.toml",

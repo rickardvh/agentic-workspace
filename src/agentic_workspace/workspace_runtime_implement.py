@@ -1144,6 +1144,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     and int(payload.get("architecture_principles", {}).get("matched_count", 0) or 0) > 0
                     else []
                 ),
+                *(
+                    [f"high_risk_overlay={payload.get('proof', {}).get('high_risk_overlay', {}).get('active_count')}"]
+                    if isinstance(payload.get("proof"), dict)
+                    and isinstance(payload.get("proof", {}).get("high_risk_overlay"), dict)
+                    and payload.get("proof", {}).get("high_risk_overlay", {}).get("status") == "active"
+                    else []
+                ),
             ],
             advisory_selectors=advisory_selectors,
             agent_judgment="Agent owns semantic work shape and completion judgment after proof and acceptance reconciliation.",
@@ -1190,6 +1197,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("proof"), dict)
             and isinstance(payload.get("proof", {}).get("proof_route_maintenance"), dict)
             and payload.get("proof", {}).get("proof_route_maintenance", {}).get("status") == "attention"
+            else {},
+            "high_risk_overlay": {
+                "status": payload.get("proof", {}).get("high_risk_overlay", {}).get("status"),
+                "active_count": payload.get("proof", {}).get("high_risk_overlay", {}).get("active_count", 0),
+                "detail_selector": "proof.high_risk_overlay",
+            }
+            if isinstance(payload.get("proof"), dict)
+            and isinstance(payload.get("proof", {}).get("high_risk_overlay"), dict)
+            and payload.get("proof", {}).get("high_risk_overlay", {}).get("status") == "active"
             else {},
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke

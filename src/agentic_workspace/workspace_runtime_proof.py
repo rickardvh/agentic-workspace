@@ -160,6 +160,19 @@ def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
     return compact
 
 
+def _compact_tiny_high_risk_overlay(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or value.get("status") != "active":
+        return {}
+    active = _as_dict(value.get("active"))
+    return {
+        "status": value.get("status"),
+        "active_count": value.get("active_count", 0),
+        "sections": {section: len(_list_payload(items)) for section, items in active.items() if _list_payload(items)},
+        "authority_boundary": _as_dict(value.get("authority_boundary")).get("rule", ""),
+        "detail_selector": "high_risk_overlay",
+    }
+
+
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
@@ -194,6 +207,9 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 }
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
+            high_risk_overlay = _compact_tiny_high_risk_overlay(answer.get("high_risk_overlay"))
+            if high_risk_overlay:
+                next_decision["high_risk_overlay"] = high_risk_overlay
             next_decision.setdefault(
                 "detail_command",
                 _command_with_cli_invoke(
@@ -217,6 +233,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
         warnings: list[dict[str, Any]] = []
         if isinstance(surface_value, dict) and surface_value.get("status") in {"blocked", "needs-review"}:
             warnings.append({"status": surface_value.get("status"), "summary": surface_value.get("summary") or surface_value.get("rule")})
+        high_risk_overlay = _compact_tiny_high_risk_overlay(answer.get("high_risk_overlay") if isinstance(answer, dict) else {})
         next_payload = {
             "kind": "proof-next-decision/v1",
             "target": payload.get("target"),
@@ -230,6 +247,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             },
             "required_commands": required_commands,
             **({"intent_proof": _compact_tiny_intent_proof(answer["intent_proof"])} if include_intent_proof else {}),
+            **({"high_risk_overlay": high_risk_overlay} if high_risk_overlay else {}),
             **(
                 {"proof_command_adjustments": answer["proof_command_adjustments"]}
                 if isinstance(answer, dict) and answer.get("proof_command_adjustments")
@@ -974,6 +992,10 @@ def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, 
         authority = "repo-owned-domain-proof-lane"
         fallback_status = "repo-confirmed"
         surface = ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
+    elif lane.get("local_overlay"):
+        authority = "local-only-high-risk-overlay"
+        fallback_status = "local-only"
+        surface = ".agentic-workspace/config.local.toml [high_risk_overlay]"
     elif lane.get("proof_profile") or lane.get("requirement_id") or lane.get("subsystem"):
         authority = "repo-owned-proof-policy"
         fallback_status = "repo-confirmed"
@@ -1018,6 +1040,7 @@ def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) 
         "host-configured-subsystem": 95,
         "repo-learned-proof-route": 90,
         "verification-manual-protocol": 85,
+        "local-only-high-risk-overlay": 75,
         "live-adapted-target-capability": 60,
         "live-confirmed-proof-rule": 40,
         "manual-fallback": 20,
@@ -1081,6 +1104,203 @@ def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) 
         ],
         "cases": competing,
         "rule": "When the same command is selected from multiple sources, repo-owned and learned authority should be visible and preferred over package defaults.",
+    }
+
+
+def _local_overlay_item_matches(*, item: dict[str, Any], changed_paths: list[str], task_text: str | None) -> tuple[bool, list[str]]:
+    reasons: list[str] = []
+    path_patterns = [str(pattern).strip() for pattern in _list_payload(item.get("applies_to_paths")) if str(pattern).strip()]
+    for changed_path in changed_paths:
+        for pattern in path_patterns:
+            if fnmatch.fnmatch(changed_path, pattern):
+                reasons.append(f"path:{changed_path} matches {pattern}")
+                break
+    normalized_task = (task_text or "").lower()
+    for marker in [str(marker).strip() for marker in _list_payload(item.get("applies_to_task_markers")) if str(marker).strip()]:
+        if marker.lower() in normalized_task:
+            reasons.append(f"task-marker:{marker}")
+    return (bool(reasons), reasons)
+
+
+def _local_high_risk_overlay_for_work(
+    *, config: WorkspaceConfig | None, changed_paths: list[str], task_text: str | None, cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
+    overlay = config.local_override.high_risk_overlay if config is not None else {}
+    if not isinstance(overlay, dict) or overlay.get("status") != "configured":
+        return {
+            "kind": "agentic-workspace/local-high-risk-overlay/v1",
+            "status": "absent",
+            "active_count": 0,
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section local_high_risk_overlay --format json",
+                cli_invoke=cli_invoke,
+            ),
+        }
+    sections = _as_dict(overlay.get("sections"))
+    active_by_section: dict[str, list[dict[str, Any]]] = {}
+    for section, raw_items in sections.items():
+        active_items: list[dict[str, Any]] = []
+        for raw_item in _list_payload(raw_items):
+            if not isinstance(raw_item, dict):
+                continue
+            matched, reasons = _local_overlay_item_matches(item=raw_item, changed_paths=changed_paths, task_text=task_text)
+            if not matched:
+                continue
+            item = dict(raw_item)
+            item["matched_because"] = reasons
+            item["provenance"] = {
+                "source_layer": item.get("source_layer", "local-config"),
+                "surface": item.get("surface", ".agentic-workspace/config.local.toml [high_risk_overlay]"),
+                "authority": "local-only-overlay",
+                "shared_repo_policy": False,
+            }
+            active_items.append(item)
+        active_by_section[str(section)] = active_items
+    active_count = sum(len(items) for items in active_by_section.values())
+    return {
+        "kind": "agentic-workspace/local-high-risk-overlay/v1",
+        "status": "active" if active_count else "configured-no-match",
+        "configured_count": int(overlay.get("item_count", 0) or 0),
+        "active_count": active_count,
+        "changed_paths": changed_paths,
+        "active": active_by_section,
+        "warnings": _list_payload(overlay.get("warnings")),
+        "authority_boundary": {
+            "kind": "agentic-workspace/authority-boundary/v1",
+            "surface": "local_high_risk_overlay",
+            "authority_class": "local-advisory",
+            "observed_by_aw": ["local config overlay declarations", "changed-path/task-marker match facts"],
+            "recommended_by_aw": ["carry matched local guardrails into proof and closeout claims"],
+            "agent_owned_decisions": ["semantic applicability", "whether proof and review evidence satisfy the requested task"],
+            "human_owned_decisions": ["host policy acceptance", "security/legal review", "local override trust"],
+            "rule": "Local-only overlays may shape this checkout's workflow but never become checked-in host policy or certification.",
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section local_high_risk_overlay --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _local_overlay_lanes(overlay: dict[str, Any]) -> list[dict[str, Any]]:
+    if overlay.get("status") != "active":
+        return []
+    active = _as_dict(overlay.get("active"))
+    lanes: list[dict[str, Any]] = []
+    for item in _list_payload(active.get("source_maps")):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id", "")).strip()
+        if not item_id:
+            continue
+        lanes.append(
+            {
+                "id": f"local-overlay-source:{item_id}",
+                "when": "local-only high-risk overlay source map matched changed paths or task markers",
+                "enough_proof": _list_payload(item.get("required_commands")),
+                "manual_evidence": _list_payload(item.get("manual_evidence")) or _list_payload(item.get("required_sources")),
+                "review_aids": _list_payload(item.get("review_aids")),
+                "proof_profile": next(iter(_list_payload(item.get("proof_profiles"))), ""),
+                "authority_refs": _list_payload(item.get("authority_refs")) or _list_payload(item.get("required_sources")),
+                "claim_boundary": str(item.get("claim_boundary") or ""),
+                "local_overlay": {
+                    "section": "source_maps",
+                    "id": item_id,
+                    "source_layer": item.get("source_layer"),
+                    "impact": item.get("impact"),
+                    "matched_because": _list_payload(item.get("matched_because")),
+                },
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "recovery_signal": "local source-of-truth mapping must be considered before high-risk closeout claims",
+            }
+        )
+    for item in _list_payload(active.get("validation_profiles")):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id", "")).strip()
+        if not item_id:
+            continue
+        lanes.append(
+            {
+                "id": f"local-overlay-validation:{item_id}",
+                "when": "local-only validation profile matched changed paths or task markers",
+                "enough_proof": _list_payload(item.get("required_commands")),
+                "manual_evidence": _list_payload(item.get("manual_checks")),
+                "optional_commands": _list_payload(item.get("optional_commands")),
+                "review_aids": _list_payload(item.get("manual_checks")),
+                "proof_profile": next(iter(_list_payload(item.get("proof_profiles"))), ""),
+                "authority_refs": _list_payload(item.get("authority_refs")),
+                "claim_boundary": str(item.get("claim_boundary") or ""),
+                "validation_profile": {
+                    "id": item_id,
+                    "category": item.get("category"),
+                    "unavailable_routes": _list_payload(item.get("unavailable_routes")),
+                    "source_layer": item.get("source_layer"),
+                    "impact": item.get("impact"),
+                    "matched_because": _list_payload(item.get("matched_because")),
+                },
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "recovery_signal": "matched local validation profile must be resolved or consciously substituted before closeout",
+            }
+        )
+    return lanes
+
+
+def _local_overlay_claim_effects(overlay: dict[str, Any]) -> dict[str, Any]:
+    if overlay.get("status") != "active":
+        return {"status": overlay.get("status", "absent"), "blockers": [], "warnings": []}
+    active = _as_dict(overlay.get("active"))
+    blockers: list[str] = []
+    warnings: list[str] = []
+    ci_items: list[dict[str, Any]] = []
+    unresolved_items: list[dict[str, Any]] = []
+    guardrail_items: list[dict[str, Any]] = []
+    template_items: list[dict[str, Any]] = []
+    for item in _list_payload(active.get("ci_validation")):
+        if not isinstance(item, dict):
+            continue
+        ci_items.append(item)
+        state = str(item.get("validation_state") or "ci_unavailable")
+        policy = str(item.get("local_substitute_policy") or "insufficient")
+        if state in {"ci_failed", "ci_pending", "ci_unavailable", "quota_exhausted", "logs_unavailable"}:
+            blockers.append(f"validation-state:{state}")
+        if policy in {"insufficient", "human-review-only"}:
+            blockers.append(f"local-substitute-policy:{policy}")
+        elif policy == "advisory":
+            warnings.append("local substitute validation is advisory only")
+    for item in _list_payload(active.get("unresolved_questions")):
+        if not isinstance(item, dict):
+            continue
+        unresolved_items.append(item)
+        category = str(item.get("category") or "safe-follow-up")
+        if category in {"merge-blocker", "release-blocker", "human-review-required"}:
+            blockers.append(f"unresolved-question:{category}")
+        elif category == "intentionally-deferred":
+            warnings.append("unresolved question intentionally deferred with owner")
+    for item in _list_payload(active.get("guardrails")):
+        if not isinstance(item, dict):
+            continue
+        guardrail_items.append(item)
+        impact = str(item.get("impact") or "advisory")
+        if impact in {"blocking", "human-review-only", "claim-limiting"}:
+            blockers.append(f"guardrail:{impact}")
+    for item in _list_payload(active.get("templates")):
+        if not isinstance(item, dict):
+            continue
+        template_items.append(item)
+        state = str(item.get("state") or "")
+        if state in {"missing", "ambiguous", "unsupported"}:
+            blockers.append(f"template-preservation:{state}")
+    return {
+        "status": "attention" if blockers else "advisory" if warnings else "clear",
+        "blockers": _dedupe(blockers),
+        "warnings": _dedupe(warnings),
+        "ci_validation": ci_items,
+        "unresolved_questions": unresolved_items,
+        "guardrails": guardrail_items,
+        "templates": template_items,
     }
 
 
@@ -1665,6 +1885,7 @@ def _proof_decision_packet(
     high_assurance_closeout_posture: dict[str, Any],
     test_strategy_check: dict[str, Any],
     proof_execution_evidence: dict[str, Any],
+    local_high_risk_overlay: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lane_authority = {
         str(command.get("lane", "")): {
@@ -1685,6 +1906,8 @@ def _proof_decision_packet(
             lane=lane,
             route_source="host-declared-domain-proof-lane"
             if lane.get("domain_lane")
+            else "local-only-high-risk-overlay"
+            if lane.get("local_overlay")
             else "verification-manual-protocol"
             if lane_id.startswith("verification:")
             else "live-confirmed-proof-rule",
@@ -1705,6 +1928,8 @@ def _proof_decision_packet(
                 "claim_boundary": str(lane.get("claim_boundary", "")),
                 "route_authority": authority,
                 **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
+                **({"local_overlay": lane["local_overlay"]} if lane.get("local_overlay") else {}),
+                **({"validation_profile": lane["validation_profile"]} if lane.get("validation_profile") else {}),
             }
         )
     manual_required = bool(manual_verification) or any(item.get("required") for item in manual_proof_obligations)
@@ -1749,10 +1974,18 @@ def _proof_decision_packet(
         blockers.append("high-assurance closeout posture evidence is missing")
     if closeout_posture_waivers or closeout_posture_uncertainty:
         blockers.append("high-assurance closeout posture requires human waiver or uncertainty acknowledgement")
+    overlay_claim_effects = _local_overlay_claim_effects(local_high_risk_overlay or {})
+    overlay_blockers = _list_payload(overlay_claim_effects.get("blockers"))
+    if overlay_blockers:
+        blockers.append("local high-risk overlay constrains proof or closeout claims")
     if host_policy_blocked_commands:
         safe_claim_state = "human-waiver-required"
     elif closeout_posture_waivers or closeout_posture_uncertainty:
         safe_claim_state = "human-waiver-required"
+    elif any(str(item).startswith("unresolved-question:human-review-required") for item in overlay_blockers):
+        safe_claim_state = "human-waiver-required"
+    elif overlay_blockers:
+        safe_claim_state = "overlay-review-required"
     elif manual_required:
         safe_claim_state = "manual-review-required"
     elif required_commands or unavailable_commands or architecture_count or assurance_active or closeout_posture_missing:
@@ -1777,9 +2010,12 @@ def _proof_decision_packet(
             "verification_protocol_count": verification_active,
             "architecture_principle_match_count": architecture_count,
             "high_assurance_closeout_posture_status": closeout_posture_status,
+            "local_high_risk_overlay_status": str((local_high_risk_overlay or {}).get("status", "absent")),
+            "local_high_risk_overlay_active_count": int((local_high_risk_overlay or {}).get("active_count", 0) or 0),
             "test_strategy_status": str(test_strategy_check.get("status", "")) if isinstance(test_strategy_check, dict) else "",
         },
         "high_assurance_closeout_posture": high_assurance_closeout_posture,
+        "local_high_risk_overlay": local_high_risk_overlay or {"status": "absent", "active_count": 0},
         "missing_or_unresolved": {
             "blockers": blockers,
             "unavailable_commands": unavailable_commands,
@@ -1788,6 +2024,10 @@ def _proof_decision_packet(
             "closeout_posture_missing_evidence": closeout_posture_missing,
             "closeout_posture_human_waiver_refs": closeout_posture_waivers,
             "closeout_posture_uncertainty": closeout_posture_uncertainty,
+            "local_overlay_blockers": overlay_blockers,
+            "local_overlay_warnings": _list_payload(overlay_claim_effects.get("warnings")),
+            "local_overlay_ci_validation": _list_payload(overlay_claim_effects.get("ci_validation")),
+            "local_overlay_unresolved_questions": _list_payload(overlay_claim_effects.get("unresolved_questions")),
             "proof_execution_evidence_status": str(proof_execution_evidence.get("status", "")),
         },
         "safe_claim_now": {
@@ -1804,6 +2044,7 @@ def _proof_decision_packet(
             "assurance_requirements",
             "architecture_principles",
             "high_assurance_closeout_posture",
+            "high_risk_overlay",
             "test_strategy_check",
             "proof_route_explanation",
         ],
@@ -2086,6 +2327,14 @@ def _proof_selection_for_changed_paths(
     selected_lanes.extend(requirement_lanes)
     selected_lanes.extend(verification_lanes)
     selected_lanes.extend(domain_lanes)
+    local_high_risk_overlay = _local_high_risk_overlay_for_work(
+        config=config,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        cli_invoke=cli_invoke,
+    )
+    local_overlay_lanes = _local_overlay_lanes(local_high_risk_overlay)
+    selected_lanes.extend(local_overlay_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     project_roots = _project_roots_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
@@ -2476,6 +2725,7 @@ def _proof_selection_for_changed_paths(
         high_assurance_closeout_posture=high_assurance_closeout_posture,
         test_strategy_check=test_strategy_check,
         proof_execution_evidence=proof_execution_evidence,
+        local_high_risk_overlay=local_high_risk_overlay,
     )
     proof_selection = {
         "kind": "proof-selection/v1",
@@ -2565,6 +2815,8 @@ def _proof_selection_for_changed_paths(
                 ),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"domain_lane": lane["domain_lane"]} if lane.get("domain_lane") else {}),
+                **({"local_overlay": lane["local_overlay"]} if lane.get("local_overlay") else {}),
+                **({"validation_profile": lane["validation_profile"]} if lane.get("validation_profile") else {}),
                 **({"manual_evidence": lane["manual_evidence"]} if lane.get("manual_evidence") else {}),
                 **({"evidence_concepts": lane["evidence_concepts"]} if lane.get("evidence_concepts") else {}),
                 **({"evidence_concept_usage": lane["evidence_concept_usage"]} if lane.get("evidence_concept_usage") else {}),
@@ -2636,6 +2888,8 @@ def _proof_selection_for_changed_paths(
         )
     if manual_verification is not None:
         proof_selection["manual_verification"] = manual_verification
+    if local_high_risk_overlay.get("status") == "active":
+        proof_selection["high_risk_overlay"] = local_high_risk_overlay
     if config is not None and target_root is not None and include_durable_intent:
         durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         proof_selection["durable_intent"] = durable_intent
