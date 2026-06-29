@@ -27706,6 +27706,29 @@ _TEST_STRATEGY_DISPOSITION_VALUES = {
     "existing-proof-sufficient",
     "temporary-with-follow-up-consolidation",
 }
+_TEST_STRATEGY_ROOT_BUDGET = {
+    "scope": "root",
+    "baseline_date": "2026-06-15",
+    "baseline_collected_count": 613,
+    "current_observed_date": "2026-06-29",
+    "current_collected_count": 884,
+    "target_min": 500,
+    "target_max": 700,
+}
+_TEST_STRATEGY_TOTAL_BUDGET = {
+    "scope": "all",
+    "baseline_date": "2026-06-15",
+    "baseline_collected_count": 1118,
+    "current_observed_date": "2026-06-29",
+    "current_collected_count": 1426,
+}
+_TEST_STRATEGY_PLACEMENT_ALTERNATIVES = [
+    "merge into an existing scenario matrix for the same contract",
+    "move package-owned behavior to a package-local proof",
+    "encode stable behavior as contract or conformance evidence",
+    "cite an existing proof when it already answers the trust question",
+    "record temporary follow-up consolidation when standalone evidence is unavoidable",
+]
 
 
 def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
@@ -27773,6 +27796,63 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
         "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
         "items": normalized_items,
         "invalid_items": invalid_items,
+    }
+
+
+def _test_strategy_budget_drift_payload(
+    *,
+    files: list[dict[str, Any]],
+    matched_dispositions: list[dict[str, Any]],
+    missing_disposition_paths: list[str],
+) -> dict[str, Any]:
+    root_files = [item for item in files if str(item.get("path", "")).startswith("tests/")]
+    package_local_files = [item for item in files if str(item.get("path", "")).startswith("packages/")]
+    root_hotspots = [item for item in root_files if item.get("is_hotspot")]
+    root_budget = dict(_TEST_STRATEGY_ROOT_BUDGET)
+    total_budget = dict(_TEST_STRATEGY_TOTAL_BUDGET)
+    root_delta = int(root_budget["current_collected_count"]) - int(root_budget["baseline_collected_count"])
+    root_over_target_by = max(0, int(root_budget["current_collected_count"]) - int(root_budget["target_max"]))
+    disposition_satisfied_paths = sorted(
+        {
+            str(path).strip().replace("\\", "/")
+            for item in matched_dispositions
+            for path in _list_payload(item.get("changed_test_paths"))
+            if str(path).strip()
+        }
+    )
+    over_budget_hotspot_paths = [str(item.get("path")) for item in root_hotspots if str(item.get("path")) in missing_disposition_paths]
+    status = "not-applicable"
+    if package_local_files and not root_files:
+        status = "package-local"
+    elif root_files:
+        status = "attention" if root_over_target_by and root_hotspots else "context"
+    return {
+        "kind": "agentic-workspace/test-suite-budget-drift/v1",
+        "status": status,
+        "advisory_only": True,
+        "scope": "root" if root_files else "package-local" if package_local_files else "none",
+        "root": {
+            **root_budget,
+            "collected_count_delta_from_baseline": root_delta,
+            "over_target_by": root_over_target_by,
+            "target_range": [root_budget["target_min"], root_budget["target_max"]],
+        },
+        "total": {
+            **total_budget,
+            "collected_count_delta_from_baseline": int(total_budget["current_collected_count"])
+            - int(total_budget["baseline_collected_count"]),
+        },
+        "changed_root_test_paths": [str(item.get("path")) for item in root_files],
+        "changed_package_local_test_paths": [str(item.get("path")) for item in package_local_files],
+        "changed_hotspot_files": [str(item.get("path")) for item in root_hotspots],
+        "over_budget_hotspot_files_requiring_disposition": over_budget_hotspot_paths,
+        "placement_alternatives": list(_TEST_STRATEGY_PLACEMENT_ALTERNATIVES),
+        "disposition_paths": disposition_satisfied_paths,
+        "missing_disposition_paths": [path for path in missing_disposition_paths if path in {str(item.get("path")) for item in root_files}],
+        "rule": (
+            "When root collected tests exceed the strategy target, changed root hotspots should state why evidence belongs "
+            "there or move the proof to a narrower owner. This is advisory during implementation and visible before closeout."
+        ),
     }
 
 
@@ -27854,6 +27934,12 @@ def _test_strategy_check_payload(
         )
     task_lower = str(task_text or "").lower()
     reviewer_requested = any(term in task_lower for term in ("review", "comment", "pr feedback", "requested coverage", "regression"))
+    budget_drift = _test_strategy_budget_drift_payload(
+        files=files,
+        matched_dispositions=matched_dispositions,
+        missing_disposition_paths=missing_disposition_paths,
+    )
+    budget_requires_disposition = bool(budget_drift.get("over_budget_hotspot_files_requiring_disposition"))
     return {
         "kind": "agentic-workspace/test-strategy-check/v1",
         "status": "advisory",
@@ -27865,6 +27951,8 @@ def _test_strategy_check_payload(
         "unknown_materiality_count": unknown_materiality_count,
         "files": files,
         "reviewer_requested_coverage": reviewer_requested,
+        "budget_drift": budget_drift,
+        "placement_alternatives": budget_drift.get("placement_alternatives", []),
         "verification_evidence_surfaces": {
             "evidence_strategy_status": evidence_strategy.get("status", "unavailable"),
             "proof_governance_status": proof_governance.get("status", "unavailable"),
@@ -27888,7 +27976,9 @@ def _test_strategy_check_payload(
             "temporary-with-follow-up-consolidation",
         ],
         "disposition_required_before_closeout": bool(
-            ((material_count or unknown_materiality_count) and missing_disposition_paths) or temporary_without_follow_up
+            ((material_count or unknown_materiality_count) and missing_disposition_paths)
+            or budget_requires_disposition
+            or temporary_without_follow_up
         ),
         "materiality_rule": (
             "Disposition pressure is strongest when tests are added, deleted, renamed, or change test function count. "
@@ -27912,6 +28002,7 @@ def _test_strategy_check_payload(
                 f"deleted_or_missing_test_file_count={deleted_count}",
                 f"material_evidence_change_count={material_count}",
                 f"unknown_materiality_count={unknown_materiality_count}",
+                f"root_budget_drift_status={budget_drift.get('status')}",
             ],
             recommended_by_aw=["record the testing evidence disposition before closeout"],
             proof_hints=["evidence_strategy.proof_governance", "proof_decision", "regression_sprawl", "nearby parametrized tests"],

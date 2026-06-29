@@ -7,7 +7,6 @@ import json
 import re
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +47,10 @@ def _load_test_ir_runner():
 
 
 def _run_checker_case(source: str) -> dict[str, object]:
+    return _run_checker_cases([source])[0]
+
+
+def _run_checker_cases(sources: list[str]) -> list[dict[str, object]]:
     script = f"""
 from __future__ import annotations
 
@@ -56,21 +59,50 @@ import importlib.util
 import json
 import subprocess
 import sys
+import textwrap
+import traceback
 from pathlib import Path
 
 CHECK_SCRIPT_PATH = Path({str(CHECK_SCRIPT_PATH)!r})
-spec = importlib.util.spec_from_file_location("check_generated_command_packages_case", CHECK_SCRIPT_PATH)
-assert spec is not None
-checker = importlib.util.module_from_spec(spec)
-assert spec.loader is not None
-sys.modules[spec.name] = checker
-spec.loader.exec_module(checker)
+SOURCES = json.loads({json.dumps(json.dumps(sources))})
 
 
-def _emit(payload):
-    print({str(_CHECKER_CASE_PREFIX)!r} + json.dumps(payload, sort_keys=True))
+def _load_checker(index):
+    spec = importlib.util.spec_from_file_location(f"check_generated_command_packages_case_{{index}}", CHECK_SCRIPT_PATH)
+    assert spec is not None
+    checker = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = checker
+    spec.loader.exec_module(checker)
+    return checker
 
-{textwrap.indent(textwrap.dedent(source).strip(), " " * 0)}
+
+results = []
+for index, source in enumerate(SOURCES):
+    emitted = []
+
+    def _emit(payload):
+        emitted.append(payload)
+
+    namespace = {{
+        "checker": _load_checker(index),
+        "copy": copy,
+        "json": json,
+        "Path": Path,
+        "subprocess": subprocess,
+        "_emit": _emit,
+    }}
+    try:
+        exec(textwrap.dedent(source).strip(), namespace)
+    except BaseException as exc:
+        results.append({{"__error__": str(exc), "__traceback__": traceback.format_exc()}})
+    else:
+        if not emitted:
+            results.append({{"__error__": "checker case did not emit a result"}})
+        else:
+            results.append(emitted[-1])
+
+print({str(_CHECKER_CASE_PREFIX)!r} + json.dumps(results, sort_keys=True))
 """
     completed = subprocess.run(
         [sys.executable, "-c", script],
@@ -85,17 +117,28 @@ def _emit(payload):
         )
     for line in reversed(completed.stdout.splitlines()):
         if line.startswith(_CHECKER_CASE_PREFIX):
-            payload = json.loads(line[len(_CHECKER_CASE_PREFIX) :])
-            assert isinstance(payload, dict)
-            return payload
+            payloads = json.loads(line[len(_CHECKER_CASE_PREFIX) :])
+            assert isinstance(payloads, list)
+            results: list[dict[str, object]] = []
+            for payload in payloads:
+                assert isinstance(payload, dict)
+                if "__error__" in payload:
+                    raise AssertionError(
+                        f"checker case failed\nerror={payload['__error__']}\ntraceback:\n{payload.get('__traceback__', '')}"
+                    )
+                results.append(payload)
+            return results
     raise AssertionError(f"checker subprocess did not emit a result\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}")
 
 
-def _checker_case_errors(source: str) -> list[str]:
-    payload = _run_checker_case(source)
+def _checker_payload_errors(payload: dict[str, object]) -> list[str]:
     errors = payload.get("errors")
     assert isinstance(errors, list)
     return [str(error) for error in errors]
+
+
+def _checker_case_errors(source: str) -> list[str]:
+    return _checker_payload_errors(_run_checker_case(source))
 
 
 def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
@@ -1399,7 +1442,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
             python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
             python_target["generation_status"] = "weak-agent-safe-adapter"
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_generated_mutation_target_routing(ir)})
             """,
             "weak-agent-safe-adapter while generated commands include mutation-capable effects",
         ),
@@ -1413,7 +1456,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
                     item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
                     break
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_python_cli_completion_policy(ir["generation_policy"]["python_cli_completion"])})
             """,
             "--python-docker-conformance --require-docker",
         ),
@@ -1464,7 +1507,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
             ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
             ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_python_cli_completion_policy(ir["generation_policy"]["python_cli_completion"])})
             """,
             "cannot mark the Python CLI completion gate satisfied",
         ),
@@ -1472,7 +1515,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
             "missing-primitive-conformance-case",
             """
             checker.REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {"missing.primitive"}
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_primitive_conformance_surface()})
             """,
             "primitive conformance is missing required primitive case: missing.primitive",
         ),
@@ -1485,7 +1528,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
 
             checker._aw_owned_ordinary_python_check_paths = lambda: [retired_path]
             checker._python_function_symbols = lambda path: {"test_defaults_tiny_text_uses_generated_output"}
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_generated_command_check_inventory_removals()})
 
             checker._aw_owned_ordinary_python_check_paths = original_paths
             checker._python_function_symbols = original_symbols
@@ -1493,8 +1536,9 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
             "remove-from-aw retired check remains active",
         ),
     ]
-    for label, source, expected_fragment in scenarios:
-        errors = _checker_case_errors(source)
+    payloads = _run_checker_cases([source for _, source, _ in scenarios])
+    for (label, _, expected_fragment), payload in zip(scenarios, payloads, strict=True):
+        errors = _checker_payload_errors(payload)
 
         assert any(expected_fragment in error for error in errors), label
 
@@ -1505,9 +1549,8 @@ def test_static_generated_package_proof_requires_completion_gate_evidence() -> N
         "representative-operation-ir-runtime-consumed",
         "operation-execution-inventory-exhaustive",
     ]
-    for item_id in required_gate_items:
-        errors = _checker_case_errors(
-            f"""
+    sources = [
+        f"""
             ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
             ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
             ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
@@ -1516,9 +1559,13 @@ def test_static_generated_package_proof_requires_completion_gate_evidence() -> N
                 if item["id"] != {item_id!r}
             ]
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
-            _emit({{"errors": checker._validate_static_surfaces()}})
+            _emit({{"errors": checker._validate_python_cli_completion_policy(ir["generation_policy"]["python_cli_completion"])}})
             """
-        )
+        for item_id in required_gate_items
+    ]
+    payloads = _run_checker_cases(sources)
+    for item_id, payload in zip(required_gate_items, payloads, strict=True):
+        errors = _checker_payload_errors(payload)
 
         assert any(item_id in error for error in errors), item_id
 
@@ -1544,7 +1591,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
 
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
             checker._load_json = fake_load_json
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_python_operation_execution_inventory(ir)})
             """,
             "compatibility-runtime-handler",
         ),
@@ -1569,7 +1616,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
 
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
             checker._load_json = fake_load_json
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_python_operation_execution_inventory(ir)})
             """,
             "generic deterministic behavior as runtime debt",
         ),
@@ -1600,7 +1647,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
 
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
             checker.Path.read_text = fake_read_text
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_full_python_completion_runtime_ownership(ir)})
             """,
             "missing generated-main boundary fragment",
         ),
@@ -1628,7 +1675,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
             checker.PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (product_runtime_source,)
             checker.Path.read_text = fake_read_text
             checker.Path.is_file = fake_is_file
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_full_python_completion_executable_ownership(ir)})
             """,
             "scratch/product_runtime.py owns executable behavior markers",
         ),
@@ -1658,7 +1705,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
 
             checker.load_workspace_command_package_ir = lambda *, repo_root: ir
             checker.render_workspace_command_package_outputs = fake_render_outputs
-            _emit({"errors": checker._validate_static_surfaces()})
+            _emit({"errors": checker._validate_full_python_completion_executable_ownership(ir)})
             """,
             "not produced by command-generation render_outputs()",
         ),
@@ -1682,8 +1729,9 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
             "transitional-generated-output-debt",
         ),
     ]
-    for label, code, expected_fragment in scenarios:
-        errors = _checker_case_errors(code)
+    payloads = _run_checker_cases([code for _, code, _ in scenarios])
+    for (label, _, expected_fragment), payload in zip(scenarios, payloads, strict=True):
+        errors = _checker_payload_errors(payload)
 
         assert any(expected_fragment in error for error in errors), label
 
@@ -1737,13 +1785,15 @@ def test_static_generated_package_proof_accepts_current_static_surfaces() -> Non
         (
             "python-completion-gate",
             """
-            _emit({"errors": checker._validate_static_surfaces()})
+            ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+            _emit({"errors": checker._validate_python_cli_completion_policy(ir["generation_policy"]["python_cli_completion"])})
             """,
             lambda errors: not [error for error in errors if "Python CLI completion" in error or "Python completion" in error],
         ),
     ]
-    for label, script, assertion in scenarios:
-        errors = _checker_case_errors(script)
+    payloads = _run_checker_cases([script for _, script, _ in scenarios])
+    for (label, _, assertion), payload in zip(scenarios, payloads, strict=True):
+        errors = _checker_payload_errors(payload)
 
         assert assertion(errors), label
 
