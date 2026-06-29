@@ -2195,6 +2195,53 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
 
 
+def test_implement_tiny_profile_surfaces_manual_verification_obligations(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.policy_review]
+title = "Policy review"
+purpose = "Manual policy proof for sensitive changes."
+applies_to_paths = ["privacy/**"]
+expected_evidence = ["manual_policy_review"]
+review_owner = "policy-review"
+authority_refs = ["docs/policy.md#rule-1"]
+steps = ["Read policy rule 1", "Compare the changed output"]
+review_aids = ["Record the manual policy finding."]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "privacy/export.txt",
+                "--task",
+                "Update the privacy export",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    required = payload["proof"]["proof_obligations"]["required_proof"]
+    assert required["manual_verification_required"] is True
+    assert required["manual_obligation_count"] == 1
+    assert required["manual_obligations"][0]["id"] == "verification:policy_review"
+    assert required["manual_obligations"][0]["missing_evidence"] == ["manual_policy_review"]
+    assert required["manual_obligations"][0]["reference_material"] == ["docs/policy.md#rule-1"]
+    assert payload["proof"]["proof_route_maintenance"]["status"] == "attention"
+
+
 def test_implement_tiny_profile_defers_reuse_pressure_scan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

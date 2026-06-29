@@ -59,6 +59,7 @@ from agentic_workspace.workspace_runtime_core import (
     _intent_proof_prompt_payload,
     _issue_scope_evidence_payload,
     _lane_execution_metadata,
+    _learned_proof_lanes_for_changed_paths,
     _learned_route_reliance_payload,
     _load_proof_route_hints,
     _load_workspace_config,
@@ -338,6 +339,18 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "status": required.get("status", "unknown"),
             "commands": visible_required_commands,
             "manual_verification_required": bool(required.get("manual_verification_required", False)),
+            "manual_obligation_count": int(required.get("manual_obligation_count", 0) or 0),
+            "manual_obligations": [
+                {
+                    "id": str(item.get("id", "")),
+                    "status": str(item.get("status", "")),
+                    "missing_evidence": item.get("missing_evidence", []),
+                    "reference_material": item.get("reference_material", []),
+                    "claim_boundary": str(item.get("claim_boundary", "")),
+                }
+                for item in required.get("manual_obligations", [])
+                if isinstance(item, dict) and item.get("required")
+            ][:3],
             "action_effect": _tiny_action_effect(
                 required.get("action_effect", {}), include_allowed=False, include_resolution_commands=False
             ),
@@ -945,14 +958,317 @@ def _release_proof_profile_payload(
     }
 
 
+def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, learned_confirmed: bool = False) -> dict[str, Any]:
+    lane_id = str(lane.get("id", ""))
+    if lane.get("learned_route"):
+        authority = "repo-learned-route-table"
+        fallback_status = "repo-learned-confirmed"
+        route = lane.get("learned_route", {}) if isinstance(lane.get("learned_route"), dict) else {}
+        surface = str(route.get("source_path") or ".agentic-workspace/proof-route-hints.json")
+    elif learned_confirmed:
+        authority = "agent-learned-confirmed-route"
+        fallback_status = "confirmed-repo-knowledge"
+        surface = str(lane.get("authority_surface", ".agentic-workspace/memory/repo"))
+    elif lane.get("proof_profile") or lane.get("requirement_id") or lane.get("subsystem"):
+        authority = "repo-owned-proof-policy"
+        fallback_status = "repo-confirmed"
+        surface = ".agentic-workspace/config.toml"
+    elif lane_id.startswith("verification:"):
+        authority = "verification-manual-protocol"
+        fallback_status = "repo-confirmed"
+        surface = ".agentic-workspace/verification/manifest.toml"
+    elif route_source == "manual-fallback":
+        authority = "generic-manual-fallback"
+        fallback_status = "fallback"
+        surface = "package fallback"
+    elif route_source == "live-adapted-target-capability":
+        authority = "live-target-capability"
+        fallback_status = "candidate-live-confirmed"
+        surface = "target repo command discovery"
+    elif lane_id.startswith("subsystem:"):
+        authority = "repo-owned-subsystem-route"
+        fallback_status = "repo-confirmed"
+        surface = ".agentic-workspace/OWNERSHIP.toml"
+    else:
+        authority = "package-seed-or-default-route"
+        fallback_status = "seed-fallback"
+        surface = "package proof defaults"
+    promotion_candidate = fallback_status in {"seed-fallback", "fallback", "candidate-live-confirmed"}
+    return {
+        "kind": "proof-route-authority/v1",
+        "authority": authority,
+        "fallback_status": fallback_status,
+        "route_source": route_source,
+        "authority_surface": surface,
+        "promotion_candidate": promotion_candidate,
+        "maintenance_target": ".agentic-workspace/proof-route-hints.json" if promotion_candidate else surface,
+        "rule": "Prefer confirmed repo/agent-learned/Verification proof knowledge over package defaults and generic fallbacks.",
+    }
+
+
+def _proof_route_precedence_payload(*, selected_commands: list[dict[str, Any]]) -> dict[str, Any]:
+    priority = {
+        "host-configured-proof-profile": 100,
+        "host-configured-subsystem": 95,
+        "repo-learned-proof-route": 90,
+        "verification-manual-protocol": 85,
+        "live-adapted-target-capability": 60,
+        "live-confirmed-proof-rule": 40,
+        "manual-fallback": 20,
+    }
+    by_command: dict[str, list[dict[str, Any]]] = {}
+    for command in selected_commands:
+        if not isinstance(command, dict):
+            continue
+        command_text = str(command.get("command", "")).strip()
+        if not command_text:
+            continue
+        by_command.setdefault(command_text, []).append(command)
+    competing: list[dict[str, Any]] = []
+    for command_text, matches in by_command.items():
+        if len(matches) < 2:
+            continue
+        ordered = sorted(
+            matches,
+            key=lambda item: (
+                priority.get(str(item.get("selected_from", "")), 0),
+                1
+                if str(item.get("fallback_status", "")) in {"repo-confirmed", "repo-learned-confirmed", "confirmed-repo-knowledge"}
+                else 0,
+            ),
+            reverse=True,
+        )
+        winner = ordered[0]
+        competing.append(
+            {
+                "kind": "proof-route-precedence-case/v1",
+                "command": command_text,
+                "winner": {
+                    "lane": str(winner.get("lane", "")),
+                    "route_source": str(winner.get("selected_from", "")),
+                    "route_authority": str(winner.get("route_authority", "")),
+                    "authority_surface": str(winner.get("authority_surface", "")),
+                },
+                "overridden": [
+                    {
+                        "lane": str(item.get("lane", "")),
+                        "route_source": str(item.get("selected_from", "")),
+                        "route_authority": str(item.get("route_authority", "")),
+                        "authority_surface": str(item.get("authority_surface", "")),
+                    }
+                    for item in ordered[1:]
+                ],
+            }
+        )
+    return {
+        "kind": "proof-route-precedence/v1",
+        "status": "competing-routes" if competing else "no-competition",
+        "priority_order": [
+            "host-configured-proof-profile",
+            "host-configured-subsystem",
+            "repo-learned-proof-route",
+            "verification-manual-protocol",
+            "live-adapted-target-capability",
+            "live-confirmed-proof-rule",
+            "manual-fallback",
+        ],
+        "cases": competing,
+        "rule": "When the same command is selected from multiple sources, repo-owned and learned authority should be visible and preferred over package defaults.",
+    }
+
+
+def _manual_proof_obligations_payload(*, verification: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(verification, dict):
+        return []
+    evidence_by_protocol = {
+        str(item.get("protocol_id", "")): item
+        for item in _list_payload(verification.get("evidence_status"))
+        if isinstance(item, dict) and str(item.get("protocol_id", "")).strip()
+    }
+    routes_by_protocol: dict[str, list[dict[str, Any]]] = {}
+    for route in _list_payload(verification.get("active_proof_routes")):
+        if not isinstance(route, dict):
+            continue
+        for protocol_ref in _list_payload(route.get("protocol_refs")):
+            routes_by_protocol.setdefault(str(protocol_ref), []).append(route)
+    obligations: list[dict[str, Any]] = []
+    for protocol in _list_payload(verification.get("active_protocols")):
+        if not isinstance(protocol, dict):
+            continue
+        protocol_id = str(protocol.get("id", "")).strip()
+        if not protocol_id:
+            continue
+        status = evidence_by_protocol.get(protocol_id, {})
+        expected = [
+            str(item).strip()
+            for item in _list_payload(status.get("expected_evidence") or protocol.get("expected_evidence"))
+            if str(item).strip()
+        ]
+        missing = [str(item).strip() for item in _list_payload(status.get("missing_evidence")) if str(item).strip()]
+        stale = [str(item).strip() for item in _list_payload(status.get("stale_expected_evidence")) if str(item).strip()]
+        protocol_routes = routes_by_protocol.get(protocol_id, [])
+        review_aids = _dedupe(
+            [str(item).strip() for item in _list_payload(protocol.get("review_aids")) if str(item).strip()]
+            + [str(item).strip() for route in protocol_routes for item in _list_payload(route.get("review_aids")) if str(item).strip()]
+        )
+        steps = [str(item).strip() for item in _list_payload(protocol.get("steps")) if str(item).strip()]
+        authority_refs = [str(item).strip() for item in _list_payload(protocol.get("authority_refs")) if str(item).strip()]
+        if not (expected or missing or stale or review_aids or steps or authority_refs):
+            continue
+        required = bool(missing or stale or expected)
+        obligations.append(
+            {
+                "kind": "manual-proof-obligation/v1",
+                "id": f"verification:{protocol_id}",
+                "status": "missing-evidence" if missing else "stale-evidence" if stale else "satisfied" if expected else "review",
+                "required": required,
+                "protocol_id": protocol_id,
+                "title": str(protocol.get("title", "")),
+                "purpose": str(protocol.get("purpose", "")),
+                "review_owner": str(protocol.get("review_owner") or protocol.get("ownerless_reason") or ""),
+                "expected_evidence": expected,
+                "missing_evidence": missing,
+                "stale_evidence": stale,
+                "steps": steps,
+                "reference_material": authority_refs,
+                "review_aids": review_aids,
+                "proof_route_ids": [str(route.get("id")) for route in protocol_routes if route.get("id")],
+                "authority": _proof_route_authority_for_lane(
+                    lane={"id": f"verification:{protocol_id}"}, route_source="verification-manual-protocol"
+                ),
+                "claim_boundary": (
+                    "completion-claims-qualified-until-manual-evidence-recorded-or-waived"
+                    if required
+                    else "manual-verification-evidence-present-or-review-only"
+                ),
+            }
+        )
+    return obligations
+
+
+def _proof_route_maintenance_payload(
+    *,
+    selected_lanes: list[dict[str, Any]],
+    selected_commands: list[dict[str, Any]],
+    learned_route_hints: dict[str, Any],
+    manual_proof_obligations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    stale_hints = [hint for hint in _list_payload(learned_route_hints.get("stale")) if isinstance(hint, dict)]
+    invalid_hints = [hint for hint in _list_payload(learned_route_hints.get("invalid")) if isinstance(hint, dict)]
+    fallback_commands = [
+        command
+        for command in selected_commands
+        if isinstance(command, dict)
+        and str(command.get("fallback_status", "")) in {"seed-fallback", "fallback", "candidate-live-confirmed"}
+    ]
+    manual_missing = [item for item in manual_proof_obligations if isinstance(item, dict) and item.get("required")]
+    suggestions: list[dict[str, Any]] = []
+    for command in fallback_commands:
+        command_text = str(command.get("command", ""))
+        reason = (
+            "new target proof capability needs route-table promotion"
+            if str(command.get("fallback_status", "")) == "candidate-live-confirmed"
+            else "selected proof relies on fallback or seed route"
+        )
+        suggestions.append(
+            {
+                "kind": "proof-route-maintenance-suggestion/v1",
+                "reason": reason,
+                "route_id": f"promote-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
+                "matcher": {"selected_lane": str(command.get("lane", ""))},
+                "command": command_text,
+                "target_surface": ".agentic-workspace/proof-route-hints.json",
+                "source_observation": str(command.get("selected_from", "")),
+                "recommended_state": "confirmed",
+            }
+        )
+        if str(command.get("ci_relationship", "")).strip():
+            suggestions.append(
+                {
+                    "kind": "proof-route-maintenance-suggestion/v1",
+                    "reason": "CI-learned proof gap should be captured as repo route authority",
+                    "route_id": f"ci-gap-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
+                    "matcher": {"selected_lane": str(command.get("lane", "")), "ci_relationship": str(command.get("ci_relationship", ""))},
+                    "command": command_text,
+                    "target_surface": ".agentic-workspace/proof-route-hints.json",
+                    "source_observation": str(command.get("selected_from", "")),
+                    "recommended_state": "confirmed-with-ci-provenance",
+                }
+            )
+    for hint in stale_hints:
+        suggestions.append(
+            {
+                "kind": "proof-route-maintenance-suggestion/v1",
+                "reason": "learned proof route is stale or unavailable",
+                "route_id": str(hint.get("id", "")),
+                "matcher": {"scope": str(hint.get("scope", "")), "intent_type": str(hint.get("intent_type", ""))},
+                "command": str(hint.get("candidate_command", "")),
+                "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
+                "source_observation": str(hint.get("confirmation", "stale-or-unavailable")),
+                "recommended_state": "negative-or-superseded-or-reconfirmed",
+            }
+        )
+    for hint in invalid_hints:
+        suggestions.append(
+            {
+                "kind": "proof-route-maintenance-suggestion/v1",
+                "reason": "learned proof route lacks authority metadata",
+                "route_id": str(hint.get("id", "")),
+                "matcher": {"missing_fields": ", ".join(str(item) for item in _list_payload(hint.get("missing_fields")))},
+                "command": str(hint.get("candidate_command", "")),
+                "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
+                "source_observation": str(hint.get("recovery", "")),
+                "recommended_state": "recapture-with-authority",
+            }
+        )
+    for obligation in manual_missing:
+        suggestions.append(
+            {
+                "kind": "proof-route-maintenance-suggestion/v1",
+                "reason": "manual Verification evidence is required or missing",
+                "route_id": str(obligation.get("id", "")),
+                "matcher": {"protocol_id": str(obligation.get("protocol_id", ""))},
+                "manual_evidence": ", ".join(str(item) for item in _list_payload(obligation.get("missing_evidence"))),
+                "target_surface": ".agentic-workspace/verification/manifest.toml",
+                "source_observation": "active verification protocol selected manual proof",
+                "recommended_state": "record-evidence-or-waive",
+            }
+        )
+    material = bool(stale_hints or invalid_hints or manual_missing)
+    fallback_count = len(fallback_commands)
+    new_capability_count = sum(1 for command in fallback_commands if str(command.get("fallback_status", "")) == "candidate-live-confirmed")
+    ci_gap_count = sum(1 for command in fallback_commands if str(command.get("ci_relationship", "")).strip())
+    return {
+        "kind": "proof-route-maintenance/v1",
+        "status": "attention" if material else "promotion-available" if fallback_count else "quiet",
+        "material_to_current_work": material,
+        "fallback_selected_count": fallback_count,
+        "new_capability_candidate_count": new_capability_count,
+        "ci_gap_candidate_count": ci_gap_count,
+        "stale_route_count": len(stale_hints),
+        "invalid_authority_count": len(invalid_hints),
+        "manual_obligation_count": len(manual_missing),
+        "suggested_updates": suggestions,
+        "closeout_rule": (
+            "Stale, invalid, or missing manual proof routes require closeout disclosure or durable routing."
+            if material
+            else "Fallback proof routes may be promoted when repeated, but do not block this closeout by themselves."
+        ),
+        "rule": "Agents may spend cheap maintenance effort to preserve proof knowledge and avoid repeated rediscovery.",
+    }
+
+
 def _proof_obligations_payload(
     *,
     required_commands: list[str],
     optional_commands: list[str],
     manual_verification: dict[str, Any] | None,
     selected_commands: list[dict[str, Any]] | None = None,
+    manual_proof_obligations: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    manual_required = manual_verification is not None
+    manual_obligations = [item for item in manual_proof_obligations or [] if isinstance(item, dict)]
+    required_manual_obligations = [item for item in manual_obligations if item.get("required")]
+    manual_required = manual_verification is not None or bool(required_manual_obligations)
     manual_status = manual_verification.get("status") if manual_verification is not None else "not-needed"
     authority_by_command = {str(item.get("command", "")): item for item in selected_commands or []}
     command_authority = []
@@ -962,6 +1278,9 @@ def _proof_obligations_payload(
             {
                 "command": str(command),
                 "authority_source": str(selected.get("selected_from") or selected.get("lane") or "proof-route-selection"),
+                "route_authority": str(selected.get("route_authority") or ""),
+                "fallback_status": str(selected.get("fallback_status") or ""),
+                "authority_surface": str(selected.get("authority_surface") or ""),
                 "lane": str(selected.get("lane") or ""),
                 "intent_type": str(selected.get("intent_type") or ""),
                 "rule": "Authority describes why AW surfaced the command; the agent still owns proof sufficiency.",
@@ -978,6 +1297,8 @@ def _proof_obligations_payload(
             "command_authority": command_authority,
             "manual_verification_required": manual_required,
             "manual_verification_status": manual_status,
+            "manual_obligations": manual_obligations,
+            "manual_obligation_count": len(required_manual_obligations),
             "source_field": "required_commands",
             "action_effect": {
                 "force": "required_before_claim" if proof_required else "advisory",
@@ -1305,6 +1626,7 @@ def _proof_selection_for_changed_paths(
     target_capabilities = _apply_learned_route_hints_to_capabilities(
         target_capabilities=target_capabilities, learned_route_hints=learned_route_hints
     )
+    selected_lanes.extend(_learned_proof_lanes_for_changed_paths(changed_paths=changed_paths, learned_route_hints=learned_route_hints))
     learned_negative_commands = {
         str(hint.get("candidate_command", "")).strip()
         for hint in learned_route_hints.get("negative", [])
@@ -1411,6 +1733,13 @@ def _proof_selection_for_changed_paths(
     adjustments_by_replacement = {
         str(adjustment["replacement"]): adjustment for adjustment in proof_command_adjustments if adjustment.get("replacement")
     }
+    learned_confirmed_commands = {
+        str(hint.get("candidate_command", "")).strip()
+        for hint in learned_route_hints.get("confirmed", [])
+        if isinstance(hint, dict)
+        and str(hint.get("candidate_command", "")).strip()
+        and str(hint.get("confirmation", "")) == "learned-confirmed"
+    }
     proof_intents = [_proof_intent_for_lane(lane) for lane in selected_lanes]
     intent_by_lane_id = {intent["id"]: intent for intent in proof_intents}
     selected_commands: list[dict[str, Any]] = []
@@ -1419,15 +1748,26 @@ def _proof_selection_for_changed_paths(
         for command in lane.get("enough_proof", []):
             command_text = str(command)
             command_cwd, run_command = _split_validation_command(command_text)
+            route_source = _proof_route_source_for_lane(
+                lane=lane, command=command_text, adjustments_by_replacement=adjustments_by_replacement
+            )
+            route_authority = _proof_route_authority_for_lane(
+                lane=lane,
+                route_source=route_source,
+                learned_confirmed=command_text in learned_confirmed_commands and route_source == "live-adapted-target-capability",
+            )
             selected_commands.append(
                 {
                     "kind": "proof-command/v1",
                     "command": command_text,
                     "cwd": command_cwd,
                     "run": run_command,
-                    "selected_from": _proof_route_source_for_lane(
-                        lane=lane, command=command_text, adjustments_by_replacement=adjustments_by_replacement
-                    ),
+                    "selected_from": route_source,
+                    "route_authority": route_authority["authority"],
+                    "fallback_status": route_authority["fallback_status"],
+                    "authority_surface": route_authority["authority_surface"],
+                    "promotion_candidate": route_authority["promotion_candidate"],
+                    "maintenance_target": route_authority["maintenance_target"],
                     "intent_type": str(intent.get("type", "behavior-test")),
                     "lane": str(lane.get("id", "")),
                     "required": True,
@@ -1513,12 +1853,20 @@ def _proof_selection_for_changed_paths(
         unavailable_commands=unavailable_commands,
         learned_route_reliance=learned_route_reliance,
     )
+    proof_route_precedence = _proof_route_precedence_payload(selected_commands=selected_commands)
     host_repo_learning = _host_repo_learning_posture_payload(
         target_capabilities=target_capabilities,
         learned_route_hints=learned_route_hints,
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
         selected_commands=selected_commands,
+    )
+    manual_proof_obligations = _manual_proof_obligations_payload(verification=verification)
+    proof_route_maintenance = _proof_route_maintenance_payload(
+        selected_lanes=selected_lanes,
+        selected_commands=selected_commands,
+        learned_route_hints=learned_route_hints,
+        manual_proof_obligations=manual_proof_obligations,
     )
     proof_route_explanation = _proof_route_explanation_payload(
         proof_intents=proof_intents,
@@ -1567,6 +1915,7 @@ def _proof_selection_for_changed_paths(
         optional_commands=optional_commands,
         manual_verification=manual_verification,
         selected_commands=selected_commands,
+        manual_proof_obligations=manual_proof_obligations,
     )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_confidence = _proof_confidence_payload(
@@ -1655,6 +2004,8 @@ def _proof_selection_for_changed_paths(
         "host_repo_learning": host_repo_learning,
         "learned_route_hints": learned_route_hints,
         "learned_route_reliance": learned_route_reliance,
+        "proof_route_maintenance": proof_route_maintenance,
+        "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
         "verification": verification,
@@ -1687,6 +2038,12 @@ def _proof_selection_for_changed_paths(
                 "execution_mode": lane.get("execution_mode", "parallel-ok"),
                 "ci_relationship": lane.get("ci_relationship", ""),
                 "recovery_signal": lane.get("recovery_signal", ""),
+                "route_authority": _proof_route_authority_for_lane(
+                    lane=lane,
+                    route_source="verification-manual-protocol"
+                    if str(lane.get("id", "")).startswith("verification:")
+                    else "live-confirmed-proof-rule",
+                ),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"requirement_id": lane["requirement_id"]} if lane.get("requirement_id") else {}),
                 **({"verification_protocol_id": lane["verification_protocol_id"]} if lane.get("verification_protocol_id") else {}),
@@ -1711,6 +2068,7 @@ def _proof_selection_for_changed_paths(
             for lane in selected_lanes
         ],
         "required_commands": required_commands,
+        "manual_proof_obligations": manual_proof_obligations,
         "sufficiency": _workflow_sufficiency_payload(
             surface="proof",
             decision="required-proof-selected" if required_commands else "no-required-proof-selected",

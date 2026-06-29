@@ -66,6 +66,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.action_effect.claim_boundary` | string | yes |  | Claim limit created by this local or installed-state condition. |  |  |
 | `installed_state_compatibility.action_effect.resolution_selector` | string | yes |  | Selector that exposes the resolving diagnostic. |  |  |
 | `installed_state_compatibility.action_effect.resolution_command` | string | yes |  | Command to run when reconciliation is required or desired. |  |  |
+| `installed_state_compatibility.repair_route` | object | no |  | Repair route for reconciling installed-state drift or payload upgrade conditions. |  |  |
 | `installed_state_compatibility.rule` | string | no |  | Policy rule for applying this packet. |  |  |
 | `selected_modules` | array of string | yes |  | Modules selected for this report invocation. |  |  |
 | `installed_modules` | array of string | yes |  | Installed Agentic Workspace modules detected in the target repository. |  |  |
@@ -170,6 +171,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `applicable_intent_status.kind` | const `"agentic-workspace/applicable-intent-status/v1"` | yes |  | Discriminator for the applicable-intent status packet. |  |  |
 | `applicable_intent_status.status` | string | yes |  | Whether applicable-intent evidence is present, guidance-only, or requires attention. |  |  |
 | `repair_loop_residue` | object | yes |  | Derived validation-driven repair residue across Planning and Verification. |  |  |
+| `repair_route` | object | no |  | Planning repair-route guidance for already-started or recovery-shaped work. |  |  |
 | `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
 | `workflow_compliance_summary` | object | yes |  | Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action. |  |  |

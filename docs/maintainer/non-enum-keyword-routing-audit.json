@@ -4,6 +4,42 @@
   "rule": "Substring marker tables are allowed only when decision_authority is advisory-only, checker-only, enum-owned, or structured-owned. Repo-specific routing must come from explicit labels, structured state, or learned metadata.",
   "entries": [
     {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_installed_state_drift_triage_payload",
+      "variable": "freshness_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags task text that may make installed-state freshness relevant to closeout; it does not decide proof, ownership, or workflow state.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface installed-state drift attention; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_read_only_meta_task",
+      "variable": "meta_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies likely meta/read-only task phrasing for startup diagnostics; it does not authorize or forbid implementation by itself.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface task-shape evidence; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_installed_state_drift_triage_payload",
+      "variable": "freshness_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table flags task text that may make installed-state freshness relevant to closeout; it does not decide proof, ownership, or workflow state.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface installed-state drift attention; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "function": "_read_only_meta_task",
+      "variable": "meta_terms",
+      "classification": "advisory-diagnostic",
+      "authority": "The table identifies likely meta/read-only task phrasing for startup diagnostics; it does not authorize or forbid implementation by itself.",
+      "decision_authority": "advisory-only",
+      "agent_judgment_boundary": "The table may surface task-shape evidence; the agent decides semantic task fit, owner, proof sufficiency, and action."
+    },
+    {
       "path": "packages/memory/scripts/check/check_memory_freshness.py",
       "function": "_delegates_durable_context",
       "variable": "delegation_markers",
