@@ -1310,14 +1310,20 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             for key in (
                 "kind",
                 "status",
+                "outcome",
                 "closeout_blocked",
                 "destinations",
                 "dismissal_reason",
+                "deferred_reason",
                 "signal_count",
+                "sample_signals",
+                "durability",
+                "durable_residue",
+                "canonical_repo_history",
                 "detail_command",
                 "selector",
             )
-            if key in dogfooding_signal_status
+            if key in dogfooding_signal_status and dogfooding_signal_status.get(key) not in (None, "", [], {}, False, 0)
         }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):

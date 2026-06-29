@@ -785,6 +785,40 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
     assert "dogfooding_signal_status" in release["action_signals"]["advisory_detail"]["selectors"]
 
 
+def test_start_surfaces_unresolved_dogfooding_signal_outcome(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "dogfooding-signal-status.json"
+    cache_path.write_text(
+        json.dumps({"status": "unresolved", "signals": ["diagnostic did not change routing"]}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue planned lane in stacked PR sequence",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    status = payload["context"]["dogfooding_signal_status"]
+    assert status["status"] == "unresolved"
+    assert status["closeout_blocked"] is True
+    assert status["durable_residue"] is True
+    assert status["sample_signals"] == ["diagnostic did not change routing"]
+    assert "dogfooding_signal_status=unresolved" in payload["action_signals"]["changed_signals"]
+
+
 def test_start_report_meta_task_keeps_routine_context_selector_only_with_background_drift(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2147,27 +2181,59 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
     not_checked = json.loads(capsys.readouterr().out)["answer"]
     assert not_checked["status"] == "not_checked"
+    assert not_checked["outcome"] == "not_checked"
     assert not_checked["closeout_blocked"] is False
+    assert "session_improvement_intake" in not_checked["detail_command"]
 
-    cache_path.write_text(json.dumps({"status": "no_signal_found", "reason": "reviewed; no durable signal"}), encoding="utf-8")
+    cache_path.write_text(json.dumps({"status": "checked_none", "reason": "reviewed; no durable signal"}), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
     no_signal = json.loads(capsys.readouterr().out)["answer"]
-    assert no_signal["status"] == "no_signal_found"
+    assert no_signal["status"] == "checked_none"
+    assert no_signal["durable_residue"] is False
 
     cache_path.write_text(
-        json.dumps({"status": "signals_routed", "signals": ["startup missed PR comments"], "destinations": ["#1831"]}),
+        json.dumps({"status": "recorded_chat_only", "signals": ["in-chat dogfooding note"]}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    chat_only = json.loads(capsys.readouterr().out)["answer"]
+    assert chat_only["status"] == "recorded_chat_only"
+    assert chat_only["durability"] == "local_chat_only"
+    assert chat_only["canonical_repo_history"] is False
+
+    cache_path.write_text(
+        json.dumps({"status": "recorded_session_only", "signals": ["temporary validation friction"]}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    session_only = json.loads(capsys.readouterr().out)["answer"]
+    assert session_only["status"] == "recorded_session_only"
+    assert session_only["durability"] == "local_session_only"
+
+    cache_path.write_text(
+        json.dumps({"status": "routed_to_issue", "signals": ["startup missed PR comments"], "destinations": ["#1831"]}),
         encoding="utf-8",
     )
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
     routed = json.loads(capsys.readouterr().out)["answer"]
-    assert routed["status"] == "signals_routed"
+    assert routed["status"] == "routed_to_issue"
     assert routed["destinations"] == ["#1831"]
     assert routed["closeout_blocked"] is False
+    assert routed["durable_residue"] is True
+
+    cache_path.write_text(
+        json.dumps({"status": "deferred_to_roadmap", "signals": ["larger design concern"], "deferred_reason": "roadmap batch"}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    deferred = json.loads(capsys.readouterr().out)["answer"]
+    assert deferred["status"] == "deferred_to_roadmap"
+    assert deferred["durability"] == "roadmap_or_future_work"
 
     cache_path.write_text(
         json.dumps(
             {
-                "status": "signals_dismissed_with_reason",
+                "status": "dismissed_with_reason",
                 "signals": ["one-off shell typo"],
                 "dismissal_reason": "operator typo, not product friction",
             }
@@ -2176,14 +2242,51 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     )
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
     dismissed = json.loads(capsys.readouterr().out)["answer"]
-    assert dismissed["status"] == "signals_dismissed_with_reason"
+    assert dismissed["status"] == "dismissed_with_reason"
     assert dismissed["dismissal_reason"] == "operator typo, not product friction"
 
     cache_path.write_text(json.dumps({"signals": ["unrouted friction"]}), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
     blocked = json.loads(capsys.readouterr().out)["answer"]
-    assert blocked["status"] == "not_checked"
+    assert blocked["status"] == "unresolved"
     assert blocked["closeout_blocked"] is True
+    assert blocked["durable_residue"] is True
+
+
+def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "dogfooding-signal-status.json"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "session_improvement_intake", "--format", "json"]) == 0
+    unavailable = json.loads(capsys.readouterr().out)["answer"]
+    assert unavailable["status"] == "unavailable"
+    assert unavailable["session_signal_source"]["status"] == "missing"
+    assert unavailable["repo_wide_existing"]["included_by_default"] is False
+    assert "large_file" not in json.dumps(unavailable)
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                "status": "unresolved",
+                "signals": ["improvement diagnostics did not change next action"],
+                "routing_decision": "route_now",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "session_improvement_intake", "--format", "json"]) == 0
+    session = json.loads(capsys.readouterr().out)["answer"]
+    assert session["status"] == "session_observed"
+    assert session["session_observed_signals"][0]["outcome"] == "unresolved"
+    assert session["routing_decisions"][0]["decision"] == "route_now"
+    assert session["routing_decisions"][0]["closeout_blocked"] is True
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
+    repo_wide = json.loads(capsys.readouterr().out)["answer"]
+    assert repo_wide["intake_scope"]["status"] == "explicit_repo_wide_requested"
+    assert "repo_wide_existing_candidates" in repo_wide
 
 
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
