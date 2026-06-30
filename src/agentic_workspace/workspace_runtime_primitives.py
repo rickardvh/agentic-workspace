@@ -36546,6 +36546,21 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
         args, command_name=command_name
     )
+    legacy_cleanup_requested = command_name == "upgrade" and (
+        bool(getattr(args, "legacy_scratch_cleanup", False)) or bool(getattr(args, "apply_legacy_scratch_cleanup", False))
+    )
+    if legacy_cleanup_requested:
+        apply_cleanup = bool(getattr(args, "apply_legacy_scratch_cleanup", False)) and not bool(getattr(args, "dry_run", False))
+        payload = _workspace_runtime_core._run_legacy_scratch_cleanup(
+            target_root=target_root,
+            config=config,
+            dry_run=not apply_cleanup,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
         payload = _run_managed_local_instructions_repair(
             target_root=target_root,
@@ -42304,9 +42319,12 @@ def _dedupe(values: list[str]) -> list[str]:
 _local_scratch_payload: Any = _workspace_runtime_core._local_scratch_payload
 _local_footprint_payload: Any = _workspace_runtime_core._local_footprint_payload
 _local_scratch_policy_payload: Any = _workspace_runtime_core._local_scratch_policy_payload
+_local_scratch_runs_payload: Any = _workspace_runtime_core._local_scratch_runs_payload
 _prune_local_scratch_runs: Any = _workspace_runtime_core._prune_local_scratch_runs
+_cleanup_legacy_local_scratch: Any = _workspace_runtime_core._cleanup_legacy_local_scratch
 _workspace_status_report: Any = _workspace_runtime_core._workspace_status_report
 _workspace_init_or_upgrade_report: Any = _workspace_runtime_core._workspace_init_or_upgrade_report
+_run_legacy_scratch_cleanup: Any = _workspace_runtime_core._run_legacy_scratch_cleanup
 _run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
 _run_report_command: Any = _workspace_runtime_core._run_report_command
 _run_report_router_command: Any = _workspace_runtime_core._run_report_router_command

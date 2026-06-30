@@ -63,6 +63,7 @@
     "external_work_reconciliation",
     "external_work_delta",
     "local_aw_state",
+    "local_footprint",
     "findings",
     "next_action",
     "discovery",
@@ -268,6 +269,11 @@
     "local_aw_state": {
       "type": "object",
       "description": "Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces.",
+      "additionalProperties": true
+    },
+    "local_footprint": {
+      "type": "object",
+      "description": "Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing.",
       "additionalProperties": true
     },
     "workflow_obligations": {

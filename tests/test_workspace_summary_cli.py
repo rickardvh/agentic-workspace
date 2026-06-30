@@ -219,6 +219,9 @@ def test_report_local_footprint_splits_managed_and_legacy_scratch(tmp_path: Path
     assert "largest_files" not in scratch["legacy_entries"][0]
     assert not any("scratch/host-owned" in json.dumps(item) for item in packet["largest_local_offenders"])
     assert packet["policy"]["source"] == ".agentic-workspace/config.local.toml"
+    assert packet["next_action"]["legacy_cleanup"]["status"] == "available"
+    assert " --legacy-scratch-cleanup --dry-run " in packet["next_action"]["legacy_cleanup"]["dry_run"]
+    assert " --apply-legacy-scratch-cleanup " in packet["next_action"]["legacy_cleanup"]["apply_after_review"]
     assert "subtrees" not in packet
     assert " --section local_footprint --verbose --format json" in packet["detail_command"]
 
@@ -262,6 +265,110 @@ def test_upgrade_prunes_manifest_backed_scratch_but_preserves_legacy_and_protect
     assert not old_run.exists()
     assert protected_run.exists()
     assert legacy.exists()
+
+
+def test_upgrade_legacy_scratch_cleanup_has_explicit_dry_run_and_apply(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    legacy_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "legacy-run"
+    legacy_top = target / ".agentic-workspace" / "local" / "scratch" / "legacy" / "deep" / "path"
+    managed_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "managed-run"
+    host_scratch = target / "scratch" / "host-owned.txt"
+    _write(legacy_run / "artifact.txt", "legacy run\n")
+    _write(legacy_top / "artifact.txt", "legacy top\n")
+    _write(
+        managed_run / ".aw-scratch.toml",
+        'owner = "agentic-workspace"\ncreated_at = "2999-01-01T00:00:00+00:00"\npurpose = "managed"\nproducer = "pytest"\nretention = "ephemeral"\n',
+    )
+    _write(managed_run / "artifact.txt", "managed\n")
+    _write(host_scratch, "host\n")
+
+    assert cli.main(["upgrade", "--target", str(target), "--legacy-scratch-cleanup", "--dry-run", "--format", "json"]) == 0
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    workspace_report = dry_run_payload["reports"][0]
+    assert dry_run_payload["cleanup_mode"] == "legacy-scratch"
+    assert dry_run_payload["dry_run"] is True
+    assert {action["kind"] for action in workspace_report["actions"]} == {"would remove"}
+    assert {action["path"] for action in workspace_report["actions"]} == {
+        ".agentic-workspace/local/scratch/legacy",
+        ".agentic-workspace/local/scratch/runs/legacy-run",
+    }
+    assert legacy_run.exists()
+    assert legacy_top.exists()
+
+    assert (
+        cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(target),
+                "--legacy-scratch-cleanup",
+                "--apply-legacy-scratch-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = payload["reports"][0]
+    assert payload["dry_run"] is False
+    assert {action["kind"] for action in workspace_report["actions"]} == {"removed"}
+    assert not legacy_run.exists()
+    assert not (target / ".agentic-workspace" / "local" / "scratch" / "legacy").exists()
+    assert managed_run.exists()
+    assert host_scratch.exists()
+
+
+def test_legacy_scratch_cleanup_rejects_path_escape_candidates(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    outside = tmp_path / "outside-legacy"
+    _write(outside / "artifact.txt", "do not delete\n")
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_local_scratch_runs_payload",
+        lambda *, target_root, policy, **kwargs: {
+            "kind": "agentic-workspace/local-scratch-runs/v1",
+            "legacy_entries": [{"path": "../outside-legacy"}],
+        },
+    )
+
+    result = workspace_runtime_core._cleanup_legacy_local_scratch(
+        target_root=target,
+        dry_run=False,
+        policy=workspace_runtime_core._local_scratch_policy_payload(target_root=target),
+    )
+
+    assert outside.exists()
+    assert result["actions"] == []
+    assert result["warnings"][0]["message"] == "legacy scratch cleanup skipped; candidate failed path or manifest guard"
+
+
+def test_legacy_scratch_cleanup_rejects_symlinked_runs_root(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    outside = tmp_path / "outside-runs"
+    runs = target / ".agentic-workspace" / "local" / "scratch" / "runs"
+    outside.mkdir(parents=True)
+    runs.parent.mkdir(parents=True)
+    try:
+        runs.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    _write(outside / "legacy-run" / "artifact.txt", "legacy\n")
+
+    result = workspace_runtime_core._cleanup_legacy_local_scratch(
+        target_root=target,
+        dry_run=False,
+        policy=workspace_runtime_core._local_scratch_policy_payload(target_root=target),
+    )
+
+    assert (outside / "legacy-run").exists()
+    assert result["actions"] == []
+    assert result["warnings"][0]["message"] == "legacy scratch cleanup skipped; scratch root or runs root is a symlink"
 
 
 def test_scratch_size_budget_subtracts_already_eligible_runs(tmp_path: Path, capsys) -> None:

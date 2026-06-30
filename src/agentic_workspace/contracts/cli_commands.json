@@ -2564,6 +2564,22 @@
           "help": "Show planned changes without mutating files."
         },
         {
+          "name": "legacy_scratch_cleanup",
+          "flags": [
+            "--legacy-scratch-cleanup"
+          ],
+          "action": "store_true",
+          "help": "Run the explicit legacy AW local scratch cleanup route. Defaults to dry-run unless --apply-legacy-scratch-cleanup is also set."
+        },
+        {
+          "name": "apply_legacy_scratch_cleanup",
+          "flags": [
+            "--apply-legacy-scratch-cleanup"
+          ],
+          "action": "store_true",
+          "help": "Apply the explicit legacy AW local scratch cleanup after reviewing the dry-run output."
+        },
+        {
           "name": "repair_managed_local_instructions",
           "flags": [
             "--repair-managed-local-instructions"

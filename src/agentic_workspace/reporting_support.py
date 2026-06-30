@@ -425,6 +425,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "runs_root": scratch.get("runs_root", ".agentic-workspace/local/scratch/runs"),
                     "managed_run_count": scratch.get("managed_run_count", 0),
                     "legacy_entry_count": scratch.get("legacy_entry_count", 0),
+                    "legacy_entry_omitted_count": scratch.get("legacy_entry_omitted_count", 0),
                     "eligible_prune_count": scratch.get("eligible_prune_count", 0),
                     "eligible_prune_paths": _support_list_payload(scratch.get("eligible_prune_paths"))[:5],
                     "legacy_entries": [compact_scratch_entry(item) for item in _support_list_payload(scratch.get("legacy_entries"))[:3]],

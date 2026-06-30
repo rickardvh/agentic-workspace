@@ -10476,7 +10476,9 @@ def _local_scratch_run_payload(*, run_dir: Path, target_root: Path, policy: dict
     }
 
 
-def _local_scratch_runs_payload(*, target_root: Path, policy: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
+def _local_scratch_runs_payload(
+    *, target_root: Path, policy: dict[str, Any], now: datetime | None = None, legacy_entry_limit: int | None = 8
+) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
     scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     runs_root = scratch_root / "runs"
@@ -10527,14 +10529,19 @@ def _local_scratch_runs_payload(*, target_root: Path, policy: dict[str, Any], no
             run["eligible_for_auto_prune"] = True
             if total_bytes <= _safe_int(policy.get("max_total_bytes"), LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES):
                 break
+    sorted_legacy_entries = sorted(legacy_entries, key=lambda item: (-_as_int(item.get("bytes")), str(item.get("path", ""))))
+    reported_legacy_entries = (
+        sorted_legacy_entries if legacy_entry_limit is None else sorted_legacy_entries[: max(0, int(legacy_entry_limit))]
+    )
     return {
         "kind": "agentic-workspace/local-scratch-runs/v1",
         "root": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
         "runs_root": (WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").as_posix(),
         "managed_runs": managed_runs,
-        "legacy_entries": sorted(legacy_entries, key=lambda item: (-_as_int(item.get("bytes")), str(item.get("path", ""))))[:8],
+        "legacy_entries": reported_legacy_entries,
         "managed_run_count": len(managed_runs),
         "legacy_entry_count": len(legacy_entries),
+        "legacy_entry_omitted_count": max(0, len(legacy_entries) - len(reported_legacy_entries)),
         "eligible_prune_count": len(eligible),
         "eligible_prune_paths": [str(run.get("path", "")) for run in eligible],
     }
@@ -10602,6 +10609,74 @@ def _prune_local_scratch_runs(*, target_root: Path, dry_run: bool, policy: dict[
     }
 
 
+def _cleanup_legacy_local_scratch(*, target_root: Path, dry_run: bool, policy: dict[str, Any]) -> dict[str, Any]:
+    scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    runs_root = scratch_path / "runs"
+    warnings: list[dict[str, str]] = []
+    if scratch_path.is_symlink() or runs_root.is_symlink():
+        warnings.append(
+            {
+                "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+                "message": "legacy scratch cleanup skipped; scratch root or runs root is a symlink",
+            }
+        )
+        return {
+            "kind": "agentic-workspace/local-scratch-legacy-cleanup/v1",
+            "status": "clear",
+            "dry_run": dry_run,
+            "actions": [],
+            "warnings": warnings,
+            "policy": policy,
+            "rule": "Legacy cleanup only deletes explicit unmanifested AW local scratch entries under .agentic-workspace/local/scratch.",
+        }
+    resolved_scratch_root = scratch_path.resolve(strict=False)
+    resolved_runs_root = runs_root.resolve(strict=False)
+    runs = _local_scratch_runs_payload(target_root=target_root, policy=policy, legacy_entry_limit=None)
+    actions: list[dict[str, str]] = []
+    for entry in _list_payload(runs.get("legacy_entries")):
+        if not isinstance(entry, dict):
+            continue
+        relative = str(entry.get("path", "")).strip()
+        if not relative:
+            continue
+        candidate_path = target_root / relative
+        candidate = candidate_path.resolve(strict=False)
+        manifest = candidate_path / LOCAL_SCRATCH_MANIFEST_NAME
+        if (
+            candidate_path.is_symlink()
+            or not _path_under_root(candidate, resolved_scratch_root)
+            or candidate == resolved_scratch_root
+            or (_path_under_root(candidate, resolved_runs_root) and manifest.is_file())
+        ):
+            warnings.append({"path": relative, "message": "legacy scratch cleanup skipped; candidate failed path or manifest guard"})
+            continue
+        if not candidate_path.exists():
+            warnings.append({"path": relative, "message": "legacy scratch cleanup skipped; candidate no longer exists"})
+            continue
+        if not dry_run:
+            try:
+                _remove_tree_no_follow(candidate_path)
+            except OSError as exc:
+                warnings.append({"path": relative, "message": f"legacy scratch cleanup failed: {exc}"})
+                continue
+        actions.append(
+            {
+                "kind": "would remove" if dry_run else "removed",
+                "path": relative,
+                "detail": "remove legacy unmanifested AW local scratch entry after explicit review",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/local-scratch-legacy-cleanup/v1",
+        "status": "cleaned" if actions and not dry_run else "would-clean" if actions else "clear",
+        "dry_run": dry_run,
+        "actions": actions,
+        "warnings": warnings,
+        "policy": policy,
+        "rule": "Legacy cleanup only deletes explicit unmanifested AW local scratch entries under .agentic-workspace/local/scratch.",
+    }
+
+
 def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     policy = _local_scratch_policy_payload(target_root=target_root)
     aw_root = target_root / ".agentic-workspace"
@@ -10650,6 +10725,14 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
         },
     ]
     status = "attention" if any(item["status"] == "over-budget" for item in budget_items) or runs["eligible_prune_count"] else "ok"
+    legacy_cleanup_dry_run = _command_with_cli_invoke(
+        command="agentic-workspace upgrade --target ./repo --legacy-scratch-cleanup --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    legacy_cleanup_apply = _command_with_cli_invoke(
+        command=("agentic-workspace upgrade --target ./repo --legacy-scratch-cleanup --apply-legacy-scratch-cleanup --format json"),
+        cli_invoke=cli_invoke,
+    )
     return {
         "kind": "agentic-workspace/local-footprint/v1",
         "status": status,
@@ -10685,7 +10768,12 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
                 cli_invoke=cli_invoke,
             ),
             "apply": _command_with_cli_invoke(command="agentic-workspace upgrade --target ./repo --format json", cli_invoke=cli_invoke),
-            "legacy_cleanup": "legacy unmanifested scratch remains explicit-review only",
+            "legacy_cleanup": {
+                "status": "available" if runs["legacy_entry_count"] else "not-needed",
+                "dry_run": legacy_cleanup_dry_run,
+                "apply_after_review": legacy_cleanup_apply,
+                "rule": "Dry-run first; apply deletes only guarded legacy AW-owned scratch entries.",
+            },
         },
         "scope_boundary": "AW owns only .agentic-workspace/local/scratch; repo-root scratch and host-owned temporary paths are out of scope.",
     }
@@ -37215,6 +37303,21 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
         args, command_name=command_name
     )
+    legacy_cleanup_requested = command_name == "upgrade" and (
+        bool(getattr(args, "legacy_scratch_cleanup", False)) or bool(getattr(args, "apply_legacy_scratch_cleanup", False))
+    )
+    if legacy_cleanup_requested:
+        apply_cleanup = bool(getattr(args, "apply_legacy_scratch_cleanup", False)) and not bool(getattr(args, "dry_run", False))
+        payload = _run_legacy_scratch_cleanup(
+            target_root=target_root,
+            config=config,
+            dry_run=not apply_cleanup,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
         payload = _run_managed_local_instructions_repair(
             target_root=target_root,
@@ -37240,6 +37343,54 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _run_legacy_scratch_cleanup(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    dry_run: bool,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    non_interactive: bool,
+) -> dict[str, Any]:
+    cleanup = _cleanup_legacy_local_scratch(
+        target_root=target_root,
+        dry_run=dry_run,
+        policy=_local_scratch_policy_payload(target_root=target_root),
+    )
+    report = _workspace_report(
+        target_root=target_root,
+        message="Legacy local scratch cleanup",
+        dry_run=dry_run,
+        actions=cast(list[dict[str, str]], cleanup.get("actions", [])),
+        warnings=cast(list[dict[str, str]], cleanup.get("warnings", [])),
+    )
+    summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+    return {
+        "command": "upgrade",
+        "cleanup_mode": "legacy-scratch",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "non_interactive": non_interactive,
+        "health": "healthy" if not cleanup.get("warnings") else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
+        "warnings": summary["warnings"],
+        "reports": [report],
+        "config": _config_payload(config=config),
+        "cleanup": cleanup,
+        "cleanup_scope": {
+            "root": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+            "mode": "explicit-legacy-only",
+            "rule": "Manifest-backed runs are not part of legacy cleanup; repo-root scratch is outside AW ownership.",
+        },
+    }
 
 
 def _run_managed_local_instructions_repair(

@@ -4885,6 +4885,22 @@
           {
             "action": "store_true",
             "flags": [
+              "--legacy-scratch-cleanup"
+            ],
+            "help": "Run the explicit legacy AW local scratch cleanup route. Defaults to dry-run unless --apply-legacy-scratch-cleanup is also set.",
+            "name": "legacy_scratch_cleanup"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-legacy-scratch-cleanup"
+            ],
+            "help": "Apply the explicit legacy AW local scratch cleanup after reviewing the dry-run output.",
+            "name": "apply_legacy_scratch_cleanup"
+          },
+          {
+            "action": "store_true",
+            "flags": [
               "--repair-managed-local-instructions"
             ],
             "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file.",

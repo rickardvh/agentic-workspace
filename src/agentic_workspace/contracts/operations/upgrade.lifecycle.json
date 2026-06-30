@@ -23,6 +23,16 @@
       "required": false
     },
     {
+      "name": "legacy_scratch_cleanup",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "apply_legacy_scratch_cleanup",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "repair_managed_local_instructions",
       "source": "cli-option",
       "required": false
@@ -93,12 +103,12 @@
     {
       "id": "plan_lifecycle",
       "uses": "workspace.lifecycle.plan",
-      "description": "Plan upgrade changes."
+      "description": "Plan upgrade changes or explicit legacy scratch cleanup when selected."
     },
     {
       "id": "apply_lifecycle",
       "uses": "workspace.lifecycle.apply",
-      "description": "Apply upgrade changes when not a dry run."
+      "description": "Apply upgrade changes when not a dry run; apply legacy scratch cleanup only when explicitly requested."
     },
     {
       "id": "emit_output",
@@ -108,7 +118,8 @@
   ],
   "guards": [
     "Enforce strict preflight when configured.",
-    "Respect dry-run mode by avoiding writes."
+    "Respect dry-run mode by avoiding writes.",
+    "Keep legacy scratch cleanup explicit and scoped to guarded entries under .agentic-workspace/local/scratch."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
