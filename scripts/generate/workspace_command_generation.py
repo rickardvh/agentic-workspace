@@ -365,6 +365,91 @@ def _patch_workspace_typescript_sample_command_test(
     return GeneratedOutput(output.path, content)
 
 
+def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if not relative.startswith("generated/") or not relative.endswith("/typescript/src/cli.mjs"):
+        return output
+    if "Strict preflight gate is enabled." in output.content:
+        return output
+    anchor = (
+        "function maybeRunNativeOperation() {\n"
+        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
+        "  const operationId = invocation.operationRef?.id;\n"
+        "  const operationPath = invocation.operationRef?.path;\n"
+        "  try {\n"
+    )
+    inserted = (
+        "function maybeRunNativeOperation() {\n"
+        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
+        "  const operationId = invocation.operationRef?.id;\n"
+        "  const operationPath = invocation.operationRef?.path;\n"
+        "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
+        "    console.error(\"Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.\");\n"
+        "    process.exit(2);\n"
+        "  }\n"
+        "  try {\n"
+    )
+    if anchor not in output.content:
+        return output
+    return GeneratedOutput(output.path, output.content.replace(anchor, inserted))
+
+
+def _patch_typescript_runtime_template_ops(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if not relative.startswith("generated/") or not relative.endswith("/typescript/src/runtime.mjs"):
+        return output
+    if "$exists_status" in output.content:
+        return output
+    anchor = (
+        "function resolveTemplate(template, values) {\n"
+        "  if (Array.isArray(template)) return template.map((item) => resolveTemplate(item, values));\n"
+        "  if (!isObject(template)) return template;\n"
+        "  const keys = Object.keys(template);\n"
+        "  if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];\n"
+        "  if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;\n"
+        "  return Object.fromEntries(Object.entries(template).map(([key, value]) => [key, resolveTemplate(value, values)]));\n"
+        "}\n"
+    )
+    inserted = (
+        "function resolveTemplate(template, values) {\n"
+        "  if (Array.isArray(template)) return template.map((item) => resolveTemplate(item, values));\n"
+        "  if (!isObject(template)) return template;\n"
+        "  const keys = Object.keys(template);\n"
+        "  if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];\n"
+        "  if (Object.prototype.hasOwnProperty.call(template, '$field')) {\n"
+        "    const spec = template.$field;\n"
+        "    const parts = Array.isArray(spec.path) ? spec.path.map(String) : String(spec.path ?? '').split('.').filter(Boolean);\n"
+        "    let value = values[String(spec.value ?? '')];\n"
+        "    for (const part of parts) {\n"
+        "      if (!isObject(value) || !Object.prototype.hasOwnProperty.call(value, part)) throw new RuntimeError(`template $field cannot resolve ${spec.value}.${parts.join('.')}`);\n"
+        "      value = value[part];\n"
+        "    }\n"
+        "    return value;\n"
+        "  }\n"
+        "  if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;\n"
+        "  if (Object.prototype.hasOwnProperty.call(template, '$exists_status')) {\n"
+        "    const spec = template.$exists_status;\n"
+        "    return Boolean(values[String(spec.value ?? '')]) ? spec.present : spec.missing;\n"
+        "  }\n"
+        "  if (Object.prototype.hasOwnProperty.call(template, '$count_status')) {\n"
+        "    const spec = template.$count_status;\n"
+        "    const counted = values[String(spec.value ?? '')];\n"
+        "    return Array.isArray(counted) && counted.length ? spec.present : spec.missing;\n"
+        "  }\n"
+        "  if (Object.prototype.hasOwnProperty.call(template, '$join_path')) {\n"
+        "    const spec = template.$join_path;\n"
+        "    return join(String(values[String(spec.base ?? '')] ?? ''), String(spec.path ?? '')).replace(/\\\\/g, '/');\n"
+        "  }\n"
+        "  return Object.fromEntries(Object.entries(template).map(([key, value]) => [key, resolveTemplate(value, values)]));\n"
+        "}\n"
+    )
+    if anchor not in output.content:
+        return output
+    return GeneratedOutput(output.path, output.content.replace(anchor, inserted))
+
+
 def render_workspace_command_package_outputs(
     manifest: dict[str, object] | None = None,
     *,
@@ -380,10 +465,16 @@ def render_workspace_command_package_outputs(
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     return [
-        _patch_workspace_typescript_sample_command_test(
-            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+        _patch_typescript_runtime_template_ops(
+            _patch_typescript_strict_preflight_gate(
+                _patch_workspace_typescript_sample_command_test(
+                    _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                    repo_root=repo_root,
+                    manifest=effective_manifest,
+                ),
+                repo_root=repo_root,
+            ),
             repo_root=repo_root,
-            manifest=effective_manifest,
         )
         for output in outputs
     ]
@@ -395,7 +486,7 @@ def generate_workspace_command_packages(*, repo_root: Path = REPO_ROOT, check: b
     for output in render_workspace_command_package_outputs(repo_root=repo_root):
         path = output.path if output.path.is_absolute() else repo_root / output.path
         relative = path.relative_to(repo_root).as_posix()
-        if path.exists() and path.read_text(encoding="utf-8") == output.content:
+        if path.exists() and path.read_bytes() == output.content.encode("utf-8"):
             continue
         stale.append(relative)
         if not check:

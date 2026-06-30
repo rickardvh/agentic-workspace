@@ -2095,6 +2095,10 @@ function maybeRunNativeOperation() {
   const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
   const operationId = invocation.operationRef?.id;
   const operationPath = invocation.operationRef?.path;
+  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {
+    console.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.");
+    process.exit(2);
+  }
   try {
     const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
     process.exit(nativeStatus);
