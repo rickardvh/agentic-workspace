@@ -10,6 +10,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WorkspaceUsageError
 from agentic_workspace.repository_scanning import repository_scan_files
+from agentic_workspace.workspace_output import bounded_selector_inventory
 
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
@@ -886,6 +887,14 @@ def report_router_payload(
     router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
     if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
         router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
+    next_action_payload = router_payload.get("next_action", {})
+    next_action_summary = (str(next_action_payload.get("summary", "")) if isinstance(next_action_payload, dict) else "") or str(
+        router_payload.get("health", "unknown")
+    )
+    warning_summary_payload = router_payload.get("warning_summary", {})
+    warning_summary_payload = warning_summary_payload if isinstance(warning_summary_payload, dict) else {}
+    warning_sample = warning_summary_payload.get("sample", [])
+    warning_sample_count = len(warning_sample) if isinstance(warning_sample, list) else 0
     compact_payload = {
         "kind": router_payload["kind"],
         "schema": router_payload["schema"],
@@ -893,44 +902,98 @@ def report_router_payload(
         "target": router_payload["target"],
         "health": router_payload["health"],
         "next_action": router_payload["next_action"],
+        "decision_packet": {
+            "kind": "agentic-workspace/ordinary-decision-packet/v1",
+            "surface": "report",
+            "phase_question": "Which report fact changes the next action?",
+            "next_action": next_action_summary,
+            "blocked_actions": [],
+            "required_commands": [],
+            "claim_boundary": "reporting-only",
+            "residue_owner": "current work" if current_work else "none",
+            "reasons": [f"health={router_payload['health']}", f"warning_count={len(findings)}"],
+            "detail_routes": {
+                "current_work": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section current_work --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "warnings": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section findings --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "full_diagnostics": router_payload["deeper_detail"]["full_profile_command"],
+            },
+            "shown_because": ["command_phase=report", "report_section=default"],
+            "absence_states": {
+                "full_selector_inventory": "hidden_behind_detail_route",
+                "high_volume_sections": "detail_omitted",
+            },
+        },
         "context": {
-            key: value
-            for key, value in router_payload.items()
-            if key
-            not in {
-                "kind",
-                "schema",
-                "command",
-                "target",
-                "health",
-                "next_action",
-                "section_hints",
-                "deeper_detail",
-            }
+            "report_profile": router_payload["report_profile"],
+            "current_work": router_payload["current_work"],
+            "memory_consult": router_payload["memory_consult"],
+            "routine_work_context": router_payload["routine_work_context"],
+            "warning_summary": {
+                "total_count": warning_summary_payload.get("total_count", 0),
+                "by_severity": warning_summary_payload.get("by_severity", {}),
+                "by_module": warning_summary_payload.get("by_module", {}),
+                "sample_count": warning_sample_count,
+                "detail_section": "findings",
+            },
+            "closeout_report": router_payload["closeout_report"],
+            "absence_states": {
+                "configuration_projection": "detail_omitted",
+                "durable_intent": "detail_omitted",
+                "external_work_reconciliation": "hidden_behind_detail_route",
+                "execution_shape": "detail_omitted",
+                "surface_value_guardrail": "detail_omitted",
+            },
         },
         "drill_down": {
-            "ordinary_profile": "primary=next_action;health=status;context=selector-backed router state",
-            "section_hints": router_payload["section_hints"],
-            "deeper_detail": router_payload["deeper_detail"],
-            "available_selectors": [
-                "next_action",
-                "health",
-                "context.report_profile",
-                "context.current_work",
-                "context.memory_consult",
-                "context.routine_work_context",
-                "context.warning_summary",
-                "context.execution_shape",
-                "context.configuration_projection",
-                "context.selective_surfacing_evaluation",
-                "context.improvement_intake",
-                "context.external_work_reconciliation",
-                "context.closeout_report",
-                "context.surface_value_guardrail",
-                "drill_down.section_hints",
-                "drill_down.deeper_detail.lazy_section_catalog",
-                "drill_down.deeper_detail",
-            ],
+            "ordinary_profile": "primary=decision_packet;health=status;detail=exact_routes",
+            "section_hints": {
+                "status": "omitted-from-compact-default",
+                "available_count": len(router_payload["section_hints"]) if isinstance(router_payload["section_hints"], list) else 0,
+                "sample": [],
+                "omitted_count": len(router_payload["section_hints"]) if isinstance(router_payload["section_hints"], list) else 0,
+                "detail_route": router_payload["deeper_detail"]["section_command"],
+            },
+            "deeper_detail": {
+                "full_profile_command": router_payload["deeper_detail"]["full_profile_command"],
+                "section_command": router_payload["deeper_detail"]["section_command"],
+                "omitted_section_hint_count": router_payload["deeper_detail"]["omitted_section_hint_count"],
+            },
+            "selector_inventory": bounded_selector_inventory(
+                selectors=[
+                    "next_action",
+                    "health",
+                    "context.report_profile",
+                    "context.current_work",
+                    "context.memory_consult",
+                    "context.routine_work_context",
+                    "context.warning_summary",
+                    "context.execution_shape",
+                    "context.configuration_projection",
+                    "context.selective_surfacing_evaluation",
+                    "context.improvement_intake",
+                    "context.external_work_reconciliation",
+                    "context.closeout_report",
+                    "context.surface_value_guardrail",
+                    "drill_down.section_hints",
+                    "drill_down.deeper_detail.lazy_section_catalog",
+                    "drill_down.deeper_detail",
+                ],
+                source_command="report",
+                select_command=_command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section <section> --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                inventory_command=router_payload["deeper_detail"]["full_profile_command"],
+            ),
         },
     }
     return _localize_command_fields(compact_payload, cli_invoke=cli_invoke, target_arg=target_arg)
@@ -1358,8 +1421,8 @@ def _ordinary_agent_path_payload(
         "status": "ready",
         "primary_design_unit": "phase_question",
         "rule": "Answer the current phase question first; commands are routed affordances, not the workflow.",
-        "phase_questions": phase_questions,
-        "lane_completion_model": _ordinary_lane_completion_model_payload(cli_invoke=cli_invoke),
+        "phase_questions": [{"phase": item["phase"], "question": item["question"]} for item in phase_questions],
+        "lane_completion_model": _compact_ordinary_lane_completion_model(cli_invoke=cli_invoke),
         "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
         "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
         "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
@@ -1384,6 +1447,28 @@ def _ordinary_agent_path_payload(
         "recover_by_default": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
     }
     return ordinary_path
+
+
+def _compact_ordinary_lane_completion_model(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/ordinary-lane-completion-model/v1",
+        "status": "available",
+        "visibility_question": "Does this surface change the next safe action, working set, proof, owner, or continuation?",
+        "minimal_survivor_shape": ["claim_boundary", "proof_summary", "residue_owner", "remaining_gap", "reopen_trigger"],
+        "restart_scenario_ids": [
+            "direct-work",
+            "known-changed-paths",
+            "active-lane-continuation",
+            "takeover-or-recovery",
+            "parent-lane-closeout",
+        ],
+        "affordance_first_rule_count": 7,
+        "detail_section": "report_profile",
+        "detail_command": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section report_profile --format json", cli_invoke=cli_invoke
+        ),
+        "absence_state": "full_model_hidden_behind_detail_route",
+    }
 
 
 def _ordinary_lane_completion_model_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:

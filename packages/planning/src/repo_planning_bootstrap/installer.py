@@ -1813,11 +1813,19 @@ def _compact_residue_governance(payload: dict[str, Any]) -> dict[str, Any]:
         "archived_execplan_count": payload.get("archived_execplan_count", 0),
         "matrix_class_count": len(payload.get("residue_class_matrix", [])) if isinstance(payload.get("residue_class_matrix"), list) else 0,
         "review_routing": {
-            key: review_routing[key]
-            for key in ("status", "review_count", "read_first", "do_not_bulk_read", "selection_rule", "relevant_reviews", "recent_reviews")
-            if key in review_routing
+            "status": review_routing.get("status", "unknown"),
+            "review_count": review_routing.get("review_count", 0),
+            "relevant_review_count": len(review_routing.get("relevant_reviews", []))
+            if isinstance(review_routing.get("relevant_reviews"), list)
+            else 0,
+            "recent_review_count": len(review_routing.get("recent_reviews", []))
+            if isinstance(review_routing.get("recent_reviews"), list)
+            else 0,
+            "read_first_count": len(review_routing.get("read_first", [])) if isinstance(review_routing.get("read_first"), list) else 0,
+            "do_not_bulk_read": review_routing.get("do_not_bulk_read", True),
+            "absence_state": "review_samples_hidden_behind_detail_route",
         },
-        "rule": payload.get("rule", ""),
+        "rule": "Residue is routed by owner and future value; inspect verbose detail only when continuation or closeout needs it.",
         "detail_command": payload.get("detail_command", "agentic-planning summary --target . --verbose --format json"),
     }
 
@@ -4037,12 +4045,14 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             changed_paths=[],
         )
     )
-    continuation_view = _planning_continuation_view_payload(
-        target_root=target_root,
-        active_items=active_items,
-        active_execplans=active_execplans,
-        planning_record=None,
-        summary_profile="tiny",
+    continuation_view = _tiny_continuation_view_payload(
+        _planning_continuation_view_payload(
+            target_root=target_root,
+            active_items=active_items,
+            active_execplans=active_execplans,
+            planning_record=None,
+            summary_profile="tiny",
+        )
     )
     return _drop_empty_compact_fields(
         {
@@ -4077,6 +4087,37 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "status": "present" if active_items or active_execplans else "quiet",
                 "recommended_next_action": recommendation,
                 "active_plan_required": bool(active_items or active_execplans),
+            },
+            "decision_packet": {
+                "kind": "agentic-workspace/ordinary-decision-packet/v1",
+                "surface": "summary",
+                "phase_question": "How can a future agent resume without replaying chat?",
+                "next_action": recommendation,
+                "blocked_actions": [],
+                "required_commands": [],
+                "claim_boundary": continuation_view.get("claim_boundary", {}).get("claim_level_allowed", "not-evaluated")
+                if isinstance(continuation_view.get("claim_boundary"), dict)
+                else "not-evaluated",
+                "residue_owner": "active continuation state" if active_items or active_execplans else "none",
+                "reasons": [
+                    f"active_items={len(active_items)}",
+                    f"active_execplans={len(active_execplans)}",
+                    f"warning_count={warning_count}",
+                ],
+                "detail_routes": {
+                    "active_plan": "agentic-workspace summary --select continuation_view,execplans,todo --format json",
+                    "claim_boundary": "agentic-workspace summary --select continuation_view.claim_boundary --format json",
+                    "proof_detail": "agentic-workspace summary --select continuation_view.proof_state --format json",
+                    "omitted_residue": "agentic-workspace summary --verbose --format json",
+                },
+                "shown_because": [
+                    "command_phase=summary",
+                    "active_planning_state=present" if active_items or active_execplans else "active_planning_state=quiet",
+                ],
+                "absence_states": {
+                    "source_freshness": "detail_omitted",
+                    "historical_review_residue": "hidden_behind_detail_route",
+                },
             },
             "continuation_view": continuation_view,
             "decomposition": {"status": "not-evaluated", "detail": "Use compact or full summary for decomposition detail."},
@@ -9741,6 +9782,81 @@ def _planning_continuation_view_payload(
                 "aw_owns": ["assembling source precedence", "exposing freshness", "surfacing blocked claim classes"],
                 "agent_owns": ["semantic intent satisfaction judgment", "whether compact evidence is sufficient for the next step"],
                 "human_owns": ["intent changes", "accepted narrowing", "accepting unresolved residual intent"],
+            },
+        }
+    )
+
+
+def _tiny_continuation_view_payload(view: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(view, dict):
+        return {}
+    if view.get("status") == "quiet":
+        return {
+            "kind": view.get("kind", "agentic-planning/continuation-view/v1"),
+            "status": "quiet",
+            "absence_state": "not_applicable",
+            "reason": view.get("reason", "no active Planning owner is present"),
+            "detail_command": view.get("detail_command", "agentic-workspace summary --verbose --format json"),
+        }
+    answers = view.get("answers", {}) if isinstance(view.get("answers"), dict) else {}
+    proof_state = view.get("proof_state", {}) if isinstance(view.get("proof_state"), dict) else {}
+    claim_boundary = view.get("claim_boundary", {}) if isinstance(view.get("claim_boundary"), dict) else {}
+    resume_predicate = view.get("resume_predicate", {}) if isinstance(view.get("resume_predicate"), dict) else {}
+    drill_down = view.get("drill_down", {}) if isinstance(view.get("drill_down"), dict) else {}
+    stale_projections = view.get("stale_projections", []) if isinstance(view.get("stale_projections"), list) else []
+    source_freshness = view.get("source_freshness", []) if isinstance(view.get("source_freshness"), list) else []
+    source_freshness = [
+        item for item in source_freshness if isinstance(item, dict) and item.get("freshness") not in (None, "", "current", "current-owner")
+    ] or source_freshness[:1]
+    omitted_detail = view.get("omitted_detail", []) if isinstance(view.get("omitted_detail"), list) else []
+    write_responsibility = view.get("write_responsibility", {}) if isinstance(view.get("write_responsibility"), dict) else {}
+    return _drop_empty_compact_fields(
+        {
+            "kind": view.get("kind", "agentic-planning/continuation-view/v1"),
+            "status": view.get("status", "unknown"),
+            "view_role": view.get("view_role", "lossy-continuation-projection"),
+            "summary_profile": view.get("summary_profile", "tiny"),
+            "answers": {
+                key: answers.get(key)
+                for key in ("preserved_intent", "claim_allowed", "next_safe_action", "trust_basis")
+                if answers.get(key) not in (None, "", [], {})
+            },
+            "proof_state": {
+                key: proof_state.get(key)
+                for key in ("status", "summary", "freshness", "known_gap")
+                if proof_state.get(key) not in (None, "", [], {})
+            },
+            "claim_boundary": {
+                key: claim_boundary.get(key)
+                for key in (
+                    "status",
+                    "claim_level_allowed",
+                    "required_next_action",
+                    "active_intent_satisfied",
+                    "human_accepted_partial",
+                    "allowed_claim_classes",
+                    "blocked_claim_classes",
+                )
+                if claim_boundary.get(key) not in (None, "", [], {})
+            },
+            "resume_predicate": {
+                "status": resume_predicate.get("status"),
+                "failed": resume_predicate.get("failed", []),
+                "required_next_action": resume_predicate.get("required_next_action"),
+            },
+            "stale_projections": stale_projections[:3],
+            "source_freshness": source_freshness[:4],
+            "omitted_detail": omitted_detail[:5],
+            "write_responsibility": {key: write_responsibility.get(key) for key in ("summary_start",) if write_responsibility.get(key)},
+            "absence_states": {
+                "source_freshness": "detail_omitted",
+                "source_precedence": "detail_omitted",
+                "historical_review_residue": "hidden_behind_detail_route",
+            },
+            "detail_routes": {
+                key: drill_down.get(key)
+                for key in ("summary_verbose", "planning_record", "proof", "claim_boundary", "owner_sources")
+                if drill_down.get(key)
             },
         }
     )

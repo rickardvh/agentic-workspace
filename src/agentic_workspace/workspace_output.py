@@ -7,6 +7,29 @@ from typing import Any
 from agentic_workspace.result_adapter import serialise_value
 
 
+def bounded_selector_inventory(
+    *,
+    selectors: list[str],
+    source_command: str,
+    select_command: str,
+    inventory_command: str,
+    sample_limit: int = 8,
+) -> dict[str, Any]:
+    """Return selector metadata without exposing the full selector namespace."""
+    compact_selectors = [selector for selector in selectors if isinstance(selector, str) and selector.strip()]
+    sample = list(dict.fromkeys(compact_selectors))[:sample_limit]
+    return {
+        "status": "omitted-from-compact-default",
+        "source_command": source_command,
+        "available_count": len(compact_selectors),
+        "sample": sample,
+        "exact_select_command": select_command,
+        "inventory_command": inventory_command,
+        "absence_state": "hidden_behind_detail_route",
+        "rule": "Compact outputs expose a bounded selector summary and exact routes; use the inventory route only for debugging.",
+    }
+
+
 def _emit_init_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
     print(f"Command: init{' (dry-run)' if payload.get('dry_run') else ''}")
