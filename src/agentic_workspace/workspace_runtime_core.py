@@ -10515,8 +10515,8 @@ def _local_scratch_runs_payload(*, target_root: Path, policy: dict[str, Any], no
                     "reason": "missing manifest-backed run contract",
                 }
             )
-    total_bytes = sum(_as_int(run.get("bytes")) for run in managed_runs)
     eligible = [run for run in managed_runs if run.get("eligible_for_auto_prune")]
+    total_bytes = sum(_as_int(run.get("bytes")) for run in managed_runs if run not in eligible)
     if total_bytes > _safe_int(policy.get("max_total_bytes"), LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES):
         for run in sorted(managed_runs, key=lambda item: (_as_int(item.get("age_hours")), _as_int(item.get("bytes"))), reverse=True):
             if run in eligible:

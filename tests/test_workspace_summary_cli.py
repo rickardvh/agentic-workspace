@@ -6,9 +6,11 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+import pytest
 from repo_planning_bootstrap.installer import install_bootstrap
 from tests.workspace_cli_support import cli
 
+from agentic_workspace import workspace_runtime_core
 from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload, _operating_loop_decision_payload
 
 
@@ -260,6 +262,90 @@ def test_upgrade_prunes_manifest_backed_scratch_but_preserves_legacy_and_protect
     assert not old_run.exists()
     assert protected_run.exists()
     assert legacy.exists()
+
+
+def test_scratch_size_budget_subtracts_already_eligible_runs(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[local_scratch_retention]\nmax_age_hours = 1\nmax_total_bytes = 512\n",
+    )
+    old_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "old-run"
+    current_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "current-run"
+    _write(
+        old_run / ".aw-scratch.toml",
+        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "old"\nproducer = "pytest"\nretention = "ephemeral"\n',
+    )
+    _write(old_run / "artifact.bin", "x" * 600)
+    _write(
+        current_run / ".aw-scratch.toml",
+        'owner = "agentic-workspace"\ncreated_at = "2999-01-01T00:00:00+00:00"\npurpose = "current"\nproducer = "pytest"\nretention = "ephemeral"\n',
+    )
+    _write(current_run / "artifact.bin", "y" * 100)
+
+    assert cli.main(["report", "--target", str(target), "--section", "local_footprint", "--format", "json"]) == 0
+
+    scratch = json.loads(capsys.readouterr().out)["answer"]["scratch_retention"]
+    assert scratch["eligible_prune_paths"] == [".agentic-workspace/local/scratch/runs/old-run"]
+
+
+def test_scratch_prune_rejects_path_escape_candidates(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    outside = tmp_path / "outside-run"
+    _write(
+        outside / ".aw-scratch.toml",
+        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "escape"\nproducer = "pytest"\nretention = "ephemeral"\n',
+    )
+    _write(outside / "artifact.txt", "do not delete\n")
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_local_scratch_runs_payload",
+        lambda *, target_root, policy: {
+            "kind": "agentic-workspace/local-scratch-runs/v1",
+            "eligible_prune_paths": ["../outside-run"],
+        },
+    )
+
+    result = workspace_runtime_core._prune_local_scratch_runs(
+        target_root=target,
+        dry_run=False,
+        policy=workspace_runtime_core._local_scratch_policy_payload(target_root=target),
+    )
+
+    assert outside.exists()
+    assert result["actions"] == []
+    assert result["warnings"][0]["message"] == "scratch prune skipped; candidate failed path or manifest guard"
+
+
+def test_scratch_prune_rejects_symlinked_runs_root(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    outside = tmp_path / "outside-runs"
+    runs = target / ".agentic-workspace" / "local" / "scratch" / "runs"
+    outside.mkdir(parents=True)
+    runs.parent.mkdir(parents=True)
+    try:
+        runs.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    _write(
+        outside / "old-run" / ".aw-scratch.toml",
+        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "escape"\nproducer = "pytest"\nretention = "ephemeral"\n',
+    )
+
+    result = workspace_runtime_core._prune_local_scratch_runs(
+        target_root=target,
+        dry_run=False,
+        policy=workspace_runtime_core._local_scratch_policy_payload(target_root=target),
+    )
+
+    assert (outside / "old-run").exists()
+    assert result["actions"] == []
+    assert result["warnings"][0]["message"] == "scratch prune skipped; scratch root or runs root is a symlink"
 
 
 def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
