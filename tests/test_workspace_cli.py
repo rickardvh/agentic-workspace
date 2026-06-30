@@ -2154,8 +2154,11 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
     assert attention["status"] == "pr_comment_status_unavailable"
     assert attention["comment_state"] == "cache_miss"
     assert attention["pr_number"] == "1831"
-    assert "pr_comment_delta.py" in attention["recommended_command"]
-    assert "--pr 1831" in attention["thread_inspection"]["command"]
+    assert "report --target . --section pr_comment_attention --format json" in attention["recommended_command"]
+    assert "report --target . --section pr_comment_attention --format json" in attention["thread_inspection"]["command"]
+    assert attention["thread_inspection"]["connector_route"].endswith("<owner/name>#1831")
+    assert attention["thread_inspection"]["source_checkout_helper"]["availability"] == "source-checkout-only"
+    assert "--pr 1831" in attention["thread_inspection"]["source_checkout_helper"]["command"]
     assert attention["unverified_context"] == ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."]
     assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
     assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
@@ -2204,6 +2207,8 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert actionable["actionable_count"] == 1
     assert actionable["sample"][0]["path"] == "src/app.py"
     assert actionable["thread_inspection"]["status"] == "available"
+    assert "report --target . --section pr_comment_attention --format json" in actionable["recommended_command"]
+    assert "pr_comment_delta.py" in actionable["thread_inspection"]["source_checkout_helper"]["command"]
 
     # Legacy empty caches are not enough to support readiness claims because they
     # do not prove which PR head was observed.
@@ -2393,11 +2398,19 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert attention["status"] == "actionable_stack_comments_present"
     assert attention["comment_state"] == "stack_comments_requiring_action"
     assert attention["stack_member_count"] == 2
-    assert attention["stack"]["stack_members"][0]["refresh_command"].endswith("--pr 1840 --format json")
+    assert attention["stack"]["stack_members"][0]["refresh_command"].endswith(
+        "report --target . --section pr_comment_attention --format json"
+    )
+    assert attention["stack"]["stack_members"][0]["source_checkout_refresh_command"].endswith("--pr 1840 --format json")
     assert attention["stack"]["stack_members"][1]["comment_status"] == "actionable_pr_comments_present"
     assert attention["stack"]["stack_members"][1]["new_comment_count"] == 1
     assert attention["stack"]["stack_members"][1]["sample"][0]["path"] == "src/app.py"
-    assert attention["stack"]["stack_members"][1]["thread_inspection"]["command"].endswith("--pr 1841 --format json")
+    assert attention["stack"]["stack_members"][1]["thread_inspection"]["command"].endswith(
+        "report --target . --section pr_comment_attention --format json"
+    )
+    assert attention["stack"]["stack_members"][1]["thread_inspection"]["source_checkout_helper"]["command"].endswith(
+        "--pr 1841 --format json"
+    )
     assert attention["unverified_context"] == []
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
 

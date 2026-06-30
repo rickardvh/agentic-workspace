@@ -22483,17 +22483,36 @@ def _read_local_cache_json(target_root: Path, relative_path: str) -> dict[str, A
     return payload if isinstance(payload, dict) else {"_cache_error": f"{relative_path} did not contain a JSON object"}
 
 
-def _pr_comment_thread_inspection_payload(*, repo: str, pr_number: str, cli_invoke: str, status: str = "required") -> dict[str, Any]:
-    command = _command_with_cli_invoke(
+def _pr_comment_report_command(*, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command="agentic-workspace report --target . --section pr_comment_attention --format json",
+        cli_invoke=cli_invoke,
+    )
+
+
+def _pr_comment_source_checkout_helper_command(*, repo: str, pr_number: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
         command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
         cli_invoke=cli_invoke,
     )
+
+
+def _pr_comment_thread_inspection_payload(*, repo: str, pr_number: str, cli_invoke: str, status: str = "required") -> dict[str, Any]:
+    command = _pr_comment_report_command(cli_invoke=cli_invoke)
     return {
         "kind": "agentic-workspace/pr-comment-thread-inspection/v1",
         "status": status,
         "command": command,
         "connector_route": f"GitHub connector: fetch PR comments for {repo}#{pr_number or '<number>'}",
-        "fallback_rule": "Use this route for thread-level context before claiming comments are absent, resolved, or fully handled.",
+        "source_checkout_helper": {
+            "availability": "source-checkout-only",
+            "command": _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "rule": "This helper is useful in this source repository but is not a durable host-repo contract.",
+        },
+        "fallback_rule": (
+            "Use the portable report route for cached AW state and the connector route for live thread-level context before "
+            "claiming comments are absent, resolved, or fully handled."
+        ),
     }
 
 
@@ -22749,10 +22768,7 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         else:
             comment_status = "pr_comment_status_unavailable"
             unavailable_present = True
-        refresh_command = _command_with_cli_invoke(
-            command=f"python scripts/github/pr_comment_delta.py --repo {command_repo} --pr {pr_number or '<number>'} --format json",
-            cli_invoke=cli_invoke,
-        )
+        refresh_command = _pr_comment_report_command(cli_invoke=cli_invoke)
         thread_inspection = _pr_comment_thread_inspection_payload(repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke)
         members.append(
             {
@@ -22772,6 +22788,9 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
                     for entry in actionable_items[:2]
                 ],
                 "refresh_command": refresh_command,
+                "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
+                    repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke
+                ),
                 "thread_inspection": thread_inspection,
             }
         )
@@ -22831,10 +22850,7 @@ def _pr_stack_comment_context_relevant(*, task_text: str | None, branch: str) ->
 
 def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
-    recommended_command = _command_with_cli_invoke(
-        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-        cli_invoke=cli_invoke,
-    )
+    recommended_command = _pr_comment_report_command(cli_invoke=cli_invoke)
     return {
         "kind": "agentic-workspace/pr-stack-comment-attention/v1",
         "status": "stack_comment_status_unavailable",
@@ -22850,6 +22866,9 @@ def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: 
             "repository": repo,
             "cache_path": cache_path,
             "refresh_command": recommended_command,
+            "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
+                repo=repo, pr_number=pr_number, cli_invoke=cli_invoke
+            ),
         },
         "comment_state": "stack_discovery_unavailable",
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
@@ -22894,17 +22913,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
             if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
             else _command_with_cli_invoke(
-                command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-                cli_invoke=cli_invoke,
+                command="agentic-workspace report --target . --section pr_comment_attention --format json", cli_invoke=cli_invoke
             ),
             "selector": "pr_comment_attention",
             "degraded_explicitly": status == "stack_comment_status_unavailable",
             "claim_boundary": stack.get("claim_boundary"),
         }
-    command = _command_with_cli_invoke(
-        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-        cli_invoke=cli_invoke,
-    )
+    command = _pr_comment_report_command(cli_invoke=cli_invoke)
     if cache.get("_cache_error"):
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
