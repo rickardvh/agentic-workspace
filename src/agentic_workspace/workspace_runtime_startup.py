@@ -36,6 +36,7 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_selector_next_safe_action,
     _compact_start_closeout_obligations,
     _compact_start_delegation_decision,
+    _compact_start_local_footprint_advisory,
     _compact_start_prep_only_handoff,
     _compact_start_proof_payload,
     _compact_start_workflow_obligations,
@@ -64,6 +65,7 @@ from agentic_workspace.workspace_runtime_core import (
     _issue_reference_intent_payload,
     _load_workspace_config,
     _local_chat_checkpoint_projection,
+    _local_footprint_payload,
     _maintainer_mode_payload,
     _memory_consult_from_payload,
     _memory_consult_payload,
@@ -430,6 +432,10 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         skill_routing=payload.get("skill_routing"),
         memory_consult=payload.get("memory_consult"),
     )
+    local_footprint = payload.get("local_footprint", {})
+    local_footprint_attention = isinstance(local_footprint, dict) and local_footprint.get("status") == "attention"
+    if local_footprint_attention:
+        projected["local_footprint"] = local_footprint
     projected["action_signals"] = _compact_action_signals_payload(
         surface="start",
         allowed_next_action=str(projected["next_safe_action"].get("next_safe_action", "")),
@@ -438,9 +444,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         read_only_allowed=bool(projected["next_safe_action"].get("read_only_allowed")),
         proof_required=bool(projected["next_safe_action"].get("proof_required")),
         proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
+        changed_signals=["local_footprint=attention"] if local_footprint_attention else [],
         advisory_selectors=[
             "skill_routing",
             "workflow_sufficiency",
+            *(["local_footprint"] if local_footprint_attention else []),
             *(["pre_test_evidence_guardrail"] if "pre_test_evidence_guardrail" in payload else []),
         ],
         agent_judgment="Agent owns work-shape unless blocked.",
@@ -657,6 +665,12 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    local_footprint = _compact_start_local_footprint_advisory(
+        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        cli_invoke=config.cli_invoke,
+    )
+    if local_footprint.get("status") == "attention":
+        payload["local_footprint"] = local_footprint
     pre_test_guardrail = _pre_test_evidence_guardrail_payload(
         target_root=target_root,
         changed_paths=changed_paths,
@@ -1094,6 +1108,12 @@ def _hydrate_selected_start_advisory_payloads(
                 cli_invoke=config.cli_invoke,
             ),
         )
+    if _selector_requests(select, "local_footprint") and "local_footprint" not in payload:
+        payload["local_footprint"] = _compact_start_local_footprint_advisory(
+            _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+            cli_invoke=config.cli_invoke,
+        )
+
     if _selector_requests(select, "intent_elicitation_protocol"):
         payload.setdefault(
             "intent_elicitation_protocol",
@@ -1446,6 +1466,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") == "attention":
         startup_changed_signals.append("sibling_repo_aw_freshness=attention")
+    local_footprint = payload.get("local_footprint", {})
+    if isinstance(local_footprint, dict) and local_footprint.get("status") == "attention":
+        startup_changed_signals.append("local_footprint=attention")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
         startup_changed_signals.append("pre_test_evidence=advisory")
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
@@ -1488,6 +1511,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("installed_state_drift_triage")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         advisory_selectors.append("local_chat_checkpoint")
+    if isinstance(local_footprint, dict) and local_footprint.get("status") == "attention":
+        advisory_selectors.append("local_footprint")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":
         advisory_selectors.append("pre_test_evidence_guardrail")
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:

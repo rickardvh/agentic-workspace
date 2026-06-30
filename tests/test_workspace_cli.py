@@ -690,6 +690,30 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
+def test_start_flags_over_budget_local_footprint_as_advisory_selector(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[local_scratch_retention]\nwarn_total_bytes = 1\nlocal_aw_warn_bytes = 1\n",
+    )
+    _write(tmp_path / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt", "legacy\n")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "inspect repo", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "local_footprint" not in payload
+    assert "local_footprint=attention" in payload["action_signals"]["changed_signals"]
+    assert "local_footprint" in payload["action_signals"]["advisory_detail"]["selectors"]
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_footprint", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["local_footprint"]
+    assert selected["status"] == "attention"
+    assert selected["scratch_retention"]["legacy_entry_count"] == 1
+    assert selected["detail_command"].endswith("report --target ./repo --section local_footprint --format json")
+
+
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

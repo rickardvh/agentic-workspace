@@ -386,6 +386,77 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             cli_invoke=cli_invoke,
             target_arg=target_arg,
         )
+    if section == "local_footprint" and isinstance(answer, dict):
+        scratch = answer.get("scratch_retention", {})
+        scratch = scratch if isinstance(scratch, dict) else {}
+        policy = answer.get("policy", {})
+        policy = policy if isinstance(policy, dict) else {}
+
+        def compact_scratch_entry(value: Any) -> dict[str, Any]:
+            if not isinstance(value, dict):
+                return {}
+            return {
+                key: value.get(key)
+                for key in (
+                    "path",
+                    "classification",
+                    "retention",
+                    "bytes",
+                    "display_size",
+                    "file_count",
+                    "age_hours",
+                    "eligible_for_auto_prune",
+                    "reason",
+                    "protect_until",
+                )
+                if key in value
+            }
+
+        return _localize_command_fields(
+            {
+                "kind": answer.get("kind", "agentic-workspace/local-footprint/v1"),
+                "status": answer.get("status", "available"),
+                "root": answer.get("root", ".agentic-workspace"),
+                "tracked": answer.get("tracked", {}),
+                "ignored": answer.get("ignored", {}),
+                "budget_status": _support_list_payload(answer.get("budget_status"))[:5],
+                "scratch_retention": {
+                    "root": scratch.get("root", ".agentic-workspace/local/scratch"),
+                    "runs_root": scratch.get("runs_root", ".agentic-workspace/local/scratch/runs"),
+                    "managed_run_count": scratch.get("managed_run_count", 0),
+                    "legacy_entry_count": scratch.get("legacy_entry_count", 0),
+                    "eligible_prune_count": scratch.get("eligible_prune_count", 0),
+                    "eligible_prune_paths": _support_list_payload(scratch.get("eligible_prune_paths"))[:5],
+                    "legacy_entries": [compact_scratch_entry(item) for item in _support_list_payload(scratch.get("legacy_entries"))[:3]],
+                    "managed_runs": [compact_scratch_entry(item) for item in _support_list_payload(scratch.get("managed_runs"))[:3]],
+                },
+                "largest_local_offenders": _support_list_payload(answer.get("largest_local_offenders"))[:5],
+                "policy": {
+                    key: policy.get(key)
+                    for key in (
+                        "source",
+                        "max_age_hours",
+                        "protected_max_age_hours",
+                        "max_total_bytes",
+                        "warn_total_bytes",
+                        "large_file_bytes",
+                        "local_aw_warn_bytes",
+                        "tracked_aw_warn_bytes",
+                    )
+                    if key in policy
+                },
+                "next_action": answer.get("next_action", {}),
+                "scope_boundary": answer.get("scope_boundary", ""),
+                "detail_command": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section local_footprint --verbose --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "rule": "Selected local footprint reports stay compact; use --verbose for subtree and full offender detail.",
+            },
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        )
     if section == "closeout_trust" and isinstance(answer, dict):
 
         def compact_closeout_check(value: dict[str, Any]) -> dict[str, Any]:
@@ -1472,6 +1543,7 @@ def report_section_hints(
         "repo_friction": "repo-friction and improvement pressure evidence",
         "operating_posture": "effective improvement and output posture for bounded action, incidental findings, and compact residue",
         "local_aw_state": "compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces",
+        "local_footprint": "tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing",
         "config": "resolved workspace config and local posture",
         "config_enforcement": "config fields classified by actual enforcement strength and operational routes",
         "config_effect_audit": "audit of actual config force, affected outputs, and agent-dependent settings",
@@ -1516,6 +1588,7 @@ def report_section_hints(
         "repo_friction": "inspect when choosing or routing improvement targets",
         "operating_posture": "inspect at startup, recovery, or closeout when improvement posture should affect behavior without adding obligations",
         "local_aw_state": "inspect after AW upgrades or local policy edits when tracked git status is not enough",
+        "local_footprint": "inspect when .agentic-workspace/local or AW scratch size is surprising or over budget",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "config_enforcement": "inspect when deciding whether a config field is hard, operational, advisory, or local-only",
         "config_effect_audit": "inspect when verifying whether settings have concrete behavior or only advise agents",

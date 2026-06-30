@@ -240,6 +240,26 @@ def test_workspace_report_buckets_scratch_nested_repo_warnings(tmp_path: Path) -
     assert [item["path"] for item in payload["warnings"]] == [ordinary_repo]
 
 
+def test_doctor_flags_over_budget_aw_local_footprint(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[local_scratch_retention]\nwarn_total_bytes = 1\nlocal_aw_warn_bytes = 1\n",
+    )
+    _write(target / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt", "legacy\n")
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    assert any(action["path"] == ".agentic-workspace/local/scratch" for action in workspace_report["actions"])
+    assert any("local_footprint" in warning for warning in payload["warnings"])
+
+
 def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templates(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

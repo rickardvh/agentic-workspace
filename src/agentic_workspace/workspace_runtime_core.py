@@ -2775,6 +2775,12 @@ def _local_scratch_payload(*, exists: bool = False) -> dict[str, Any]:
         "git_ignored": True,
         "authoritative": False,
         "safe_to_delete": True,
+        "retention": {
+            "status": "bounded",
+            "run_root": (WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").as_posix(),
+            "manifest_name": ".aw-scratch.toml",
+            "report_section": "local_footprint",
+        },
         "sign": "Go ahead and use this for whatever temporary working files you need.",
     }
 
@@ -6018,6 +6024,21 @@ def _workspace_status_report(
             "detail": "gitignored local scratch space for temporary agent working files",
         }
     )
+    local_footprint = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+    if local_footprint.get("status") == "attention":
+        actions.append(
+            {
+                "kind": "warning",
+                "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+                "detail": "AW local footprint or scratch retention budget needs review",
+            }
+        )
+        warnings.append(
+            {
+                "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+                "message": "AW local footprint exceeds budget or has scratch eligible for retention cleanup; inspect report --section local_footprint.",
+            }
+        )
     agents_path = target_root / agents_relative
     if not agents_path.exists():
         actions.append({"kind": "missing", "path": agents_relative.as_posix(), "detail": "root startup entrypoint missing"})
@@ -6715,6 +6736,14 @@ def _workspace_init_or_upgrade_report(
     if local_only_repo_root is None:
         actions.append(_ensure_repo_owned_local_gitignore(target_root=target_root, dry_run=dry_run))
     actions.append(_ensure_local_scratch(target_root=target_root, dry_run=dry_run))
+    if command_name == "upgrade":
+        scratch_prune = _prune_local_scratch_runs(
+            target_root=target_root,
+            dry_run=dry_run,
+            policy=_local_scratch_policy_payload(target_root=target_root),
+        )
+        actions.extend(cast(list[dict[str, str]], scratch_prune.get("actions", [])))
+        warnings.extend(cast(list[dict[str, str]], scratch_prune.get("warnings", [])))
     policy_actions, policy_warnings = _sync_update_policy_actions(
         target_root=target_root, selected_modules=selected_modules, dry_run=dry_run, command_name=command_name, config=config, apply=True
     )
@@ -8598,6 +8627,7 @@ def _run_report_command(
     repo_posture = _repo_posture_payload(config=config, surface="report", compact=False)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_aw_state = _local_aw_state_payload(target_root=target_root)
+    local_footprint = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(
         module_reports=module_reports, target_root=target_root, config=config, cli_invoke=config.cli_invoke
@@ -8715,6 +8745,7 @@ def _run_report_command(
         "selective_surfacing_evaluation": configuration_projection["selective_surfacing_evaluation"],
         "branch_workflow_posture": branch_workflow_posture,
         "local_aw_state": local_aw_state,
+        "local_footprint": local_footprint,
         "local_memory": local_memory,
         "memory_consult": memory_consult,
         "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -9990,6 +10021,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "before ordinary lane closeout or broad completion claims, without loading the full report",
     },
     {
+        "section": "local_footprint",
+        "kind": "agentic-workspace/local-footprint/v1",
+        "purpose": "tracked-vs-ignored AW footprint, local scratch retention, budgets, and largest local offenders",
+        "when_to_use": "when .agentic-workspace size, local scratch growth, or cleanup routing needs diagnosis",
+    },
+    {
         "section": "workflow_compliance_summary",
         "kind": "agentic-workspace/workflow-compliance-summary/v1",
         "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
@@ -10196,6 +10233,483 @@ def _workflow_gate(gate_id: str, summary: str, *, source: str = "", command: str
     if command:
         payload["command"] = command
     return payload
+
+
+LOCAL_SCRATCH_MANIFEST_NAME = ".aw-scratch.toml"
+LOCAL_SCRATCH_DEFAULT_MAX_AGE_HOURS = 72
+LOCAL_SCRATCH_DEFAULT_PROTECTED_MAX_AGE_HOURS = 168
+LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES = 512 * 1024 * 1024
+LOCAL_SCRATCH_DEFAULT_WARN_TOTAL_BYTES = 50 * 1024 * 1024
+LOCAL_SCRATCH_DEFAULT_LARGE_FILE_BYTES = 25 * 1024 * 1024
+LOCAL_AW_DEFAULT_WARN_BYTES = 100 * 1024 * 1024
+TRACKED_AW_DEFAULT_WARN_BYTES = 15 * 1024 * 1024
+
+
+def _format_bytes(value: int) -> str:
+    units = ("B", "KB", "MB", "GB", "TB")
+    amount = float(max(0, value))
+    unit = units[0]
+    for unit in units:
+        if amount < 1024 or unit == units[-1]:
+            break
+        amount /= 1024
+    if unit == "B":
+        return f"{int(amount)} B"
+    return f"{amount:.1f} {unit}"
+
+
+def _safe_int(value: Any, default: int, *, min_value: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, parsed)
+
+
+def _local_scratch_policy_payload(*, target_root: Path) -> dict[str, Any]:
+    defaults = {
+        "max_age_hours": LOCAL_SCRATCH_DEFAULT_MAX_AGE_HOURS,
+        "protected_max_age_hours": LOCAL_SCRATCH_DEFAULT_PROTECTED_MAX_AGE_HOURS,
+        "max_total_bytes": LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES,
+        "warn_total_bytes": LOCAL_SCRATCH_DEFAULT_WARN_TOTAL_BYTES,
+        "large_file_bytes": LOCAL_SCRATCH_DEFAULT_LARGE_FILE_BYTES,
+        "local_aw_warn_bytes": LOCAL_AW_DEFAULT_WARN_BYTES,
+        "tracked_aw_warn_bytes": TRACKED_AW_DEFAULT_WARN_BYTES,
+    }
+    local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    source = "product-default"
+    warnings: list[str] = []
+    configured: dict[str, Any] = {}
+    if local_path.is_file():
+        try:
+            payload = tomllib.loads(local_path.read_text(encoding="utf-8-sig"))
+            raw = payload.get("local_scratch_retention", {})
+            if raw is None:
+                raw = {}
+            if isinstance(raw, dict):
+                configured = raw
+                source = WORKSPACE_LOCAL_CONFIG_PATH.as_posix() if raw else source
+            else:
+                warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_scratch_retention] must be a table.")
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} local scratch retention config unreadable: {exc}")
+    values = {key: _safe_int(configured.get(key), default) for key, default in defaults.items()}
+    return {
+        "kind": "agentic-workspace/local-scratch-retention-policy/v1",
+        "source": source,
+        "config_path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        "supported_config": {
+            "table": "local_scratch_retention",
+            "fields": sorted(defaults),
+        },
+        "defaults": defaults,
+        **values,
+        "warnings": warnings,
+        "rule": "Only manifest-backed AW scratch runs are pruned automatically; legacy unmanifested scratch needs explicit legacy cleanup review.",
+    }
+
+
+def _path_under_root(path: Path, root: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(root.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
+def _scratch_entry_stat(path: Path) -> os.stat_result | None:
+    try:
+        return path.stat(follow_symlinks=False)
+    except OSError:
+        return None
+
+
+def _walk_local_tree_no_follow(root: Path) -> tuple[list[Path], list[dict[str, str]]]:
+    if root.is_symlink() or root.is_file():
+        return [root], []
+    files: list[Path] = []
+    errors: list[dict[str, str]] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            entries = list(current.iterdir())
+        except OSError as exc:
+            errors.append({"path": current.as_posix(), "reason": str(exc)})
+            continue
+        for entry in entries:
+            if entry.is_symlink():
+                files.append(entry)
+                continue
+            try:
+                if entry.is_dir():
+                    stack.append(entry)
+                elif entry.is_file():
+                    files.append(entry)
+            except OSError as exc:
+                errors.append({"path": entry.as_posix(), "reason": str(exc)})
+    return files, errors
+
+
+def _tree_size_payload(*, path: Path, target_root: Path, sample_limit: int = 5) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "path": _repo_relative_path(path, target_root),
+            "exists": False,
+            "bytes": 0,
+            "display_size": "0 B",
+            "file_count": 0,
+            "largest_files": [],
+            "scan_errors": [],
+        }
+    files, errors = _walk_local_tree_no_follow(path)
+    total = 0
+    largest: list[tuple[int, Path]] = []
+    for file_path in files:
+        stat = _scratch_entry_stat(file_path)
+        size = int(stat.st_size) if stat is not None else 0
+        total += size
+        largest.append((size, file_path))
+    largest_files = [
+        {
+            "path": _repo_relative_path(file_path, target_root),
+            "bytes": size,
+            "display_size": _format_bytes(size),
+        }
+        for size, file_path in sorted(largest, key=lambda item: (-item[0], item[1].as_posix()))[:sample_limit]
+    ]
+    return {
+        "path": _repo_relative_path(path, target_root),
+        "exists": True,
+        "bytes": total,
+        "display_size": _format_bytes(total),
+        "file_count": len(files),
+        "largest_files": largest_files,
+        "scan_errors": errors[:sample_limit],
+        "omitted_error_count": max(0, len(errors) - sample_limit),
+    }
+
+
+def _load_local_scratch_manifest(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return None, str(exc)
+    if not isinstance(payload, dict):
+        return None, "manifest is not a table"
+    if str(payload.get("owner", "")).strip() != "agentic-workspace":
+        return None, "owner is not agentic-workspace"
+    return payload, None
+
+
+def _parse_manifest_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _local_scratch_run_payload(*, run_dir: Path, target_root: Path, policy: dict[str, Any], now: datetime) -> dict[str, Any]:
+    manifest_path = run_dir / LOCAL_SCRATCH_MANIFEST_NAME
+    manifest, manifest_error = _load_local_scratch_manifest(manifest_path)
+    size = _tree_size_payload(path=run_dir, target_root=target_root, sample_limit=3)
+    if manifest is None:
+        return {
+            "path": _repo_relative_path(run_dir, target_root),
+            "managed": False,
+            "classification": "legacy-aw-local-scratch",
+            "manifest_path": _repo_relative_path(manifest_path, target_root),
+            "manifest_error": manifest_error or "manifest missing",
+            "bytes": size["bytes"],
+            "display_size": size["display_size"],
+            "file_count": size["file_count"],
+            "largest_files": size["largest_files"],
+            "eligible_for_auto_prune": False,
+        }
+    retention = str(manifest.get("retention", "ephemeral")).strip().lower() or "ephemeral"
+    created_at = _parse_manifest_datetime(manifest.get("created_at"))
+    protect_until = _parse_manifest_datetime(manifest.get("protect_until"))
+    age_hours = int((now - created_at).total_seconds() // 3600) if created_at is not None else None
+    reasons: list[str] = []
+    if retention == "protected":
+        if protect_until is None:
+            reasons.append("protected-without-expiry")
+        elif protect_until <= now:
+            reasons.append("protection-expired")
+        elif age_hours is not None and age_hours > _safe_int(
+            policy.get("protected_max_age_hours"), LOCAL_SCRATCH_DEFAULT_PROTECTED_MAX_AGE_HOURS
+        ):
+            reasons.append("protected-budget-expired")
+    elif retention == "ephemeral":
+        if age_hours is None:
+            reasons.append("missing-created-at")
+        elif age_hours >= _safe_int(policy.get("max_age_hours"), LOCAL_SCRATCH_DEFAULT_MAX_AGE_HOURS):
+            reasons.append("age-budget-exceeded")
+    else:
+        reasons.append("unsupported-retention")
+    return {
+        "path": _repo_relative_path(run_dir, target_root),
+        "managed": True,
+        "classification": "manifest-backed-aw-scratch",
+        "manifest_path": _repo_relative_path(manifest_path, target_root),
+        "owner": manifest.get("owner"),
+        "purpose": manifest.get("purpose", ""),
+        "producer": manifest.get("producer", ""),
+        "retention": retention,
+        "created_at": str(manifest.get("created_at", "")),
+        "protect_until": str(manifest.get("protect_until", "")),
+        "age_hours": age_hours,
+        "bytes": size["bytes"],
+        "display_size": size["display_size"],
+        "file_count": size["file_count"],
+        "largest_files": size["largest_files"],
+        "eligible_for_auto_prune": bool(reasons) and retention in {"ephemeral", "protected"},
+        "prune_reasons": reasons,
+    }
+
+
+def _local_scratch_runs_payload(*, target_root: Path, policy: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
+    now = now or datetime.now(timezone.utc)
+    scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    runs_root = scratch_root / "runs"
+    managed_runs: list[dict[str, Any]] = []
+    legacy_entries: list[dict[str, Any]] = []
+    if runs_root.exists() and not runs_root.is_symlink():
+        try:
+            run_dirs = sorted((entry for entry in runs_root.iterdir() if entry.is_dir() and not entry.is_symlink()), key=lambda p: p.name)
+        except OSError:
+            run_dirs = []
+        for run_dir in run_dirs:
+            run_payload = _local_scratch_run_payload(run_dir=run_dir, target_root=target_root, policy=policy, now=now)
+            if run_payload["managed"]:
+                managed_runs.append(run_payload)
+            else:
+                legacy_entries.append(run_payload)
+    if scratch_root.exists() and not scratch_root.is_symlink():
+        try:
+            top_entries = sorted(scratch_root.iterdir(), key=lambda p: p.name)
+        except OSError:
+            top_entries = []
+        for entry in top_entries:
+            if entry.name == "runs":
+                continue
+            size = _tree_size_payload(path=entry, target_root=target_root, sample_limit=3)
+            legacy_entries.append(
+                {
+                    "path": _repo_relative_path(entry, target_root),
+                    "managed": False,
+                    "classification": "legacy-aw-local-scratch",
+                    "bytes": size["bytes"],
+                    "display_size": size["display_size"],
+                    "file_count": size["file_count"],
+                    "largest_files": size["largest_files"],
+                    "eligible_for_auto_prune": False,
+                    "reason": "missing manifest-backed run contract",
+                }
+            )
+    total_bytes = sum(_as_int(run.get("bytes")) for run in managed_runs)
+    eligible = [run for run in managed_runs if run.get("eligible_for_auto_prune")]
+    if total_bytes > _safe_int(policy.get("max_total_bytes"), LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES):
+        for run in sorted(managed_runs, key=lambda item: (_as_int(item.get("age_hours")), _as_int(item.get("bytes"))), reverse=True):
+            if run in eligible:
+                continue
+            eligible.append(run)
+            total_bytes -= _as_int(run.get("bytes"))
+            run.setdefault("prune_reasons", []).append("total-size-budget-exceeded")
+            run["eligible_for_auto_prune"] = True
+            if total_bytes <= _safe_int(policy.get("max_total_bytes"), LOCAL_SCRATCH_DEFAULT_MAX_TOTAL_BYTES):
+                break
+    return {
+        "kind": "agentic-workspace/local-scratch-runs/v1",
+        "root": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+        "runs_root": (WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").as_posix(),
+        "managed_runs": managed_runs,
+        "legacy_entries": sorted(legacy_entries, key=lambda item: (-_as_int(item.get("bytes")), str(item.get("path", ""))))[:8],
+        "managed_run_count": len(managed_runs),
+        "legacy_entry_count": len(legacy_entries),
+        "eligible_prune_count": len(eligible),
+        "eligible_prune_paths": [str(run.get("path", "")) for run in eligible],
+    }
+
+
+def _remove_tree_no_follow(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+        return
+    for child in path.iterdir():
+        _remove_tree_no_follow(child)
+    path.rmdir()
+
+
+def _prune_local_scratch_runs(*, target_root: Path, dry_run: bool, policy: dict[str, Any]) -> dict[str, Any]:
+    scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    runs_root = scratch_path / "runs"
+    warnings: list[dict[str, str]] = []
+    if scratch_path.is_symlink() or runs_root.is_symlink():
+        warnings.append(
+            {
+                "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+                "message": "scratch prune skipped; scratch root or runs root is a symlink",
+            }
+        )
+        return {
+            "kind": "agentic-workspace/local-scratch-prune/v1",
+            "status": "clear",
+            "dry_run": dry_run,
+            "actions": [],
+            "warnings": warnings,
+            "policy": policy,
+            "rule": "Automatic pruning only deletes manifest-backed run directories under .agentic-workspace/local/scratch/runs.",
+        }
+    resolved_runs_root = runs_root.resolve(strict=False)
+    runs = _local_scratch_runs_payload(target_root=target_root, policy=policy)
+    actions: list[dict[str, str]] = []
+    for relative in runs["eligible_prune_paths"]:
+        candidate = (target_root / relative).resolve(strict=False)
+        manifest = candidate / LOCAL_SCRATCH_MANIFEST_NAME
+        if not _path_under_root(candidate, resolved_runs_root) or not manifest.is_file():
+            warnings.append({"path": relative, "message": "scratch prune skipped; candidate failed path or manifest guard"})
+            continue
+        if not dry_run:
+            try:
+                _remove_tree_no_follow(candidate)
+            except OSError as exc:
+                warnings.append({"path": relative, "message": f"scratch prune failed: {exc}"})
+                continue
+        actions.append(
+            {
+                "kind": "would remove" if dry_run else "removed",
+                "path": relative,
+                "detail": "prune manifest-backed AW local scratch run",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/local-scratch-prune/v1",
+        "status": "pruned" if actions and not dry_run else "would-prune" if actions else "clear",
+        "dry_run": dry_run,
+        "actions": actions,
+        "warnings": warnings,
+        "policy": policy,
+        "rule": "Automatic pruning only deletes manifest-backed run directories under .agentic-workspace/local/scratch/runs.",
+    }
+
+
+def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    policy = _local_scratch_policy_payload(target_root=target_root)
+    aw_root = target_root / ".agentic-workspace"
+    local_root = target_root / ".agentic-workspace" / "local"
+    scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    tracked_status, tracked = _git_lines(target_root=target_root, args=["ls-files", ".agentic-workspace"])
+    ignored_status, ignored = _git_lines(
+        target_root=target_root, args=["ls-files", "--others", "--ignored", "--exclude-standard", ".agentic-workspace"]
+    )
+    tracked_bytes = 0
+    for relative in tracked if tracked_status == "ok" else []:
+        stat = _scratch_entry_stat(target_root / relative)
+        tracked_bytes += int(stat.st_size) if stat is not None else 0
+    root_size = _tree_size_payload(path=aw_root, target_root=target_root)
+    local_size = _tree_size_payload(path=local_root, target_root=target_root)
+    scratch_size = _tree_size_payload(path=scratch_root, target_root=target_root)
+    cache_size = _tree_size_payload(path=target_root / ".agentic-workspace" / "local" / "cache", target_root=target_root)
+    runs = _local_scratch_runs_payload(target_root=target_root, policy=policy)
+    budget_items = [
+        {
+            "id": "tracked_aw_payload",
+            "path": ".agentic-workspace",
+            "bytes": tracked_bytes,
+            "display_size": _format_bytes(tracked_bytes),
+            "limit_bytes": policy["tracked_aw_warn_bytes"],
+            "status": "over-budget" if tracked_bytes > policy["tracked_aw_warn_bytes"] else "ok",
+            "owner": "product-managed-payload",
+        },
+        {
+            "id": "local_aw_state",
+            "path": ".agentic-workspace/local",
+            "bytes": local_size["bytes"],
+            "display_size": local_size["display_size"],
+            "limit_bytes": policy["local_aw_warn_bytes"],
+            "status": "over-budget" if local_size["bytes"] > policy["local_aw_warn_bytes"] else "ok",
+            "owner": "local-aw-runtime",
+        },
+        {
+            "id": "aw_owned_scratch",
+            "path": WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix(),
+            "bytes": scratch_size["bytes"],
+            "display_size": scratch_size["display_size"],
+            "limit_bytes": policy["warn_total_bytes"],
+            "status": "over-budget" if scratch_size["bytes"] > policy["warn_total_bytes"] else "ok",
+            "owner": "aw-local-scratch",
+        },
+    ]
+    status = "attention" if any(item["status"] == "over-budget" for item in budget_items) or runs["eligible_prune_count"] else "ok"
+    return {
+        "kind": "agentic-workspace/local-footprint/v1",
+        "status": status,
+        "root": ".agentic-workspace",
+        "policy": policy,
+        "tracked": {
+            "git_status": tracked_status,
+            "file_count": len(tracked) if tracked_status == "ok" else 0,
+            "bytes": tracked_bytes,
+            "display_size": _format_bytes(tracked_bytes),
+        },
+        "ignored": {
+            "git_status": ignored_status,
+            "file_count": len(ignored) if ignored_status == "ok" else 0,
+        },
+        "subtrees": {
+            "workspace_root": root_size,
+            "local": local_size,
+            "scratch": scratch_size,
+            "cache": cache_size,
+        },
+        "scratch_retention": runs,
+        "largest_local_offenders": local_size["largest_files"],
+        "budget_status": budget_items,
+        "next_action": {
+            "action": "run-scratch-retention-upgrade"
+            if runs["eligible_prune_count"]
+            else "review-legacy-scratch"
+            if runs["legacy_entry_count"]
+            else "none",
+            "dry_run": _command_with_cli_invoke(
+                command="agentic-workspace upgrade --target ./repo --dry-run --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "apply": _command_with_cli_invoke(command="agentic-workspace upgrade --target ./repo --format json", cli_invoke=cli_invoke),
+            "legacy_cleanup": "legacy unmanifested scratch remains explicit-review only",
+        },
+        "scope_boundary": "AW owns only .agentic-workspace/local/scratch; repo-root scratch and host-owned temporary paths are out of scope.",
+    }
+
+
+def _compact_start_local_footprint_advisory(value: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+    scratch = _as_dict(value.get("scratch_retention"))
+    return {
+        "kind": value.get("kind", "agentic-workspace/local-footprint/v1"),
+        "status": value.get("status", "unknown"),
+        "budget_status": _list_payload(value.get("budget_status"))[:3],
+        "scratch_retention": {
+            "managed_run_count": scratch.get("managed_run_count", 0),
+            "legacy_entry_count": scratch.get("legacy_entry_count", 0),
+            "eligible_prune_count": scratch.get("eligible_prune_count", 0),
+            "eligible_prune_paths": _list_payload(scratch.get("eligible_prune_paths"))[:3],
+        },
+        "next_action": value.get("next_action", {}),
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section local_footprint --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Startup surfaces local AW footprint pressure as advisory routing; doctor/report own detailed footprint evidence.",
+    }
 
 
 def _local_aw_state_role(path: str) -> str:
@@ -12448,6 +12962,10 @@ def _run_lazy_report_section_command(
 
     if normalized == "local_high_risk_overlay":
         payload["local_high_risk_overlay"] = _local_high_risk_overlay_report_payload(config=config)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "local_footprint":
+        payload["local_footprint"] = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "architecture_principles":
@@ -23602,6 +24120,12 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    local_footprint = _compact_start_local_footprint_advisory(
+        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        cli_invoke=config.cli_invoke,
+    )
+    if local_footprint.get("status") == "attention":
+        payload["local_footprint"] = local_footprint
     pre_test_guardrail = _pre_test_evidence_guardrail_payload(
         target_root=target_root,
         changed_paths=changed_paths,

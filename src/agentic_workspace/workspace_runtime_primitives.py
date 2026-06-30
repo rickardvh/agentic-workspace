@@ -31,6 +31,7 @@ from typing import Any, cast, overload
 
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
+from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
@@ -42296,3 +42297,16 @@ def _dedupe(values: list[str]) -> list[str]:
     for value in values:
         _append_unique(ordered, value)
     return ordered
+
+
+# Keep the generated CLI's legacy primitive import surface aligned with the
+# shared runtime owner for local scratch retention and footprint reporting.
+_local_scratch_payload: Any = _workspace_runtime_core._local_scratch_payload
+_local_footprint_payload: Any = _workspace_runtime_core._local_footprint_payload
+_local_scratch_policy_payload: Any = _workspace_runtime_core._local_scratch_policy_payload
+_prune_local_scratch_runs: Any = _workspace_runtime_core._prune_local_scratch_runs
+_workspace_status_report: Any = _workspace_runtime_core._workspace_status_report
+_workspace_init_or_upgrade_report: Any = _workspace_runtime_core._workspace_init_or_upgrade_report
+_run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
+_run_report_command: Any = _workspace_runtime_core._run_report_command
+_run_report_router_command: Any = _workspace_runtime_core._run_report_router_command

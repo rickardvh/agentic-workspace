@@ -115,6 +115,12 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
             "authoritative": False,
             "safe_to_delete": True,
             "sign": "Go ahead and use this for whatever temporary working files you need.",
+            "retention": {
+                "status": "bounded",
+                "run_root": ".agentic-workspace/local/scratch/runs",
+                "manifest_name": ".aw-scratch.toml",
+                "report_section": "local_footprint",
+            },
         },
         "status": "available-local-only",
         "exists": False,
@@ -193,6 +199,12 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "authoritative": False,
         "safe_to_delete": True,
         "sign": "Go ahead and use this for whatever temporary working files you need.",
+        "retention": {
+            "status": "bounded",
+            "run_root": ".agentic-workspace/local/scratch/runs",
+            "manifest_name": ".aw-scratch.toml",
+            "report_section": "local_footprint",
+        },
     }
     agent_aids = payload["mixed_agent"]["agent_aid_storage"]
     assert agent_aids["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
