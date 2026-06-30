@@ -114,7 +114,30 @@ function resolveTemplate(template, values) {
   if (!isObject(template)) return template;
   const keys = Object.keys(template);
   if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];
+  if (Object.prototype.hasOwnProperty.call(template, '$field')) {
+    const spec = template.$field;
+    const parts = Array.isArray(spec.path) ? spec.path.map(String) : String(spec.path ?? '').split('.').filter(Boolean);
+    let value = values[String(spec.value ?? '')];
+    for (const part of parts) {
+      if (!isObject(value) || !Object.prototype.hasOwnProperty.call(value, part)) throw new RuntimeError(`template $field cannot resolve ${spec.value}.${parts.join('.')}`);
+      value = value[part];
+    }
+    return value;
+  }
   if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;
+  if (Object.prototype.hasOwnProperty.call(template, '$exists_status')) {
+    const spec = template.$exists_status;
+    return Boolean(values[String(spec.value ?? '')]) ? spec.present : spec.missing;
+  }
+  if (Object.prototype.hasOwnProperty.call(template, '$count_status')) {
+    const spec = template.$count_status;
+    const counted = values[String(spec.value ?? '')];
+    return Array.isArray(counted) && counted.length ? spec.present : spec.missing;
+  }
+  if (Object.prototype.hasOwnProperty.call(template, '$join_path')) {
+    const spec = template.$join_path;
+    return join(String(values[String(spec.base ?? '')] ?? ''), String(spec.path ?? '')).replace(/\\/g, '/');
+  }
   return Object.fromEntries(Object.entries(template).map(([key, value]) => [key, resolveTemplate(value, values)]));
 }
 

@@ -134,6 +134,43 @@ function parseTomlTables(text, tableName) {
   return isObject(table) ? table : {};
 }
 
+function tomlTableCounts(values, args) {
+  const root = valueRoot(args, values);
+  const relativePath = String(args.path ?? '');
+  const path = resolveInside(root, relativePath);
+  const tableName = String(args.table ?? '');
+  const relevanceField = String(args.relevance_field ?? '');
+  const requiredValue = String(args.required_value ?? 'required').trim().toLowerCase();
+  const optionalValue = String(args.optional_value ?? 'optional').trim().toLowerCase();
+  const routingOnlyField = String(args.routing_only_field ?? 'routing_only');
+  const counts = {
+    status: 'missing',
+    note_count: 0,
+    required_count: 0,
+    optional_count: 0,
+    routing_only_count: 0,
+    path: relativePath,
+  };
+  if (!existsSync(path)) return { table_counts: counts, table_present: false, table_status: counts.status };
+  let records;
+  try {
+    records = Object.values(parseTomlTables(readText(path), tableName));
+  } catch {
+    counts.status = 'invalid';
+    return { table_counts: counts, table_present: false, table_status: counts.status };
+  }
+  counts.status = 'present';
+  counts.note_count = records.length;
+  for (const record of records) {
+    if (!isObject(record)) continue;
+    const relevance = String(record[relevanceField] ?? '').trim().toLowerCase();
+    if (relevance === requiredValue) counts.required_count += 1;
+    else if (relevance === optionalValue) counts.optional_count += 1;
+    if (Boolean(record[routingOnlyField])) counts.routing_only_count += 1;
+  }
+  return { table_counts: counts, table_present: true, table_status: counts.status };
+}
+
 function readVersion(path) {
   if (!existsSync(path)) return null;
   const match = readText(path).match(/^\s*Version:\s*(\d+)\s*$/m);
@@ -678,6 +715,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   };
   if (primitive.startsWith('system_intent.')) return { kind: 'workspace-system-intent/v1', command: 'system-intent', target_root: resolve(String(values.target ?? '.')), dry_run: values.dry_run !== false, message: 'System intent sync', actions: [] };
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
+  if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
 }
 
@@ -719,13 +757,25 @@ function executeTypescriptDomainOperation(operationId, values) {
   if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
   if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
-  if (operationId === 'proof.report') return { kind: 'proof-next-decision/v1', next: { action: 'run-validation-command' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
+  if (operationId === 'proof.report') return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
   if (operationId === 'ownership.report') return { profile: 'compact-contract-answer/v1', surface: 'ownership', matched: false, target_root: target };
   if (operationId === 'skills.report') return { task: values.task ?? '', target_root: target, skills: [] };
   if (operationId === 'report.combined') return { kind: 'workspace-report-router/v1', command: 'report', target_root: target };
   if (operationId === 'reconcile.report') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: target };
   if (operationId === 'preflight.report') return { kind: 'preflight-response/v1', mode: values.active_only ? 'active-state-only' : 'full', target_root: target };
+  if (operationId === 'checkpoint.write') return {
+    kind: 'agentic-workspace/local-chat-checkpoint-write/v1',
+    status: 'written',
+    path: '.agentic-workspace/local/chat-checkpoint.json',
+    local_only: true,
+    durable_sources: String(values.durable_source ?? '').trim() ? [String(values.durable_source).trim()] : [],
+    durable_source_count: String(values.durable_source ?? '').trim() ? 1 : 0,
+    current_issue_refs: String(values.issue ?? '').trim() ? [String(values.issue).trim()] : [],
+    warnings: [],
+    resume_rule: 'Local checkpoints are advisory continuity state, not durable closure evidence.',
+    rule: 'Local-only checkpoint output from the native TypeScript adapter.',
+  };
   if (['install.lifecycle', 'init.lifecycle', 'upgrade.lifecycle', 'uninstall.lifecycle'].includes(operationId)) return workspaceLifecycle(values, operationId.split('.')[0]);
   if (operationId === 'status.report') return { command: 'status', health: 'attention-needed', target_root: target };
   if (operationId === 'doctor.report') return { command: 'doctor', health: 'attention-needed', repair_plan: { kind: 'workspace-repair-plan/v1' }, target_root: target };
