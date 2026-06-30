@@ -30,12 +30,12 @@
     "hard_constraints": "Start from merged master. Create stacked PRs, one coherent lane at a time, without merging them. Preserve AW mandatory workflow gates. Put the computer to sleep only after local proof, pushed PRs, and final status checks are complete.",
     "agent_may_decide": "Exact lane grouping, branch names, implementation details, test boundaries, and whether a lane can close multiple related issues.",
     "escalate_when": "An issue cannot be closed without redesign beyond the intended lane, destructive system action before PR publication, unavailable GitHub auth, or proof failures that cannot be fixed locally.",
-    "next_action": "Address review comments on the stacked PRs, push the restacked branches, then inspect final stack status.",
+    "next_action": "Review the four draft PRs, mark them ready when acceptable, and merge in stack order (#1894, #1895, #1896, #1897).",
     "proof_expectations": [
       "Focused regression tests for each issue lane.",
       "AW implement proof selection after each lane's changed paths are known.",
       "Workspace lint/typecheck and relevant CLI test modules before each PR.",
-      "Full workspace proof and GitHub checks before final sleep."
+      "Full workspace proof and GitHub checks before review/merge handoff."
     ],
     "touched_scope": [
       "scripts/github/pr_comment_delta.py",
@@ -54,10 +54,10 @@
     "completion_criteria": [
       "All seven open issues have a stacked PR lane that implements their intended outcome in the ordinary path.",
       "Each stack PR has focused proof recorded in its PR body and remains unmerged.",
-      "Final branch stack is published, checks are inspected, and the computer is put to sleep only after final reporting."
+      "Final branch stack is published, review-comment follow-ups are pushed, checks are inspected, and remaining action is PR review/ready/merge in stack order."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "continuation_owner": "PR reviewer/maintainer",
+    "closeout_decision": "implementation stack ready for review/ready/merge in order"
   },
   "goal": [
     "Create a bounded plan for Implement current open issues by stacked PR lane."
@@ -74,8 +74,8 @@
     },
     "execution": {
       "milestone": "open-issues-stacked-lanes",
-      "status": "active",
-      "next_step": "Push review-comment follow-up commits for lanes 2, 3, and 4, then inspect final stack status.",
+      "status": "ready-for-review",
+      "next_step": "Review draft PRs, mark ready when acceptable, and merge in stack order (#1894, #1895, #1896, #1897).",
       "proof": "Focused regression, AW implement proof selection, workspace lint/typecheck, and PR checks."
     },
     "scope": {
@@ -89,21 +89,21 @@
   },
   "intent_continuity": {
     "larger intended outcome": "All current open issues are implemented in stacked PRs and the machine sleeps afterward.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none"
+    "this slice completes the larger intended outcome": "yes for implementation, publication, review-comment follow-up, proof, status inspection, and sleep request; PR merge remains the normal reviewer/maintainer lifecycle",
+    "continuation surface": "GitHub PR stack #1894 -> #1895 -> #1896 -> #1897"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": "none",
-    "activation trigger": "none"
+    "required follow-on for the larger intended outcome": "PR lifecycle only",
+    "owner surface": "GitHub PR stack",
+    "activation trigger": "reviewer marks draft PRs ready or merges the stack"
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "yes",
+    "validation still needed": "none for implementation stack; PR review/ready/merge remains",
+    "next likely slice": "review draft PRs and merge in stack order if acceptable"
   },
   "intent_interpretation": {
     "literal request": "Merged. Implement all open issues by lane in stacked PRs, then put the computer to sleep.",
@@ -162,7 +162,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Push lane 4 review-comment follow-up for portable PR-comment fallback and refreshed closeout state, then inspect final stack status."
+    "Review draft PRs, mark ready when acceptable, and merge in stack order (#1894, #1895, #1896, #1897)."
   ],
   "blockers": [
     "None."
@@ -201,27 +201,27 @@
     "#1885 and #1887 proof/closeout route improvements are implemented and published as stack lane 2.",
     "#1883 and #1884 startup/output routing improvements are implemented and published as stack lane 3.",
     "#1886 and #1893 PR comment attention/fallback improvements are implemented and published as stack lane 4.",
-    "All PRs remain unmerged, final checks/status are reported, and the computer is put to sleep."
+    "All PRs remain unmerged draft PRs, final checks/status are green, and the remaining action is reviewer/maintainer PR ready/merge in stack order."
   ],
   "execution_run": {
-    "run status": "in-progress",
+    "run status": "complete",
     "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Lane 1 (#1888) was published as draft PR #1894. Lane 2 (#1885/#1887) was published as draft PR #1895 and then updated for proof receipt history. Lane 3 (#1883/#1884) was published as draft PR #1896 and then updated to mark task-switch marker matching as a non-authoritative route hint. Lane 4 (#1886/#1893) was published as draft PR #1897 and is being updated to make PR comment fallback portable outside this source checkout.",
-    "scope touched": "Lane 4 PR comment attention runtime surfaces, checked-in execplan closeout state, and focused workspace CLI tests.",
+    "what happened": "Lane 1 (#1888) was published as draft PR #1894. Lane 2 (#1885/#1887) was published as draft PR #1895 and then updated for proof receipt history. Lane 3 (#1883/#1884) was published as draft PR #1896 and then updated to mark task-switch marker matching as a non-authoritative route hint. Lane 4 (#1886/#1893) was published as draft PR #1897, updated to make PR comment fallback portable outside this source checkout, and then refreshed to remove stale planning continuation residue.",
+    "scope touched": "Checked-in execplan closeout state for the published stack.",
     "changed surfaces": ".agentic-workspace/planning/execplans/open-issues-stacked-lanes.plan.json; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_cli.py",
     "validations run": "uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_pr_comment_delta.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; git diff --check",
-    "result for continuation": "lane 4 review-comment follow-up ready for local proof, commit, push, and PR status inspection",
-    "next step": "Commit lane 4 portable fallback and refreshed execplan state, force-push the restacked branch, update PR metadata, then inspect stack PR status/checks."
+    "result for continuation": "no implementation continuation remains; all four draft PRs are published with review-comment follow-ups pushed and checks green",
+    "next step": "Reviewer/maintainer may mark PRs ready and merge in stack order: #1894, #1895, #1896, #1897."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "yes; changes remained within the open-issue stack and review-comment follow-up",
+    "proof status": "local proof and GitHub checks passed for updated stack heads",
+    "intent served": "yes for implementation and PR publication; merge remains reviewer/maintainer controlled",
+    "config compliance": "AW start/implement/proof/report gates were used",
+    "misinterpretation risk": "low; remaining action is explicitly PR lifecycle, not implementation",
+    "follow-on decision": "review, mark ready, and merge in stack order if acceptable"
   },
   "delegation_outcome_feedback": {
     "route chosen": "pending",
@@ -235,21 +235,21 @@
   "proof_report": {
     "validation proof": "Lane 4 passed summary, planning doctor, make test-workspace, make lint-workspace, focused tests/test_workspace_cli.py, focused tests/test_pr_comment_delta.py, make typecheck, runtime mirror consistency, and git diff --check.",
     "proof achieved now": "yes for lane 4 local proof",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json recorded the lane 4 proof before PR publication; review-comment follow-up proof will be recorded before pushing the updated branch."
+    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json records the lane 4 review-comment follow-up proof; GitHub checks were green on #1895, #1896, and #1897 after the pushed updates."
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Implement current open issues by stacked PR lane.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes for implementation and publication; PR merge remains reviewer/maintainer lifecycle",
+    "evidence of intent satisfaction": "Draft PRs #1894, #1895, #1896, and #1897 are published; review-comment follow-ups were pushed; local proof and GitHub checks passed.",
+    "unsolved intent passed to": "GitHub PR review/ready/merge lifecycle"
   },
   "execution_summary": {
-    "outcome delivered": "all four lanes published as draft PRs; review comments are being addressed in-place on the stack",
+    "outcome delivered": "all four lanes published as draft PRs; review-comment follow-ups pushed; checks green",
     "validation confirmed": "lane 4 original local proof passed; review-comment follow-up proof passed",
-    "follow-on routed to": "review comments on #1895, #1896, and #1897",
-    "post-work posterity capture": "updated execplan state records published PRs and review-comment follow-up",
+    "follow-on routed to": "PR review/ready/merge in stack order",
+    "post-work posterity capture": "updated execplan state records published PRs, pushed review-comment follow-up, green checks, and remaining PR lifecycle action",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "commit lane 4 review-comment follow-up, push restacked branch, update PR metadata, and inspect stack status"
+    "resume from": "review draft PRs, mark ready when acceptable, and merge in stack order (#1894, #1895, #1896, #1897)"
   },
   "durable_residue": {
     "status": "none",
@@ -270,13 +270,13 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
+    "slice status": "complete",
+    "larger-intent status": "complete for implementation/publication/proof; PR merge lifecycle remains open",
+    "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "why this decision is honest": "The implementation stack is published and proven, but the PRs are intentionally still draft/unmerged and require reviewer/maintainer action.",
+    "evidence carried forward": "PRs #1894, #1895, #1896, and #1897; local proof receipt; green GitHub checks on updated stack heads.",
+    "reopen trigger": "New review comments, failing checks, or merge conflicts before stack merge."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -313,6 +313,7 @@
     "2026-06-29: Lane 1 (#1888) published as draft PR #1894; lane 2 (#1885/#1887) implemented with local proof passing.",
     "2026-06-29: Lane 2 (#1885/#1887) published as draft PR #1895; lane 3 (#1883/#1884) implemented with local proof passing.",
     "2026-06-29: Lane 3 (#1883/#1884) published as draft PR #1896; lane 4 (#1886/#1893) implemented with local proof passing.",
-    "2026-06-30: Review comments required lane 2 proof receipt history, lane 3 explicit non-authoritative route-hint boundaries, and lane 4 portable PR-comment fallback plus refreshed execplan closeout state."
+    "2026-06-30: Review comments required lane 2 proof receipt history, lane 3 explicit non-authoritative route-hint boundaries, and lane 4 portable PR-comment fallback plus refreshed execplan closeout state.",
+    "2026-06-30: Follow-up review on #1897 required closing stale execplan continuation residue after all review-comment follow-ups had been pushed and checks were green."
   ]
 }
