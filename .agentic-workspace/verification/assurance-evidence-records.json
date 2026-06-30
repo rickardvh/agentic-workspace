@@ -1,0 +1,29 @@
+{
+  "kind": "agentic-workspace/assurance-evidence-records/v1",
+  "records": [
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_lifecycle_smoke.py -q; make test-workspace; make lint-workspace; git diff --check",
+      "changed_paths": [
+        "tests/test_lifecycle_smoke.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #1923 adds permanent root lifecycle smoke evidence for workspace, planning, and memory upgrade/uninstall dry-run safety. This is additive behavior-class coverage for high-risk lifecycle mutation safety; it does not prune or replace existing lifecycle evidence."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_lifecycle_smoke.py -q; make test-workspace; make lint-workspace; git diff --check",
+      "changed_paths": [
+        "tests/test_lifecycle_smoke.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Owner is the root workspace lifecycle smoke suite because the trust question is front-door integration: dry-run upgrade and uninstall commands must report dry_run=true and leave installed planning and memory state intact."
+    }
+  ]
+}
