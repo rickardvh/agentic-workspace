@@ -74,6 +74,7 @@ from agentic_workspace.workspace_runtime_core import (
     _module_registry,
     _next_safe_action_packet,
     _operating_posture_payload,
+    _ordinary_decision_packet,
     _package_boundary_payload,
     _parent_intent_status_payload,
     _pre_test_evidence_guardrail_payload,
@@ -1234,7 +1235,7 @@ def _selector_first_closeout_obligations(payload: dict[str, Any]) -> dict[str, A
     ).lower()
     route_relevant = bool(payload.get("closeout_report_route")) or any(
         marker in requested_text
-        for marker in ("planned", "plan", "lane", "release", "status", "complete", "completion", "closeout", "merge", "issue", "pr")
+        for marker in ("planned", "plan", "lane", "release", "status", "complete", "completion", "closeout", "merge")
     )
     if not route_relevant:
         return {}
@@ -1252,6 +1253,67 @@ def _selector_first_closeout_obligations(payload: dict[str, Any]) -> dict[str, A
     if route:
         compact["ordinary_closeout_route"] = route
     return compact
+
+
+def _compact_start_continuation_view(view: Any) -> dict[str, Any]:
+    if not isinstance(view, dict):
+        return {}
+    answers = _as_dict(view.get("answers"))
+    proof_state = _as_dict(view.get("proof_state"))
+    claim_boundary = _as_dict(view.get("claim_boundary"))
+    resume_predicate = _as_dict(view.get("resume_predicate"))
+    drill_down = _as_dict(view.get("drill_down"))
+    return {
+        "kind": view.get("kind", "agentic-planning/continuation-view/v1"),
+        "status": view.get("status", "unknown"),
+        "answers": {
+            key: answers.get(key)
+            for key in ("claim_allowed", "next_safe_action", "trust_basis")
+            if answers.get(key) not in (None, "", [], {})
+        },
+        "proof_state": {
+            key: proof_state.get(key) for key in ("status", "summary", "known_gap") if proof_state.get(key) not in (None, "", [], {})
+        },
+        "claim_boundary": {
+            key: claim_boundary.get(key)
+            for key in ("status", "claim_level_allowed", "required_next_action", "blocked_claim_classes")
+            if claim_boundary.get(key) not in (None, "", [], {})
+        },
+        "resume_predicate": {
+            key: resume_predicate.get(key)
+            for key in ("status", "failed", "required_next_action")
+            if resume_predicate.get(key) not in (None, "", [], {})
+        },
+        "detail_routes": {
+            key: drill_down.get(key)
+            for key in ("summary_verbose", "planning_record", "proof", "claim_boundary", "owner_sources")
+            if drill_down.get(key)
+        },
+    }
+
+
+def _compact_start_continuation_reorientation(packet: Any) -> dict[str, Any]:
+    if not isinstance(packet, dict):
+        return {}
+    next_action = _as_dict(packet.get("next_safe_action"))
+    proof_boundary = _as_dict(packet.get("proof_claim_boundary"))
+    return {
+        "kind": packet.get("kind", "agentic-workspace/continuation-reorientation/v1"),
+        "status": packet.get("status", "unknown"),
+        "active_intent_refs": packet.get("active_intent_refs", [])[:4],
+        "next_safe_action": {
+            key: next_action.get(key)
+            for key in ("action", "summary", "risk", "next_proof")
+            if next_action.get(key) not in (None, "", [], {})
+        },
+        "proof_claim_boundary": {
+            key: proof_boundary.get(key) for key in ("proof", "claim_allowed") if proof_boundary.get(key) not in (None, "", [], {})
+        },
+        "detail_routes": {
+            "continuation_view": "agentic-workspace summary --select continuation_view --format json",
+            "active_intent_contract": "agentic-workspace start --target . --select active_intent_contract --format json",
+        },
+    }
 
 
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
@@ -1317,9 +1379,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             )
             if key in local_checkpoint
         }
-    if isinstance(payload.get("parent_intent_status"), dict):
+    parent_intent_packet = payload.get("parent_intent_status", {})
+    if isinstance(parent_intent_packet, dict) and parent_intent_packet.get("status") not in {None, "", "not-recorded", "guidance-only"}:
         context["parent_intent_status"] = {
-            key: payload["parent_intent_status"].get(key)
+            key: parent_intent_packet.get(key)
             for key in (
                 "status",
                 "original_intent",
@@ -1329,7 +1392,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "residual_parent_intent",
                 "parent_proof_required",
             )
-            if key in payload["parent_intent_status"]
+            if key in parent_intent_packet
         }
     if isinstance(payload.get("applicable_intent_status"), dict):
         context["applicable_intent_status"] = {
@@ -1363,17 +1426,20 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "actionable_count",
                 "new_comment_count",
                 "stack_member_count",
-                "stack",
-                "stack_discovery",
                 "recommended_command",
-                "thread_inspection",
-                "unverified_context",
-                "selector",
-                "degraded_explicitly",
                 "claim_boundary",
             )
             if key in pr_comment_attention
         }
+        context["pr_comment_attention"]["absence_states"] = {
+            "stack_membership": "unavailable"
+            if pr_comment_attention.get("status") == "stack_comment_status_unavailable"
+            else "detail_omitted",
+            "thread_level_comments": "hidden_behind_detail_route",
+        }
+        context["pr_comment_attention"]["detail_route"] = pr_comment_attention.get(
+            "recommended_command", "agentic-workspace report --target . --section pr_comment_attention --format json"
+        )
     installed_state_triage = payload.get("installed_state_drift_triage", {})
     if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") in {"actionable_now", "claim_blocking"}:
         context["installed_state_drift_triage"] = _compact_installed_state_drift_triage(installed_state_triage)
@@ -1433,10 +1499,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             }
         )
         if isinstance(task_intent, dict) and "acceptance" in task_intent and not prep_only_active and not read_only_compact_default:
-            context["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
-            if context["task"].get("task_argument_mode") == "task-file":
-                context["acceptance"].pop("items", None)
-                context["acceptance"].pop("proof_rule", None)
+            context["task"]["acceptance_item_count"] = (
+                len(task_intent["acceptance"].get("items", [])) if isinstance(task_intent.get("acceptance"), dict) else 0
+            )
+            context["task"]["acceptance_detail_selector"] = "acceptance"
         if read_only_compact_default:
             context["read_only_response"] = read_only_response
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
@@ -1541,6 +1607,36 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             agent_judgment="Agent owns work-shape unless blocked.",
         ),
         "next_safe_action": next_safe_action,
+        "decision_packet": _ordinary_decision_packet(
+            surface="start",
+            phase_question="Startup posture?",
+            next_action=str(next_safe_action.get("next_safe_action", "")),
+            blocked_actions=[str(item) for item in next_safe_action.get("forbidden_actions", []) if str(item).strip()],
+            required_commands=[
+                str(item)
+                for item in [
+                    next_safe_action.get("preferred_cli"),
+                    payload.get("immediate_next_allowed_action", {}).get("command")
+                    if isinstance(payload.get("immediate_next_allowed_action"), dict)
+                    else "",
+                    *startup_proof_commands,
+                ]
+                if str(item).strip()
+            ],
+            claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
+            residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
+            reasons=startup_changed_signals[:6],
+            detail_routes={
+                "why_blocked": f"{cli_invoke} start --target . --select next_safe_action,action_signals --format json",
+                "active_plan": f"{cli_invoke} summary --target . --format json",
+                "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
+            },
+            shown_because=["command_phase=start", *startup_changed_signals[:3]],
+            absence_states={
+                "full_selector_inventory": "hidden_behind_detail_route",
+                "verbose_planning_detail": "detail_omitted",
+            },
+        ),
         "skills": _startup_skills_projection(
             payload=payload,
             next_safe_action=next_safe_action,
@@ -1563,10 +1659,19 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
-    if isinstance(payload.get("continuation_view"), dict):
-        selected["continuation_view"] = payload["continuation_view"]
-    if isinstance(payload.get("continuation_reorientation"), dict) and payload["continuation_reorientation"].get("status") == "required":
-        selected["continuation_reorientation"] = payload["continuation_reorientation"]
+    if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
+        drill_down: dict[str, Any] = selected["drill_down"]
+        omitted_detail = drill_down.get("omitted_detail")
+        if not isinstance(omitted_detail, dict):
+            omitted_detail = {}
+            drill_down["omitted_detail"] = omitted_detail
+        omitted_detail["continuation"] = {
+            "absence_state": "hidden_behind_detail_route",
+            "detail_routes": {
+                "continuation_view": f"{cli_invoke} summary --target . --select continuation_view --format json",
+                "continuation_reorientation": f"{cli_invoke} start --target . --select continuation_reorientation --format json",
+            },
+        }
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
         if (

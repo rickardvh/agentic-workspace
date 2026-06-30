@@ -2215,10 +2215,14 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert payload["memory_decision_packet"]["label"] == "knowledge"
+    assert payload["memory_decision_packet"]["provenance"] == "memory"
     planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["label"] == "work gate"
+    assert planning_gate["provenance"] == "planning"
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"
-    assert planning_gate["changed_path_facts"]["surface_roots"] == ["README.md"]
+    assert "changed_path_facts" not in planning_gate
     assert "reason" not in planning_gate
     assert "promotion_command" not in planning_gate
     assert "active_plan_reliance" not in planning_gate
@@ -2266,9 +2270,11 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
         "configured_posture": "conservative/balanced",
     }
     planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["label"] == "work gate"
+    assert planning_gate["provenance"] == "planning"
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"
-    assert planning_gate["changed_path_facts"]["surface_roots"] == ["src"]
+    assert "changed_path_facts" not in planning_gate
     assert "reason" not in planning_gate
     assert "promotion_command" not in planning_gate
     assert "active_plan_reliance" not in planning_gate
@@ -2381,6 +2387,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "kind",
         "target",
         "action_signals",
+        "decision_packet",
         "next",
         "proof",
         "generated_surface_trust",
@@ -2391,6 +2398,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "drill_down",
     }
     signals = payload["action_signals"]
+    decision = payload["decision_packet"]
+    assert decision["surface"] == "implement"
+    assert decision["phase_question"] == "What narrow working set is safe to touch now?"
+    assert decision["next_action"] == payload["next"]["action"]
+    assert decision["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
     assert signals["kind"] == "agentic-workspace/action-signals/v1"
     assert signals["order"] == [
         "hard_blockers",
@@ -2406,11 +2418,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "generated_surface_trust=present" in signals["changed_signals"]
     assert "generated_cli_freshness=required" in signals["changed_signals"]
     assert "context.reuse_pressure" in signals["advisory_detail"]["selectors"]
-    adaptive = context["adaptive_routing"]
-    assert adaptive["current_need"] == "changed-path-next-action"
-    assert adaptive["read_budget"]["profile"] == "tiny"
-    assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
-    assert "raw workspace files" in adaptive["not_needed_now"]
+    assert context["absence_states"]["adaptive_routing"] == "detail_omitted"
+    assert context["absence_states"]["work_shape_guidance"] == "detail_omitted"
+    assert "context.guidance" in payload["drill_down"]["available_selectors"]
     assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
     assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
@@ -2443,14 +2453,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     }
     assert context["generated_surface_trust"]["action_effect"]["force"] == "required_before_claim"
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
-    guidance = context["guidance"]
-    assert guidance["rule"].startswith("AW exposes facts")
-    assert guidance["work_shape_guidance"]["agent_decision_required"] is True
-    guidance_boundary = guidance["work_shape_guidance"]["authority_boundary"]
-    assert guidance_boundary["kind"] == "agentic-workspace/authority-boundary/v1"
-    assert guidance_boundary["surface"] == "work_shape_guidance"
-    assert "semantic work shape" in guidance_boundary["agent_owned_decisions"]
-    assert any(item.startswith("dirty_shape=") for item in guidance_boundary["observed_by_aw"])
+    assert "guidance" not in context
     assert "intent_acknowledgement" not in context
     intent_evidence = context["intent_evidence"]
     assert intent_evidence["source_class"] == "direct-user-text"
@@ -3004,18 +3007,10 @@ candidates = []
     )
 
     payload = json.loads(capsys.readouterr().out)
-    reliance = payload["context"]["planning_safety_gate"]["active_plan_reliance"]
-    assert reliance["permission_claim"] == "direct-work-not-active-plan-continuation"
-    assert reliance["requirement_status"] == "delegation-decision-not-needed-for-direct-task"
-    assert reliance["action_effect"]["force"] == "advisory"
-    assert reliance["action_effect"]["allowed_now"] == "continue-direct-work-without-active-plan-reliance"
-    assert reliance["action_effect"]["blocked_until_reconciled"] == [
-        "claim-active-plan-progress",
-        "claim-active-plan-complete",
-    ]
-    assert reliance["action_effect"]["claim_boundary"] == "do-not-claim-active-plan-progress-from-this-direct-work"
-    assert reliance["action_effect"]["resolution_selector"] == "planning_safety_gate.active_plan_reliance"
-    assert payload["context"]["planning_safety_gate"]["delegation_decision_required"] is False
+    gate = payload["context"]["planning_safety_gate"]
+    assert "active_plan_reliance" not in gate
+    assert gate["delegation_decision_required"] is False
+    assert gate["detail_selector"] == "planning_safety_gate"
 
 
 def test_implement_active_plan_continuation_blocks_edits_until_decision_recorded(tmp_path: Path, capsys) -> None:
@@ -3073,16 +3068,8 @@ candidates = []
     assert gate["delegation_decision_required"] is True
     assert reliance["status"] == "blocked"
     assert reliance["permission_claim"] == "blocked-until-active-plan-decision-recorded"
-    assert reliance["active_execplan"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
-    assert reliance["action_effect"]["force"] == "required_before_edit"
-    assert reliance["action_effect"]["allowed_now"] == "record-active-plan-decision-before-editing"
-    assert reliance["action_effect"]["blocked_until_reconciled"] == [
-        "edit-active-plan-owned-work",
-        "claim-active-plan-continuation",
-        "claim-task-complete",
-    ]
-    assert reliance["action_effect"]["resolution_selector"] == "planning_safety_gate.active_plan_reliance"
-    assert "planning delegation-decision" in reliance["action_effect"]["resolution_command"]
+    assert "action_effect" not in reliance
+    assert "active_execplan" not in reliance
 
 
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
@@ -3904,7 +3891,7 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
     repair_route = payload["context"]["planning"]["planning_safety_gate"]["repair_route"]
     assert action["next_safe_action"] == "checkpoint-planning-before-implementation"
     assert "planning new-plan" in action["preferred_cli"]
-    assert action["preferred_cli"] == repair_route["claim_current_slice_command"]
+    assert repair_route["after_claim_command"] == "agentic-workspace summary --target . --format json"
     assert repair_route["work_context"] == "already-started-continuation-or-review-repair"
 
 
@@ -4000,14 +3987,7 @@ candidates = [
     gate = payload["context"]["planning_safety_gate"]
     assert gate["status"] == "clear"
     assert gate["implementation_allowed"] is True
-    pressure = gate["candidate_pressure"]
-    assert pressure["status"] == "observed"
-    assert "candidate_ids" not in pressure
-    assert "relevance" not in pressure
-    assert "advisory_backlog" not in pressure
-    assert pressure["unmatched_roadmap_candidate_count"] == 2
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
-    assert len(json.dumps(pressure, separators=(",", ":")).encode()) < 400
+    assert "candidate_pressure" not in gate
 
     capsys.readouterr()
     assert (
@@ -4073,11 +4053,9 @@ candidates = [
         == 0
     )
 
-    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
-    assert pressure["status"] == "observed"
-    assert "candidate_ids" not in pressure
-    assert "relevance" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
+    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert "candidate_pressure" not in gate
 
 
 def test_implement_keeps_generic_ci_refresh_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
@@ -4118,12 +4096,9 @@ candidates = [
         == 0
     )
 
-    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
-    assert pressure["status"] == "observed"
-    assert pressure["matched_roadmap_candidate_count"] == 0
-    assert "candidate_ids" not in pressure
-    assert "relevance" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
+    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert "candidate_pressure" not in gate
 
 
 def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:
@@ -4176,11 +4151,9 @@ candidates = [
         == 0
     )
 
-    pressure = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]["candidate_pressure"]
-    assert pressure["status"] == "observed"
-    assert pressure["stale_or_closed_roadmap_candidate_count"] == 2
-    assert "advisory_backlog" not in pressure
-    assert pressure["detail_visibility"] == "relevance and advisory backlog stay behind verbose implement context"
+    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    assert gate["status"] == "clear"
+    assert "candidate_pressure" not in gate
 
 
 def test_start_surfaces_custody_only_planning_for_parent_lane_without_blocking_direct_work(tmp_path: Path, capsys) -> None:
@@ -4707,7 +4680,26 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
 
     payload = json.loads(capsys.readouterr().out)
     assert "architecture_principles=1" in payload["action_signals"]["changed_signals"]
-    packet = payload["context"]["architecture_principles"]
+    assert payload["context"]["absence_states"]["architecture_principles"] == "hidden_behind_detail_route"
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Refactor runtime routing",
+                "--select",
+                "architecture_principles",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    packet = json.loads(capsys.readouterr().out)["values"]["architecture_principles"]
     assert packet["kind"] == "agentic-workspace/architecture-principles-status/v1"
     assert packet["status"] == "attention"
     assert packet["source"] == ".agentic-workspace/system-intent/intent.toml"
@@ -7106,8 +7098,8 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["missing"] == ["does_not_exist"]
-    assert "context.delegation_decision" not in payload["available_selectors"]
-    assert "next" in payload["available_selectors"]
-    assert "context.scope" in payload["available_selectors"]
-    assert "proof" in payload["available_selectors"]
-    assert "reuse_pressure" in payload["available_selectors"]
+    inventory = payload["selector_inventory"]
+    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["available_count"] > len(inventory["sample"])
+    assert len(inventory["sample"]) <= 8
+    assert "available_selectors" not in payload

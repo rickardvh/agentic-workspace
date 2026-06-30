@@ -27,6 +27,11 @@
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
       "additionalProperties": true
     },
+    "decision_packet": {
+      "type": "object",
+      "description": "Compact ordinary decision packet that names the startup phase question, next action, claim boundary, detail routes, and omitted detail states.",
+      "additionalProperties": true
+    },
     "pre_test_evidence_guardrail": {
       "type": "object",
       "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions.",
@@ -1230,26 +1235,16 @@
         "kind",
         "next_safe_action",
         "why",
-        "required_skill",
-        "preferred_cli",
         "preferred_cli_effect",
-        "cli_availability",
-        "module_slot",
         "allowed_next_actions",
-        "forbidden_actions",
         "implementation_allowed",
         "read_only_allowed",
         "exploration_allowed",
-        "allowed_read_only_actions",
         "proof_required",
         "completion_claim_allowed",
         "claim_boundary",
-        "closure_blockers",
-        "continuation_owner_required",
         "memory_consultation_status",
-        "authority_boundary",
-        "fallback_if_cli_unavailable",
-        "source_fields"
+        "detail_selector"
       ],
       "properties": {
         "kind": {
@@ -1404,6 +1399,10 @@
         "memory_consultation_status": {
           "type": "string",
           "description": "Memory consultation or durable-residue status relevant to the next action."
+        },
+        "detail_selector": {
+          "type": "string",
+          "description": "Exact selector for expanding next-safe-action detail."
         },
         "authority_boundary": {
           "type": "object",

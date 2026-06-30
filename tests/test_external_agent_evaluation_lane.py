@@ -152,11 +152,40 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
         "proof_churn_events",
         "over_planning_events",
         "review_repair_loop_count",
+        "extra_aw_calls",
+        "selector_inventory_reads",
+        "raw_agentic_workspace_file_opens",
+        "avoidable_clarifications",
+        "missed_blockers",
+        "repeated_rereads",
+        "surface_causing_overhead",
         "handoff_recovery_status",
         "unsafe_closure_claims",
         "aw_sections_used",
         "cost_drivers",
     } <= set(observation_contract["required_fields"])
+    cognitive_probes = {
+        probe["cognitive_overhead_probe"]["scenario_class"]: probe
+        for probe in probes
+        if isinstance(probe.get("cognitive_overhead_probe"), dict)
+    }
+    assert {
+        "active-planning-task-switch-proof-pressure",
+        "low-risk-ordinary-path",
+    } <= set(cognitive_probes)
+    expected_metrics = {
+        "extra_aw_calls",
+        "selector_inventory_reads",
+        "raw_agentic_workspace_file_opens",
+        "avoidable_clarifications",
+        "missed_blockers",
+        "repeated_rereads",
+    }
+    for probe in cognitive_probes.values():
+        contract = probe["cognitive_overhead_probe"]
+        assert contract["kind"] == "agentic-workspace/cognitive-overhead-probe/v1"
+        assert expected_metrics <= set(contract["expected_metrics"])
+        assert contract["overhead_surfaces_to_identify"]
 
 
 def test_external_agent_lane_completion_cost_observations_classify_representative_outcomes() -> None:
@@ -178,6 +207,15 @@ def test_external_agent_lane_completion_cost_observations_classify_representativ
         "proof_churn",
         "unsafe_closure",
     }
+    assert observations["stale-memory-active-planning-handoff"]["selector_inventory_reads"] == 1
+    assert observations["stale-memory-active-planning-handoff"]["surface_causing_overhead"] == "memory_decision_packet"
+    assert observations["operational-decision-trace-required"]["raw_agentic_workspace_file_opens"] == 1
+    assert observations["operational-decision-trace-required"]["surface_causing_overhead"] == "closeout_trust"
+    assert observations["active-plan-task-switch-proof-pressure"]["missed_blockers"] == 0
+    assert observations["active-plan-task-switch-proof-pressure"]["surface_causing_overhead"] == "none"
+    assert observations["low-risk-ordinary-docs-direct-work"]["extra_aw_calls"] == 0
+    assert observations["low-risk-ordinary-docs-direct-work"]["raw_agentic_workspace_file_opens"] == 0
+    assert "implement.decision_packet" in observations["low-risk-ordinary-docs-direct-work"]["aw_sections_used"]
 
 
 def test_external_agent_lane_surface_decisions_record_selector_first_start_reduction() -> None:

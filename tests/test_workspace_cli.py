@@ -1045,24 +1045,25 @@ candidates = []
     assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
     assert payload["next_safe_action"]["implementation_allowed"] is True
     assert payload["action_signals"]["implementation_allowed"] is True
+    _assert_json_payload_under(payload, 12_000, label="active-plan maintenance start payload", sort_keys=False)
+    decision = payload["decision_packet"]
+    assert decision["phase_question"] == "Startup posture?"
+    assert decision["next_action"] == "choose-task-switch-route"
+    assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
     gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert gate["label"] == "work gate"
+    assert gate["provenance"] == "planning"
     assert gate["gate_result"] == "active-plan-task-switch"
     switch = gate["task_switch_reconciliation"]
     assert switch["status"] == "active"
     assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
-    assert switch["classification_basis"] == "bounded-maintenance-marker-hint"
-    assert switch["matched_maintenance_markers"] == ["report", "upgrade", "payload"]
-    assert switch["intent_conflict_state"] == "explicit-task-differs-from-active-plan"
-    assert switch["mismatch_evidence"]["active_plan_label"] == "active plan"
-    assert switch["mismatch_evidence"]["overlap_signal"] == "low-overlap-explicit-task"
-    assert "active_plan_reliance.status=not-needed-for-current-task" in switch["classification_inputs"]
-    assert "not authoritative semantic classification" in switch["semantic_boundary"]
-    assert {route["id"] for route in switch["safe_routes"]} == {
+    assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
+    assert set(switch["safe_route_ids"]) == {
         "continue-active-plan",
         "proceed-bounded-repo-maintenance",
         "reconcile-active-plan-before-implementation",
     }
-    assert "claim-active-plan-complete" in switch["active_plan_protection"]["blocked_claims"]
+    assert "claim-active-plan-complete" in switch["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
@@ -1107,15 +1108,21 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
 
+    _assert_json_payload_under(payload, 12_000, label="active-plan issue start payload", sort_keys=False)
+    assert payload["decision_packet"]["next_action"] == "choose-task-switch-route"
+    assert payload["decision_packet"]["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
     gate = payload["context"]["planning"]["planning_safety_gate"]
     assert gate["gate_result"] == "active-plan-task-switch"
     assert gate["implementation_allowed"] is True
     switch = gate["task_switch_reconciliation"]
     assert switch["current_task_class"] == "new-explicit-task"
     assert switch["recommended_next_action"] == "choose-between-new-task-and-active-plan"
-    assert switch["matched_maintenance_markers"] == []
-    assert switch["mismatch_evidence"]["task_refs"] == []
-    assert "active_plan_reliance.status=not-needed-for-current-task" in switch["classification_inputs"]
+    assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
+    assert set(switch["safe_route_ids"]) == {
+        "continue-active-plan",
+        "proceed-bounded-repo-maintenance",
+        "reconcile-active-plan-before-implementation",
+    }
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
@@ -2250,11 +2257,8 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
     assert attention["comment_state"] == "cache_miss"
     assert attention["pr_number"] == "1831"
     assert "report --target . --section pr_comment_attention --format json" in attention["recommended_command"]
-    assert "report --target . --section pr_comment_attention --format json" in attention["thread_inspection"]["command"]
-    assert attention["thread_inspection"]["connector_route"].endswith("<owner/name>#1831")
-    assert attention["thread_inspection"]["source_checkout_helper"]["availability"] == "source-checkout-only"
-    assert "--pr 1831" in attention["thread_inspection"]["source_checkout_helper"]["command"]
-    assert attention["unverified_context"] == ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."]
+    assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    assert "--section pr_comment_attention --format json" in attention["detail_route"]
     assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
     assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
 
@@ -2395,9 +2399,9 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     unavailable_attention = unavailable["context"]["pr_comment_attention"]
     assert unavailable_attention["status"] == "stack_comment_status_unavailable"
     assert unavailable_attention["comment_state"] == "stack_discovery_unavailable"
-    assert unavailable_attention["stack_discovery"]["status"] == "unavailable"
+    assert unavailable_attention["absence_states"]["stack_membership"] == "unavailable"
     assert unavailable_attention["stack_member_count"] == 0
-    assert "Thread-level PR comment state is unverified." in unavailable_attention["unverified_context"]
+    assert unavailable_attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
 
     fresh_stack = {
         "repository": "rickardvh/agentic-workspace",
@@ -2452,7 +2456,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert current["context"]["pr_comment_attention"]["status"] == "stack_comments_current"
     assert current["context"]["pr_comment_attention"]["comment_state"] == "stack_current_no_actionable_comments"
     assert current["context"]["pr_comment_attention"]["pr_number"] == "1841"
-    assert current["context"]["pr_comment_attention"]["stack_discovery"]["current_branch_pr_number"] == "1841"
+    assert current["context"]["pr_comment_attention"]["stack_member_count"] == 2
+    assert current["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
@@ -2493,20 +2498,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert attention["status"] == "actionable_stack_comments_present"
     assert attention["comment_state"] == "stack_comments_requiring_action"
     assert attention["stack_member_count"] == 2
-    assert attention["stack"]["stack_members"][0]["refresh_command"].endswith(
-        "report --target . --section pr_comment_attention --format json"
-    )
-    assert attention["stack"]["stack_members"][0]["source_checkout_refresh_command"].endswith("--pr 1840 --format json")
-    assert attention["stack"]["stack_members"][1]["comment_status"] == "actionable_pr_comments_present"
-    assert attention["stack"]["stack_members"][1]["new_comment_count"] == 1
-    assert attention["stack"]["stack_members"][1]["sample"][0]["path"] == "src/app.py"
-    assert attention["stack"]["stack_members"][1]["thread_inspection"]["command"].endswith(
-        "report --target . --section pr_comment_attention --format json"
-    )
-    assert attention["stack"]["stack_members"][1]["thread_inspection"]["source_checkout_helper"]["command"].endswith(
-        "--pr 1841 --format json"
-    )
-    assert attention["unverified_context"] == []
+    assert "--section pr_comment_attention --format json" in attention["detail_route"]
+    assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
 
     stale_stack = copy.deepcopy(fresh_stack)
@@ -2529,7 +2522,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     stale = json.loads(capsys.readouterr().out)
     assert stale["context"]["pr_comment_attention"]["status"] == "stack_comment_status_unavailable"
     assert stale["context"]["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
-    assert "lacks PR-head freshness proof" in stale["context"]["pr_comment_attention"]["unverified_context"][0]
+    assert stale["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    assert "--section pr_comment_attention --format json" in stale["context"]["pr_comment_attention"]["detail_route"]
 
 
 def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path: Path, capsys) -> None:
@@ -2835,6 +2829,26 @@ def test_chat_agent_default_outputs_stay_bounded_without_selector_inventories(tm
         assert "selector_schema" not in encoded, label
 
 
+def test_start_missing_selector_returns_bounded_inventory(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    _assert_json_payload_under(payload, 2_000, label="start missing selector fallback", sort_keys=False)
+    assert payload["missing"] == ["not_a_selector"]
+    inventory = payload["selector_inventory"]
+    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["available_count"] > len(inventory["sample"])
+    assert len(inventory["sample"]) <= 8
+    assert inventory["absence_state"] == "hidden_behind_detail_route"
+    encoded = json.dumps(payload)
+    assert "available_selectors" not in encoded
+    assert "selector_schema" not in encoded
+
+
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
@@ -2944,23 +2958,10 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
 
     router = json.loads(capsys.readouterr().out)
-    projection = router["context"]["configuration_projection"]
-    assert projection["projection_status_counts"]["active"] >= 1
-    assert projection["unprojected_field_count"] == 0
-    assert projection["verification_probe_count"] >= 2
-    assert projection["evaluation"]["status"] == "pass"
-    assert projection["evaluation"]["detail_section"] == "selective_surfacing_evaluation"
-    assert "facts" not in projection
-    assert "owner_boundary_exceptions" not in projection
-    evaluation = router["context"]["selective_surfacing_evaluation"]
-    assert evaluation["status"] == "pass"
-    assert evaluation["failing_check_count"] == 0
-    assert evaluation["metrics"]["compact_selector_count"] == 1
-    hint = next(item for item in router["drill_down"]["section_hints"] if item["section"] == "configuration_projection")
-    assert "projection coverage" in hint["purpose_summary"]
-    assert hint["volume"] == "normal"
-    eval_hint = next(item for item in router["drill_down"]["section_hints"] if item["section"] == "selective_surfacing_evaluation")
-    assert "cheap contract checks" in eval_hint["purpose_summary"]
+    assert "configuration_projection" not in router["context"]
+    assert router["context"]["absence_states"]["configuration_projection"] == "detail_omitted"
+    assert router["drill_down"]["section_hints"]["status"] == "omitted-from-compact-default"
+    assert "--section <section> --format json" in router["drill_down"]["section_hints"]["detail_route"]
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
 
@@ -2979,6 +2980,10 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert selected_eval["answer"]["kind"] == "agentic-workspace/selective-surfacing-evaluation/v1"
     assert selected_eval["answer"]["status"] == "pass"
     assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
+    relevance = {item["id"]: item for item in selected_eval["answer"]["relevance_scenarios"]}
+    assert relevance["changed-path-ownership"]["basis_source_type"] == "explicit-state-and-contract"
+    assert relevance["active-planning-task-switch"]["projection_fact_id"] == "planning:active-state-obligations"
+    assert relevance["configured-proof-closeout"]["shown_because"] == ["contract.verification_manifest", "state.proof_route_selected"]
 
 
 def test_local_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
@@ -3089,6 +3094,11 @@ def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, caps
     assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
 
     router = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(router, 12_000, label="report ordinary compact payload", sort_keys=False)
+    decision = router["decision_packet"]
+    assert decision["surface"] == "report"
+    assert decision["phase_question"] == "Which report fact changes the next action?"
+    assert decision["absence_states"]["high_volume_sections"] == "detail_omitted"
     ordinary_path = router["context"]["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["primary_design_unit"] == "phase_question"
     assert ordinary_path["rule"] == "Answer the current phase question first; commands are routed affordances, not the workflow."
@@ -3102,12 +3112,9 @@ def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, caps
         "continuation",
     ]
     assert ordinary_path["phase_questions"][0]["question"] == "What is the smallest safe context before acting?"
-    assert "agentic-workspace start" in ordinary_path["phase_questions"][0]["primary_affordance"]
-    assert "command inventories" in ordinary_path["phase_questions"][0]["boundary"]
     assert ordinary_path["phase_questions"][3]["phase"] == "implementation_context"
-    assert "implement --changed <paths>" in ordinary_path["phase_questions"][3]["primary_affordance"]
-    assert "intent-satisfaction judgment" in ordinary_path["phase_questions"][4]["boundary"]
     assert ordinary_path["phase_questions"][6]["question"] == "How can a future agent resume without replaying chat?"
+    assert ordinary_path["lane_completion_model"]["detail_section"] == "report_profile"
 
 
 def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:
@@ -3119,21 +3126,18 @@ def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path
     ordinary_path = router["context"]["report_profile"]["ordinary_agent_path"]
     lane_model = ordinary_path["lane_completion_model"]
     assert lane_model["kind"] == "agentic-workspace/ordinary-lane-completion-model/v1"
-    assert lane_model["visibility_disposition"]["question"].startswith("Does this surface change")
-    assert "start" in lane_model["visibility_disposition"]["retained_first_contact"]
-    assert "preflight" in lane_model["visibility_disposition"]["diagnostic_or_recovery"]
-    assert "docs/reference/" in lane_model["visibility_disposition"]["generated_or_reference"]
-    assert "claim_boundary" in lane_model["artifact_lifecycle"]["minimal_survivor_shape"]
-    assert [scenario["id"] for scenario in lane_model["restart_scenarios"]] == [
+    assert lane_model["visibility_question"].startswith("Does this surface change")
+    assert "claim_boundary" in lane_model["minimal_survivor_shape"]
+    assert lane_model["restart_scenario_ids"] == [
         "direct-work",
         "known-changed-paths",
         "active-lane-continuation",
         "takeover-or-recovery",
         "parent-lane-closeout",
     ]
-    assert "owner surface before broad reading" in lane_model["affordance_first_rules"]
-    assert lane_model["reasoning_skill_boundary"].startswith("Use reasoning skills")
-    assert "restart scenarios reviewed or routed" in lane_model["closeout_checks"]
+    assert lane_model["affordance_first_rule_count"] == 7
+    assert lane_model["detail_section"] == "report_profile"
+    assert lane_model["absence_state"] == "full_model_hidden_behind_detail_route"
 
 
 def test_selective_surfacing_evaluation_fails_on_missing_guidance_or_compact_noise(tmp_path: Path) -> None:
@@ -3161,6 +3165,7 @@ def test_selective_surfacing_evaluation_fails_on_missing_guidance_or_compact_noi
     missing_checks = {check["id"]: check for check in missing_evaluation["checks"]}
     assert missing_checks["required-guidance-present"]["result"] == "fail"
     assert missing_checks["required-guidance-present"]["evidence"] == ["broken:row"]
+    assert missing_checks["typed-relevance-basis-present"]["result"] == "fail"
     assert missing_evaluation["finding_routing"]["rule"].startswith("Route failed checks")
 
 

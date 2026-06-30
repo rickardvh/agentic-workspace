@@ -75,6 +75,7 @@ candidates = [
         "planning_surface_health",
         "execution_readiness",
         "current_execution_pressure",
+        "decision_packet",
         "continuation_view",
         "decomposition",
         "lanes",

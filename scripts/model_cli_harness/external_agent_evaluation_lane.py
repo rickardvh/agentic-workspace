@@ -76,6 +76,13 @@ COMPLETION_COST_REQUIRED_FIELDS = {
     "proof_churn_events",
     "over_planning_events",
     "review_repair_loop_count",
+    "extra_aw_calls",
+    "selector_inventory_reads",
+    "raw_agentic_workspace_file_opens",
+    "avoidable_clarifications",
+    "missed_blockers",
+    "repeated_rereads",
+    "surface_causing_overhead",
     "handoff_recovery_status",
     "unsafe_closure_claims",
     "aw_sections_used",
@@ -88,6 +95,12 @@ COMPLETION_COST_NUMERIC_FIELDS = {
     "proof_churn_events",
     "over_planning_events",
     "review_repair_loop_count",
+    "extra_aw_calls",
+    "selector_inventory_reads",
+    "raw_agentic_workspace_file_opens",
+    "avoidable_clarifications",
+    "missed_blockers",
+    "repeated_rereads",
     "unsafe_closure_claims",
 }
 COMPLETION_COST_HANDOFF_STATUSES = {"not_applicable", "success", "partial", "failed"}
@@ -100,6 +113,11 @@ COMPLETION_COST_DRIVER_CLASSIFICATIONS = {
     "handoff_recovery",
     "unsafe_closure",
     "unused_output",
+    "selector_inventory_read",
+    "raw_file_open",
+    "avoidable_clarification",
+    "missed_blocker",
+    "repeated_reread",
 }
 LOCAL_PATH_LEAK_KIND = "agentic-workspace/external-agent-local-path-leak/v1"
 
@@ -228,6 +246,11 @@ def _validate_completion_cost_observations(
     _require(isinstance(sections, list), f"{prefix} completion_cost_observations aw_sections_used must be a list", errors)
     for section in (sections if isinstance(sections, list) else []):
         _require(isinstance(section, str) and bool(section.strip()), f"{prefix} completion_cost_observations aw_sections_used entry is invalid", errors)
+    _require(
+        isinstance(observations.get("surface_causing_overhead"), str) and bool(observations.get("surface_causing_overhead", "").strip()),
+        f"{prefix} completion_cost_observations surface_causing_overhead must be a non-empty string",
+        errors,
+    )
     drivers = observations.get("cost_drivers", [])
     _require(isinstance(drivers, list), f"{prefix} completion_cost_observations cost_drivers must be a list", errors)
     for index, driver in enumerate(drivers if isinstance(drivers, list) else []):

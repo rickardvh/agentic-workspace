@@ -54,6 +54,7 @@ from agentic_workspace.workspace_runtime_core import (
     _memory_decision_packet_payload,
     _module_operations,
     _operating_loop_decision_payload,
+    _ordinary_decision_packet,
     _ownership_payload,
     _package_boundary_payload,
     _parent_intent_status_payload,
@@ -1169,8 +1170,46 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "run": primary_command,
             "commands": proof_commands if isinstance(proof_commands, list) else [],
             "status": payload.get("orientation", {}).get("status", "unknown"),
-            "ask_human_only_if": "scope, authority, risk, or intent is genuinely blocked after inspecting the listed paths",
+            "ask_human_only_if": "blocked",
         },
+        "decision_packet": _ordinary_decision_packet(
+            surface="implement",
+            phase_question="What narrow working set is safe to touch now?",
+            next_action=next_action,
+            blocked_actions=[str(item) for item in _as_dict(payload.get("applicable_intent_status")).get("blocked_claims", [])],
+            required_commands=[str(item) for item in proof_commands if str(item).strip()],
+            claim_boundary=_as_dict(payload.get("parent_intent_status")).get("proof_boundary")
+            or "claim after changed-path proof and acceptance reconciliation",
+            residue_owner="active continuation state"
+            if _as_dict(payload.get("planning_safety_gate")).get("active_planning_present")
+            else "none",
+            reasons=[
+                f"changed_path_count={len(_normalize_changed_paths(payload.get('changed_paths', [])))}",
+                f"workflow={workflow_sufficiency.get('sufficiency_result', workflow_sufficiency.get('decision', 'unknown'))}"
+                if isinstance(workflow_sufficiency, dict)
+                else "workflow=unknown",
+            ],
+            detail_routes={
+                "proof_detail": _command_with_cli_invoke(
+                    command="agentic-workspace proof --target . --changed <paths> --format json", cli_invoke=config.cli_invoke
+                ),
+                "why_blocked": _command_with_cli_invoke(
+                    command="agentic-workspace implement --changed <paths> --select context.planning_safety_gate,next,proof --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "omitted_diagnostics": detail_commands["full_context"],
+            },
+            shown_because=[
+                "command_phase=implement",
+                "changed_path_ownership=present" if payload.get("changed_paths") else "changed_path_ownership=absent",
+                "proof_selection=changed_paths",
+            ],
+            absence_states={
+                "full_selector_inventory": "hidden_behind_detail_route",
+                "architecture_detail": "not_action_changing",
+                "raw_workspace_files": "not_action_changing",
+            },
+        ),
         "proof": {
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
             if isinstance(payload.get("proof"), dict)
@@ -1469,6 +1508,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         remove_available_selector("context.intent_satisfaction_matrix")
     tiny_context = projected.get("context", {})
     if isinstance(tiny_context, dict):
+        tiny_context["absence_states"] = {
+            **_as_dict(tiny_context.get("absence_states")),
+            "adaptive_routing": "detail_omitted",
+            "architecture_principles": "hidden_behind_detail_route",
+            "work_shape_guidance": "detail_omitted",
+        }
+        tiny_context.pop("adaptive_routing", None)
+        tiny_context.pop("guidance", None)
+        tiny_context.pop("architecture_principles", None)
         parent_packet = tiny_context.get("parent_intent_status", {})
         parent_status = str(parent_packet.get("status") or "").strip() if isinstance(parent_packet, dict) else ""
         if parent_status in {"", "guidance-only", "not-recorded", "needs-planning"}:
@@ -1552,6 +1600,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 key: compact_gate.get(key)
                 for key in (
                     "kind",
+                    "label",
+                    "provenance",
                     "status",
                     "gate_result",
                     "workflow_sufficient",

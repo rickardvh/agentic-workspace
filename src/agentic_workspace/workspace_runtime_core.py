@@ -131,6 +131,7 @@ from agentic_workspace.workspace_output import (
     _emit_prompt_text,
     _emit_report_text,
     _emit_setup_text,
+    bounded_selector_inventory,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _generated_cli_freshness_payload,  # noqa: F401 - compatibility re-export for runtime inventory
@@ -141,7 +142,6 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 from agentic_workspace.workspace_runtime_projection import (
     _authority_boundary_payload,
     _compact_authority_boundary,
-    _compact_authority_text,
     _tiny_action_effect,
     _workflow_participation_payload,
 )
@@ -15358,6 +15358,8 @@ def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
     }
     return {
         "kind": full.get("kind"),
+        "label": "knowledge",
+        "provenance": "memory",
         "stage": full.get("stage"),
         "force": full.get("force"),
         "why_visible": "Explicit agent-owned Memory pull/capture decision.",
@@ -22482,7 +22484,12 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
     if missing:
         selected["missing"] = missing
         selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
-        selected["available_selectors"] = _available_selectors_for_payload(payload)
+        selected["selector_inventory"] = bounded_selector_inventory(
+            selectors=_available_selectors_for_payload(payload),
+            source_command=source_command,
+            select_command=f"agentic-workspace {source_command} --select <field[,field...]> --format json",
+            inventory_command=f"agentic-workspace {source_command} --verbose --format json",
+        )
     return selected
 
 
@@ -22825,6 +22832,36 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
     return selectors
 
 
+def _ordinary_decision_packet(
+    *,
+    surface: str,
+    phase_question: str,
+    next_action: str,
+    blocked_actions: list[str] | None = None,
+    required_commands: list[str] | None = None,
+    claim_boundary: str | dict[str, Any] | None = None,
+    residue_owner: str | None = None,
+    reasons: list[str] | None = None,
+    detail_routes: dict[str, str] | None = None,
+    shown_because: list[str] | None = None,
+    absence_states: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/ordinary-decision-packet/v1",
+        "surface": surface,
+        "phase_question": phase_question,
+        "next_action": next_action,
+        "blocked_actions": [item for item in (blocked_actions or []) if str(item).strip()][:8],
+        "required_commands": [item for item in (required_commands or []) if str(item).strip()][:6],
+        "claim_boundary": claim_boundary or "not-evaluated",
+        "residue_owner": residue_owner or "none",
+        "reasons": [item for item in (reasons or []) if str(item).strip()][:6],
+        "detail_routes": {key: value for key, value in (detail_routes or {}).items() if value},
+        "shown_because": [item for item in (shown_because or []) if str(item).strip()][:6],
+        "absence_states": {key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})},
+    }
+
+
 def _skill_catalog_summary_from_payload(skills_payload: dict[str, Any]) -> dict[str, Any]:
     skills = skills_payload.get("skills", [])
     sources = skills_payload.get("sources", [])
@@ -22983,6 +23020,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         return {}
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
+        "label": "work gate",
+        "provenance": "planning",
         "status": gate.get("status"),
         "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
@@ -22994,41 +23033,57 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "delegation_decision_command": gate.get("delegation_decision_command"),
         "new_plan_command": gate.get("new_plan_command"),
         "planning_revision": _compact_selector_planning_revision(gate.get("planning_revision")),
-        "active_plan_reliance": _compact_selector_active_plan_reliance(gate.get("active_plan_reliance")),
         "implementation_allowed": gate.get("implementation_allowed"),
         "delegation_decision_required": gate.get("delegation_decision_required"),
         "authority_boundary": _compact_authority_boundary(gate.get("authority_boundary")),
     }
+    active_plan_reliance = _compact_selector_active_plan_reliance(gate.get("active_plan_reliance"))
+    if active_plan_reliance.get("permission_claim") != "direct-work-not-active-plan-continuation" or active_plan_reliance.get(
+        "blocked_until_reconciled"
+    ):
+        compact["active_plan_reliance"] = {
+            key: active_plan_reliance.get(key)
+            for key in (
+                "status",
+                "permission_claim",
+                "reliance",
+                "blocked_until_reconciled",
+                "claim_boundary",
+                "detail_command",
+            )
+            if active_plan_reliance.get(key) not in (None, "", [], {})
+        }
     if gate.get("implementation_allowed") is False or gate.get("workflow_sufficient") is False:
         compact["read_only_allowed"] = gate.get("read_only_allowed")
         compact["exploration_allowed"] = gate.get("exploration_allowed")
         compact["allowed_read_only_actions"] = gate.get("allowed_read_only_actions")
         compact["claim_boundary"] = gate.get("claim_boundary")
     if "changed_path_facts" in gate or "changed_path_classification" in gate:
-        compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
-    if "work_shape_guidance" in gate:
+        changed_path_facts = _as_dict(gate.get("changed_path_facts") or gate.get("changed_path_classification"))
+        compact["changed_path_facts"] = {
+            key: changed_path_facts.get(key)
+            for key in ("dirty_shape", "surface_root_count", "scope_growth_detected", "scope_growth_reasons")
+            if changed_path_facts.get(key) not in (None, "", [], {})
+        }
+    if "work_shape_guidance" in gate and gate.get("workflow_sufficient") is False:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
     task_switch = gate.get("task_switch_reconciliation")
     if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+        safe_routes = [
+            {key: route.get(key) for key in ("id", "command") if isinstance(route, dict) and route.get(key) not in (None, "", [], {})}
+            for route in _list_payload(task_switch.get("safe_routes"))[:3]
+            if isinstance(route, dict)
+        ]
+        active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
         compact["task_switch_reconciliation"] = {
-            key: task_switch.get(key)
-            for key in (
-                "kind",
-                "status",
-                "summary",
-                "intent_conflict_state",
-                "mismatch_evidence",
-                "current_task_class",
-                "classification_basis",
-                "matched_maintenance_markers",
-                "classification_inputs",
-                "semantic_boundary",
-                "recommended_next_action",
-                "safe_routes",
-                "active_plan_protection",
-                "rule",
-            )
-            if key in task_switch
+            "kind": task_switch.get("kind"),
+            "status": task_switch.get("status"),
+            "summary": task_switch.get("summary"),
+            "current_task_class": task_switch.get("current_task_class"),
+            "recommended_next_action": task_switch.get("recommended_next_action"),
+            "safe_route_ids": [route.get("id") for route in safe_routes if route.get("id")],
+            "blocked_claims": active_plan_protection.get("blocked_claims", []),
+            "detail_selector": "planning_safety_gate.task_switch_reconciliation",
         }
     custody_planning = gate.get("custody_planning")
     if isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable"):
@@ -23057,6 +23112,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         None,
         "",
         "absent",
+        "no-parent-decomposition-match",
     ):
         compact["active_parent_decomposition_requirement"] = active_parent_decomposition_requirement
     hierarchy_owner_requirement = gate.get("hierarchy_owner_requirement")
@@ -23082,8 +23138,12 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             if key in hierarchy_owner_requirement
         }
     repair_route = gate.get("repair_route")
-    if isinstance(repair_route, dict) and repair_route.get("status") not in (None, "", "absent"):
-        compact["repair_route"] = repair_route
+    if isinstance(repair_route, dict) and repair_route.get("status") not in (None, "", "absent", "retired"):
+        compact["repair_route"] = {
+            key: repair_route.get(key)
+            for key in ("status", "route", "work_context", "after_claim_command", "closeout_command", "cleanup_rule")
+            if repair_route.get(key) not in (None, "", [], {})
+        }
     candidate_pressure = gate.get("candidate_pressure")
     if isinstance(candidate_pressure, dict) and candidate_pressure.get("status") in {"promotion-required", "observed"}:
         pressure_summary = {
@@ -23112,7 +23172,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             if not pressure_summary.get("candidate_ids"):
                 pressure_summary.pop("candidate_ids", None)
             pressure_summary["detail_visibility"] = "relevance and advisory backlog stay behind verbose implement context"
-        compact["candidate_pressure"] = pressure_summary
+        if candidate_pressure.get("status") == "promotion-required":
+            compact["candidate_pressure"] = pressure_summary
     issue_scope_evidence = gate.get("issue_scope_evidence")
     if isinstance(issue_scope_evidence, dict) and issue_scope_evidence.get("status") in {"unknown", "partial"}:
         compact["issue_scope_evidence"] = {
@@ -23121,7 +23182,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             if key in issue_scope_evidence
         }
     decomposition = gate.get("decomposition")
-    if isinstance(decomposition, dict):
+    if isinstance(decomposition, dict) and decomposition.get("status") not in {"none", "not-evaluated"}:
         candidates = decomposition.get("candidates", [])
         top_candidate = candidates[0] if isinstance(candidates, list) and candidates else {}
         compact["decomposition"] = {
@@ -23135,6 +23196,10 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             if isinstance(top_candidate, dict) and top_candidate
             else {},
         }
+    if compact.get("status") in {"clear", "satisfied", "attention"}:
+        for noisy_key in ("authority_boundary", "candidate_pressure", "decomposition", "changed_path_facts", "planning_revision"):
+            compact.pop(noisy_key, None)
+    compact["detail_selector"] = "planning_safety_gate"
     return {key: value for key, value in compact.items() if value is not None}
 
 
@@ -29919,30 +29984,32 @@ def _tiny_generated_surface_trust(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _compact_selector_next_safe_action(packet: dict[str, Any]) -> dict[str, Any]:
-    compact = dict(packet)
+    compact = {
+        key: packet.get(key)
+        for key in (
+            "kind",
+            "next_safe_action",
+            "why",
+            "required_skill",
+            "preferred_cli",
+            "preferred_cli_effect",
+            "implementation_allowed",
+            "read_only_allowed",
+            "exploration_allowed",
+            "proof_required",
+            "completion_claim_allowed",
+            "claim_boundary",
+            "closure_blockers",
+            "forbidden_actions",
+            "allowed_next_actions",
+            "memory_consultation_status",
+        )
+        if packet.get(key) not in (None, "", [], {})
+    }
     why = str(compact.get("why", "") or "")
     if len(why) > 180:
         compact["why"] = _task_excerpt(why, limit=180)
-    authority = compact.get("authority_boundary")
-    if isinstance(authority, dict):
-        compact_authority = {
-            "kind": authority.get("kind"),
-            "surface": authority.get("surface"),
-            "authority_class": authority.get("authority_class"),
-            "enforced_by_aw": [_compact_authority_text(str(item)) for item in _list_payload(authority.get("enforced_by_aw"))[:3]],
-            "observed_by_aw": [_compact_authority_text(str(item)) for item in _list_payload(authority.get("observed_by_aw"))[:2]],
-            "recommended_by_aw": [_compact_authority_text(str(item)) for item in _list_payload(authority.get("recommended_by_aw"))[:2]],
-            "candidate_routes": [_compact_authority_text(str(item)) for item in _list_payload(authority.get("candidate_routes"))[:2]],
-            "proof_hints": [_compact_authority_text(str(item)) for item in _list_payload(authority.get("proof_hints"))[:1]],
-            "agent_owned_decisions": [
-                _compact_authority_text(str(item)) for item in _list_payload(authority.get("agent_owned_decisions"))[:2]
-            ],
-            "human_owned_decisions": [
-                _compact_authority_text(str(item)) for item in _list_payload(authority.get("human_owned_decisions"))[:1]
-            ],
-            "reporting_rule": "AW marks hard gates; recommendations guide agent judgment.",
-        }
-        compact["authority_boundary"] = compact_authority
+    compact["detail_selector"] = "next_safe_action"
     return compact
 
 
@@ -32594,6 +32661,42 @@ def _selective_surfacing_evaluation_payload(
         "stale-or-unprojected-gap": bool(statuses & {"stale", "unprojected"}),
         "ordinary-output-noise": not compact_has_fact_detail,
     }
+    facts_by_id = {str(item.get("id") or ""): item for item in facts}
+    relevance_scenarios = [
+        {
+            "id": "changed-path-ownership",
+            "shown_because": ["state.changed_paths=present", "contract.owner_boundary"],
+            "basis": "changed paths route through projection facts with explicit owner boundaries and payload fields",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "memory:routing-metadata",
+            "covered": bool(facts_by_id.get("memory:routing-metadata", {}).get("owner_boundary"))
+            and bool(facts_by_id.get("memory:routing-metadata", {}).get("payload_fields")),
+            "not_based_on": "keyword task prose alone",
+        },
+        {
+            "id": "active-planning-task-switch",
+            "shown_because": ["state.active_planning_present=true", "contract.planning_safety_gate"],
+            "basis": "active Planning state has a typed projection fact and ordinary route to summary/implement surfaces",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "planning:active-state-obligations",
+            "covered": bool(facts_by_id.get("planning:active-state-obligations", {}).get("ordinary_path_routes"))
+            and bool(facts_by_id.get("planning:active-state-obligations", {}).get("trigger")),
+            "not_based_on": "broad planning vocabulary",
+        },
+        {
+            "id": "configured-proof-closeout",
+            "shown_because": ["contract.verification_manifest", "state.proof_route_selected"],
+            "basis": "enabled Verification and proof selection use manifest status and proof route contracts",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "verification:manifest",
+            "covered": bool(facts_by_id.get("verification:manifest", {}).get("ordinary_path_routes"))
+            and bool(facts_by_id.get("verification:manifest", {}).get("suppression_rule")),
+            "not_based_on": "bug/fix/test keyword matching",
+        },
+    ]
+    relevance_pass = all(
+        bool(item.get("covered")) and item.get("basis_source_type") == "explicit-state-and-contract" for item in relevance_scenarios
+    )
     required_scenarios = ("positive-config-surfacing", "latent-suppression", "ordinary-output-noise")
     checks = [
         {
@@ -32624,6 +32727,13 @@ def _selective_surfacing_evaluation_payload(
             "evidence": {"compact_json_size": compact_json_size, "max_json_size": 1400},
             "finding_route": "surface-value guardrail issue or direct compact-shape fix",
         },
+        {
+            "id": "typed-relevance-basis-present",
+            "result": "pass" if relevance_pass else "fail",
+            "fails_when": "changed-path ownership, active Planning, or configured proof/closeout relevance lacks explicit state/contract basis",
+            "evidence": {item["id"]: item["covered"] for item in relevance_scenarios},
+            "finding_route": "projection row or compact decision-packet shown_because fix",
+        },
     ]
     failing = [item for item in checks if item["result"] == "fail"]
     return {
@@ -32647,6 +32757,7 @@ def _selective_surfacing_evaluation_payload(
             }
             for scenario_id, covered in scenario_ids.items()
         ],
+        "relevance_scenarios": relevance_scenarios,
         "checks": checks,
         "failing_checks": failing,
         "metrics": {
@@ -43141,7 +43252,7 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
 
 def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if format_name == "json":
-        print(json.dumps(serialise_value(payload), indent=2))
+        print(json.dumps(serialise_value(payload), separators=(",", ":")))
         return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)

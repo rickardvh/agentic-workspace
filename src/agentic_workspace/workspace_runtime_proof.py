@@ -597,6 +597,25 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
     required = value.get("required_proof", {}) if isinstance(value.get("required_proof"), dict) else {}
     recommended = value.get("recommended_confidence_checks", {}) if isinstance(value.get("recommended_confidence_checks"), dict) else {}
     visible_required_commands = list(required_commands) if required_commands is not None else required.get("commands", [])
+    manual_obligations = [item for item in required.get("manual_obligations", []) if isinstance(item, dict) and item.get("required")]
+    compact_manual_obligations = [
+        {
+            "id": str(item.get("id", "")),
+            "status": str(item.get("status", "")),
+            "missing_evidence": item.get("missing_evidence", []),
+            "reference_material": item.get("reference_material", []),
+            "claim_boundary": str(item.get("claim_boundary", "")),
+        }
+        for item in manual_obligations
+    ]
+    manual_obligation_projection: dict[str, Any]
+    if len(compact_manual_obligations) <= 1:
+        manual_obligation_projection = {"manual_obligations": compact_manual_obligations}
+    else:
+        manual_obligation_projection = {
+            "manual_obligation_ids": [str(item.get("id", "")) for item in manual_obligations[:4] if str(item.get("id", "")).strip()],
+            "manual_obligations_detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+        }
     return {
         "kind": value.get("kind", "agentic-workspace/proof-obligations/v1"),
         "required_proof": {
@@ -604,17 +623,7 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "commands": visible_required_commands,
             "manual_verification_required": bool(required.get("manual_verification_required", False)),
             "manual_obligation_count": int(required.get("manual_obligation_count", 0) or 0),
-            "manual_obligations": [
-                {
-                    "id": str(item.get("id", "")),
-                    "status": str(item.get("status", "")),
-                    "missing_evidence": item.get("missing_evidence", []),
-                    "reference_material": item.get("reference_material", []),
-                    "claim_boundary": str(item.get("claim_boundary", "")),
-                }
-                for item in required.get("manual_obligations", [])
-                if isinstance(item, dict) and item.get("required")
-            ][:3],
+            **manual_obligation_projection,
             "action_effect": _tiny_action_effect(
                 required.get("action_effect", {}), include_allowed=False, include_resolution_commands=False
             ),
