@@ -1012,6 +1012,9 @@ candidates = []
     switch = gate["task_switch_reconciliation"]
     assert switch["status"] == "active"
     assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
+    assert switch["classification_basis"] == "bounded-maintenance-marker-hint"
+    assert switch["matched_maintenance_markers"] == ["report", "upgrade", "payload"]
+    assert "not authoritative semantic classification" in switch["semantic_boundary"]
     assert {route["id"] for route in switch["safe_routes"]} == {
         "continue-active-plan",
         "proceed-bounded-repo-maintenance",

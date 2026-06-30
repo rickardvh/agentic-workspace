@@ -496,10 +496,10 @@ def _task_switch_reconciliation_payload(
         planning_revision=planning_revision,
     )
     text = " ".join((task_text or "").lower().split())
-    maintenance_like = any(
-        marker in text
-        for marker in ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status", "issue", "pr")
-    )
+    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status", "issue", "pr")
+    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
+    maintenance_like = bool(matched_maintenance_markers)
+    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
     recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
     return {
         "kind": "agentic-workspace/task-switch-reconciliation/v1",
@@ -507,6 +507,12 @@ def _task_switch_reconciliation_payload(
         "summary": "Current task does not explicitly continue the active plan; keep the active plan protected and choose the current-task route deliberately.",
         "active_execplan": active_summary.get("active_execplan", ""),
         "current_task_class": "repo-maintenance-or-reporting" if maintenance_like else "new-explicit-task",
+        "classification_basis": classification_basis,
+        "matched_maintenance_markers": matched_maintenance_markers,
+        "semantic_boundary": (
+            "Maintenance marker matching is a low-cost route-choice hint for protecting the active plan. "
+            "It is not authoritative semantic classification, intent satisfaction, or evidence that the active plan can be closed."
+        ),
         "recommended_next_action": recommended,
         "next_action_packet": {
             "action": "choose-task-switch-route",
