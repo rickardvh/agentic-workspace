@@ -14,6 +14,7 @@ from agentic_workspace.repository_scanning import repository_scan_files
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
 REPO_FRICTION_MAX_HOTSPOTS = 5
+REPO_FRICTION_MAX_SCAN_FILES = 1200
 REPO_FRICTION_SCAN_SUFFIXES = {
     ".md",
     ".py",
@@ -276,6 +277,115 @@ def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str,
 
 
 def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
+    if section == "improvement_intake" and isinstance(answer, dict):
+        candidates = [
+            {
+                key: item[key]
+                for key in (
+                    "kind",
+                    "candidate_kind",
+                    "source",
+                    "summary",
+                    "recommended_destination",
+                    "recommended_action",
+                    "routing_decision",
+                )
+                if isinstance(item, dict) and key in item
+            }
+            for item in _support_list_payload(answer.get("improvement_signal_candidates"))[:5]
+        ]
+        repo_existing = answer.get("repo_wide_existing_candidates", {})
+        repo_existing = repo_existing if isinstance(repo_existing, dict) else {}
+        setup_findings = answer.get("setup_findings", {})
+        setup_findings = setup_findings if isinstance(setup_findings, dict) else {}
+        intake_scope = answer.get("intake_scope", {})
+        intake_scope = intake_scope if isinstance(intake_scope, dict) else {}
+        return _localize_command_fields(
+            {
+                "kind": answer.get("kind", "workspace-improvement-intake/v1"),
+                "status": answer.get("status", "available"),
+                "role": answer.get("role", "router-not-backlog"),
+                "intake_scope": {
+                    key: intake_scope.get(key) for key in ("status", "session_section", "repo_wide_section", "rule") if key in intake_scope
+                },
+                "audience_boundary": answer.get("audience_boundary", {}),
+                "candidate_count": answer.get("candidate_count", len(candidates)),
+                "candidate_sample": candidates,
+                "repo_wide_existing_candidates": {
+                    key: repo_existing.get(key)
+                    for key in ("status", "included_by_default", "candidate_count", "command", "full_scan_command")
+                    if key in repo_existing
+                },
+                "setup_findings": {
+                    key: setup_findings.get(key)
+                    for key in ("status", "candidate_count", "promotable_count", "dismissed_count", "command")
+                    if key in setup_findings
+                },
+                "detail_command": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --verbose --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "detail_selector": "improvement_intake",
+                "rule": "Selected dogfooding report sections return compact routing evidence by default; use --verbose for full payload detail.",
+            },
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        )
+    if section == "repo_friction" and isinstance(answer, dict):
+
+        def compact_collection(value: Any) -> dict[str, Any]:
+            if not isinstance(value, dict):
+                return {"status": "unavailable", "count": 0, "sample": []}
+            items = [
+                {
+                    key: item[key]
+                    for key in (
+                        "kind",
+                        "path",
+                        "relative_path",
+                        "line_count",
+                        "summary",
+                        "surface_role",
+                        "recommended_action",
+                        "route",
+                    )
+                    if isinstance(item, dict) and key in item
+                }
+                for item in _support_list_payload(value.get("items"))[:3]
+            ]
+            return {
+                "status": value.get("status", "available"),
+                "count": value.get("count", value.get("item_count", len(items))),
+                "sample": items,
+            }
+
+        policy = answer.get("policy", {})
+        policy = policy if isinstance(policy, dict) else {}
+        return _localize_command_fields(
+            {
+                "kind": answer.get("kind", "workspace-repo-friction/v1"),
+                "status": answer.get("status", "available"),
+                "summary": answer.get("summary", ""),
+                "policy": {
+                    key: policy.get(key) for key in ("status", "mode", "max_candidate_count", "candidate_limit", "rule") if key in policy
+                },
+                "large_file_hotspots": compact_collection(answer.get("large_file_hotspots")),
+                "concept_surface_hotspots": compact_collection(answer.get("concept_surface_hotspots")),
+                "regenerable_cache_hotspots": compact_collection(answer.get("regenerable_cache_hotspots")),
+                "external_evidence_count": len(_support_list_payload(answer.get("external_evidence"))),
+                "capture_shortcut": answer.get("capture_shortcut", {}),
+                "detail_command": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --verbose --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "detail_selector": "repo_friction",
+                "rule": "Selected dogfooding report sections return compact routing evidence by default; use --verbose for full payload detail.",
+            },
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        )
     if section == "closeout_trust" and isinstance(answer, dict):
 
         def compact_closeout_check(value: dict[str, Any]) -> dict[str, Any]:
@@ -2060,6 +2170,11 @@ def repo_friction_payload(
         "policy_mode": improvement_latitude,
         "policy_source": improvement_latitude_source,
         "policy_target": "repo-directed-improvement",
+        "scan_budget": {
+            "status": "bounded",
+            "max_files": REPO_FRICTION_MAX_SCAN_FILES,
+            "sample_rule": "Repo-friction report samples are capped for ordinary chat-agent inspection; use focused path-specific tools for deeper review.",
+        },
         "policy_target_rule": (
             "The improvement-latitude mode governs repo-directed initiative; bounded workspace-self-adaptation "
             "inside Agentic Workspace-owned surfaces remains allowed under every mode."
@@ -2427,6 +2542,7 @@ def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_
         include_untracked=True,
         include_managed_workspace=True,
         suffixes=REPO_FRICTION_SCAN_SUFFIXES,
+        max_files=REPO_FRICTION_MAX_SCAN_FILES,
     ):
         try:
             line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
@@ -2450,6 +2566,7 @@ def _repo_friction_regenerable_cache_hotspots(*, target_root: Path, cli_invoke: 
         include_untracked=True,
         include_managed_workspace=True,
         suffixes=REPO_FRICTION_SCAN_SUFFIXES,
+        max_files=REPO_FRICTION_MAX_SCAN_FILES,
     ):
         try:
             line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
