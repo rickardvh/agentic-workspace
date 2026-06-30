@@ -496,22 +496,32 @@ def _task_switch_reconciliation_payload(
         planning_revision=planning_revision,
     )
     text = " ".join((task_text or "").lower().split())
-    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status", "issue", "pr")
+    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
     matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
     maintenance_like = bool(matched_maintenance_markers)
     classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
     recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
+    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
     return {
         "kind": "agentic-workspace/task-switch-reconciliation/v1",
         "status": "active",
         "summary": "Current task does not explicitly continue the active plan; keep the active plan protected and choose the current-task route deliberately.",
         "active_execplan": active_summary.get("active_execplan", ""),
+        "intent_conflict_state": "explicit-task-differs-from-active-plan",
+        "mismatch_evidence": mismatch_evidence,
         "current_task_class": "repo-maintenance-or-reporting" if maintenance_like else "new-explicit-task",
         "classification_basis": classification_basis,
         "matched_maintenance_markers": matched_maintenance_markers,
+        "classification_inputs": [
+            "active_plan_reliance.status=not-needed-for-current-task",
+            f"shared_term_count={len(mismatch_evidence.get('shared_terms', []))}",
+            f"shared_ref_count={len(mismatch_evidence.get('shared_refs', []))}",
+            f"maintenance_marker_count={len(matched_maintenance_markers)}",
+        ],
         "semantic_boundary": (
-            "Maintenance marker matching is a low-cost route-choice hint for protecting the active plan. "
-            "It is not authoritative semantic classification, intent satisfaction, or evidence that the active plan can be closed."
+            "Active-plan reliance, task/plan overlap, and maintenance marker matching are low-cost route-choice hints for protecting "
+            "the active plan. They are not authoritative semantic classification, intent satisfaction, or evidence that the active "
+            "plan can be closed."
         ),
         "recommended_next_action": recommended,
         "next_action_packet": {
@@ -548,6 +558,103 @@ def _task_switch_reconciliation_payload(
             "blocked_claims": ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"],
         },
         "rule": "An unrelated active plan is protected state, not an automatic hard block for explicit bounded maintenance or reporting.",
+    }
+
+
+_TASK_SWITCH_STOPWORDS = {
+    "about",
+    "active",
+    "after",
+    "again",
+    "agent",
+    "all",
+    "and",
+    "are",
+    "both",
+    "but",
+    "close",
+    "current",
+    "from",
+    "have",
+    "implement",
+    "into",
+    "issue",
+    "issues",
+    "lane",
+    "master",
+    "new",
+    "open",
+    "plan",
+    "planning",
+    "pr",
+    "prs",
+    "remaining",
+    "task",
+    "the",
+    "this",
+    "two",
+    "with",
+    "work",
+}
+
+
+def _task_switch_terms(text: str) -> list[str]:
+    seen: set[str] = set()
+    terms: list[str] = []
+    for term in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", text.lower()):
+        normalized = term.strip("-_")
+        if not normalized or normalized in _TASK_SWITCH_STOPWORDS or normalized in seen:
+            continue
+        seen.add(normalized)
+        terms.append(normalized)
+        if len(terms) >= 12:
+            break
+    return terms
+
+
+def _task_switch_refs(text: str) -> list[str]:
+    refs = {match.lower() for match in re.findall(r"#\d+", text)}
+    refs.update(f"issue-{match}" for match in re.findall(r"\bissue\s+#?(\d+)\b", text, flags=re.IGNORECASE))
+    refs.update(f"pr-{match}" for match in re.findall(r"\bpr\s+#?(\d+)\b", text, flags=re.IGNORECASE))
+    return sorted(refs)
+
+
+def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text: str | None) -> dict[str, Any]:
+    active_execplan = str(active_summary.get("active_execplan") or "")
+    active_plan_stem = Path(active_execplan).stem if active_execplan else ""
+    if active_plan_stem.endswith(".plan"):
+        active_plan_stem = active_plan_stem[: -len(".plan")]
+    active_plan_label = active_plan_stem.replace("-", " ")
+    active_text = " ".join(
+        str(value)
+        for value in (
+            active_execplan,
+            active_plan_label,
+            active_summary.get("active_item_id"),
+            active_summary.get("planning_status"),
+        )
+        if value
+    )
+    task = " ".join((task_text or "").split())
+    task_terms = _task_switch_terms(task)
+    active_terms = _task_switch_terms(active_text)
+    task_refs = _task_switch_refs(task)
+    active_refs = _task_switch_refs(active_text)
+    shared_terms = [term for term in task_terms if term in set(active_terms)]
+    shared_refs = [ref for ref in task_refs if ref in set(active_refs)]
+    overlap_signal = "possible-continuation" if shared_refs or len(shared_terms) >= 2 else "low-overlap-explicit-task"
+    return {
+        "current_task_excerpt": task[:160],
+        "active_plan_label": active_plan_label,
+        "active_execplan": active_execplan,
+        "task_refs": task_refs[:8],
+        "active_refs": active_refs[:8],
+        "shared_refs": shared_refs[:8],
+        "task_terms": task_terms[:8],
+        "active_plan_terms": active_terms[:8],
+        "shared_terms": shared_terms[:8],
+        "overlap_signal": overlap_signal,
+        "rule": "Overlap evidence is bounded routing support; it does not decide user intent or close active planning.",
     }
 
 

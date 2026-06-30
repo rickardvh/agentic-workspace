@@ -22302,6 +22302,76 @@ def _startup_skills_projection(
     }
 
 
+def _compact_selector_planning_revision(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        key: value.get(key)
+        for key in (
+            "kind",
+            "status",
+            "revision_id",
+            "active_item_id",
+            "active_item_surface",
+            "active_execplan",
+        )
+        if value.get(key) not in (None, "", [], {})
+    }
+
+
+def _compact_selector_active_plan_reliance(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    compact = {
+        key: value.get(key)
+        for key in (
+            "kind",
+            "status",
+            "permission_claim",
+            "integrity",
+            "active_execplan",
+            "reliance",
+            "requirement_status",
+        )
+        if value.get(key) not in (None, "", [], {})
+    }
+    freshness = value.get("freshness")
+    if isinstance(freshness, dict):
+        compact["freshness"] = {
+            key: freshness.get(key) for key in ("revision_id", "source") if freshness.get(key) not in (None, "", [], {})
+        }
+    action_effect = value.get("action_effect")
+    if isinstance(action_effect, dict):
+        compact["action_effect"] = {
+            key: action_effect.get(key)
+            for key in (
+                "force",
+                "allowed_now",
+                "blocked_until_reconciled",
+                "claim_boundary",
+                "resolution_selector",
+                "resolution_command",
+            )
+            if action_effect.get(key) not in (None, "", [], {})
+        }
+    authority = value.get("authority_evidence")
+    if isinstance(authority, dict):
+        compact["authority_summary"] = {
+            key: authority.get(key)
+            for key in (
+                "authority",
+                "mutation_authority",
+                "manual_edit_indicator",
+                "current_enough_to_guide_work",
+            )
+            if authority.get(key) not in (None, "", [], {})
+        }
+        routes = authority.get("routes")
+        if isinstance(routes, dict) and routes.get("refresh"):
+            compact["detail_command"] = routes["refresh"]
+    return compact
+
+
 def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     if not isinstance(gate, dict):
         return {}
@@ -22317,8 +22387,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "promotion_command": gate.get("promotion_command"),
         "delegation_decision_command": gate.get("delegation_decision_command"),
         "new_plan_command": gate.get("new_plan_command"),
-        "planning_revision": gate.get("planning_revision"),
-        "active_plan_reliance": gate.get("active_plan_reliance"),
+        "planning_revision": _compact_selector_planning_revision(gate.get("planning_revision")),
+        "active_plan_reliance": _compact_selector_active_plan_reliance(gate.get("active_plan_reliance")),
         "implementation_allowed": gate.get("implementation_allowed"),
         "delegation_decision_required": gate.get("delegation_decision_required"),
         "authority_boundary": _compact_authority_boundary(gate.get("authority_boundary")),
@@ -22340,9 +22410,12 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "kind",
                 "status",
                 "summary",
+                "intent_conflict_state",
+                "mismatch_evidence",
                 "current_task_class",
                 "classification_basis",
                 "matched_maintenance_markers",
+                "classification_inputs",
                 "semantic_boundary",
                 "recommended_next_action",
                 "safe_routes",

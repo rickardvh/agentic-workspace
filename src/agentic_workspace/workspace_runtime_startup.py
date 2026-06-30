@@ -1498,6 +1498,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("proof.local_overlay")
     if isinstance(startup_high_risk_overlay, dict) and startup_high_risk_overlay.get("status") == "active":
         advisory_selectors.append("proof.high_risk_overlay")
+    selector_sample = list(dict.fromkeys([*advisory_selectors, *available_selectors[:4]]))[:8]
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -1524,8 +1525,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "context": context,
         "drill_down": {
             "ordinary_profile": "primary=next_safe_action;skills=proj;legacy=select/context",
-            "rule": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.",
-            "available_selectors": available_selectors,
+            "rule": "Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.",
+            "selector_inventory": {
+                "status": "omitted-from-compact-default",
+                "available_count": len(available_selectors),
+                "sample": selector_sample,
+                "exact_select_command": f"{cli_invoke} start --target . --select <field[,field...]> --format json",
+                "broad_diagnostics_command": f"{cli_invoke} start --target . --verbose --format json",
+            },
         },
     }
     task_posture_packet = payload.get("task_posture_packet", {})

@@ -79,10 +79,13 @@ candidates = [
         "residue_governance",
         "roadmap",
         "detail_commands",
-        "available_selectors",
+        "selector_inventory",
         "warning_count",
         "memory_consult",
     }
+    assert payload["selector_inventory"]["status"] == "omitted-from-compact-default"
+    assert payload["selector_inventory"]["available_count"] == 9
+    assert payload["selector_inventory"]["exact_select_command"] == "agentic-workspace summary --select <field.path> --format json"
     assert "candidate_lanes" not in payload["roadmap"]
 
 

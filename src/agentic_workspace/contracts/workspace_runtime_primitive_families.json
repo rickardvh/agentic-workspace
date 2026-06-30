@@ -680,6 +680,8 @@
           "_CONTEXT_TEMPLATES",
           "_PROOF_EXECUTION_STATUSES",
           "_PROOF_SELECTION_RULES",
+          "PROOF_RECEIPT_HISTORY_RELATIVE_PATH",
+          "PROOF_RECEIPT_RELATIVE_PATH",
           "_cli_invocation_payload",
           "_compact_startup_installed_state_signal",
           "_defaults_payload",

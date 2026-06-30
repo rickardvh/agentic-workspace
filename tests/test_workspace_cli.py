@@ -5,6 +5,7 @@ import copy
 import hashlib
 import re
 from datetime import date
+from typing import Any
 
 from tests.workspace_cli_support import *
 
@@ -27,6 +28,18 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "Largest JSON contributors:" in message
     assert "context" in message
     assert "context.large" in message
+
+
+def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any]) -> dict[str, Any]:
+    drill_down = payload["drill_down"]
+    assert "available_selectors" not in drill_down
+    inventory = drill_down["selector_inventory"]
+    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["available_count"] > 0
+    assert inventory["sample"]
+    assert "start --target . --select <field[,field...]> --format json" in inventory["exact_select_command"]
+    assert "start --target . --verbose --format json" in inventory["broad_diagnostics_command"]
+    return inventory
 
 
 def test_repeated_module_flags_accumulate_module_selection(tmp_path: Path, capsys) -> None:
@@ -672,7 +685,8 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
     assert "memory_decision_packet" in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "memory_decision_packet" in payload["drill_down"]["available_selectors"]
+    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
+    assert "memory_decision_packet" in inventory["sample"]
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
@@ -768,7 +782,8 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     assert "installed_state_compatibility" not in payload
     assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
     assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "installed_state_compatibility" in payload["drill_down"]["available_selectors"]
+    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
+    assert "installed_state_compatibility" in inventory["sample"]
 
     assert (
         cli.main(
@@ -921,9 +936,8 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
     assert "planning_safety_gate" not in payload
-    assert "memory_decision_packet" in payload["drill_down"]["available_selectors"]
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
-    assert "workflow_sufficiency" in payload["drill_down"]["available_selectors"]
+    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
+    assert inventory["available_count"] >= 3
     assert payload["workflow_participation"]["status"] == "mandatory"
     assert "implementation_allowed cannot bypass workflow" in payload["workflow_participation"]["rule"]
 
@@ -1014,6 +1028,10 @@ candidates = []
     assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
     assert switch["classification_basis"] == "bounded-maintenance-marker-hint"
     assert switch["matched_maintenance_markers"] == ["report", "upgrade", "payload"]
+    assert switch["intent_conflict_state"] == "explicit-task-differs-from-active-plan"
+    assert switch["mismatch_evidence"]["active_plan_label"] == "active plan"
+    assert switch["mismatch_evidence"]["overlap_signal"] == "low-overlap-explicit-task"
+    assert "active_plan_reliance.status=not-needed-for-current-task" in switch["classification_inputs"]
     assert "not authoritative semantic classification" in switch["semantic_boundary"]
     assert {route["id"] for route in switch["safe_routes"]} == {
         "continue-active-plan",
@@ -1021,6 +1039,59 @@ candidates = []
         "reconcile-active-plan-before-implementation",
     }
     assert "claim-active-plan-complete" in switch["active_plan_protection"]["blocked_claims"]
+
+
+def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        json.dumps({"id": "active-plan", "title": "Unrelated active plan"}),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement parser cache eviction for issue routing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["implementation_allowed"] is True
+    switch = gate["task_switch_reconciliation"]
+    assert switch["current_task_class"] == "new-explicit-task"
+    assert switch["recommended_next_action"] == "choose-between-new-task-and-active-plan"
+    assert switch["matched_maintenance_markers"] == []
+    assert switch["mismatch_evidence"]["task_refs"] == []
+    assert "active_plan_reliance.status=not-needed-for-current-task" in switch["classification_inputs"]
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
@@ -1055,7 +1126,7 @@ def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path
     assert "local_chat_checkpoint" not in payload["context"]
     assert "local_chat_checkpoint=present" not in payload["action_signals"]["changed_signals"]
     assert "local_chat_checkpoint" not in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "local_chat_checkpoint" in payload["drill_down"]["available_selectors"]
+    _assert_selector_inventory_omitted_from_compact_start(payload)
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume checkpoint slice", "--format", "json"]) == 0
     resume_payload = json.loads(capsys.readouterr().out)
@@ -1183,7 +1254,7 @@ def test_start_report_meta_task_keeps_routine_context_selector_only_with_backgro
 
     _assert_json_payload_under(payload, 10_000, label="start report/meta compact payload", sort_keys=False)
     assert "routine_work_context" not in payload["context"]
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+    _assert_selector_inventory_omitted_from_compact_start(payload)
     assert "installed_state_compatibility" not in payload
     assert "installed_state_drift_triage" not in payload["context"]
     assert "installed_state_drift_triage=background_advisory" in payload["action_signals"]["changed_signals"]
@@ -1480,7 +1551,7 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
     assert packet["volatile_observations"]["current_pr"]["observed_at"] == checkpoint["updated_at"]
     assert packet["proof_state"]["status"] == "historical-local-summary"
     assert any(item["action"].startswith("re-run or re-evaluate proof") for item in packet["resume_checklist"])
-    assert "local_chat_checkpoint" in startup["drill_down"]["available_selectors"]
+    _assert_selector_inventory_omitted_from_compact_start(startup)
     assert "local_chat_checkpoint=present" in startup["action_signals"]["changed_signals"]
 
 
@@ -2697,6 +2768,47 @@ def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys
     assert friction["answer"]["detail_selector"] == "repo_friction"
     assert friction["answer"]["large_file_hotspots"]["sample"] == []
     assert friction["answer"]["concept_surface_hotspots"]["count"] >= 1
+
+
+def test_chat_agent_default_outputs_stay_bounded_without_selector_inventories(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(start, 10_000, label="compact start chat-agent output", sort_keys=False)
+    _assert_selector_inventory_omitted_from_compact_start(start)
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(summary, 20_000, label="compact summary chat-agent output", sort_keys=False)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    proof = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(proof, 12_000, label="compact proof chat-agent output", sort_keys=False)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "repo_friction", "--format", "json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    _assert_json_payload_under(report, 8_000, label="selected report chat-agent output", sort_keys=False)
+
+    for label, payload in (("start", start), ("summary", summary), ("proof", proof), ("report", report)):
+        encoded = json.dumps(payload)
+        assert "available_selectors" not in encoded, label
+        assert "selector_schema" not in encoded, label
 
 
 def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
