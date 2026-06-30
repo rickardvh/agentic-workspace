@@ -1051,6 +1051,8 @@ candidates = []
     assert decision["next_action"] == "choose-task-switch-route"
     assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
     gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert gate["label"] == "work gate"
+    assert gate["provenance"] == "planning"
     assert gate["gate_result"] == "active-plan-task-switch"
     switch = gate["task_switch_reconciliation"]
     assert switch["status"] == "active"
@@ -2978,6 +2980,10 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert selected_eval["answer"]["kind"] == "agentic-workspace/selective-surfacing-evaluation/v1"
     assert selected_eval["answer"]["status"] == "pass"
     assert selected_eval["answer"]["metrics"]["compact_json_size"] <= 1400
+    relevance = {item["id"]: item for item in selected_eval["answer"]["relevance_scenarios"]}
+    assert relevance["changed-path-ownership"]["basis_source_type"] == "explicit-state-and-contract"
+    assert relevance["active-planning-task-switch"]["projection_fact_id"] == "planning:active-state-obligations"
+    assert relevance["configured-proof-closeout"]["shown_because"] == ["contract.verification_manifest", "state.proof_route_selected"]
 
 
 def test_local_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
@@ -3159,6 +3165,7 @@ def test_selective_surfacing_evaluation_fails_on_missing_guidance_or_compact_noi
     missing_checks = {check["id"]: check for check in missing_evaluation["checks"]}
     assert missing_checks["required-guidance-present"]["result"] == "fail"
     assert missing_checks["required-guidance-present"]["evidence"] == ["broken:row"]
+    assert missing_checks["typed-relevance-basis-present"]["result"] == "fail"
     assert missing_evaluation["finding_routing"]["rule"].startswith("Route failed checks")
 
 

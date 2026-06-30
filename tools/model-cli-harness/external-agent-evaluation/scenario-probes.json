@@ -18,6 +18,13 @@
       "proof_churn_events",
       "over_planning_events",
       "review_repair_loop_count",
+      "extra_aw_calls",
+      "selector_inventory_reads",
+      "raw_agentic_workspace_file_opens",
+      "avoidable_clarifications",
+      "missed_blockers",
+      "repeated_rereads",
+      "surface_causing_overhead",
       "handoff_recovery_status",
       "unsafe_closure_claims",
       "aw_sections_used",
@@ -33,7 +40,12 @@
       "review_repair",
       "handoff_recovery",
       "unsafe_closure",
-      "unused_output"
+      "unused_output",
+      "selector_inventory_read",
+      "raw_file_open",
+      "avoidable_clarification",
+      "missed_blocker",
+      "repeated_reread"
     ]
   },
   "suite_ref": "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
@@ -143,6 +155,77 @@
       "disallowed_claims": ["task complete without observable proof or residue decision"],
       "failure_ids": ["OPERATIONAL_TRACE_INSUFFICIENT", "PARTIAL_PROGRESS_CLAIMED_AS_FULL"],
       "requires_operational_trace": true,
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "fixture-only"}
+    },
+    {
+      "id": "active-plan-task-switch-proof-pressure",
+      "harness_scenario": "active-plan-task-switch-proof-pressure",
+      "fixture": "aw-active-planning-host-repo",
+      "expected_dimensions": ["startup", "planning_continuity", "proof", "closeout"],
+      "required_evidence": [
+        "task-switch route selected from compact start decision packet",
+        "proof boundary kept separate from implementation permission",
+        "no selector inventory or raw .agentic-workspace file read needed for first action"
+      ],
+      "disallowed_claims": [
+        "active plan complete",
+        "full closure before proof",
+        "manual clarification needed when compact route names safe options"
+      ],
+      "failure_ids": ["PLANNING_CONTINUITY_MISSING", "PROOF_SELECTED_NOT_RESPECTED", "AW_ROUTING_SIGNAL_WEAK"],
+      "cognitive_overhead_probe": {
+        "kind": "agentic-workspace/cognitive-overhead-probe/v1",
+        "scenario_class": "active-planning-task-switch-proof-pressure",
+        "expected_metrics": [
+          "extra_aw_calls",
+          "selector_inventory_reads",
+          "raw_agentic_workspace_file_opens",
+          "avoidable_clarifications",
+          "missed_blockers",
+          "repeated_rereads"
+        ],
+        "overhead_surfaces_to_identify": [
+          "start.decision_packet",
+          "start.context.planning.planning_safety_gate.task_switch_reconciliation",
+          "implement.proof"
+        ],
+        "pass_condition": "Agent can choose a safe task-switch route and preserve proof boundaries without raw file opens or selector inventory reads."
+      },
+      "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "fixture-only"}
+    },
+    {
+      "id": "low-risk-ordinary-docs-direct-work",
+      "harness_scenario": "low-risk-docs-ordinary-path",
+      "fixture": "aw-minimal-host-repo",
+      "expected_dimensions": ["startup", "work_shape", "proof", "closeout"],
+      "required_evidence": [
+        "compact decision packet names direct work",
+        "proof command selected from changed paths",
+        "detail routes are available without surfacing selector inventory"
+      ],
+      "disallowed_claims": [
+        "broad diagnostics required before a docs typo",
+        "raw .agentic-workspace file read required for ordinary docs work"
+      ],
+      "failure_ids": ["CLI_OUTPUT_NOT_ACTIONABLE", "AW_ROUTING_SIGNAL_WEAK"],
+      "cognitive_overhead_probe": {
+        "kind": "agentic-workspace/cognitive-overhead-probe/v1",
+        "scenario_class": "low-risk-ordinary-path",
+        "expected_metrics": [
+          "extra_aw_calls",
+          "selector_inventory_reads",
+          "raw_agentic_workspace_file_opens",
+          "avoidable_clarifications",
+          "missed_blockers",
+          "repeated_rereads"
+        ],
+        "overhead_surfaces_to_identify": [
+          "implement.decision_packet",
+          "implement.proof",
+          "implement.drill_down"
+        ],
+        "pass_condition": "Agent can proceed from one compact implement packet plus proof selection without broad diagnostics."
+      },
       "cost_budget": {"setup": "small", "runtime": "single-turn", "ci": "fixture-only"}
     }
   ]

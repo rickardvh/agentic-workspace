@@ -2215,7 +2215,11 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
     assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert payload["memory_decision_packet"]["label"] == "knowledge"
+    assert payload["memory_decision_packet"]["provenance"] == "memory"
     planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["label"] == "work gate"
+    assert planning_gate["provenance"] == "planning"
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"
     assert "changed_path_facts" not in planning_gate
@@ -2266,6 +2270,8 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
         "configured_posture": "conservative/balanced",
     }
     planning_gate = payload["context"]["planning_safety_gate"]
+    assert planning_gate["label"] == "work gate"
+    assert planning_gate["provenance"] == "planning"
     assert planning_gate["status"] == "clear"
     assert planning_gate["required_next_action"] == "continue-direct"
     assert "changed_path_facts" not in planning_gate

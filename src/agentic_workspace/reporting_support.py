@@ -1424,11 +1424,6 @@ def _ordinary_agent_path_payload(
         "phase_questions": [{"phase": item["phase"], "question": item["question"]} for item in phase_questions],
         "lane_completion_model": _compact_ordinary_lane_completion_model(cli_invoke=cli_invoke),
         "entry_command": _command_with_cli_invoke("agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
-        "state_command": _command_with_cli_invoke("agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
-        "current_work_command": _command_with_cli_invoke("agentic-workspace summary --format json", cli_invoke=cli_invoke),
-        "proof_command": _command_with_cli_invoke(
-            "agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
-        ),
         "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
         "current_signal": {
             "current_work_status": current_status,

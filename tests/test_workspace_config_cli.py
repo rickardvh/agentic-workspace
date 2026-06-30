@@ -85,8 +85,19 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "positive-and-suppression-scenarios-present": "pass",
         "irrelevant-guidance-suppressed-from-compact-output": "pass",
         "compact-output-size-bounded": "pass",
+        "typed-relevance-basis-present": "pass",
     }
     assert surfacing_eval["metrics"]["projection_row_count"] == len(projection["facts"])
+    relevance = {item["id"]: item for item in surfacing_eval["relevance_scenarios"]}
+    assert {
+        "changed-path-ownership",
+        "active-planning-task-switch",
+        "configured-proof-closeout",
+    } <= set(relevance)
+    assert {item["basis_source_type"] for item in relevance.values()} == {"explicit-state-and-contract"}
+    assert relevance["changed-path-ownership"]["shown_because"] == ["state.changed_paths=present", "contract.owner_boundary"]
+    assert relevance["active-planning-task-switch"]["not_based_on"] == "broad planning vocabulary"
+    assert relevance["configured-proof-closeout"]["not_based_on"] == "bug/fix/test keyword matching"
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}

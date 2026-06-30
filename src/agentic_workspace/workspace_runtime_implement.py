@@ -1600,6 +1600,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 key: compact_gate.get(key)
                 for key in (
                     "kind",
+                    "label",
+                    "provenance",
                     "status",
                     "gate_result",
                     "workflow_sufficient",

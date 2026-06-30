@@ -429,6 +429,7 @@
           "_guidance_with_cli_invoke",
           "_local_chat_checkpoint_projection",
           "_local_footprint_payload",
+          "_ordinary_decision_packet",
           "_selector_first_planning_safety_gate",
           "_selector_requests",
           "_selector_requests_architecture_principles",

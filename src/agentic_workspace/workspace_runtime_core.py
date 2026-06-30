@@ -15358,6 +15358,8 @@ def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
     }
     return {
         "kind": full.get("kind"),
+        "label": "knowledge",
+        "provenance": "memory",
         "stage": full.get("stage"),
         "force": full.get("force"),
         "why_visible": "Explicit agent-owned Memory pull/capture decision.",
@@ -23018,6 +23020,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         return {}
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
+        "label": "work gate",
+        "provenance": "planning",
         "status": gate.get("status"),
         "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
@@ -32657,6 +32661,42 @@ def _selective_surfacing_evaluation_payload(
         "stale-or-unprojected-gap": bool(statuses & {"stale", "unprojected"}),
         "ordinary-output-noise": not compact_has_fact_detail,
     }
+    facts_by_id = {str(item.get("id") or ""): item for item in facts}
+    relevance_scenarios = [
+        {
+            "id": "changed-path-ownership",
+            "shown_because": ["state.changed_paths=present", "contract.owner_boundary"],
+            "basis": "changed paths route through projection facts with explicit owner boundaries and payload fields",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "memory:routing-metadata",
+            "covered": bool(facts_by_id.get("memory:routing-metadata", {}).get("owner_boundary"))
+            and bool(facts_by_id.get("memory:routing-metadata", {}).get("payload_fields")),
+            "not_based_on": "keyword task prose alone",
+        },
+        {
+            "id": "active-planning-task-switch",
+            "shown_because": ["state.active_planning_present=true", "contract.planning_safety_gate"],
+            "basis": "active Planning state has a typed projection fact and ordinary route to summary/implement surfaces",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "planning:active-state-obligations",
+            "covered": bool(facts_by_id.get("planning:active-state-obligations", {}).get("ordinary_path_routes"))
+            and bool(facts_by_id.get("planning:active-state-obligations", {}).get("trigger")),
+            "not_based_on": "broad planning vocabulary",
+        },
+        {
+            "id": "configured-proof-closeout",
+            "shown_because": ["contract.verification_manifest", "state.proof_route_selected"],
+            "basis": "enabled Verification and proof selection use manifest status and proof route contracts",
+            "basis_source_type": "explicit-state-and-contract",
+            "projection_fact_id": "verification:manifest",
+            "covered": bool(facts_by_id.get("verification:manifest", {}).get("ordinary_path_routes"))
+            and bool(facts_by_id.get("verification:manifest", {}).get("suppression_rule")),
+            "not_based_on": "bug/fix/test keyword matching",
+        },
+    ]
+    relevance_pass = all(
+        bool(item.get("covered")) and item.get("basis_source_type") == "explicit-state-and-contract" for item in relevance_scenarios
+    )
     required_scenarios = ("positive-config-surfacing", "latent-suppression", "ordinary-output-noise")
     checks = [
         {
@@ -32687,6 +32727,13 @@ def _selective_surfacing_evaluation_payload(
             "evidence": {"compact_json_size": compact_json_size, "max_json_size": 1400},
             "finding_route": "surface-value guardrail issue or direct compact-shape fix",
         },
+        {
+            "id": "typed-relevance-basis-present",
+            "result": "pass" if relevance_pass else "fail",
+            "fails_when": "changed-path ownership, active Planning, or configured proof/closeout relevance lacks explicit state/contract basis",
+            "evidence": {item["id"]: item["covered"] for item in relevance_scenarios},
+            "finding_route": "projection row or compact decision-packet shown_because fix",
+        },
     ]
     failing = [item for item in checks if item["result"] == "fail"]
     return {
@@ -32710,6 +32757,7 @@ def _selective_surfacing_evaluation_payload(
             }
             for scenario_id, covered in scenario_ids.items()
         ],
+        "relevance_scenarios": relevance_scenarios,
         "checks": checks,
         "failing_checks": failing,
         "metrics": {
