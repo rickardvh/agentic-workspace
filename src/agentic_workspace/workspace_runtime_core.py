@@ -22483,6 +22483,39 @@ def _read_local_cache_json(target_root: Path, relative_path: str) -> dict[str, A
     return payload if isinstance(payload, dict) else {"_cache_error": f"{relative_path} did not contain a JSON object"}
 
 
+def _pr_comment_report_command(*, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command="agentic-workspace report --target . --section pr_comment_attention --format json",
+        cli_invoke=cli_invoke,
+    )
+
+
+def _pr_comment_source_checkout_helper_command(*, repo: str, pr_number: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
+        cli_invoke=cli_invoke,
+    )
+
+
+def _pr_comment_thread_inspection_payload(*, repo: str, pr_number: str, cli_invoke: str, status: str = "required") -> dict[str, Any]:
+    command = _pr_comment_report_command(cli_invoke=cli_invoke)
+    return {
+        "kind": "agentic-workspace/pr-comment-thread-inspection/v1",
+        "status": status,
+        "command": command,
+        "connector_route": f"GitHub connector: fetch PR comments for {repo}#{pr_number or '<number>'}",
+        "source_checkout_helper": {
+            "availability": "source-checkout-only",
+            "command": _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "rule": "This helper is useful in this source repository but is not a durable host-repo contract.",
+        },
+        "fallback_rule": (
+            "Use the portable report route for cached AW state and the connector route for live thread-level context before "
+            "claiming comments are absent, resolved, or fully handled."
+        ),
+    }
+
+
 def _current_git_branch(target_root: Path) -> str:
     try:
         result = subprocess.run(
@@ -22494,8 +22527,17 @@ def _current_git_branch(target_root: Path) -> str:
             timeout=2,
         )
     except (OSError, subprocess.SubprocessError):
+        result = None
+    if result is not None and result.returncode == 0 and result.stdout.strip():
+        return result.stdout.strip()
+    try:
+        head = (target_root / ".git" / "HEAD").read_text(encoding="utf-8").strip()
+    except OSError:
         return ""
-    return result.stdout.strip() if result.returncode == 0 else ""
+    prefix = "ref: refs/heads/"
+    if head.startswith(prefix):
+        return head[len(prefix) :].strip()
+    return ""
 
 
 def _github_repo_from_origin(target_root: Path) -> str:
@@ -22535,6 +22577,17 @@ def _task_pr_number(task_text: str | None) -> str:
 def _branch_pr_number(branch: str) -> str:
     match = re.search(r"(?:^|[/_-])(?:pr|pull|pull-request)[/_-]?(\d+)(?:$|[/_-])", branch, flags=re.IGNORECASE)
     return match.group(1) if match else ""
+
+
+def _pr_number_from_stack(stack: dict[str, Any], *, branch: str) -> str:
+    if not branch:
+        return ""
+    for member in _list_payload(stack.get("stack_members")):
+        if not isinstance(member, dict):
+            continue
+        if str(member.get("branch") or "") == branch:
+            return str(member.get("pr_number") or "").strip()
+    return ""
 
 
 def _read_only_meta_task(task_text: str | None) -> bool:
@@ -22676,11 +22729,14 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         return {
             "kind": "agentic-workspace/pr-stack-comment-attention/v1",
             "status": "stack_comment_status_unavailable",
+            "comment_state": "connector_or_cache_unavailable",
             "reason": str(cache["_cache_error"]),
             "repository": command_repo,
             "branch": branch,
             "cache_path": cache_path,
             "degraded_because": "unreadable-cache",
+            "thread_inspection": _pr_comment_thread_inspection_payload(repo=command_repo, pr_number="<number>", cli_invoke=cli_invoke),
+            "unverified_context": ["Stack cache could not be read; stack members and thread-level comment state are unverified."],
         }
     raw_members = [item for item in _list_payload(cache.get("stack_members")) if isinstance(item, dict)]
     if not raw_members:
@@ -22692,15 +22748,15 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         pr_number = str(item.get("pr_number") or "").strip()
         member_cache = item.get("delta", {}) if isinstance(item.get("delta"), dict) else item
         counts = member_cache.get("category_counts", {}) if isinstance(member_cache.get("category_counts"), dict) else {}
-        actionable_count = sum(
-            _as_int(counts.get(category))
-            for category in (
-                "actionable_code_doc_body_change",
-                "pr_metadata_body_only_change",
-                "ci_label_only_issue",
-                "ambiguous_needs_human",
-            )
+        items = [entry for entry in _list_payload(member_cache.get("items")) if isinstance(entry, dict)]
+        actionable_categories = (
+            "actionable_code_doc_body_change",
+            "pr_metadata_body_only_change",
+            "ci_label_only_issue",
+            "ambiguous_needs_human",
         )
+        actionable_items = [entry for entry in items if str(entry.get("category") or "") in actionable_categories]
+        actionable_count = sum(_as_int(counts.get(category)) for category in actionable_categories)
         freshness = member_cache.get("freshness", {}) if isinstance(member_cache.get("freshness"), dict) else {}
         fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
         comment_status = str(item.get("status") or member_cache.get("status") or "")
@@ -22712,10 +22768,8 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         else:
             comment_status = "pr_comment_status_unavailable"
             unavailable_present = True
-        refresh_command = _command_with_cli_invoke(
-            command=f"python scripts/github/pr_comment_delta.py --repo {command_repo} --pr {pr_number or '<number>'} --format json",
-            cli_invoke=cli_invoke,
-        )
+        refresh_command = _pr_comment_report_command(cli_invoke=cli_invoke)
+        thread_inspection = _pr_comment_thread_inspection_payload(repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke)
         members.append(
             {
                 "pr_number": pr_number,
@@ -22723,8 +22777,21 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
                 "head_sha": str(item.get("head_sha") or freshness.get("pr_head_sha") or ""),
                 "comment_status": comment_status,
                 "freshness": freshness or {"status": "missing"},
+                "new_comment_count": _as_int(member_cache.get("new_comment_count")),
                 "actionable_count": actionable_count,
+                "sample": [
+                    {
+                        key: entry.get(key)
+                        for key in ("kind", "category", "path", "line", "url", "author", "created_at", "proof_hint")
+                        if entry.get(key) not in (None, "")
+                    }
+                    for entry in actionable_items[:2]
+                ],
                 "refresh_command": refresh_command,
+                "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
+                    repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke
+                ),
+                "thread_inspection": thread_inspection,
             }
         )
     status = (
@@ -22742,6 +22809,22 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         "stack_member_count": len(members),
         "stack_members": members,
         "cache_path": cache_path,
+        "comment_state": "stack_comments_requiring_action"
+        if actionable_present
+        else "stack_stale_or_unknown"
+        if unavailable_present
+        else "stack_current_no_actionable_comments",
+        "stack_discovery": {
+            "status": "from-cache",
+            "repository": command_repo,
+            "branch": branch,
+            "cache_path": cache_path,
+            "member_count": len(members),
+            "current_branch_pr_number": _pr_number_from_stack({"stack_members": members}, branch=branch),
+        },
+        "unverified_context": []
+        if not unavailable_present
+        else ["At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."],
         "claim_boundary": "A broad stack-ready claim is blocked while any stack member has actionable, stale, or unavailable comment status.",
         "degraded_because": "stale-or-missing-member-freshness" if unavailable_present else "",
     }
@@ -22767,10 +22850,7 @@ def _pr_stack_comment_context_relevant(*, task_text: str | None, branch: str) ->
 
 def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
-    recommended_command = _command_with_cli_invoke(
-        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-        cli_invoke=cli_invoke,
-    )
+    recommended_command = _pr_comment_report_command(cli_invoke=cli_invoke)
     return {
         "kind": "agentic-workspace/pr-stack-comment-attention/v1",
         "status": "stack_comment_status_unavailable",
@@ -22786,7 +22866,13 @@ def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: 
             "repository": repo,
             "cache_path": cache_path,
             "refresh_command": recommended_command,
+            "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
+                repo=repo, pr_number=pr_number, cli_invoke=cli_invoke
+            ),
         },
+        "comment_state": "stack_discovery_unavailable",
+        "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+        "unverified_context": ["Stack membership is unverified.", "Thread-level PR comment state is unverified."],
         "claim_boundary": "A broad stack-ready claim is blocked until stack members are discovered or the stack scope is explicitly narrowed.",
         "degraded_because": "missing-stack-discovery-evidence",
     }
@@ -22799,6 +22885,8 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
     repo = str(cache.get("repository") or _github_repo_from_origin(target_root) or "<owner/name>")
     pr_number = str(cache.get("pr_number") or _task_pr_number(task_text) or _branch_pr_number(branch) or "")
     stack = _pr_stack_comment_cache_payload(target_root=target_root, repo=repo, branch=branch, cli_invoke=cli_invoke)
+    if stack and not pr_number:
+        pr_number = _pr_number_from_stack(stack, branch=branch)
     if not _pr_comment_attention_relevant(task_text=task_text, branch=branch, cache=cache):
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
@@ -22818,29 +22906,32 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "stack": stack,
             "stack_discovery": stack.get("stack_discovery", {}),
             "stack_member_count": stack.get("stack_member_count", 0),
+            "comment_state": stack.get("comment_state") or status,
+            "thread_inspection": stack.get("thread_inspection")
+            or _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "unverified_context": stack.get("unverified_context", []),
             "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
             if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
             else _command_with_cli_invoke(
-                command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-                cli_invoke=cli_invoke,
+                command="agentic-workspace report --target . --section pr_comment_attention --format json", cli_invoke=cli_invoke
             ),
             "selector": "pr_comment_attention",
             "degraded_explicitly": status == "stack_comment_status_unavailable",
             "claim_boundary": stack.get("claim_boundary"),
         }
-    command = _command_with_cli_invoke(
-        command=f"python scripts/github/pr_comment_delta.py --repo {repo} --pr {pr_number or '<number>'} --format json",
-        cli_invoke=cli_invoke,
-    )
+    command = _pr_comment_report_command(cli_invoke=cli_invoke)
     if cache.get("_cache_error"):
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": "pr_comment_status_unavailable",
+            "comment_state": "connector_or_cache_unavailable",
             "reason": str(cache["_cache_error"]),
             "pr_number": pr_number,
             "repository": repo,
             "cache_path": cache_path,
             "recommended_command": command,
+            "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "unverified_context": ["Cached PR comment delta could not be read; thread-level comment state is unverified."],
             "selector": "pr_comment_attention",
         }
     if cache:
@@ -22861,6 +22952,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             return {
                 "kind": "agentic-workspace/pr-comment-attention/v1",
                 "status": "pr_comment_status_unavailable",
+                "comment_state": "stale_or_unknown",
                 "reason": "Cached PR comment delta has no PR-head freshness proof; refresh before readiness claims.",
                 "repository": repo,
                 "pr_number": str(cache.get("pr_number") or pr_number),
@@ -22872,12 +22964,17 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
                 },
                 "cache_path": cache_path,
                 "recommended_command": command,
+                "thread_inspection": _pr_comment_thread_inspection_payload(
+                    repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke
+                ),
+                "unverified_context": ["Current PR head is unverified.", "Thread-level comment state may be stale."],
                 "selector": "pr_comment_attention",
                 "degraded_explicitly": True,
             }
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": status,
+            "comment_state": "comments_requiring_action" if actionable_count else "no_comments_requiring_action",
             "repository": repo,
             "pr_number": str(cache.get("pr_number") or pr_number),
             "pr_url": str(cache.get("pr_url") or ""),
@@ -22897,18 +22994,25 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "pagination": cache.get("pagination", {}) if isinstance(cache.get("pagination"), dict) else {},
             "cache_path": cache_path,
             "recommended_command": command,
+            "thread_inspection": _pr_comment_thread_inspection_payload(
+                repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke, status="available"
+            ),
+            "unverified_context": [] if cache_is_fresh else ["Current PR head is unverified; refresh before readiness claims."],
             "selector": "pr_comment_attention",
             "claim_boundary": "Do not claim PR readiness while actionable PR comments are present unless they are addressed or explicitly deferred.",
         }
     return {
         "kind": "agentic-workspace/pr-comment-attention/v1",
         "status": "pr_comment_status_unavailable",
+        "comment_state": "cache_miss",
         "reason": "PR context is relevant, but no cached PR comment delta was found and startup/report do not poll GitHub by default.",
         "repository": repo,
         "pr_number": pr_number,
         "branch": branch,
         "cache_path": cache_path,
         "recommended_command": command,
+        "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+        "unverified_context": ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."],
         "selector": "pr_comment_attention",
         "degraded_explicitly": True,
     }

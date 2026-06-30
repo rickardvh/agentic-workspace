@@ -400,6 +400,8 @@ query($owner: String!, $name: String!, $number: Int!) {
             f"query={query}",
         ],
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,

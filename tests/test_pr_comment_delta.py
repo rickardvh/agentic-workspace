@@ -265,6 +265,50 @@ def test_pr_comment_delta_cli_reads_fixture(tmp_path: Path) -> None:
     assert packet["smallest_next_action"] == "Clarify ambiguous comments before editing or fetching broad patch context."
 
 
+def test_pr_comment_delta_fetch_forces_utf8_subprocess_decoding(monkeypatch) -> None:
+    module = _load_module()
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        observed["command"] = command
+        observed["encoding"] = kwargs.get("encoding")
+        observed["errors"] = kwargs.get("errors")
+        payload = {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "url": "https://github.com/rickardvh/agentic-workspace/pull/1893",
+                        "headRefOid": "abc123",
+                        "comments": {
+                            "nodes": [
+                                {
+                                    "databaseId": 1,
+                                    "url": "https://example.test/pr#unicode",
+                                    "body": "Please keep the snowman \u2603 in the body.",
+                                    "createdAt": "2026-06-29T21:00:00Z",
+                                    "author": {"login": "reviewer"},
+                                }
+                            ],
+                            "pageInfo": {"hasNextPage": False},
+                        },
+                        "reviews": {"nodes": [], "pageInfo": {"hasNextPage": False}},
+                        "reviewThreads": {"nodes": [], "pageInfo": {"hasNextPage": False}},
+                    }
+                }
+            }
+        }
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module._fetch_with_gh(repo="rickardvh/agentic-workspace", pr_number=1893)
+
+    assert observed["encoding"] == "utf-8"
+    assert observed["errors"] == "replace"
+    assert payload["repository"] == "rickardvh/agentic-workspace"
+    assert "snowman" in payload["data"]["repository"]["pullRequest"]["comments"]["nodes"][0]["body"]
+
+
 def test_pr_comment_delta_readme_keeps_live_workflow_discoverable() -> None:
     text = README.read_text(encoding="utf-8")
 
