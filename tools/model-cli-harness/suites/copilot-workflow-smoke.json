@@ -249,6 +249,37 @@
       ]
     },
     {
+      "id": "setup-jumpstart-discovery",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "This repository has already been bootstrapped with Agentic Workspace and now needs bounded post-bootstrap setup discovery. Use the repo's setup or jumpstart route to inspect candidate durable surfaces, but do not write Memory, Planning, docs, or application files. Final answer should name the exact setup command used, the inspected candidate surface types, and which findings would be promoted, deferred, or dismissed.",
+      "forbidden_write_patterns": [
+        "**/*"
+      ],
+      "required_executed_commands": [
+        "uv run agentic-workspace setup"
+      ],
+      "required_command_mentions": [
+        "uv run agentic-workspace setup",
+        "workspace-setup-jumpstart"
+      ],
+      "forbidden_response_phrases": [
+        "bulk import",
+        "seed everything",
+        "created memory",
+        "created planning"
+      ],
+      "expected_signals": [
+        "uses setup as pre-write and pre-seed discovery",
+        "routes through workspace-setup-jumpstart or equivalent setup jumpstart guidance",
+        "does not promote durable Memory or Planning state without inspected host-repo evidence",
+        "reports promoted, deferred, and dismissed findings separately"
+      ],
+      "score_notes": [
+        "Good: setup discovery first, no blind durable writes, compact promotion/defer/dismiss routing.",
+        "Bad: bulk-imports repo prose, creates Memory or Planning surfaces directly, or treats setup output as authorization to seed everything."
+      ]
+    },
+    {
       "id": "direct-task-minimal-overhead",
       "fixture": "aw-minimal-host-repo",
       "proportionality_guardrail": true,

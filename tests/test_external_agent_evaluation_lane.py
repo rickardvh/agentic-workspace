@@ -602,6 +602,34 @@ def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(t
     assert f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}' in pyproject_text
 
 
+def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    suite_path = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
+    suite = module._load_json(suite_path)
+    scenarios = {scenario["id"]: scenario for scenario in suite["scenarios"]}
+
+    scenario = scenarios["setup-jumpstart-discovery"]
+    assert "uv run agentic-workspace setup" in scenario["required_executed_commands"]
+    assert "workspace-setup-jumpstart" in scenario["required_command_mentions"]
+    assert scenario["forbidden_write_patterns"] == ["**/*"]
+    assert any("pre-write and pre-seed discovery" in note for note in scenario["expected_signals"])
+
+    payload = module.run_suite(
+        suite_path=suite_path,
+        adapter_id="codex",
+        model="gpt-5.4-mini",
+        scenario_filter="setup-jumpstart-discovery",
+        execute=False,
+        output_root=tmp_path / "runs",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    assert result["scenario_id"] == "setup-jumpstart-discovery"
+    assert "uses setup as pre-write and pre-seed discovery" in result["expected_signals"]
+    assert result["mutation_summary"]["status"] == "not-run"
+
+
 def test_model_cli_harness_default_output_root_is_manifest_backed_scratch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     module = _load_harness_module()
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
