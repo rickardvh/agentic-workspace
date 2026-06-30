@@ -564,6 +564,33 @@ def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(t
     assert f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}' in pyproject_text
 
 
+def test_model_cli_harness_default_output_root_is_manifest_backed_scratch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_harness_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    output_root = tmp_path / ".agentic-workspace" / "local" / "scratch" / "runs"
+    paths = module._scenario_paths(
+        output_root=output_root,
+        suite_id="suite",
+        scenario_id="scenario",
+        adapter_id="adapter",
+        model="model",
+    )
+    paths.run_root.mkdir(parents=True)
+
+    manifest = module._write_scratch_run_manifest(
+        paths.run_root,
+        purpose="test manifest",
+        aw_runs_root=output_root,
+    )
+
+    assert module.DEFAULT_OUTPUT_ROOT.as_posix().endswith(".agentic-workspace/local/scratch/runs")
+    assert manifest == paths.run_root / ".aw-scratch.toml"
+    manifest_text = manifest.read_text(encoding="utf-8")
+    assert 'owner = "agentic-workspace"' in manifest_text
+    assert 'producer = "model-cli-harness"' in manifest_text
+    assert 'retention = "ephemeral"' in manifest_text
+
+
 def test_model_cli_harness_preflight_resolves_adapter_executable_candidates(tmp_path: Path) -> None:
     module = _load_harness_module()
     tool_dir = tmp_path / "tools"

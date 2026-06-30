@@ -2123,6 +2123,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "safety",
             "delegation",
             "clarification",
+            "local_scratch_retention",
             "local_memory",
             "local_overlay",
             "high_risk_overlay",

@@ -23,7 +23,7 @@ from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs"
 EPHEMERAL_MUTATION_PATHS = (
     ".git/",
     ".coverage",
@@ -84,8 +84,43 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _toml_string(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
 def _now_id() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _write_scratch_run_manifest(
+    run_root: Path,
+    *,
+    purpose: str,
+    producer: str = "model-cli-harness",
+    retention: str = "ephemeral",
+    aw_runs_root: Path | None = None,
+) -> Path | None:
+    aw_runs_root = (aw_runs_root or REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").resolve()
+    try:
+        run_root.resolve().relative_to(aw_runs_root)
+    except ValueError:
+        return None
+    manifest = run_root / ".aw-scratch.toml"
+    created_at = datetime.now(UTC).isoformat()
+    manifest.write_text(
+        "\n".join(
+            [
+                'owner = "agentic-workspace"',
+                f"created_at = {_toml_string(created_at)}",
+                f"purpose = {_toml_string(purpose)}",
+                f"producer = {_toml_string(producer)}",
+                f"retention = {_toml_string(retention)}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _replace_placeholders(value: str, *, replacements: dict[str, str]) -> str:
@@ -3261,6 +3296,10 @@ def run_suite(
                 local_aw_wheelhouse=local_aw_wheelhouse,
                 source_checkout_path=adapter_source_checkout_path,
             )
+            _write_scratch_run_manifest(
+                paths.run_root,
+                purpose=f"model CLI harness run: {suite_id}/{scenario_id}/{adapter_id}/{resolved_model}",
+            )
             replacements = {
                 "repo": str(paths.repo_path),
                 "run_root": str(paths.run_root),
@@ -3621,7 +3660,13 @@ def run_suite(
         "eventual_success_count": sum(1 for loop in completion_loops if loop.get("eventual_success") is True),
         "first_pass_success_count": sum(1 for loop in completion_loops if loop.get("first_pass_success") is True),
     }
-    _write_json(output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary.json", payload)
+    summary_root = output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary"
+    summary_root.mkdir(parents=True, exist_ok=False)
+    _write_scratch_run_manifest(
+        summary_root,
+        purpose=f"model CLI harness suite summary: {suite_id}/{adapter_id}/{resolved_model}",
+    )
+    _write_json(summary_root / "summary.json", payload)
     return payload
 
 
