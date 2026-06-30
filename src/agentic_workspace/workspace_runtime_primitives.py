@@ -35360,6 +35360,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 
 
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
+PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
 
 
 def _proof_receipt_result_failed(result: str) -> bool:
@@ -35628,10 +35629,14 @@ def _record_proof_receipt_payload(
     if not dry_run:
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+        history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
+        with history_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
     payload = {
         "kind": "agentic-workspace/proof-receipt-write/v1",
         "status": "dry-run" if dry_run else "written",
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }

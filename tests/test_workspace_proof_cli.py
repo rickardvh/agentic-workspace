@@ -2083,13 +2083,17 @@ def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, c
 
     payload = json.loads(capsys.readouterr().out)
     receipt_path = target / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    history_path = target / ".agentic-workspace" / "local" / "proof-receipts" / "history.jsonl"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    history = [json.loads(line) for line in history_path.read_text(encoding="utf-8").splitlines()]
     assert payload["status"] == "written"
     assert payload["path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert payload["history_path"] == ".agentic-workspace/local/proof-receipts/history.jsonl"
     assert receipt["command"] == "uv run pytest tests/test_workspace_proof_cli.py -q"
     assert receipt["result"] == "passed"
     assert receipt["changed_paths"] == ["tests/test_workspace_proof_cli.py"]
     assert receipt["plan_id"] == "plan-alpha"
+    assert history == [receipt]
     assert "repair_retry_ladder" not in receipt
     assert "repair_retry_ladder" not in payload
 
@@ -2241,7 +2245,7 @@ def test_proof_failed_receipt_marks_excerpt_failure_summary_lower_trust(tmp_path
     }
 
 
-def test_proof_changed_reconciles_latest_passed_receipt_without_closing_claim(tmp_path: Path, capsys) -> None:
+def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
     assert (
@@ -2255,6 +2259,27 @@ def test_proof_changed_reconciles_latest_passed_receipt_without_closing_claim(tm
                 "--record-receipt",
                 "--receipt-command",
                 "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make typecheck",
                 "--receipt-result",
                 "passed",
                 "--format",
@@ -2284,11 +2309,16 @@ def test_proof_changed_reconciles_latest_passed_receipt_without_closing_claim(tm
     answer = json.loads(capsys.readouterr().out)["answer"]
     reconciliation = answer["proof_receipt_reconciliation"]
     states = {item["command"]: item for item in reconciliation["commands"]}
-    assert reconciliation["status"] == "attention"
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["accepted_count"] == 2
+    assert reconciliation["receipt"]["command"] == "make typecheck"
+    assert reconciliation["receipt_history"]["record_count"] == 2
+    assert reconciliation["receipt_history"]["accepted_record_count"] == 2
     assert states["make test-workspace"]["evidence_state"] == "accepted"
     assert states["make test-workspace"]["diagnostic"] == "passed receipt accepted"
-    assert states["make typecheck"]["evidence_state"] == "run-but-not-recorded"
-    assert answer["proof_execution_evidence"]["status"] == "not-run-or-not-recorded"
+    assert states["make typecheck"]["evidence_state"] == "accepted"
+    assert states["make typecheck"]["diagnostic"] == "passed receipt accepted"
+    assert answer["proof_execution_evidence"]["status"] == "recorded-and-accepted"
     assert "closeout review" in answer["proof_execution_evidence"]["rule"]
 
 
