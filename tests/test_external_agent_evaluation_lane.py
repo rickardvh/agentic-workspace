@@ -710,6 +710,79 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     assert "[tool.uv.sources]" not in pyproject_text
 
 
+def test_model_cli_harness_plain_codex_large_prompt_uses_file_reference_transport(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    suite = module._load_json(REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json")
+    adapter = suite["adapters"]["codex"]
+    large_prompt = "large evaluator prompt\n" * 1000
+
+    command, prompt_transport, _ = module._adapter_invocation_command(
+        adapter,
+        adapter_id="codex",
+        model=adapter["default_model"],
+        replacements={
+            "repo": str(tmp_path / "repo"),
+            "run_root": str(tmp_path / "run"),
+            "share_path": str(tmp_path / "run" / "share.md"),
+            "postmortem_cwd": str(tmp_path / "run" / "postmortem-context"),
+            "transcript_path": str(tmp_path / "run" / "transcript.jsonl"),
+            "prompt": large_prompt,
+        },
+        run_root=tmp_path / "run",
+        prompt_id="large-evaluator",
+    )
+
+    prompt_file = Path(prompt_transport["prompt_file"])
+    assert prompt_transport["mode"] == "file-reference"
+    assert prompt_file.exists()
+    assert prompt_file.read_text(encoding="utf-8") == large_prompt
+    assert large_prompt not in command
+    assert command[-1].startswith("Read the complete prompt from this file")
+    assert str(prompt_file) in command[-1]
+
+
+def test_sbx_codex_adapter_rejects_overlong_windows_prompt_before_model_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_sbx_adapter_module()
+    commands: list[list[str]] = []
+    prompt_file = tmp_path / "prompt.txt"
+    prompt_file.write_text("large prompt\n" * 100, encoding="utf-8")
+
+    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+    monkeypatch.setattr(module.sys, "platform", "win32")
+    monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 120)
+
+    result = module.main(
+        [
+            "--sbx",
+            "sbx",
+            "--sandbox-name",
+            "aw-test",
+            "--repo",
+            "work/repo",
+            "--model",
+            "gpt-test",
+            "--share-path",
+            "work/share/final.md",
+            "--prompt-file",
+            str(prompt_file),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert result == 2
+    assert commands == []
+    assert "Refusing before sandbox/model execution" in captured.err
+    assert "plain codex adapter" in captured.err
+
+
 def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
     module = _load_sbx_adapter_module()
     commands: list[list[str]] = []

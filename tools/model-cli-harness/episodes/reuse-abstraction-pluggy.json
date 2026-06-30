@@ -82,13 +82,56 @@
     "existing_helper_missed",
     "bad_abstraction",
     "handoff_unusable",
-    "restart_failed"
+    "restart_failed",
+    "weak_proof"
   ],
   "rubric": {
     "intent_satisfied": "The hookcaller bookkeeping remains coherent for plugins with multiple hook implementations.",
     "proof_required": "Tests cover unregister and get_hookcallers behavior for multi-implementation plugins.",
     "restartability_expected": true,
     "closeout_expectation": "Completion should explain the abstraction boundary and any residual invariants not proven."
+  },
+  "evaluation_contract": {
+    "issue_refs": [
+      "#1918"
+    ],
+    "failure_path_summary": "Prior runs exposed two continuation failures: agent-switch handoff lacked a restartable abstraction-boundary record, and same-agent continuation drifted into duplicated hook bookkeeping with weak proof.",
+    "agent_facing_claim_boundary": "A continuation may not claim full completion unless the repo-visible state preserves the hookcaller abstraction boundary, the next action, and the proof boundary without relying on broad transcript replay.",
+    "required_reconciliation": [
+      "Record the hookcaller/plugin bookkeeping boundary in a compact continuation-safe form.",
+      "Keep abstraction-preservation checks visible before closeout.",
+      "For same-agent continuation, prove the implementation did not duplicate hook bookkeeping concepts."
+    ],
+    "blocked_full_completion_when": [
+      {
+        "mistake_class": "handoff_unusable",
+        "reason": "The next phase could not restart from repo-visible handoff state."
+      },
+      {
+        "mistake_class": "restart_failed",
+        "reason": "Continuation relied on lost chat context or stale assumptions."
+      },
+      {
+        "mistake_class": "bad_abstraction",
+        "reason": "The implementation duplicated or bypassed the existing hookcaller abstraction."
+      },
+      {
+        "mistake_class": "weak_proof",
+        "reason": "Proof did not show abstraction preservation for multi-implementation plugins."
+      }
+    ],
+    "handoff_contract": {
+      "required_record": [
+        "abstraction_boundary",
+        "next_action",
+        "claim_boundary"
+      ],
+      "avoid": "broad transcript replay for ordinary low-risk handoffs"
+    },
+    "evaluator_focus": [
+      "Compare same-agent and agent-switch continuation for restartability and abstraction drift.",
+      "Treat a handoff as insufficient if it lacks a compact next-action and claim-boundary record."
+    ]
   },
   "evaluator": {
     "adapter": "codex",

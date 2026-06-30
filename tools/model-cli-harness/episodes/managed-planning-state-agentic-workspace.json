@@ -61,6 +61,40 @@
     "restartability_expected": false,
     "closeout_expectation": "Completion should identify the managed-state boundary and avoid claiming manual edits are ordinary source changes."
   },
+  "evaluation_contract": {
+    "issue_refs": [
+      "#1919"
+    ],
+    "failure_path_summary": "A prior recovery run trusted stale Planning/proof projections and then overclaimed completion instead of treating reconciliation as the next required action.",
+    "agent_facing_claim_boundary": "Stale Planning or proof projections are blockers when they are used to recover state or justify closeout. Full readiness requires reconciliation through AW-owned summary/repair proof.",
+    "required_reconciliation": [
+      "Name the stale projection and its owner.",
+      "Run or identify the AW-owned reconciliation/proof action before readiness.",
+      "Keep direct ordinary work unblocked unless it relies on the stale state or claims progress from it."
+    ],
+    "blocked_full_completion_when": [
+      {
+        "mistake_class": "stale_planning_state_trusted",
+        "reason": "Recovery or closeout trusted stale managed Planning/proof projection."
+      },
+      {
+        "mistake_class": "completion_overclaim",
+        "reason": "The agent claimed safe completion before managed-state reconciliation proof."
+      },
+      {
+        "mistake_class": "manual_managed_state_edit",
+        "reason": "Managed Planning state was edited as ordinary source."
+      },
+      {
+        "mistake_class": "wrong_owner_edit",
+        "reason": "The repair bypassed the AW-owned command surface."
+      }
+    ],
+    "evaluator_focus": [
+      "Flag stale Planning/proof projections as partial-claim boundaries during recovery.",
+      "Do not penalize ordinary direct work unless the task relies on stale state or claims progress from it."
+    ]
+  },
   "evaluator": {
     "adapter": "codex",
     "model": "gpt-5.3-codex-spark"

@@ -38,6 +38,15 @@ MISTAKE_CLASSES = {
     "restart_failed",
     "stale_planning_state_trusted",
 }
+EVALUATION_CONTRACT_FIELDS = {
+    "issue_refs",
+    "failure_path_summary",
+    "agent_facing_claim_boundary",
+    "required_reconciliation",
+    "blocked_full_completion_when",
+    "evaluator_focus",
+    "handoff_contract",
+}
 
 
 def _string_list(value: Any, *, field: str) -> list[str]:
@@ -59,6 +68,49 @@ def _list_of_commands(value: Any, *, field: str) -> list[list[str]]:
             raise ValueError(f"{field}.{index} must be a string list command")
         commands.append(command)
     return commands
+
+
+def _validate_evaluation_contract(value: Any, *, field: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be an object")
+    unknown_fields = sorted(set(value) - EVALUATION_CONTRACT_FIELDS)
+    if unknown_fields:
+        raise ValueError(f"{field} has unknown fields: {', '.join(unknown_fields)}")
+    for list_field in ("issue_refs", "required_reconciliation", "evaluator_focus"):
+        _string_list(value.get(list_field), field=f"{field}.{list_field}")
+    for string_field in ("failure_path_summary", "agent_facing_claim_boundary"):
+        if string_field in value and not isinstance(value[string_field], str):
+            raise ValueError(f"{field}.{string_field} must be a string")
+    blocked_rules = value.get("blocked_full_completion_when")
+    if blocked_rules is not None:
+        if not isinstance(blocked_rules, list):
+            raise ValueError(f"{field}.blocked_full_completion_when must be a list")
+        for index, rule in enumerate(blocked_rules):
+            rule_field = f"{field}.blocked_full_completion_when.{index}"
+            if not isinstance(rule, dict):
+                raise ValueError(f"{rule_field} must be an object")
+            unknown_rule_fields = sorted(set(rule) - {"mistake_class", "reason"})
+            if unknown_rule_fields:
+                raise ValueError(f"{rule_field} has unknown fields: {', '.join(unknown_rule_fields)}")
+            mistake_class = rule.get("mistake_class")
+            if not isinstance(mistake_class, str) or not mistake_class.strip():
+                raise ValueError(f"{rule_field}.mistake_class is required")
+            if mistake_class not in MISTAKE_CLASSES:
+                raise ValueError(f"{rule_field}.mistake_class is unknown: {mistake_class}")
+            if "reason" in rule and not isinstance(rule["reason"], str):
+                raise ValueError(f"{rule_field}.reason must be a string")
+    handoff_contract = value.get("handoff_contract")
+    if handoff_contract is not None:
+        if not isinstance(handoff_contract, dict):
+            raise ValueError(f"{field}.handoff_contract must be an object")
+        unknown_handoff_fields = sorted(set(handoff_contract) - {"required_record", "avoid"})
+        if unknown_handoff_fields:
+            raise ValueError(f"{field}.handoff_contract has unknown fields: {', '.join(unknown_handoff_fields)}")
+        _string_list(handoff_contract.get("required_record"), field=f"{field}.handoff_contract.required_record")
+        if "avoid" in handoff_contract and not isinstance(handoff_contract["avoid"], str):
+            raise ValueError(f"{field}.handoff_contract.avoid must be a string")
 
 
 def load_episode(path: Path) -> dict[str, Any]:
@@ -110,6 +162,7 @@ def validate_episode(episode: dict[str, Any]) -> None:
     rubric = episode.get("rubric")
     if not isinstance(rubric, dict) or not rubric:
         raise ValueError("episode.rubric must be a non-empty object")
+    _validate_evaluation_contract(episode.get("evaluation_contract"), field="episode.evaluation_contract")
 
 
 def validate_evaluation_result(result: dict[str, Any]) -> None:
@@ -396,6 +449,7 @@ def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) 
             "rubric": episode.get("rubric", {}),
             "known_traps": episode.get("known_traps", []),
             "expected_mistake_classes": episode.get("expected_mistake_classes", []),
+            "evaluation_contract": episode.get("evaluation_contract", {}),
         },
         "mode_result": mode_result,
         "hidden_oracle_excluded": hidden_oracle is not None,
@@ -403,6 +457,36 @@ def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) 
     return f"Review this long-horizon episode evidence and return only a JSON object matching {EVALUATION_KIND}.\n\n" + json.dumps(
         evidence_bundle, indent=2, sort_keys=True
     )
+
+
+def _contract_assessment(*, episode: dict[str, Any], evaluation_payload: dict[str, Any]) -> dict[str, Any]:
+    contract = episode.get("evaluation_contract")
+    if not isinstance(contract, dict) or not contract:
+        return {"status": "absent"}
+    if not isinstance(evaluation_payload, dict) or evaluation_payload.get("kind") != EVALUATION_KIND:
+        return {
+            "status": "pending-primary-score",
+            "contract": contract,
+            "claim_level": "unknown",
+            "blocking_rules": [],
+        }
+    mistakes = set(_string_list(evaluation_payload.get("mistake_classes"), field="evaluation.mistake_classes"))
+    blocking_rules: list[dict[str, Any]] = []
+    for rule in contract.get("blocked_full_completion_when", []):
+        if not isinstance(rule, dict):
+            continue
+        mistake_class = rule.get("mistake_class")
+        if isinstance(mistake_class, str) and mistake_class in mistakes:
+            blocking_rules.append(rule)
+    full_completion_blocked = bool(blocking_rules)
+    return {
+        "status": "full-completion-blocked" if full_completion_blocked else "primary-score-allows-claim",
+        "contract": contract,
+        "claim_level": "partial-progress" if full_completion_blocked else "primary-evaluation-claim",
+        "blocking_rules": blocking_rules,
+        "required_reconciliation": contract.get("required_reconciliation", []) if full_completion_blocked else [],
+        "agent_facing_claim_boundary": contract.get("agent_facing_claim_boundary", "") if full_completion_blocked else "",
+    }
 
 
 def _post_score_reference_payload(*, episode: dict[str, Any], evaluation_status: str) -> dict[str, Any]:
@@ -440,10 +524,11 @@ def _parse_evaluation(text: str) -> dict[str, Any]:
     return payload
 
 
-def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
+def _comparison_summary(mode_results: list[dict[str, Any]], *, episode: dict[str, Any] | None = None) -> dict[str, Any]:
     mistake_classes_by_mode: dict[str, list[str]] = {}
     aw_effect_by_mode: dict[str, dict[str, list[str]]] = {}
     post_score_reference_by_mode: dict[str, dict[str, Any]] = {}
+    contract_assessment_by_mode: dict[str, dict[str, Any]] = {}
     human_review_required = False
     followups: list[dict[str, Any]] = []
     for result in mode_results:
@@ -451,6 +536,8 @@ def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
         evaluation_result = result.get("evaluation", {})
         if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("post_score_reference"), dict):
             post_score_reference_by_mode[mode_id] = evaluation_result["post_score_reference"]
+        if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("contract_assessment"), dict):
+            contract_assessment_by_mode[mode_id] = evaluation_result["contract_assessment"]
         evaluation = evaluation_result.get("payload") if isinstance(evaluation_result, dict) else None
         if not isinstance(evaluation, dict):
             continue
@@ -467,6 +554,11 @@ def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
         if isinstance(followup, dict):
             followups.append({"mode": mode_id, **followup})
     all_classes = sorted({item for values in mistake_classes_by_mode.values() for item in values})
+    blocking_modes = [
+        mode_id
+        for mode_id, assessment in contract_assessment_by_mode.items()
+        if assessment.get("status") == "full-completion-blocked"
+    ]
     return {
         "kind": "agentic-workspace/long-horizon-comparison/v1",
         "status": "present" if mode_results else "absent",
@@ -478,6 +570,16 @@ def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
         "recommended_followups": followups,
         "continuation_comparison": _continuation_comparison(mode_results),
         "post_score_reference_by_mode": post_score_reference_by_mode,
+        "contract_assessment_by_mode": contract_assessment_by_mode,
+        "claim_gate": {
+            "status": "full-completion-blocked" if blocking_modes else "primary-evaluation",
+            "blocking_modes": blocking_modes,
+            "contract_present": bool(isinstance(episode, dict) and episode.get("evaluation_contract")),
+            "rule": (
+                "Episode evaluation contracts downgrade full-completion claims when configured mistake classes appear; "
+                "visible validation success remains separate from semantic proof, restartability, and managed-state proof."
+            ),
+        },
         "rule": "Comparison is review evidence, not a deterministic leaderboard.",
     }
 
@@ -594,6 +696,10 @@ def run_episode(
             adapter=setup_adapter if isinstance(setup_adapter, dict) else None,
             local_aw_wheelhouse=local_aw_wheelhouse,
             source_checkout_path=_adapter_fixture_source_path(suite=suite, adapter_id=setup_adapter_id),
+        )
+        harness._write_scratch_run_manifest(
+            paths.run_root,
+            purpose=f"long-horizon episode run: {episode['id']}/{mode['id']}",
         )
         replacements = {
             "repo": str(paths.repo_path),
@@ -791,6 +897,7 @@ def run_episode(
                 }
                 evaluation_payload = {"status": "not-run"}
                 evaluation_status = "not-run"
+            contract_assessment = _contract_assessment(episode=episode, evaluation_payload=evaluation_payload)
             mode_result["evaluation"] = {
                 "status": evaluation_status,
                 "adapter_id": evaluator_adapter_id,
@@ -804,6 +911,7 @@ def run_episode(
                 "artifact_capture": artifact_capture,
                 "result": evaluator_result,
                 "payload": evaluation_payload,
+                "contract_assessment": contract_assessment,
                 "hidden_oracle_excluded": episode.get("hidden_oracle") is not None,
                 "post_score_reference": _post_score_reference_payload(episode=episode, evaluation_status=evaluation_status),
             }
@@ -815,7 +923,7 @@ def run_episode(
         "execute": execute,
         "mode_count": len(mode_results),
         "modes": mode_results,
-        "comparison": _comparison_summary(mode_results),
+        "comparison": _comparison_summary(mode_results, episode=episode),
     }
     output_root.mkdir(parents=True, exist_ok=True)
     harness._write_json(output_root / f"{episode['id']}-summary.json", payload)

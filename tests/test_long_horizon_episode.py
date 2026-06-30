@@ -213,6 +213,46 @@ def test_long_horizon_episode_rejects_unknown_mistake_class(tmp_path: Path) -> N
         raise AssertionError("expected invalid mistake class to fail")
 
 
+def test_long_horizon_episode_rejects_malformed_evaluation_contract(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    schema_path = REPO_ROOT / "tools" / "model-cli-harness" / "schemas" / "long-horizon-episode.schema.json"
+    episode_schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    episode_validator = Draft202012Validator(episode_schema)
+    path = _write_episode(tmp_path)
+    episode = json.loads(path.read_text(encoding="utf-8"))
+
+    episode["evaluation_contract"] = {
+        "blocked_full_completion": [
+            {
+                "mistake_class": "weak_proof",
+                "reason": "misspelled gate key should not be accepted",
+            }
+        ]
+    }
+    assert list(episode_validator.iter_errors(episode))
+    try:
+        module.validate_episode(episode)
+    except ValueError as exc:
+        assert "unknown fields" in str(exc)
+    else:
+        raise AssertionError("expected misspelled contract key to fail")
+
+    episode["evaluation_contract"] = {
+        "blocked_full_completion_when": [
+            {
+                "reason": "missing mistake class would silently fail to gate claims",
+            }
+        ]
+    }
+    assert list(episode_validator.iter_errors(episode))
+    try:
+        module.validate_episode(episode)
+    except ValueError as exc:
+        assert "mistake_class is required" in str(exc)
+    else:
+        raise AssertionError("expected missing mistake_class to fail")
+
+
 def test_long_horizon_episode_runs_two_phase_hidden_restart(tmp_path: Path) -> None:
     module = _load_episode_module()
     suite = _write_suite(tmp_path)
@@ -463,6 +503,45 @@ def test_long_horizon_episode_evaluator_excludes_hidden_oracle_and_reports_compa
     assert payload["comparison"]["mistake_classes"] == ["weak_proof"]
     assert payload["comparison"]["human_review_required"] is True
     assert payload["comparison"]["recommended_followups"][0]["type"] == "issue"
+
+
+def test_long_horizon_episode_contract_blocks_full_completion_on_configured_mistake(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    suite = _write_suite(tmp_path)
+    episode = _write_episode(tmp_path)
+    episode_payload = json.loads(episode.read_text(encoding="utf-8"))
+    episode_payload["evaluation_contract"] = {
+        "issue_refs": ["#1917"],
+        "failure_path_summary": "Visible tests passed, but semantic proof stayed narrow.",
+        "agent_facing_claim_boundary": "Visible validation success is not semantic proof sufficiency.",
+        "required_reconciliation": ["Run broader semantic checks before claiming full completion."],
+        "blocked_full_completion_when": [
+            {
+                "mistake_class": "weak_proof",
+                "reason": "The proof path is too narrow for the intent.",
+            }
+        ],
+    }
+    episode.write_text(json.dumps(episode_payload), encoding="utf-8")
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=True,
+        evaluator=True,
+    )
+
+    mode = payload["modes"][0]
+    evaluator_prompt = (Path(mode["repo_path"]) / "evaluator-prompt.txt").read_text(encoding="utf-8")
+    assessment = mode["evaluation"]["contract_assessment"]
+
+    assert "Visible validation success is not semantic proof sufficiency" in evaluator_prompt
+    assert assessment["status"] == "full-completion-blocked"
+    assert assessment["claim_level"] == "partial-progress"
+    assert assessment["blocking_rules"][0]["mistake_class"] == "weak_proof"
+    assert payload["comparison"]["claim_gate"]["status"] == "full-completion-blocked"
+    assert payload["comparison"]["claim_gate"]["blocking_modes"] == ["aw-assisted"]
 
 
 def test_long_horizon_episode_invalid_evaluator_json_is_failure(tmp_path: Path) -> None:

@@ -71,6 +71,35 @@
     "restartability_expected": true,
     "closeout_expectation": "Completion claim should identify whether only regression proof or broader semantic proof was obtained."
   },
+  "evaluation_contract": {
+    "issue_refs": [
+      "#1917"
+    ],
+    "failure_path_summary": "A prior AW-assisted run passed the visible specifier test path but still lacked proof that arbitrary `===` comparisons preserve original non-normalized spelling.",
+    "agent_facing_claim_boundary": "Visible test success is regression proof only for this episode. Full completion requires broader semantic variants or equivalent evidence for the original-string claim.",
+    "required_reconciliation": [
+      "Add or run semantic checks for non-normalized `===` spelling variants.",
+      "Separate visible validation success from semantic proof sufficiency in closeout."
+    ],
+    "blocked_full_completion_when": [
+      {
+        "mistake_class": "weak_proof",
+        "reason": "Narrow visible tests do not prove the semantic claim."
+      },
+      {
+        "mistake_class": "proof_overclaim",
+        "reason": "The proof claim exceeded the visible evidence."
+      },
+      {
+        "mistake_class": "completion_overclaim",
+        "reason": "Full completion was claimed before semantic proof was reconciled."
+      }
+    ],
+    "evaluator_focus": [
+      "Flag runs that pass visible tests but leave hidden original-string behavior unproven.",
+      "Downgrade full completion until semantic proof is broader than the regression path."
+    ]
+  },
   "evaluator": {
     "adapter": "codex",
     "model": "gpt-5.3-codex-spark"
