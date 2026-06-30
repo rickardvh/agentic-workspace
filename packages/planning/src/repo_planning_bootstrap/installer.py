@@ -4101,17 +4101,18 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "task_scoped": "agentic-workspace summary --verbose --task <task> --format json",
                 "changed_path_implement": "agentic-workspace implement --changed <paths> --format json",
             },
-            "available_selectors": [
-                "todo.active_count",
-                "execplans.active_count",
-                "planning_surface_health",
-                "execution_readiness",
-                "current_execution_pressure",
-                "residue_governance",
-                "continuation_view",
-                "roadmap",
-                "lanes",
-            ],
+            "selector_inventory": {
+                "status": "omitted-from-compact-default",
+                "available_count": 9,
+                "sample": [
+                    "todo.active_count",
+                    "execplans.active_count",
+                    "planning_surface_health",
+                    "execution_readiness",
+                ],
+                "exact_select_command": "agentic-workspace summary --select <field.path> --format json",
+                "broad_diagnostics_command": "agentic-workspace summary --verbose --format json",
+            },
             "warning_count": warning_count,
         }
     )

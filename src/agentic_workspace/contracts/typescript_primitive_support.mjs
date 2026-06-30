@@ -717,7 +717,7 @@ function executeTypescriptDomainOperation(operationId, values) {
   if (operationId === 'memory.front-door') return { kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
   if (operationId === 'modules.report') return { kind: 'agentic-workspace/modules-router/v1', profile: 'tiny', target_root: target, detail_commands: { full: 'agentic-workspace modules --target . --verbose --format json' } };
   if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
-  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.' }, context: { proof: { kind: 'proof-selection/v1' } } };
+  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
   if (operationId === 'proof.report') return { kind: 'proof-next-decision/v1', next: { action: 'run-validation-command' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
