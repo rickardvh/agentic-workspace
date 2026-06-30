@@ -24,6 +24,58 @@
       ],
       "recorded_by": "agent",
       "notes": "Owner is the root workspace lifecycle smoke suite because the trust question is front-door integration: dry-run upgrade and uninstall commands must report dry_run=true and leave installed planning and memory state intact."
+    },
+    {
+      "requirement_id": "subsystem:workspace-cli-runtime",
+      "evidence_label": "workspace_runtime_proof",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_cli.py::test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo -q; uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; git diff --check",
+      "changed_paths": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #1925 changes the setup guidance payload owned by the workspace CLI runtime. The focused setup test installs AW into a mature-looking host repo and asserts read-only host orientation candidates are exposed without setup findings or durable seeding."
+    },
+    {
+      "requirement_id": "subsystem:workspace-cli-runtime",
+      "evidence_label": "tiny_surface_compatibility_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_workspace_cli.py::test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo -q; git diff --check",
+      "changed_paths": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "The new host_orientation field is scoped to the setup command payload and text output. It does not widen default start, implement, preflight, or summary payloads."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_workspace_cli.py::test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo -q; uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make typecheck; git diff --check",
+      "changed_paths": [
+        "tests/test_workspace_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #1925 adds permanent root workspace CLI coverage for setup guidance in jumpstarted repos. The test is additive behavior-class coverage and does not prune existing setup or lifecycle evidence."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_workspace_cli.py::test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo -q; uv run pytest tests/test_workspace_cli.py -q; make test-workspace; make lint-workspace; make typecheck; git diff --check",
+      "changed_paths": [
+        "tests/test_workspace_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Owner is the root workspace CLI test suite because the trust question is command-facing setup guidance, not package-local Planning or Memory state semantics."
     }
   ]
 }

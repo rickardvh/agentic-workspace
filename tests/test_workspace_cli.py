@@ -68,6 +68,28 @@ def test_lifecycle_guidance_uses_canonical_modules_option(tmp_path: Path, capsys
     assert "--module planning --module memory" not in command_text
 
 
+def test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "README.md", "# Host Repo\n")
+    _write(tmp_path / "docs" / "architecture.md", "# Architecture\n")
+    _write(tmp_path / "pyproject.toml", "[project]\nname = 'host-repo'\nversion = '0.1.0'\n")
+    _write(tmp_path / "src" / "app.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_smoke.py", "def test_smoke():\n    assert True\n")
+
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--non-interactive", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    host_orientation = payload["host_orientation"]
+    assert host_orientation["status"] == "present"
+    surfaces = {candidate["surface"] for candidate in host_orientation["candidates"]}
+    assert {"README.md", "docs/architecture.md", "docs", "pyproject.toml", "src", "tests"} <= surfaces
+    assert payload["analysis_input"]["status"] == "not-found"
+    assert "must not seed Memory, Planning, assurance, or verification state" in host_orientation["rule"]
+
+
 def test_start_context_adapter_routes_through_startup_owner_facade() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     start_command = (repo_root / "generated" / "workspace" / "python" / "commands" / "start_context.py").read_text(encoding="utf-8")
