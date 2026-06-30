@@ -1028,6 +1028,11 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
     planned = json.loads(capsys.readouterr().out)
     assert planned["context"]["dogfooding_signal_status"]["status"] == "not_checked"
     assert "dogfooding_signal_status=not_checked" in planned["action_signals"]["changed_signals"]
+    ordinary_route = planned["context"]["closeout_obligations"]["ordinary_closeout_route"]
+    assert ordinary_route["status"] == "mandatory-before-completion-claim"
+    assert "--section closeout_trust" in ordinary_route["first_inspection"]
+    assert "--section closeout_report" in ordinary_route["substitute_command"]
+    assert ordinary_route["top_level_closeout_command"] == "not-available"
 
     assert (
         cli.main(
@@ -1046,6 +1051,9 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
     release = json.loads(capsys.readouterr().out)
     assert release["context"]["dogfooding_signal_status"]["status"] == "not_checked"
     assert "dogfooding_signal_status" in release["action_signals"]["advisory_detail"]["selectors"]
+    release_route = release["context"]["closeout_obligations"]["ordinary_closeout_route"]
+    assert release_route["status"] == "mandatory-before-completion-claim"
+    assert release_route["top_level_closeout_command"] == "not-available"
 
 
 def test_start_surfaces_unresolved_dogfooding_signal_outcome(tmp_path: Path, capsys) -> None:

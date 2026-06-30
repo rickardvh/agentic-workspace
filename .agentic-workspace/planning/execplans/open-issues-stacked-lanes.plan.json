@@ -30,7 +30,7 @@
     "hard_constraints": "Start from merged master. Create stacked PRs, one coherent lane at a time, without merging them. Preserve AW mandatory workflow gates. Put the computer to sleep only after local proof, pushed PRs, and final status checks are complete.",
     "agent_may_decide": "Exact lane grouping, branch names, implementation details, test boundaries, and whether a lane can close multiple related issues.",
     "escalate_when": "An issue cannot be closed without redesign beyond the intended lane, destructive system action before PR publication, unavailable GitHub auth, or proof failures that cannot be fixed locally.",
-    "next_action": "Implement lane 1 (#1888 payload upgrade idempotence) on a branch from master, then stack subsequent branches for proof/closeout, startup/output routing, and PR comment attention.",
+    "next_action": "Publish lane 2 (#1885/#1887 proof and closeout route), then implement lane 3 (#1883/#1884 startup/output routing) stacked on lane 2.",
     "proof_expectations": [
       "Focused regression tests for each issue lane.",
       "AW implement proof selection after each lane's changed paths are known.",
@@ -75,7 +75,7 @@
     "execution": {
       "milestone": "open-issues-stacked-lanes",
       "status": "active",
-      "next_step": "Implement and publish lane 1 (#1888) from master, then stack later lanes.",
+      "next_step": "Publish lane 2 (#1885/#1887) stacked on lane 1, then implement lane 3 (#1883/#1884).",
       "proof": "Focused regression, AW implement proof selection, workspace lint/typecheck, and PR checks."
     },
     "scope": {
@@ -162,7 +162,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement lane 1 (#1888 payload upgrade idempotence) from current master."
+    "Publish lane 2 (#1885/#1887 proof receipts/templates and mandatory closeout route), then continue to lane 3."
   ],
   "blockers": [
     "None."
@@ -204,15 +204,15 @@
     "All PRs remain unmerged, final checks/status are reported, and the computer is put to sleep."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "in-progress",
+    "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "what happened": "Lane 1 (#1888) was published as draft PR #1894. Lane 2 (#1885/#1887) now reconciles proof receipts, labels placeholder proof commands as templates, and exposes the mandatory closeout report route in ordinary startup guidance.",
+    "scope touched": "Lane 2 runtime proof/startup surfaces and focused workspace CLI/proof tests.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_startup.py; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py",
+    "validations run": "make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; git diff --check",
+    "result for continuation": "lane 2 ready to commit/push as the second stacked PR",
+    "next step": "Create lane 2 PR against codex/open-issues-lane1-upgrade-idempotence, then branch lane 3 from lane 2."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -233,9 +233,9 @@
     "decomposition adjustment": "pending"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "Lane 2 passed make test-workspace, make lint-workspace, focused tests/test_workspace_cli.py, make typecheck, runtime mirror consistency, and git diff --check.",
+    "proof achieved now": "yes for lane 2 local proof",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json records the lane 2 proof receipt."
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Implement current open issues by stacked PR lane.",
@@ -244,12 +244,12 @@
     "unsolved intent passed to": "none yet"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
+    "outcome delivered": "lane 1 published; lane 2 implemented and locally proven",
+    "validation confirmed": "lane 2 local proof passed",
     "follow-on routed to": "none yet",
     "post-work posterity capture": "pending",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "publish lane 2, then implement lane 3"
   },
   "durable_residue": {
     "status": "none",
@@ -309,6 +309,7 @@
     }
   },
   "drift_log": [
-    "2026-06-29: Scaffolded by agentic-planning new-plan."
+    "2026-06-29: Scaffolded by agentic-planning new-plan.",
+    "2026-06-29: Lane 1 (#1888) published as draft PR #1894; lane 2 (#1885/#1887) implemented with local proof passing."
   ]
 }
