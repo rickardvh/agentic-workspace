@@ -1,0 +1,314 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement current open issues by stacked PR lane",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement all currently open GitHub issues (#1883, #1884, #1885, #1886, #1887, #1888, #1893) from current master as coherent stacked PR lanes, then put the computer to sleep after the stack is published.",
+    "hard_constraints": "Start from merged master. Create stacked PRs, one coherent lane at a time, without merging them. Preserve AW mandatory workflow gates. Put the computer to sleep only after local proof, pushed PRs, and final status checks are complete.",
+    "agent_may_decide": "Exact lane grouping, branch names, implementation details, test boundaries, and whether a lane can close multiple related issues.",
+    "escalate_when": "An issue cannot be closed without redesign beyond the intended lane, destructive system action before PR publication, unavailable GitHub auth, or proof failures that cannot be fixed locally.",
+    "next_action": "Implement lane 1 (#1888 payload upgrade idempotence) on a branch from master, then stack subsequent branches for proof/closeout, startup/output routing, and PR comment attention.",
+    "proof_expectations": [
+      "Focused regression tests for each issue lane.",
+      "AW implement proof selection after each lane's changed paths are known.",
+      "Workspace lint/typecheck and relevant CLI test modules before each PR.",
+      "Full workspace proof and GitHub checks before final sleep."
+    ],
+    "touched_scope": [
+      "scripts/github/pr_comment_delta.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "src/agentic_workspace/workspace_output.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_startup_cli.py or nearest startup tests",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_summary_cli.py",
+      "tests/test_github_pr_comment_delta.py or nearest script test",
+      ".agentic-workspace/planning state/evidence"
+    ],
+    "completion_criteria": [
+      "All seven open issues have a stacked PR lane that implements their intended outcome in the ordinary path.",
+      "Each stack PR has focused proof recorded in its PR body and remains unmerged.",
+      "Final branch stack is published, checks are inspected, and the computer is put to sleep only after final reporting."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement current open issues by stacked PR lane."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+    "outcome": "Implement all current open GitHub issues in stacked PR lanes.",
+    "constraints": "Do not merge the new PRs. Keep sleep as the final action after stack publication and status checks.",
+    "latitude": "Group related issues into coherent lanes and choose focused tests/proof per lane.",
+    "escalation": "Escalate if an issue cannot be safely closed in the current lane stack or if a destructive system action would happen before PR publication."
+    },
+    "execution": {
+      "milestone": "open-issues-stacked-lanes",
+      "status": "active",
+      "next_step": "Implement and publish lane 1 (#1888) from master, then stack later lanes.",
+      "proof": "Focused regression, AW implement proof selection, workspace lint/typecheck, and PR checks."
+    },
+    "scope": {
+      "touched": [
+        "runtime and tests for the current issue lane"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "All current open issues are implemented in stacked PRs and the machine sleeps afterward.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Merged. Implement all open issues by lane in stacked PRs, then put the computer to sleep.",
+    "inferred intended outcome": "Start from merged master, implement every currently open issue in coherent stacked PRs, do not merge them, and sleep the computer at the end.",
+    "chosen concrete what": "Four stacked lanes: #1888 payload idempotence; #1885/#1887 proof and closeout route; #1883/#1884 startup/output routing; #1886/#1893 PR comment attention and Windows decode fallback.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime/source, GitHub helper script, focused tests, generated/package surfaces if required by proof, planning state/evidence.",
+    "max changed files": "Expect up to about 20 files across the full stack, with each PR keeping to its lane.",
+    "required validation commands": "Focused pytest per lane; AW implement --changed per lane; make lint-workspace; make typecheck; relevant full workspace tests before final stack; PR checks after push.",
+    "ask-before-refactor threshold": "Ask before changing public issue scope, adding a new top-level command, or replacing the lifecycle/proof architecture.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement current open issues by stacked PR lane.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "open-issues-stacked-lanes",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement lane 1 (#1888 payload upgrade idempotence) from current master."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/github/pr_comment_delta.py",
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_proof.py",
+    "src/agentic_workspace/workspace_output.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_proof_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    "tests/test_workspace_startup_cli.py",
+    "tests/test_github_pr_comment_delta.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/open-issues-stacked-lanes.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_summary_cli.py -q",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <lane paths> --task \"Implement all open issues by stacked PR lane\" --format json",
+    "make lint-workspace",
+    "make typecheck",
+    "make test-workspace",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#1888 payload upgrade idempotence is implemented and published as stack lane 1.",
+    "#1885 and #1887 proof/closeout route improvements are implemented and published as stack lane 2.",
+    "#1883 and #1884 startup/output routing improvements are implemented and published as stack lane 3.",
+    "#1886 and #1893 PR comment attention/fallback improvements are implemented and published as stack lane 4.",
+    "All PRs remain unmerged, final checks/status are reported, and the computer is put to sleep."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement current open issues by stacked PR lane.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-06-29: Scaffolded by agentic-planning new-plan."
+  ]
+}

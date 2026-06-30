@@ -41,6 +41,28 @@ def test_planning_report_tiny_text_uses_generated_output(tmp_path: Path, monkeyp
     assert "Next action:" in text
 
 
+def test_upgrade_bootstrap_is_idempotent_for_bundled_skills(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir(parents=True, exist_ok=True)
+    install_bootstrap(target=tmp_path)
+
+    second = upgrade_bootstrap(target=tmp_path)
+    dry_run = upgrade_bootstrap(target=tmp_path, dry_run=True)
+
+    second_updates = [
+        action
+        for action in second.actions
+        if action.kind in {"overwritten", "would overwrite"} and ".agentic-workspace/planning/skills/" in action.path.as_posix()
+    ]
+    dry_run_updates = [
+        action
+        for action in dry_run.actions
+        if action.kind in {"overwritten", "would overwrite"} and ".agentic-workspace/planning/skills/" in action.path.as_posix()
+    ]
+    assert second_updates == []
+    assert dry_run_updates == []
+    assert any(action.kind == "current" and "already matches managed planning skill" in action.detail for action in dry_run.actions)
+
+
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.template.md").read_text(encoding="utf-8")
