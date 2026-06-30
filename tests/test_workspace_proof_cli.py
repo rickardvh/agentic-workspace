@@ -194,6 +194,47 @@ def test_proof_runtime_helpers_route_through_proof_owner(tmp_path: Path) -> None
     }
 
 
+def test_tiny_proof_obligations_summarizes_multiple_manual_obligations() -> None:
+    payload = workspace_runtime_proof._tiny_proof_obligations_payload(
+        {
+            "kind": "agentic-workspace/proof-obligations/v1",
+            "required_proof": {
+                "status": "required",
+                "commands": ["make test-workspace"],
+                "manual_verification_required": True,
+                "manual_obligation_count": 2,
+                "manual_obligations": [
+                    {
+                        "id": "verification:first",
+                        "required": True,
+                        "status": "missing-evidence",
+                        "missing_evidence": ["first"],
+                        "reference_material": ["docs/first.md"],
+                        "claim_boundary": "blocked",
+                    },
+                    {
+                        "id": "verification:second",
+                        "required": True,
+                        "status": "missing-evidence",
+                        "missing_evidence": ["second"],
+                        "reference_material": ["docs/second.md"],
+                        "claim_boundary": "blocked",
+                    },
+                ],
+                "action_effect": {"force": "required_before_claim", "blocked_until_reconciled": ["claim-task-complete"]},
+            },
+            "recommended_confidence_checks": {"status": "available", "commands": [], "rule": "advisory only"},
+            "completion_claim_rule": "Completion claims remain blocked.",
+        }
+    )
+
+    required = payload["required_proof"]
+    assert required["manual_obligation_count"] == 2
+    assert required["manual_obligation_ids"] == ["verification:first", "verification:second"]
+    assert required["manual_obligations_detail_selector"] == "proof.proof_obligations.required_proof.manual_obligations"
+    assert "manual_obligations" not in required
+
+
 def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
