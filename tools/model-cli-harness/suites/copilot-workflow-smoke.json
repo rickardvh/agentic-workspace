@@ -2,6 +2,11 @@
   "schema": "agentic-workspace/model-cli-harness-suite/v1",
   "id": "copilot-workflow-smoke",
   "purpose": "Black-box smoke scenarios for checking whether model CLIs discover and follow Agentic Workspace startup, planning, and closeout paths.",
+  "prompt_transport_guidance": {
+    "large_prompt_rule": "Adapters used for long-horizon evaluator prompts must avoid embedding large prompts directly in argv on Windows. Prefer prompt_transport with file_args when the CLI supports attachments; for plain codex use file-reference prompt_transport so argv carries only the prompt-file path.",
+    "managed_artifact_root": ".agentic-workspace/local/scratch/runs",
+    "codex_sbx_status": "codex-sbx uses prompt-file metadata but currently fails early with an actionable unsupported error if the rendered Windows command would exceed the command-line limit."
+  },
   "adapters": {
     "copilot": {
       "default_model": "claude-haiku-4.5",
@@ -127,6 +132,12 @@
       "block_on_preflight_failure": true,
       "inject_repo_startup_instructions": true,
       "postmortem_feedback_supported": false,
+      "prompt_transport": {
+        "threshold_chars": 8000,
+        "mode": "file-reference",
+        "file_args": [],
+        "file_prompt": "Read the complete prompt from this file and follow it exactly: {prompt_file}"
+      },
       "command": [
         "codex",
         "exec",

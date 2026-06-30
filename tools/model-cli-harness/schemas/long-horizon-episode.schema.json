@@ -161,6 +161,58 @@
       "minProperties": 1,
       "additionalProperties": true
     },
+    "evaluation_contract": {
+      "type": "object",
+      "properties": {
+        "issue_refs": {
+          "$ref": "#/$defs/stringList"
+        },
+        "failure_path_summary": {
+          "type": "string"
+        },
+        "agent_facing_claim_boundary": {
+          "type": "string"
+        },
+        "required_reconciliation": {
+          "$ref": "#/$defs/stringList"
+        },
+        "blocked_full_completion_when": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "mistake_class"
+            ],
+            "properties": {
+              "mistake_class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evaluator_focus": {
+          "$ref": "#/$defs/stringList"
+        },
+        "handoff_contract": {
+          "type": "object",
+          "properties": {
+            "required_record": {
+              "$ref": "#/$defs/stringList"
+            },
+            "avoid": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "evaluator": {
       "type": "object",
       "additionalProperties": true
@@ -175,6 +227,12 @@
         "items": {
           "type": "string"
         }
+      }
+    },
+    "stringList": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     }
   }

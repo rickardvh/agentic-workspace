@@ -198,6 +198,9 @@ The episode runner supports:
 - a separate evaluator adapter with a controlled evidence bundle;
 - post-score hidden/reference oracle metadata, kept out of the primary evaluator prompt;
 - comparison summaries for mistake classes, same-agent versus agent-switch continuation, post-score reference status, AW effect, human-review-needed status, and follow-up routing.
+- episode-level `evaluation_contract` metadata for claim-boundary rules such as semantic proof sufficiency, restartable handoff records, and stale managed-state reconciliation. The contract is included in the evaluator evidence bundle and in the comparison `claim_gate`; it downgrades full-completion claims when configured mistake classes appear without turning the harness into a deterministic leaderboard.
+
+Large evaluator prompts should use file-backed prompt transport. The default suite supports this with prompt attachments for Copilot, prompt-file metadata for `codex-sbx`, and a file-reference prompt for plain `codex` so Windows argv carries the prompt path instead of the full prompt text. `codex-sbx` currently refuses an overlong rendered Windows command before sandbox/model execution and reports that the plain `codex` adapter should be used until in-sandbox prompt-file support exists.
 
 The first episode pack is intentionally small:
 
