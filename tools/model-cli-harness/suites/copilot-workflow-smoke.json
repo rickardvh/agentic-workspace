@@ -5,7 +5,7 @@
   "prompt_transport_guidance": {
     "large_prompt_rule": "Adapters used for long-horizon evaluator prompts must avoid embedding large prompts directly in argv on Windows. Prefer prompt_transport with file_args when the CLI supports attachments; for plain codex use file-reference prompt_transport so argv carries only the prompt-file path.",
     "managed_artifact_root": ".agentic-workspace/local/scratch/runs",
-    "codex_sbx_status": "codex-sbx uses prompt-file metadata but currently fails early with an actionable unsupported error if the rendered Windows command would exceed the command-line limit."
+    "codex_sbx_status": "codex-sbx copies prompt-file metadata into the sandbox and invokes Codex with stdin so large evaluator prompts do not expand through the Windows command line."
   },
   "adapters": {
     "copilot": {

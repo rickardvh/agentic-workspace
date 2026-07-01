@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import posixpath
 import shutil
 import subprocess
 import sys
@@ -769,7 +770,7 @@ def test_model_cli_harness_plain_codex_large_prompt_uses_file_reference_transpor
     assert str(prompt_file) in command[-1]
 
 
-def test_sbx_codex_adapter_rejects_overlong_windows_prompt_before_model_execution(
+def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -785,7 +786,7 @@ def test_sbx_codex_adapter_rejects_overlong_windows_prompt_before_model_executio
 
     monkeypatch.setattr(module, "_run", fake_run)
     monkeypatch.setattr(module.sys, "platform", "win32")
-    monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 120)
+    monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 1000)
 
     result = module.main(
         [
@@ -805,10 +806,30 @@ def test_sbx_codex_adapter_rejects_overlong_windows_prompt_before_model_executio
     )
 
     captured = capsys.readouterr()
-    assert result == 2
-    assert commands == []
-    assert "Refusing before sandbox/model execution" in captured.err
-    assert "plain codex adapter" in captured.err
+    assert result == 0
+    assert captured.err == ""
+    sandbox_prompt_dir = posixpath.join(posixpath.sep, "tmp", "agentic-workspace-model-cli-harness")
+    sandbox_prompt_path = posixpath.join(sandbox_prompt_dir, "prompt.txt")
+    assert commands[0] == ["sbx", "create", "--name", "aw-test", "codex", "work/repo"]
+    assert commands[1] == [
+        "sbx",
+        "exec",
+        "aw-test",
+        "sh",
+        "-lc",
+        f"mkdir -p work/share {sandbox_prompt_dir}",
+    ]
+    assert commands[2] == [
+        "sbx",
+        "cp",
+        str(prompt_file),
+        f"aw-test:{sandbox_prompt_path}",
+    ]
+    assert commands[3][:5] == ["sbx", "exec", "aw-test", "sh", "-lc"]
+    assert "codex exec" in commands[3][-1]
+    assert f"- < {sandbox_prompt_path}" in commands[3][-1]
+    assert "large prompt" not in subprocess.list2cmdline(commands[3])
+    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
 
 
 def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import posixpath
 import sys
 from pathlib import Path
 
@@ -567,6 +568,97 @@ def test_long_horizon_episode_invalid_evaluator_json_is_failure(tmp_path: Path) 
     assert payload["comparison"]["recommended_followups"][0]["type"] == "evaluation-harness"
 
 
+def test_long_horizon_episode_repairs_missing_evaluator_identity_from_context(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    evaluator_code = (
+        "import json, pathlib, sys; "
+        "share = pathlib.Path(sys.argv[3]); "
+        "share.write_text(json.dumps({"
+        "'kind': 'agentic-workspace/long-horizon-evaluation/v1', "
+        "'mode': 'aw-assisted', "
+        "'result': {"
+        "'intent_satisfied': 'yes', "
+        "'scope_respected': True, "
+        "'proof_sufficient': True, "
+        "'proof_matches_intent': True, "
+        "'restartable_from_repo_state': True, "
+        "'completion_claim_honest': True"
+        "}, "
+        "'mistake_classes': [], "
+        "'aw_effect': {'helped': [], 'hurt_or_overhead': [], 'missed_affordance': []}, "
+        "'evidence': [{'kind': 'summary', 'ref': 'final', 'why': 'context identity repair'}]"
+        "}), encoding='utf-8')"
+    )
+    suite = _write_suite(tmp_path, evaluator_code=evaluator_code)
+    episode = _write_episode(tmp_path)
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=True,
+        evaluator=True,
+    )
+
+    evaluation = payload["modes"][0]["evaluation"]
+    assert evaluation["status"] == "valid"
+    assert evaluation["payload"]["scenario"] == "toy-continuity"
+    assert evaluation["payload"]["harness_repairs"] == ["filled missing scenario from episode context"]
+    assert payload["comparison"]["invalid_evaluations_by_mode"] == {}
+
+
+def test_long_horizon_episode_evaluator_prompt_compacts_bulky_phase_output() -> None:
+    module = _load_episode_module()
+    large_stdout = "large stdout line\n" * 5000
+    prompt = module._evaluation_prompt(
+        episode={
+            "id": "compact-evaluator",
+            "title": "Compact evaluator",
+            "rubric": {},
+            "known_traps": [],
+            "expected_mistake_classes": [],
+        },
+        mode_result={
+            "mode_id": "aw-assisted",
+            "aw_enabled": True,
+            "repo_path": posixpath.join(posixpath.sep, "tmp", "repo"),
+            "run_root": posixpath.join(posixpath.sep, "tmp", "run"),
+            "setup_mutation_summary": {"status": "clean"},
+            "setup_results": [],
+            "phases": [
+                {
+                    "phase_id": "repair",
+                    "adapter_id": "codex-sbx",
+                    "model": "gpt-test",
+                    "prompt": large_stdout,
+                    "result": {"status": "completed", "returncode": 0, "stdout": large_stdout, "final_message": "done"},
+                    "validation_results": [{"command": ["check"], "returncode": 0, "stdout": large_stdout}],
+                    "mutation_summary": {
+                        "status": "changed",
+                        "created": ["src/pkg.py", *[f".venv/Lib/site-packages/pkg{index}.py" for index in range(100)]],
+                    },
+                    "sandbox_failure": {"status": "absent"},
+                }
+            ],
+        },
+    )
+
+    payload = json.loads(prompt.split("Evidence bundle:\n", 1)[1])
+    phase = payload["mode_result"]["phases"][0]
+
+    assert len(prompt) < 40_000
+    assert '"scenario": "compact-evaluator"' in prompt
+    assert payload["compaction"]["kind"] == "agentic-workspace/long-horizon-evaluator-compaction/v1"
+    assert phase["prompt"]["truncated"] is True
+    assert phase["result"]["stdout"]["truncated"] is True
+    assert phase["result"]["stdout"]["char_count"] == len(large_stdout)
+    assert phase["result"]["final_message"]["text"] == "done"
+    assert phase["validation_results"][0]["stdout"]["truncated"] is True
+    assert phase["mutation_summary"]["created"]["items"] == ["src/pkg.py"]
+    assert phase["mutation_summary"]["created"]["omitted_noisy_count"] == 100
+    assert ".venv/Lib/site-packages/pkg99.py" not in prompt
+
+
 def test_long_horizon_episode_sandbox_timeout_is_executor_followup() -> None:
     module = _load_episode_module()
     comparison = module._comparison_summary(
@@ -689,6 +781,62 @@ def test_long_horizon_episode_uses_model_args_by_phase_model(tmp_path: Path) -> 
     commands = [phase["command"] for phase in payload["modes"][0]["phases"]]
     assert "--effort" not in commands[0]
     assert commands[1][commands[1].index("--effort") + 1] == "low"
+
+
+def test_long_horizon_episode_adapter_override_uses_override_adapter_default_model(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    fixtures = tmp_path / "fixtures"
+    fixture = fixtures / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("repo\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "native": {
+                        "default_model": "native-default",
+                        "command": ["native", "--model", "{model}", "{prompt}"],
+                    },
+                    "override": {
+                        "default_model": "override-default",
+                        "command": ["override", "--model", "{model}", "{prompt}"],
+                    },
+                },
+                "scenarios": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    episode_payload = {
+        "kind": "agentic-workspace/long-horizon-episode/v1",
+        "id": "adapter-override-model",
+        "title": "Adapter override model",
+        "task_prompt": "Run phase.",
+        "modes": [{"id": "mode", "aw_enabled": False, "fixture": "repo"}],
+        "phases": [{"id": "phase-one", "prompt": "Do work.", "adapter": "native", "model": "native-special"}],
+        "known_traps": ["model-options"],
+        "expected_mistake_classes": ["restart_failed"],
+        "rubric": {"intent_satisfied": "override adapter default is used"},
+    }
+    episode = tmp_path / "episode-adapter-override-model.json"
+    episode.write_text(json.dumps(episode_payload), encoding="utf-8")
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        evaluator=False,
+        adapter_override="override",
+    )
+
+    command = payload["modes"][0]["phases"][0]["command"]
+    assert command[:3] == ["override", "--model", "override-default"]
+    assert "native-special" not in command
 
 
 def test_long_horizon_episode_evaluator_uses_prompt_file_transport(tmp_path: Path) -> None:
