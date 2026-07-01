@@ -1019,6 +1019,42 @@ def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> N
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
+def test_defaults_section_selector_returns_communication_contract(capsys) -> None:
+    assert cli.main(["defaults", "--verbose", "--section", "communication_contract", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "communication_contract"}
+    answer = payload["answer"]
+    assert answer["kind"] == "agentic-workspace/communication-contract/defaults/v1"
+    assert answer["default_posture"] == "decision_first_state_backed"
+    assert answer["narration_budget"] == "minimal"
+    assert answer["required_order"] == [
+        "decision_or_finding",
+        "why_it_matters",
+        "evidence_or_proof_route",
+        "residue_or_boundary",
+        "next_safe_action",
+    ]
+    assert "stale_missing_or_failed_proof" in answer["expand_when"]
+    assert set(answer["phase_expectations"]) >= {"startup", "implementation", "proof", "closeout", "handoff_review"}
+    assert answer["cost_evaluation"]["preserve"] == [
+        "evidence",
+        "proof_boundary",
+        "unresolved_residue",
+        "next_safe_action",
+    ]
+    assert answer["cost_evaluation"]["reduce"] == [
+        "low_value_narration",
+        "repeated_rereads",
+        "context_reconstruction",
+    ]
+    assert answer["cost_evaluation"]["question"].startswith("Did structured state reduce")
+    assert "dogfooding_comparison" not in answer["cost_evaluation"]
+    assert "#1942" not in json.dumps(answer)
+
+
 def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys) -> None:
     assert cli.main(["defaults", "--verbose", "--section", "setup", "--format", "json"]) == 0
 

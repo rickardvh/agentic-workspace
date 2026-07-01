@@ -48,6 +48,11 @@
       "type": "string",
       "description": "Resolved target repository for the implementation context."
     },
+    "communication_contract": {
+      "type": "object",
+      "description": "Compact communication and reasoning-economy contract for decision-first, state-backed implementer output.",
+      "additionalProperties": true
+    },
     "action_signals": {
       "type": "object",
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",

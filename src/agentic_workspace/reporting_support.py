@@ -37,6 +37,98 @@ REPORT_SECTION_ALIASES = {
 }
 
 
+def communication_contract_payload(*, surface: str) -> dict[str, Any]:
+    phase_expectations = {
+        "startup": {
+            "primary_question": "What is the next safe action?",
+            "include": ["decision", "blocking_or_allowed_action", "required_skill_or_command", "state_boundary"],
+            "default_detail": "action-first routing plus selector-backed detail routes",
+        },
+        "shaping": {
+            "primary_question": "What is the smallest safe workflow shape?",
+            "include": ["scope_decision", "why_it_matters", "promotion_or_planning_boundary", "next_safe_action"],
+            "default_detail": "state the bounded slice and non-goals when needed",
+        },
+        "implementation": {
+            "primary_question": "What narrow working set is safe to touch now?",
+            "include": ["changed_paths", "proof_route", "acceptance_boundary", "residue_owner"],
+            "default_detail": "name only action-changing warnings and selected proof",
+        },
+        "proof": {
+            "primary_question": "What evidence is required before the claim?",
+            "include": ["required_commands", "proof_gap_or_pass", "claim_boundary", "rerun_or_record_route"],
+            "default_detail": "summarize proof state without raw logs unless failure lines are needed",
+        },
+        "closeout": {
+            "primary_question": "Can this completion claim be trusted?",
+            "include": ["intent_satisfaction", "proof_receipts", "residue", "safe_claim_level"],
+            "default_detail": "compact claim, evidence, residue, and closure boundary",
+        },
+        "handoff_review": {
+            "primary_question": "What must the next agent or reviewer know without replaying chat?",
+            "include": ["finding_or_change", "evidence_ref", "risk_or_residue", "next_owner"],
+            "default_detail": "findings first for reviews; handoff facts only when continuation matters",
+        },
+    }
+    return {
+        "kind": "agentic-workspace/communication-contract/v1",
+        "surface": surface,
+        "status": "active",
+        "default_posture": "decision_first_state_backed",
+        "narration_budget": "minimal",
+        "required_order": ["decision_or_finding", "why_it_matters", "evidence_or_proof_route", "residue_or_boundary", "next_safe_action"],
+        "include": [
+            "decision_or_finding",
+            "current_intent_relevance",
+            "evidence_or_proof_route",
+            "unresolved_residue_or_safety_boundary",
+            "next_safe_action",
+        ],
+        "suppress_by_default": [
+            "chronological_tool_call_narration",
+            "repeated_context_reconstruction",
+            "generic_caveats_that_do_not_change_action_safety",
+            "broad_rationale_when_decisive_state_and_boundary_are_enough",
+        ],
+        "expand_when": [
+            "ambiguous_action_safety",
+            "irreversible_or_destructive_change",
+            "stale_missing_or_failed_proof",
+            "user_requests_detail",
+            "rejected_alternative_prevents_rediscovery",
+            "handoff_or_review_needs_continuation_context",
+        ],
+        "phase_expectations": phase_expectations,
+        "state_usage_rule": (
+            "Use compact AW fields as the evidence source first; cite or expand raw docs only when selectors, proof gaps, "
+            "or safety boundaries require it."
+        ),
+        "cost_evaluation": {
+            "question": "Did structured state reduce rereads, narration, or reconstruction without weakening proof, residue, or action clarity?",
+            "preserve": ["evidence", "proof_boundary", "unresolved_residue", "next_safe_action"],
+            "reduce": ["low_value_narration", "repeated_rereads", "context_reconstruction"],
+        },
+        "detail_command": "agentic-workspace defaults --section communication_contract --format json",
+    }
+
+
+def compact_communication_contract_payload(*, surface: str) -> dict[str, Any]:
+    full = communication_contract_payload(surface=surface)
+    return {
+        "kind": full["kind"],
+        "surface": full["surface"],
+        "status": full["status"],
+        "default_posture": full["default_posture"],
+        "narration_budget": full["narration_budget"],
+        "phase_ids": list(full["phase_expectations"].keys()),
+        "expand_when": full["expand_when"],
+        "cost_evaluation": {
+            "preserve": full["cost_evaluation"]["preserve"],
+            "reduce": full["cost_evaluation"]["reduce"],
+        },
+    }
+
+
 def output_contract_payload(
     *,
     optimization_bias: str,
@@ -79,6 +171,7 @@ def output_contract_payload(
         "surface_boundary": bias_payload["surface_boundary"],
         "report_density": bias_payload["report_density"],
         "verbosity_budget": verbosity_budget,
+        "communication_contract": communication_contract_payload(surface=surface),
         "residue_density": bias_payload["residue_density"],
         "rendered_view_style": bias_payload["rendered_view_style"],
         "must_not_change": list(bias_payload["does_not_affect"]),
@@ -834,6 +927,10 @@ def report_router_payload(
         "installed_modules": payload.get("installed_modules", []),
         "health": payload.get("health", "unknown"),
         "output_contract": _report_router_output_contract(payload.get("output_contract", {})),
+        "communication_contract": payload.get(
+            "communication_contract",
+            _report_router_output_contract(payload.get("output_contract", {})).get("communication_contract", {}),
+        ),
         "operating_posture": _report_router_operating_posture(payload.get("operating_posture", {})),
         "maintainer_mode": payload.get("maintainer_mode", {}),
         "report_profile": profile_payload,
@@ -902,6 +999,7 @@ def report_router_payload(
         "target": router_payload["target"],
         "health": router_payload["health"],
         "next_action": router_payload["next_action"],
+        "communication_contract": _compact_communication_contract(router_payload.get("communication_contract")),
         "decision_packet": {
             "kind": "agentic-workspace/ordinary-decision-packet/v1",
             "surface": "report",
@@ -974,6 +1072,7 @@ def report_router_payload(
                     "context.current_work",
                     "context.memory_consult",
                     "context.routine_work_context",
+                    "communication_contract",
                     "context.warning_summary",
                     "context.execution_shape",
                     "context.configuration_projection",
@@ -1070,6 +1169,7 @@ def _report_router_output_contract(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"status": "unavailable"}
     budget = value.get("verbosity_budget", {})
+    communication_contract = value.get("communication_contract", {})
     return {
         "optimization_bias": value.get("optimization_bias", ""),
         "optimization_bias_source": value.get("optimization_bias_source", ""),
@@ -1077,7 +1177,26 @@ def _report_router_output_contract(value: Any) -> dict[str, Any]:
         "rendered_view_style": value.get("rendered_view_style", ""),
         "default_detail": budget.get("default_detail", "") if isinstance(budget, dict) else "",
         "deep_detail": budget.get("deep_detail", "") if isinstance(budget, dict) else "",
+        "communication_contract": _compact_communication_contract(communication_contract),
         "detail_section": "output_contract",
+    }
+
+
+def _compact_communication_contract(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    phase_expectations = value.get("phase_expectations", {})
+    phase_ids = list(phase_expectations.keys()) if isinstance(phase_expectations, dict) else []
+    return {
+        key: value.get(key)
+        for key in (
+            "kind",
+            "surface",
+            "default_posture",
+        )
+        if key in value
+    } | {
+        "phase_ids": phase_ids,
     }
 
 
