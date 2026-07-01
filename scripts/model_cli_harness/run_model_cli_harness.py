@@ -197,7 +197,7 @@ def _prompt_transport(
 
     prompt_dir = run_root / "prompts"
     prompt_dir.mkdir(parents=True, exist_ok=True)
-    prompt_file = prompt_dir / f"{_safe_prompt_stem(prompt_id)}.txt"
+    prompt_file = (prompt_dir / f"{_safe_prompt_stem(prompt_id)}.txt").resolve()
     prompt_file.write_text(prompt, encoding="utf-8")
     transport_replacements = {
         **replacements,
@@ -270,6 +270,10 @@ def _adapter_invocation_command(
         replacements={**replacements, "model": model},
     )
     command_replacements = {**replacements, "model": model, "prompt": command_prompt}
+    if prompt_transport.get("prompt_file"):
+        command_replacements["prompt_file"] = str(prompt_transport["prompt_file"])
+    if prompt_transport.get("prompt_length") is not None:
+        command_replacements["prompt_length"] = str(prompt_transport["prompt_length"])
     command = _render_command_template(
         command_template,
         replacements=command_replacements,
@@ -444,11 +448,15 @@ def _sandbox_file_url(path: Path) -> str:
     return resolved.as_uri()
 
 
+def _host_file_url(path: Path) -> str:
+    return path.resolve().as_uri()
+
+
 def _fixture_file_url(path: Path, *, adapter: dict[str, Any]) -> str:
     sandbox = adapter.get("sandbox")
     if isinstance(sandbox, dict) and sandbox.get("backend") == "docker-sandbox":
         return _sandbox_file_url(path)
-    return path.resolve().as_uri()
+    return _host_file_url(path)
 
 
 def _find_wheel(wheelhouse: Path, prefix: str, version: str) -> Path:
@@ -458,13 +466,10 @@ def _find_wheel(wheelhouse: Path, prefix: str, version: str) -> Path:
     return matches[0]
 
 
-def _fixture_local_wheel_dependency(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> str:
-    version = _local_aw_version()
-    target_wheelhouse = repo_path / ".agentic-workspace" / "local" / "model-cli-harness" / "wheelhouse"
+def _patch_local_aw_wheelhouse(*, source_wheelhouse: Path, target_wheelhouse: Path, release_asset_base_url: str, version: str) -> None:
     if target_wheelhouse.exists():
         shutil.rmtree(target_wheelhouse)
     shutil.copytree(source_wheelhouse, target_wheelhouse)
-    release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
     subprocess.run(
         [
             "uv",
@@ -483,8 +488,52 @@ def _fixture_local_wheel_dependency(*, repo_path: Path, source_wheelhouse: Path,
         text=True,
         check=True,
     )
+
+
+def _fixture_local_wheel_dependencies(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> list[str]:
+    version = _local_aw_version()
+    target_wheelhouse = repo_path / ".agentic-workspace" / "local" / "model-cli-harness" / "wheelhouse"
+    sandbox = adapter.get("sandbox")
+    if os.name == "nt" and isinstance(sandbox, dict) and sandbox.get("backend") == "docker-sandbox":
+        host_wheelhouse = target_wheelhouse / "host"
+        sandbox_wheelhouse = target_wheelhouse / "sandbox"
+        if target_wheelhouse.exists():
+            shutil.rmtree(target_wheelhouse)
+        _patch_local_aw_wheelhouse(
+            source_wheelhouse=source_wheelhouse,
+            target_wheelhouse=host_wheelhouse,
+            release_asset_base_url=_host_file_url(host_wheelhouse),
+            version=version,
+        )
+        _patch_local_aw_wheelhouse(
+            source_wheelhouse=source_wheelhouse,
+            target_wheelhouse=sandbox_wheelhouse,
+            release_asset_base_url=_sandbox_file_url(sandbox_wheelhouse),
+            version=version,
+        )
+        host_root_wheel = _find_wheel(host_wheelhouse, "agentic_workspace", version)
+        sandbox_root_wheel = _find_wheel(sandbox_wheelhouse, "agentic_workspace", version)
+        return [
+            f"agentic-workspace @ {_host_file_url(host_root_wheel)} ; sys_platform == 'win32'",
+            f"agentic-workspace @ {_sandbox_file_url(sandbox_root_wheel)} ; sys_platform != 'win32'",
+        ]
+
+    release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
+    _patch_local_aw_wheelhouse(
+        source_wheelhouse=source_wheelhouse,
+        target_wheelhouse=target_wheelhouse,
+        release_asset_base_url=release_asset_base_url,
+        version=version,
+    )
     root_wheel = _find_wheel(target_wheelhouse, "agentic_workspace", version)
-    return f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"
+    return [f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"]
+
+
+def _fixture_local_wheel_dependency(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> str:
+    dependencies = _fixture_local_wheel_dependencies(repo_path=repo_path, source_wheelhouse=source_wheelhouse, adapter=adapter)
+    if len(dependencies) != 1:
+        raise RuntimeError("local wheelhouse produced platform-specific dependencies; use _fixture_local_wheel_dependencies")
+    return dependencies[0]
 
 
 def _prepare_fixture(
@@ -508,7 +557,11 @@ def _prepare_fixture(
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
     if local_aw_wheelhouse is not None:
-        dependency_specs = [_fixture_local_wheel_dependency(repo_path=paths.repo_path, source_wheelhouse=local_aw_wheelhouse, adapter=adapter)]
+        dependency_specs = _fixture_local_wheel_dependencies(
+            repo_path=paths.repo_path,
+            source_wheelhouse=local_aw_wheelhouse,
+            adapter=adapter,
+        )
     _prepare_source_checkout_invocation(paths.repo_path, dependency_specs=dependency_specs, source_checkout_path=source_checkout_path)
     _prepare_fixture_git_repository(paths.repo_path)
 
@@ -955,6 +1008,11 @@ def _adapter_sandbox_report(
         raise ValueError("adapter.sandbox.backend must be a string")
     if not isinstance(agent, str) or not agent.strip():
         raise ValueError("adapter.sandbox.agent must be a string")
+    sandbox_name = ""
+    if "--sandbox-name" in command:
+        index = command.index("--sandbox-name")
+        if index + 1 < len(command):
+            sandbox_name = str(command[index + 1])
     return {
         "kind": SANDBOX_ADAPTER_KIND,
         "enabled": True,
@@ -963,6 +1021,7 @@ def _adapter_sandbox_report(
         "adapter_id": adapter_id,
         "model": model,
         "identity": f"{backend}:{agent}:{adapter_id}",
+        "sandbox_name": sandbox_name,
         "template": str(config.get("template") or ""),
         "repo_path": str(repo_path),
         "evidence": "sandbox-backed",

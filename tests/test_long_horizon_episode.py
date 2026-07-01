@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -560,6 +561,78 @@ def test_long_horizon_episode_invalid_evaluator_json_is_failure(tmp_path: Path) 
     evaluation = payload["modes"][0]["evaluation"]
     assert evaluation["status"] == "invalid"
     assert "evaluator did not return" in evaluation["payload"]["error"]
+    assert payload["comparison"]["human_review_required"] is True
+    assert payload["comparison"]["claim_gate"]["status"] == "invalid-primary-evaluation"
+    assert payload["comparison"]["invalid_evaluations_by_mode"]["aw-assisted"]["schema_errors"]
+    assert payload["comparison"]["recommended_followups"][0]["type"] == "evaluation-harness"
+
+
+def test_long_horizon_episode_sandbox_timeout_is_executor_followup() -> None:
+    module = _load_episode_module()
+    comparison = module._comparison_summary(
+        [
+            {
+                "mode_id": "managed-state",
+                "aw_enabled": True,
+                "phases": [
+                    {
+                        "phase_id": "repair",
+                        "sandbox_failure": {
+                            "status": "present",
+                            "failure_class": "sandbox-timeout",
+                            "boundary": "sandbox-executor-timeout",
+                            "phase_id": "repair",
+                            "sandbox": "docker-sandbox:codex:codex-sbx",
+                            "sandbox_name": "aw-lh-123",
+                            "share_artifact_exists": False,
+                            "transcript_exists": False,
+                        },
+                    }
+                ],
+                "evaluation": {"status": "not-run", "payload": {"status": "not-run"}},
+            }
+        ]
+    )
+
+    followup = comparison["recommended_followups"][0]
+    assert comparison["human_review_required"] is True
+    assert comparison["sandbox_runtime_failures_by_mode"]["managed-state"][0]["boundary"] == "sandbox-executor-timeout"
+    assert followup["type"] == "rerun-executor"
+    assert followup["phase_id"] == "repair"
+    assert followup["sandbox_name"] == "aw-lh-123"
+    assert followup["share_artifact_exists"] is False
+    assert followup["transcript_exists"] is False
+    assert followup["aw_improvement_scope"] == "separate-from-agent-performance-finding"
+
+
+def test_long_horizon_episode_preflights_windows_external_clone_longpaths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_episode_module()
+    long_root = tmp_path / ("very-long-output-root-" + ("x" * 170))
+    paths = module.harness.HarnessPaths(
+        run_root=long_root,
+        fixture_root=long_root / "fixture",
+        repo_path=long_root / "repo",
+        transcript_path=long_root / "transcript.jsonl",
+        share_path=long_root / "share.md",
+    )
+
+    monkeypatch.setattr(module.os, "name", "nt")
+    monkeypatch.setattr(
+        module.harness,
+        "_run_command",
+        lambda command, *, cwd, timeout_seconds, env=None: {"returncode": 1, "stdout": "", "stderr": ""},
+    )
+
+    with pytest.raises(RuntimeError, match="core.longpaths true"):
+        module._prepare_mode_repo(
+            suite_path=tmp_path / "suites" / "suite.json",
+            mode={"id": "external", "repo_url": "https://example.invalid/repo.git", "base_commit": "abc123"},
+            paths=paths,
+            execute=True,
+        )
 
 
 def test_long_horizon_episode_uses_model_args_by_phase_model(tmp_path: Path) -> None:

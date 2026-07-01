@@ -851,8 +851,8 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     monkeypatch.setattr(module, "_build_local_aw_wheelhouse", lambda output_root: wheelhouse)
     monkeypatch.setattr(
         module,
-        "_fixture_local_wheel_dependency",
-        lambda *, repo_path, source_wheelhouse, adapter: "agentic-workspace @ file:///fixture-wheelhouse/agentic_workspace.whl",
+        "_fixture_local_wheel_dependencies",
+        lambda *, repo_path, source_wheelhouse, adapter: ["agentic-workspace @ file:///fixture-wheelhouse/agentic_workspace.whl"],
     )
 
     payload = module.run_suite(
@@ -869,3 +869,68 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     pyproject_text = (Path(payload["results"][0]["repo_path"]) / "pyproject.toml").read_text(encoding="utf-8")
     assert "fixture-wheelhouse/agentic_workspace.whl" in pyproject_text
     assert "releases/download/v0.4.3" not in pyproject_text
+
+
+def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_harness_module()
+    source = tmp_path / "source-wheelhouse"
+    source.mkdir()
+    (source / "agentic_workspace-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
+    patched_urls: list[str] = []
+
+    def fake_patch(*, source_wheelhouse, target_wheelhouse, release_asset_base_url, version):
+        patched_urls.append(release_asset_base_url)
+        target_wheelhouse.mkdir(parents=True)
+        for item in source_wheelhouse.iterdir():
+            (target_wheelhouse / item.name).write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
+
+    monkeypatch.setattr(module.os, "name", "nt")
+    monkeypatch.setattr(module, "_local_aw_version", lambda: "1.2.3")
+    monkeypatch.setattr(module, "_patch_local_aw_wheelhouse", fake_patch)
+
+    dependencies = module._fixture_local_wheel_dependencies(
+        repo_path=tmp_path / "repo",
+        source_wheelhouse=source,
+        adapter={"sandbox": {"backend": "docker-sandbox"}},
+    )
+
+    assert len(dependencies) == 2
+    assert "sys_platform == 'win32'" in dependencies[0]
+    assert "sys_platform != 'win32'" in dependencies[1]
+    assert "file:///" in dependencies[0]
+    assert "file:///c/" in dependencies[1].lower()
+    assert patched_urls[0].startswith("file:///")
+    assert patched_urls[1].lower().startswith("file:///c/")
+
+
+def test_model_cli_harness_prompt_file_transport_uses_absolute_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_harness_module()
+    monkeypatch.chdir(tmp_path)
+
+    command, prompt_transport, replacements = module._adapter_invocation_command(
+        {
+            "prompt_transport": {
+                "threshold_chars": 1,
+                "file_args": ["--prompt-file", "{prompt_file}"],
+                "file_prompt": "Read {prompt_file}.",
+            },
+            "command": ["agent", "{prompt}", "{prompt_transport_args}"],
+        },
+        adapter_id="fake",
+        model="model",
+        replacements={"prompt": "large prompt", "repo": "repo"},
+        run_root=Path("relative-run-root"),
+        prompt_id="phase-one",
+    )
+
+    prompt_file = Path(prompt_transport["prompt_file"])
+    assert prompt_file.is_absolute()
+    assert prompt_file.exists()
+    assert replacements["prompt_file"] == str(prompt_file)
+    assert str(prompt_file) in command
