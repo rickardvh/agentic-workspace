@@ -56,6 +56,12 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "scripts/run_agentic_workspace.py",
 )
 SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
+LOCAL_AW_WHEEL_PACKAGES = {
+    "agentic-workspace": "agentic_workspace",
+    "agentic-memory": "agentic_memory",
+    "agentic-planning": "agentic_planning",
+    "agentic-verification": "agentic_verification",
+}
 FINAL_ANSWER_PATH_RULE = (
     "Final answer path rule: cite changed files and evidence using repo-relative paths only. "
     "Before writing the final answer, convert any absolute cwd, fixture, run_root, session, prompt-file, "
@@ -515,35 +521,23 @@ def _fixture_local_wheel_metadata(
         sandbox_wheelhouse = target_wheelhouse / "sandbox"
         if target_wheelhouse.exists():
             shutil.rmtree(target_wheelhouse)
-        _patch_local_aw_wheelhouse(
-            source_wheelhouse=source_wheelhouse,
-            target_wheelhouse=host_wheelhouse,
-            release_asset_base_url=_host_file_url(host_wheelhouse),
-            version=version,
-        )
-        _patch_local_aw_wheelhouse(
-            source_wheelhouse=source_wheelhouse,
-            target_wheelhouse=sandbox_wheelhouse,
-            release_asset_base_url=_sandbox_file_url(sandbox_wheelhouse),
-            version=version,
-        )
-        host_root_wheel = _find_wheel(host_wheelhouse, "agentic_workspace", version)
-        sandbox_root_wheel = _find_wheel(sandbox_wheelhouse, "agentic_workspace", version)
-        return (
-            ["agentic-workspace"],
-            {
-                "agentic-workspace": [
-                    {
-                        "path": _relative_project_source_path(path=host_root_wheel, repo_path=repo_path),
-                        "marker": "sys_platform == 'win32'",
-                    },
-                    {
-                        "path": _relative_project_source_path(path=sandbox_root_wheel, repo_path=repo_path),
-                        "marker": "sys_platform != 'win32'",
-                    },
-                ]
-            },
-        )
+        shutil.copytree(source_wheelhouse, host_wheelhouse)
+        shutil.copytree(source_wheelhouse, sandbox_wheelhouse)
+        uv_sources: dict[str, Any] = {}
+        for package_name, wheel_prefix in LOCAL_AW_WHEEL_PACKAGES.items():
+            host_wheel = _find_wheel(host_wheelhouse, wheel_prefix, version)
+            sandbox_wheel = _find_wheel(sandbox_wheelhouse, wheel_prefix, version)
+            uv_sources[package_name] = [
+                {
+                    "path": _relative_project_source_path(path=host_wheel, repo_path=repo_path),
+                    "marker": "sys_platform == 'win32'",
+                },
+                {
+                    "path": _relative_project_source_path(path=sandbox_wheel, repo_path=repo_path),
+                    "marker": "sys_platform != 'win32'",
+                },
+            ]
+        return list(LOCAL_AW_WHEEL_PACKAGES), uv_sources
 
     release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
     _patch_local_aw_wheelhouse(

@@ -899,33 +899,18 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     assert "releases/download/v0.4.3" not in pyproject_text
 
 
-def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
+def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_sources(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     module = _load_harness_module()
     source = tmp_path / "source-wheelhouse"
     source.mkdir()
-    (source / "agentic_workspace-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
-    patched_urls: list[str] = []
-
-    def fake_patch(*, source_wheelhouse, target_wheelhouse, release_asset_base_url, version):
-        patched_urls.append(release_asset_base_url)
-        target_wheelhouse.mkdir(parents=True)
-        for item in source_wheelhouse.iterdir():
-            (target_wheelhouse / item.name).write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
-
-    def fake_host_file_url(path: Path) -> str:
-        return f"file:///{'C:'}/awlh/wheelhouse/{path.name}"
-
-    def fake_sandbox_file_url(path: Path) -> str:
-        return module._windows_host_path_as_sandbox_file_url(f"{'C:'}/awlh/wheelhouse/{path.name}")
+    for wheel_prefix in ("agentic_workspace", "agentic_memory", "agentic_planning", "agentic_verification"):
+        (source / f"{wheel_prefix}-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
 
     monkeypatch.setattr(module.os, "name", "nt")
     monkeypatch.setattr(module, "_local_aw_version", lambda: "1.2.3")
-    monkeypatch.setattr(module, "_patch_local_aw_wheelhouse", fake_patch)
-    monkeypatch.setattr(module, "_host_file_url", fake_host_file_url)
-    monkeypatch.setattr(module, "_sandbox_file_url", fake_sandbox_file_url)
 
     dependencies, uv_sources = module._fixture_local_wheel_metadata(
         repo_path=tmp_path / "repo",
@@ -933,8 +918,38 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
         adapter={"sandbox": {"backend": "docker-sandbox"}},
     )
 
-    assert dependencies == ["agentic-workspace"]
+    assert dependencies == ["agentic-workspace", "agentic-memory", "agentic-planning", "agentic-verification"]
     assert uv_sources == {
+        "agentic-memory": [
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_memory-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform == 'win32'",
+            },
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_memory-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform != 'win32'",
+            },
+        ],
+        "agentic-planning": [
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_planning-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform == 'win32'",
+            },
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_planning-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform != 'win32'",
+            },
+        ],
+        "agentic-verification": [
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_verification-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform == 'win32'",
+            },
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_verification-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform != 'win32'",
+            },
+        ],
         "agentic-workspace": [
             {
                 "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_workspace-1.2.3-py3-none-any.whl",
@@ -944,10 +959,58 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
                 "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_workspace-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform != 'win32'",
             },
-        ]
+        ],
     }
-    assert patched_urls[0] == "file:///C:/awlh/wheelhouse/host"
-    assert patched_urls[1].lower().startswith("file:///c/")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-host local-wheelhouse Docker fixture validation proof")
+def test_model_cli_harness_local_wheelhouse_windows_docker_fixture_runs_host_validation(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    output_root = tmp_path / "runs"
+    local_aw_wheelhouse = module._build_local_aw_wheelhouse(output_root)
+    paths = module.HarnessPaths(
+        run_root=output_root / "validation",
+        fixture_root=output_root / "validation" / "fixture",
+        repo_path=output_root / "validation" / "repo",
+        transcript_path=output_root / "validation" / "transcript.jsonl",
+        share_path=output_root / "validation" / "share.md",
+    )
+
+    module._prepare_fixture(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        scenario={"id": "startup-orientation", "fixture": "aw-minimal-host-repo"},
+        paths=paths,
+        adapter={"sandbox": {"backend": "docker-sandbox", "agent": "codex"}},
+        local_aw_wheelhouse=local_aw_wheelhouse,
+    )
+
+    pyproject = tomllib.loads((paths.repo_path / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["project"]["dependencies"] == [
+        "agentic-workspace",
+        "agentic-memory",
+        "agentic-planning",
+        "agentic-verification",
+    ]
+    sources = pyproject["tool"]["uv"]["sources"]["agentic-workspace"]
+    assert [source["marker"] for source in sources] == ["sys_platform == 'win32'", "sys_platform != 'win32'"]
+    assert sources[0]["path"].startswith(".agentic-workspace/local/model-cli-harness/wheelhouse/host/")
+    assert sources[1]["path"].startswith(".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/")
+
+    env = dict(module.os.environ)
+    env["UV_CACHE_DIR"] = str(tmp_path / "uv-cache")
+    env["UV_LINK_MODE"] = "copy"
+    env["UV_PROJECT_ENVIRONMENT"] = str(tmp_path / "fixture-venv")
+    result = module._run_command(
+        ["uv", "run", "agentic-workspace", "summary", "--format", "json"],
+        cwd=paths.repo_path,
+        timeout_seconds=240,
+        env=env,
+    )
+
+    assert result["returncode"] == 0, f"stdout:\n{result['stdout']}\nstderr:\n{result['stderr']}"
+    payload = json.loads(result["stdout"])
+    assert payload["kind"]
+    assert "wheelhouse/sandbox" not in result["stderr"].replace("\\", "/")
 
 
 def test_model_cli_harness_windows_host_sandbox_file_url_requires_drive_path() -> None:
